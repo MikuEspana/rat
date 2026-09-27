@@ -1,0 +1,173 @@
+{
+  "about": "Phase 1 style samples. Every file here came from one PixelLab MCP tool call (https://api.pixellab.ai/mcp). Re-run the same tool with the same args to regenerate. create_character and create_map_object take no seed, so a regeneration is a new variation. room.png and room.gif are layouts of these files, no new art.",
+  "styles": {
+    "A": {
+      "dir": "a-blueprint",
+      "summary": "Blueprint: pale, clean, high detail, soft selective outline"
+    },
+    "B": {
+      "dir": "b-arcade",
+      "summary": "Arcade: chunky 16-bit, black outline, flat bold colors, chibi"
+    },
+    "C": {
+      "dir": "c-noir",
+      "summary": "Noir: dark, lineless, painterly shading, moody CRT green"
+    }
+  },
+  "assets": [
+    {
+      "id": "a-blueprint/floor",
+      "file": "a-blueprint/floor.png",
+      "style": "A",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "clean pale grey office floor tiles with thin light blue seams, modern corporate lobby",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1001
+      },
+      "pixellabId": "65e1f28f-1f38-4fb0-947a-1aa27979fe28",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/wall",
+      "file": "a-blueprint/wall.png",
+      "style": "A",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "white modern office partition wall block with a light blue frosted glass strip and grey baseboard",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1002
+      },
+      "pixellabId": "6fb88361-79b4-4cf4-9458-3123a5990701",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/desk",
+      "file": "a-blueprint/desk.png",
+      "style": "A",
+      "tool": "create_map_object",
+      "args": {
+        "description": "modern white office desk with a slim computer monitor, keyboard and a coffee mug, isometric three-quarter view, clean corporate",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "pixellabId": "c69a4af7-cbe0-4c94-9906-8b24bbec5102",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/floor",
+      "file": "b-arcade/floor.png",
+      "style": "B",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "bold teal and navy checkered office carpet tile, chunky retro arcade game style",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "seed": 2001
+      },
+      "pixellabId": "d33f7360-1b9e-4330-b963-cd4f7e7ab7a7",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/wall",
+      "file": "b-arcade/wall.png",
+      "style": "B",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "bright yellow office wall block with a red stripe, chunky retro arcade game style",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "seed": 2002
+      },
+      "pixellabId": "98c13ed8-17a6-4413-ba33-825c47396d9d",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/desk",
+      "file": "b-arcade/desk.png",
+      "style": "B",
+      "tool": "create_map_object",
+      "args": {
+        "description": "chunky cartoon wooden office desk with a boxy retro computer and keyboard, bold saturated colors, isometric three-quarter view",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail"
+      },
+      "pixellabId": "7cb40d51-a5d2-4211-8483-f3b9f167abfd",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/floor",
+      "file": "c-noir/floor.png",
+      "style": "C",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "dark worn brown office carpet floor tile with faint coffee stains, dim moody noir lighting",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "seed": 3001
+      },
+      "pixellabId": "27305191-6d69-4477-8147-34ec0deba6b5",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/wall",
+      "file": "c-noir/wall.png",
+      "style": "C",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "dark green wood paneled office wall block with brass trim, dim noir mood",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "seed": 3002
+      },
+      "pixellabId": "39fd027f-41f9-4bdb-859f-bfd352d3e392",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/desk",
+      "file": "c-noir/desk.png",
+      "style": "C",
+      "tool": "create_map_object",
+      "args": {
+        "description": "cluttered dark wooden office desk with a glowing green CRT monitor, stacks of papers and a coffee cup, dim noir lighting, isometric three-quarter view",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail"
+      },
+      "pixellabId": "09a0ae94-377a-42c7-93eb-741b6614ed51",
+      "costGenerations": 1
+    }
+  ],
+  "totalGenerations": 9
+}
