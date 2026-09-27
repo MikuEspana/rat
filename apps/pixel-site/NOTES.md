@@ -47,9 +47,9 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | 2026-09-27 19:16 | Phase 1: 6 animations (idle + walk, south-east) | 6 | 18 |
 | 2026-09-27 19:41 | Style A variations: props sheet, wall ticker, office chair (map objects) | 3 | 21 |
 | 2026-09-27 19:41 | Style A variations: navy rat, 5 tier recolors, frozen, 3 desk edits (`pixelart_workbench`) | 0 | 21 |
-| 2026-09-27 20:05 | Phase 2: walk NE, idle NE (templates), stairs, furnace, cash bag, subway floor, HQ floor | 7 | 28 |
-| 2026-09-27 20:15 | Phase 2: seated pose (pixen edit), cheer, type, slump (animate_image) | 4 | 32 |
-| 2026-09-27 20:30 | Phase 2: tier recolors, palette snaps, desks, blank ticker (`pixelart_workbench`, about 10 edits) | 0 | 32 |
+| 2026-09-27 19:50 | Phase 2: walk NE, idle NE (templates), stairs, furnace, cash bag, subway floor, HQ floor | 7 | 28 |
+| 2026-09-27 19:55 | Phase 2: seated pose (pixen edit), cheer, type, slump (animate_image) | 4 | 32 |
+| 2026-09-27 20:02 | Phase 2: tier recolors, palette snaps, desks, blank ticker (`pixelart_workbench`, about 10 edits) | 0 | 32 |
 
 Left: 8.
 
