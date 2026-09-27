@@ -38,6 +38,7 @@ async function main(): Promise<void> {
     if (ran) waitingLogged = false;
     await sleep(1_000);
   }
+  await deps.keyRefiller?.stop();
   await runner.release();
   await handle.close();
 }

@@ -20,6 +20,24 @@ describe('loadConfig', () => {
     expect(cfg.intervals).toEqual({ claimSec: 35, burnSec: 600, priceSec: 15, freezeSec: 35 });
   });
 
+  it('key pool: sized for launch day, every threshold configurable', () => {
+    const d = loadConfig({}).keypool;
+    expect(d).toMatchObject({ refillBelow: 9000, target: 10000, lowAlert: 500, runwayAlertHours: 2, refillBatch: 200, grinder: 'auto', grindThreads: 0, keygenPath: 'solana-keygen' });
+    const c = loadConfig({
+      KEYPOOL_REFILL_BELOW: '4000',
+      KEYPOOL_TARGET: '6000',
+      KEYPOOL_LOW_ALERT: '100',
+      KEYPOOL_RUNWAY_ALERT_HOURS: '3.5',
+      KEYPOOL_REFILL_BATCH: '1000',
+      KEYPOOL_GRINDER: 'js',
+      KEYPOOL_GRIND_THREADS: '6',
+      SOLANA_KEYGEN_PATH: '/opt/solana/bin/solana-keygen',
+    }).keypool;
+    expect(c).toMatchObject({ refillBelow: 4000, target: 6000, lowAlert: 100, runwayAlertHours: 3.5, refillBatch: 1000, grinder: 'js', grindThreads: 6, keygenPath: '/opt/solana/bin/solana-keygen' });
+    expect(() => loadConfig({ KEYPOOL_REFILL_BELOW: '5000', KEYPOOL_TARGET: '4000' })).toThrow(/KEYPOOL_TARGET/);
+    expect(() => loadConfig({ KEYPOOL_GRINDER: 'gpu' })).toThrow();
+  });
+
   it('refuses DRY_RUN=false without the exact confirmation phrase', () => {
     expect(() => loadConfig({ DRY_RUN: 'false' })).toThrow(/LIVE_CONFIRM/);
     expect(() => loadConfig({ DRY_RUN: 'false', LIVE_CONFIRM: 'yes' })).toThrow(/LIVE_CONFIRM/);

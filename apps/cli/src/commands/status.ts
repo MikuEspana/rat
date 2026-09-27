@@ -17,7 +17,9 @@ export async function statusCommand(ctx: CliContext): Promise<void> {
   }
   out(`fund share owed: ${formatSol(await store.claims.pendingFundTransfer())} SOL (rides in the next claim tx)`);
   const keys = await store.keys.counts();
-  out(`rat key pool:    ${keys.available} available, ${keys.assigned} assigned (min ${config.keypoolMin})`);
+  const recent = await store.rats.countCreatedSince(new Date(clock.now().getTime() - HOUR_MS / 2));
+  const runway = recent > 0 ? `, lasts ~${(keys.available / (recent * 2)).toFixed(1)} h at ${recent * 2} rats/h` : '';
+  out(`rat key pool:    ${keys.available} available, ${keys.assigned} assigned (refill below ${config.keypool.refillBelow}, target ${config.keypool.target}${runway})`);
   out(`creator key:     ${(await store.keys.getRole('creator'))?.pubkey ?? 'NOT IMPORTED'}`);
   out(`fund key:        ${(await store.keys.getRole('fund'))?.pubkey ?? 'NOT IMPORTED'}`);
   out(`rats:            ${JSON.stringify(await store.rats.countByStatus())}`);

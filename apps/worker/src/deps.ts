@@ -40,8 +40,16 @@ export interface WorkerDeps {
   stocks: StockConfigEntry[];
   creator: Pubkey;
   fund: Pubkey;
-  /** tops up the vanity key pool (grinder); optional */
-  refillKeys?: () => Promise<{ added: number }>;
+  /** background vanity key grinder (KeyPoolRefiller from @rat/keys); optional */
+  keyRefiller?: KeyRefillerPort;
+}
+
+export interface KeyRefillerPort {
+  /** starts one background batch when the pool is under the refill threshold; never blocks */
+  maybeStart(available: number): { started: boolean; count: number; grinder: string | null; reason?: string };
+  readonly busy: boolean;
+  /** kills a running batch and waits for its cleanup (shutdown) */
+  stop(): Promise<void>;
 }
 
 /** In-memory state that does not need to survive a restart. */

@@ -6,7 +6,8 @@ import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { grindVanityKeys } from './grinder';
-import { DbKeyStore, encryptRoleKey, refillKeyPool, storeRatKeys } from './keystore';
+import { DbKeyStore, encryptRoleKey, storeRatKeys } from './keystore';
+import { KeyPoolRefiller } from './refiller';
 import { parseSecretKey } from './secret-input';
 import { MasterKeyRing, decryptSecret, encryptSecret, parseMasterKey } from './vault';
 
@@ -97,8 +98,13 @@ describe('DbKeyStore', () => {
   afterEach(async () => handle.close());
 
   it('refills the pool, hands out rat keys, and signs with them', async () => {
-    const r = await refillKeyPool(store.keys, ring, { min: 3, target: 5, suffix: 'R', threads: 2 });
-    expect(r.added).toBe(5);
+    const refiller = new KeyPoolRefiller(
+      { pool: store.keys, ring },
+      { suffix: 'R', refillBelow: 3, target: 5, batch: 100, grinder: 'js', threads: 2, timeoutMs: 60_000, keygenPath: 'solana-keygen' },
+    );
+    expect(refiller.maybeStart(0)).toMatchObject({ started: true, count: 5, grinder: 'js' });
+    const r = await refiller.wait();
+    expect(r?.added).toBe(5);
     const ks = new DbKeyStore(store.keys, ring);
     expect(await ks.availableRatKeys()).toBe(5);
     const pub = await ks.takeRatKey();
@@ -106,8 +112,7 @@ describe('DbKeyStore', () => {
     const signer = await ks.ratSigner(pub!);
     expect(signer.publicKey.toBase58()).toBe(pub);
     expect(await ks.availableRatKeys()).toBe(4);
-    const again = await refillKeyPool(store.keys, ring, { min: 3, target: 5, suffix: 'R', threads: 2 });
-    expect(again.added).toBe(0);
+    expect(refiller.maybeStart(await ks.availableRatKeys())).toMatchObject({ started: false, reason: 'pool above refill threshold' });
   });
 
   it('never stores or logs plaintext secrets', async () => {

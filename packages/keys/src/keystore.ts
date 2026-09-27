@@ -1,7 +1,6 @@
 // KeyStore backed by the encrypted key_pool table.
 import type { KeyPoolStore, KeyStore, Pubkey } from '@rat/core';
 import { Keypair } from '@solana/web3.js';
-import { grindVanityKeys } from './grinder';
 import { type MasterKeyRing, decryptSecret, encryptSecret } from './vault';
 
 export interface DbKeyStoreOptions {
@@ -72,20 +71,6 @@ export async function storeRatKeys(pool: KeyPoolStore, ring: MasterKeyRing, keys
     return { pubkey, secretEnc: encryptSecret(kp.secretKey, ring.current(), pubkey), keyVersion: ring.currentVersion, role: 'rat' as const };
   });
   return pool.insertMany(records);
-}
-
-/** Tops the rat key pool up to `target` when it drops below `min`. */
-export async function refillKeyPool(
-  pool: KeyPoolStore,
-  ring: MasterKeyRing,
-  opts: { min: number; target: number; suffix: string; maxBatch?: number; threads?: number; timeoutMs?: number },
-): Promise<{ added: number; available: number; elapsedMs: number }> {
-  const available = await pool.countAvailableRats();
-  if (available >= opts.min) return { added: 0, available, elapsedMs: 0 };
-  const want = Math.min(opts.target - available, opts.maxBatch ?? 200);
-  const res = await grindVanityKeys({ suffix: opts.suffix, count: want, threads: opts.threads, timeoutMs: opts.timeoutMs });
-  const added = await storeRatKeys(pool, ring, res.keys);
-  return { added, available: available + added, elapsedMs: res.elapsedMs };
 }
 
 /** Encrypts an imported creator or fund key. */

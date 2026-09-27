@@ -1,13 +1,14 @@
-import { formatSol } from '@rat/core';
+import { type GrinderChoice, formatSol } from '@rat/core';
 import {
   type MasterKeyRing,
   decryptSecret,
+  detectSolanaKeygen,
   encryptRoleKey,
   encryptSecret,
-  grindVanityKeys,
+  grindIntoPool,
   importKeypairFiles,
   parseSecretKey,
-  storeRatKeys,
+  resolveGrinder,
 } from '@rat/keys';
 import type { CliContext } from '../context';
 
@@ -35,15 +36,34 @@ export async function keysImportDirCommand(ctx: CliContext, ring: MasterKeyRing,
   for (const s of r.skipped) ctx.out(`skipped ${s.file}: ${s.reason}`);
 }
 
-export async function keysGrindCommand(ctx: CliContext, ring: MasterKeyRing, count: number, threads?: number): Promise<void> {
-  const res = await grindVanityKeys({ suffix: ctx.config.vanitySuffix, count, threads });
-  const n = await storeRatKeys(ctx.store.keys, ring, res.keys);
-  ctx.out(`ground and stored ${n} keys ending in ${ctx.config.vanitySuffix} in ${(res.elapsedMs / 1000).toFixed(1)}s (${res.tries} tries).`);
+/** Grinds keys into the pool: solana-keygen when installed (auto), else the built-in grinder. */
+export async function keysGrindCommand(
+  ctx: CliContext,
+  ring: MasterKeyRing,
+  count: number,
+  opts: { threads?: number; grinder?: GrinderChoice; timeoutSec?: number } = {},
+): Promise<void> {
+  const kp = ctx.config.keypool;
+  const kind = resolveGrinder(opts.grinder ?? kp.grinder, ctx.config.vanitySuffix, () => detectSolanaKeygen(kp.keygenPath)) ?? 'js';
+  const r = await grindIntoPool(ctx.store.keys, ring, {
+    kind,
+    suffix: ctx.config.vanitySuffix,
+    count,
+    threads: opts.threads ?? kp.grindThreads,
+    timeoutMs: (opts.timeoutSec ?? 24 * 3600) * 1000,
+    keygenPath: kp.keygenPath,
+  });
+  if (r.error) throw new Error(r.error);
+  ctx.out(`ground and stored ${r.added} keys ending in ${ctx.config.vanitySuffix} with ${r.grinder} in ${(r.elapsedMs / 1000).toFixed(1)}s.`);
 }
 
 export async function keysPoolCommand(ctx: CliContext): Promise<void> {
   const c = await ctx.store.keys.counts();
-  ctx.out(`rat keys: ${c.available} available, ${c.assigned} assigned. Target ${ctx.config.keypoolTarget}, refill below ${ctx.config.keypoolMin}.`);
+  const kp = ctx.config.keypool;
+  ctx.out(`rat keys: ${c.available} available, ${c.assigned} assigned. Refill below ${kp.refillBelow}, target ${kp.target}.`);
+  const keygen = detectSolanaKeygen(kp.keygenPath);
+  const worker = resolveGrinder(kp.grinder, ctx.config.vanitySuffix, () => keygen);
+  ctx.out(`worker grinder: ${worker ?? 'off'} (KEYPOOL_GRINDER=${kp.grinder}; solana-keygen ${keygen.ok ? `found: ${keygen.version}` : 'not found'})`);
   ctx.out(`salary per rat: ${formatSol(ctx.config.salaryLamports)} SOL`);
 }
 

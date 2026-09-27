@@ -41,6 +41,8 @@ export interface GrindOptions {
   count: number;
   threads?: number;
   timeoutMs?: number;
+  /** stops the worker threads early; keys found so far are returned */
+  signal?: AbortSignal;
 }
 
 export interface GrindResult {
@@ -65,11 +67,18 @@ export async function grindVanityKeys(opts: GrindOptions): Promise<GrindResult> 
   );
   const keys: Keypair[] = [];
   let tries = 0;
+  const workers: Worker[] = [];
+  const onAbort = () => {
+    for (const w of workers) void w.terminate();
+  };
+  opts.signal?.addEventListener('abort', onAbort, { once: true });
   await Promise.all(
     perThread.map(
       (n) =>
         new Promise<void>((resolve, reject) => {
           const worker = new Worker(WORKER_SOURCE, { eval: true, workerData: { suffix: opts.suffix, count: n, deadline } });
+          workers.push(worker);
+          if (opts.signal?.aborted) void worker.terminate();
           worker.on('message', (m: { type: string; secret?: Uint8Array; tries?: number }) => {
             if (m.type === 'key' && m.secret) {
               const kp = Keypair.fromSecretKey(new Uint8Array(m.secret));
@@ -85,6 +94,6 @@ export async function grindVanityKeys(opts: GrindOptions): Promise<GrindResult> 
           worker.on('exit', () => resolve());
         }),
     ),
-  );
+  ).finally(() => opts.signal?.removeEventListener('abort', onAbort));
   return { keys, tries, elapsedMs: Date.now() - started };
 }

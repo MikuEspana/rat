@@ -114,8 +114,10 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     FUND_PUBKEY: fund.publicKey.toBase58(),
     KEY_ENCRYPTION_KEY: masterKey,
     VANITY_SUFFIX: '',
-    KEYPOOL_MIN: '0',
+    KEYPOOL_REFILL_BELOW: '0',
     KEYPOOL_TARGET: '0',
+    KEYPOOL_LOW_ALERT: '0',
+    KEYPOOL_RUNWAY_ALERT_HOURS: '0',
     ...opts.env,
   });
 
