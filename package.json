@@ -9,11 +9,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --exclude 'tests/chaos/**'",
+    "test:chaos": "vitest run tests/chaos",
     "test:watch": "vitest",
     "check:guards": "node scripts/check-guards.mjs",
     "mock:api": "pnpm --filter @rat/api mock",
-    "ci": "pnpm check:guards && pnpm typecheck && pnpm test"
+    "ci": "pnpm check:guards && pnpm typecheck && pnpm test && pnpm test:chaos"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

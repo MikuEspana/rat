@@ -2,12 +2,12 @@
 // strangers claiming our vault, 0 to 40% of claim/hire/burn transactions failing in random ways, both hire
 // modes) run by the real worker in live mode on SimChain. After everything settles, every lamport is checked
 // against the chain: SOL spent never exceeds SOL claimed, and the ledger matches what really moved, exactly.
-import { type Bucket, solDelta } from '@rat/core';
 import { collectCreatorFeeV2Ix } from '@rat/pump';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { Keypair } from '@solana/web3.js';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
+import { checkMoney } from './helpers';
 
 interface Burst {
   bonding: bigint;
@@ -68,52 +68,7 @@ async function scenario(plan: { seed: number; hireMode: 'single' | 'two_step'; b
     w.simSender.clearFailures();
     await loop(w, 40, check);
 
-    // ---- what really happened on-chain
-    const attempts = await w.store.db.query.txAttempts.findMany({ where: (a, { eq }) => eq(a.mode, 'live') });
-    const chainOut: Record<Bucket, bigint> = { hire: 0n, burn: 0n };
-    let botClaimFees = 0n;
-    let failedClaimFees = 0n;
-    for (const a of attempts) {
-      const r = w.chain.transaction(a.signature);
-      if (!r) continue; // never landed
-      if (a.kind === 'hire') chainOut.hire += -solDelta(r, creator);
-      if (a.kind === 'burn') chainOut.burn += -solDelta(r, fund);
-      if (a.kind === 'claim') {
-        botClaimFees += r.feeLamports;
-        if (r.err) failedClaimFees += r.feeLamports;
-      }
-    }
-    const vaultLeft = (await w.deps.pump.getClaimable(creator)).totalLamports;
-
-    // ---- what the ledger says
-    const epoch = new Date(0);
-    const ledgerOut = { hire: await w.store.ledger.netOutflowSince('hire', epoch), burn: await w.store.ledger.netOutflowSince('burn', epoch) };
-    const balance = { hire: await w.store.ledger.balance('hire'), burn: await w.store.ledger.balance('burn') };
-    const totals = await w.store.claims.totals();
-    const owed = await w.store.claims.pendingFundTransfer();
-    const outstanding = { hire: 0n, burn: 0n };
-    for (const rat of await w.store.rats.listByStatus(['hiring'])) if (rat.reserveLedgerId !== null) outstanding.hire += rat.salaryLamports;
-    for (const b of await w.store.burns.listByStatus(['pending', 'unknown'])) if (b.reserveLedgerId !== null) outstanding.burn += b.reservedLamports;
-
-    // 1. every lamport that left our vaults (bot claims + strangers' claims) is credited exactly once
-    expect(totals.claimed).toBe(accrued - vaultLeft);
-    expect(totals.hireShare + totals.fundShare).toBe(totals.claimed);
-    // 2. the ledger books exactly what left the paying wallet, per bucket (plus reservations still in flight)
-    expect(ledgerOut.hire).toBe(chainOut.hire + outstanding.hire);
-    expect(ledgerOut.burn).toBe(chainOut.burn + outstanding.burn);
-    expect(totals.fee).toBe(botClaimFees - failedClaimFees);
-    // 3. SOL spent never exceeds SOL claimed. Only a failed claim's network fee can come from the creator reserve.
-    expect(ledgerOut.hire).toBeLessThanOrEqual(totals.hireShare);
-    expect(ledgerOut.burn).toBeLessThanOrEqual(totals.fundShare);
-    expect(balance.hire).toBeGreaterThanOrEqual(-failedClaimFees);
-    expect(balance.burn).toBeGreaterThanOrEqual(0n);
-    // 4. the wallets agree with the ledger to the lamport, and the owner's own SOL was never spent
-    const creatorNow = w.chain.sol(creator);
-    const fundNow = w.chain.sol(fund);
-    expect(creatorNow - creatorStart).toBe(balance.hire + outstanding.hire + owed);
-    expect(fundNow - fundStart).toBe(balance.burn + outstanding.burn - owed);
-    expect(creatorNow).toBeGreaterThanOrEqual(creatorStart - failedClaimFees);
-    expect(fundNow).toBeGreaterThanOrEqual(fundStart);
+    await checkMoney(w, { creator: creatorStart, fund: fundStart, accrued });
   } finally {
     await w.close();
   }

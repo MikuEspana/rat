@@ -89,6 +89,42 @@ describe('JupiterHttp', () => {
   });
 });
 
+describe('JupiterHttp under a 429 storm (chaos)', () => {
+  it('20 callers during a 12 s storm: nobody sends before the reset time, each gives up after 4 tries at most, no retry storm', async () => {
+    const vt = virtualTime(5_000_000);
+    const limiter = new SlidingWindowLimiter(55, 60_000, vt);
+    const stormUntil = vt.now() + 12_000;
+    const sent: number[] = [];
+    let blockedUntil = 0;
+    const http = new JupiterHttp({
+      baseUrl: 'https://api.jup.ag',
+      limiter,
+      sleep: vt.sleep,
+      now: vt.now,
+      fetchImpl: (async () => {
+        const t = vt.now();
+        expect(t).toBeGreaterThanOrEqual(blockedUntil); // never sent while told to wait
+        sent.push(t);
+        if (t < stormUntil) {
+          const reset = Math.ceil((t + 5_000) / 1000);
+          blockedUntil = Math.max(blockedUntil, reset * 1000);
+          return response(429, '[API Gateway] Too many requests', { 'x-ratelimit-reset': String(reset) });
+        }
+        return response(200, { ok: 1 });
+      }) as unknown as typeof fetch,
+    });
+    const results = await Promise.allSettled(Array.from({ length: 20 }, () => http.get('/price/v3', { ids: 'x' })));
+    expect(sent.length).toBeLessThanOrEqual(20 * 4);
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected');
+    expect(ok + failed.length).toBe(20);
+    expect(ok).toBeGreaterThan(0);
+    for (const f of failed) expect((f as PromiseRejectedResult).reason).toMatchObject({ status: 429 });
+    // the limiter's own cap holds too: never more than 55 requests in any 60 s
+    for (const t of sent) expect(sent.filter((x) => x > t - 60_000 && x <= t).length).toBeLessThanOrEqual(55);
+  });
+});
+
 describe('JupiterPriceSource', () => {
   it('batches at most 50 ids per call and treats omitted or invalid prices as missing', async () => {
     const mints = Array.from({ length: 60 }, () => Keypair.generate().publicKey.toBase58());

@@ -117,6 +117,18 @@ function reservationOf(rat: RatRow): Reservation | null {
   return { ledgerId: rat.reserveLedgerId, bucket: 'hire', lamports: rat.salaryLamports, refType: 'rat_wallet', refId: rat.wallet };
 }
 
+/**
+ * The rat's reservation, only if it is still open. A reservation released or settled just before a crash (the rat
+ * row still points at it) must never pay for a new attempt: that spend would never reach the ledger.
+ */
+async function openReservationOf(d: WorkerDeps, rat: RatRow): Promise<Reservation | null> {
+  const r = reservationOf(rat);
+  if (!r) return null;
+  if (await d.store.ledger.isOpen(r.ledgerId)) return r;
+  await d.store.rats.update(rat.id, { reserveLedgerId: null });
+  return null;
+}
+
 /** Marker reservation for the second tx of a two-step hire (the spend was already booked with tx 1). */
 function prefunded(rat: RatRow): Reservation {
   return { ledgerId: 0, bucket: 'hire', lamports: 0n, refType: 'rat_wallet', refId: rat.wallet };
@@ -347,7 +359,7 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
   const kill = await d.killSwitch.status();
   if (kill.on) return 'waiting';
 
-  let reservation = reservationOf(rat);
+  let reservation = await openReservationOf(d, rat);
   if (!reservation && !(d.config.hireMode === 'two_step' && rat.funded)) {
     const auth = await d.guard.authorize({ bucket: 'hire', lamports: rat.salaryLamports, refType: 'rat_wallet', refId: rat.wallet });
     if (!auth.ok) return 'waiting';
@@ -404,9 +416,13 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
   const res: HireResult = { hired: 0, attempted: 0, retried: 0, gaveUp: 0 };
   let slots = d.config.maxHiresPerLoop;
   const allStocks = new Map((await d.store.stocks.list()).map((st) => [st.mint, st]));
+  const inFlight = await d.store.rats.listByStatus(['hiring']);
+
+  // 0. a crash between "reserve" and "record the reservation on the rat" leaves a reservation nothing refers to
+  await d.guard.releaseOrphans('hire', new Set(inFlight.flatMap((r) => (r.reserveLedgerId === null ? [] : [r.reserveLedgerId]))));
 
   // 1. rats already in flight
-  for (const rat of await d.store.rats.listByStatus(['hiring'])) {
+  for (const rat of inFlight) {
     if (slots <= 0) break;
     const step = await resumeHire(d, s, rat, allStocks);
     if (step === 'waiting') continue;

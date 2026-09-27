@@ -2,10 +2,10 @@
 import { TOKEN_2022_PROGRAM } from '@rat/core';
 import { collectCreatorFeeV2Ix } from '@rat/pump';
 import { engageKillSwitch, releaseKillSwitch } from '@rat/safety';
-import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
+import { SOL, type SimWorld, createSimWorld, runClaimStep, runHireStep, runMintStep, runPriceStep, runWatchStep } from '@rat/worker';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { runLaunch } from './helpers';
+import { checkMoney, moneyStart, runLaunch } from './helpers';
 
 let w: SimWorld;
 afterEach(async () => w?.close());
@@ -134,5 +134,33 @@ describe('F. outside actors during a live run', () => {
     expect(external).toBeGreaterThan(0);
     expect(w.alerts.keys().filter((k) => k.startsWith('inflow_')).length).toBe(Number(gifts / 1_000_000n));
     console.log(`[F] ${external} external claims booked 50/50, ${gifts / 1_000_000n} unexplained gifts left unspent, conservation exact`);
+  });
+});
+
+describe('G. a reservation closed just before a crash is never reused (chaos finding RT-18)', () => {
+  it('the rat still points at a released reservation: the next attempt reserves again, so the spend is booked', async () => {
+    w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1' } });
+    const start = moneyStart(w);
+    await runPriceStep(w.deps, w.worker.state);
+    await runMintStep(w.deps);
+    await runWatchStep(w.deps);
+    w.accrue({ bondingLamports: SOL / 5n });
+    start.accrued = SOL / 5n;
+    await runClaimStep(w.deps, w.worker.state);
+    w.simSender.failNext('drop', 'hire');
+    expect((await runHireStep(w.deps, w.worker.state)).hired).toBe(0);
+    const [rat] = await w.store.rats.listByStatus(['hiring']);
+    const released = (await w.store.db.query.ledgerEntries.findMany({ where: (l, { eq }) => eq(l.reason, 'hire_release') }))[0]!;
+    // crash between "release the reservation" and "clear it on the rat": the rat still points at it
+    await w.store.rats.update(rat!.id, { reserveLedgerId: released.closesId });
+    expect(await w.store.ledger.isOpen(released.closesId!)).toBe(false);
+    await runHireStep(w.deps, w.worker.state);
+    expect((await w.store.rats.get(rat!.id))?.status).toBe('active');
+    for (let i = 0; i < 6; i++) {
+      await w.worker.tick();
+      w.clock.advanceSeconds(35);
+      w.chain.advanceBlocks(90);
+    }
+    await checkMoney(w, start);
   });
 });

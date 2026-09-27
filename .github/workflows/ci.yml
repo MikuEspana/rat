@@ -24,6 +24,21 @@ jobs:
       - name: Tests
         run: pnpm test
 
+  chaos:
+    # worker killed before every step of a hire and a burn, RPC / database outages at every call, Jupiter 429 storm
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chaos tests
+        run: pnpm test:chaos
+
   docker:
     runs-on: ubuntu-latest
     timeout-minutes: 20
