@@ -132,6 +132,28 @@ describe('wallet watch (owner decision #7)', () => {
   });
 });
 
+describe('wallet watch with RPC indexing lag', () => {
+  it('a claim whose record is not visible yet is booked on a later loop, exactly once', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await prime(w);
+    await runWatchStep(w.deps);
+    const stranger = Keypair.generate();
+    w.chain.fundAccount(stranger.publicKey.toBase58(), SOL);
+    w.accrue({ bondingLamports: SOL });
+    const req = { kind: 'claim' as const, label: 'x', feePayer: stranger, signers: [], instructions: [collectCreatorFeeV2Ix(w.creator.publicKey.toBase58())], computeUnitLimit: 200_000 };
+    await w.simSender.submit(await w.simSender.prepare(req));
+    // the record is not indexed yet on the first look
+    const real = w.reader.getTransactionRecord.bind(w.reader);
+    let lag = true;
+    w.reader.getTransactionRecord = async (sig: string) => (lag ? null : real(sig));
+    expect((await runWatchStep(w.deps)).externalClaims).toBe(0);
+    lag = false;
+    expect((await runWatchStep(w.deps)).externalClaims).toBe(1);
+    expect((await runWatchStep(w.deps)).externalClaims).toBe(0);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL / 2n);
+  });
+});
+
 describe('hire state machine', () => {
   async function funded(world: SimWorld, sol = SOL / 2n) {
     await prime(world);

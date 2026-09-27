@@ -30,6 +30,9 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
   const unseen = new Set(await d.store.seen.unseen(sigs.map((s) => s.signature)));
   const ours = await d.store.attempts.signaturesKnown(sigs.map((s) => s.signature));
   const now = d.clock.now();
+  // If a record is not visible yet (RPC indexing lag), keep the cursor where it was: the seen table stops
+  // anything already booked from being booked twice, and the missing one is retried next loop.
+  let incomplete = false;
   for (const info of [...sigs].reverse()) {
     const sig = info.signature;
     if (!unseen.has(sig)) continue;
@@ -38,7 +41,10 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
       continue;
     }
     const record = await d.chain.getTransactionRecord(sig);
-    if (!record) continue; // not visible yet; picked up next loop
+    if (!record) {
+      incomplete = true;
+      continue;
+    }
     if (record.err) {
       await d.store.seen.add(sig, wallet, 'failed_other', now);
       continue;
@@ -69,7 +75,7 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
     }
     await d.store.seen.add(sig, wallet, 'other', now);
   }
-  await d.store.settings.set(cursorKey, sigs[0]!.signature);
+  if (!incomplete) await d.store.settings.set(cursorKey, sigs[0]!.signature);
 }
 
 export async function runWatchStep(d: WorkerDeps): Promise<WatchResult> {
