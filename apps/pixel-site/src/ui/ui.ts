@@ -45,12 +45,16 @@ export class Ui {
   private boardList = el('ol', 'board-list');
   private boardMode: 'top' | 'bottom' = 'top';
   private card = el('div', 'card');
+  private stageChip = el('div', 'stage-chip', '');
+  private milestoneEl = el('div', 'milestone');
+  private milestoneTimer = 0;
   private selected: number | null = null;
   private marker = new Graphics();
 
   constructor(private readonly d: UiDeps) {
     document.body.appendChild(this.root);
-    this.root.append(this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card);
+    this.root.append(this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.milestoneEl);
+    this.milestoneEl.hidden = true;
     this.card.hidden = true;
     this.banner.hidden = true;
     this.marker.poly([-6, -10, 6, -10, 0, 0]).fill(0xffd23f).stroke({ color: 0x16182c, width: 2 });
@@ -84,7 +88,7 @@ export class Ui {
   private buildHud(): HTMLElement {
     const hud = el('div', 'hud panel');
     const title = el('div', 'title');
-    title.append(el('div', 'brand', 'RAT RACE'), el('div', 'tagline', 'The rat always loses. The fund always wins.'));
+    title.append(el('div', 'brand', 'RAT RACE'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
@@ -201,6 +205,65 @@ export class Ui {
       this.feedItems.unshift({ li, time, at: e.at });
     }
     while (this.feedItems.length > 60) this.feedItems.pop()!.li.remove();
+  }
+
+  /** Local lines (things the company built), newest last. */
+  pushLocal(lines: Array<{ tag: string; text: string }>): void {
+    const at = new Date().toISOString();
+    for (const d of lines) {
+      const li = el('li', `ev ${d.tag.toLowerCase()} fresh`);
+      const time = el('span', 'ev-time', ago(at));
+      li.append(el('span', `ev-tag ${d.tag.toLowerCase()}`, d.tag), el('span', 'ev-text', d.text), time);
+      this.feedList.prepend(li);
+      this.feedItems.unshift({ li, time, at });
+    }
+    while (this.feedItems.length > 60) this.feedItems.pop()!.li.remove();
+  }
+
+  // ------------------------------------------------------------------ idle game
+  setStage(name: string, rats: number): void {
+    this.stageChip.textContent = `${name} . ${rats.toLocaleString('en-US')} rats`;
+  }
+
+  /** Big banner for a new stage; fades out on its own. */
+  milestone(title: string, sub: string): void {
+    this.milestoneEl.replaceChildren(el('div', 'ms-kicker', 'NEW STAGE UNLOCKED'), el('div', 'ms-title', title), el('div', 'ms-sub', sub));
+    this.milestoneEl.hidden = false;
+    this.milestoneEl.classList.remove('show');
+    void this.milestoneEl.offsetWidth;
+    this.milestoneEl.classList.add('show');
+    clearTimeout(this.milestoneTimer);
+    this.milestoneTimer = window.setTimeout(() => (this.milestoneEl.hidden = true), 4200);
+  }
+
+  setRats(rats: RatSystem): void {
+    this.d.rats = rats;
+    this.close();
+  }
+
+  /** Debug: a slider for the rat count (?rats=N), with jumps to each stage. */
+  debugSlider(n: number, onChange: (n: number) => void, marks: number[]): void {
+    const box = el('div', 'debug panel');
+    const label = el('div', 'debug-label', `rats: ${n}`);
+    const input = el('input');
+    input.type = 'range';
+    input.min = '1';
+    input.max = '5000';
+    input.value = String(n);
+    input.oninput = () => (label.textContent = `rats: ${input.value}`);
+    input.onchange = () => onChange(Number(input.value));
+    const jumps = el('div', 'debug-jumps');
+    for (const m of marks) {
+      const b = el('button', 'tab', String(m));
+      b.onclick = () => {
+        input.value = String(m);
+        label.textContent = `rats: ${m}`;
+        onChange(m);
+      };
+      jumps.append(b);
+    }
+    box.append(label, input, jumps);
+    this.root.append(box);
   }
 
   // ------------------------------------------------------------------ leaderboard

@@ -402,13 +402,20 @@ export function stockRoom(f: Fit, seats: number): void {
     perimeter(f, variant, sym);
     pods(f, { u0: 1, u1: w - 1, v0: 1, v1: h - 1 }, variant, sym, 40 + w * h);
   }
-  // still short of the target: pods wherever they fit, then tighter single desks
-  if (f.seatCount < seats || f.rng.chance(0.4)) pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, sym, f.seatCount < seats ? 200 : 30);
-  for (let t = 0; t < 400 && f.seatCount < seats; t++) {
-    const axis: 'i' | 'j' = f.rng.chance(0.5) ? 'i' : 'j';
-    f.unit(f.r.i0 + f.rng.int(w), f.r.j0 + f.rng.int(h), axis, variant(), sym);
-  }
+  // still short of the target: structured fills in whatever space is left (they keep their own aisles)
   f.settle();
+  if (f.seatCount < seats) {
+    (w >= h ? columns : rows)(f, full, variant, sym, 0);
+    f.settle();
+  }
+  if (f.seatCount < seats) {
+    (w >= h ? rows : columns)(f, full, variant, sym, 0);
+    f.settle();
+  }
+  if (f.seatCount < seats || f.rng.chance(0.3)) {
+    pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, sym, 120);
+    f.settle();
+  }
   const area = w * h;
   f.corners(['plant', 'plant', 'lamp', 'filing_plant', 'water_cooler', 'bin'], 0.7);
   f.clutter(BIG_CLUTTER, Math.round(area / 90) + f.rng.int(2));
@@ -635,4 +642,65 @@ export function lobbyRoom(f: Fit): void {
   f.mountAnywhere('tv_wall', 3);
   f.corners(['plant', 'lamp'], 0.9);
   f.commit();
+}
+
+/** The founders' garage: the furnace in the middle (room around it to grow), shared desks, a couch, boxes. */
+export function garageRoom(f: Fit, furnace: Cell, seats: number): void {
+  const { i0, j0, w, h } = f.r;
+  f.put('furnace', furnace.i, furnace.j, false, { bias: 0.1 });
+  for (let i = furnace.i - 3; i <= furnace.i + 2; i++) for (let j = furnace.j - 3; j <= furnace.j + 2; j++) if (f.inside(i, j)) f.reserve(i, j);
+  const ring: Array<[number, number, Face]> = [
+    [furnace.i + 1, furnace.j + 1, 'nw'], [furnace.i - 2, furnace.j + 1, 'ne'], [furnace.i + 1, furnace.j - 2, 'nw'],
+  ];
+  for (const [i, j, face] of ring) f.spot('furnace', i, j, face);
+  alongBackWall(f, [{ kind: 'coffee_counter', spot: 'coffee', w: 2 }, { kind: 'coffee_machine', spot: 'coffee' }, { kind: 'box_pile' }], 1);
+  alongLeftWall(f, [{ kind: 'sofa', w: 2 }, { kind: 'box_pile2', w: 2 }], 2, 1);
+  f.maxSeats = seats;
+  const variant = (): number => (f.rng.chance(0.5) ? 1 : 0);
+  pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, null, 400);
+  f.settle();
+  if (f.seatCount < seats) {
+    columns(f, { u0: 1, u1: w - 2, v0: 1, v1: h - 2 }, variant, null, 0);
+    f.settle();
+  }
+  f.mountAnywhere('whiteboard_wall', 3);
+  f.mountAnywhere('tv_wall', 3);
+  f.mountAnywhere('sticky_wall', 2);
+  f.corners(['box_pile', 'box', 'plant', 'lamp'], 1);
+  f.clutter(['box_s', 'box_s2', 'box_half', 'paper_stack', 'box_long', 'bin'], Math.round((w * h) / 18));
+  f.litter(['cables', 'cable_run', 'spill', 'sticky_floor'], Math.round((w * h) / 12));
+  f.commit();
+}
+
+/** Open-plan office: shared desks for every stock (the small-office stage). */
+export function openRoom(f: Fit, seats: number): void {
+  stockRoom(f, seats);
+}
+
+/** The evil empire's war room: a meeting room with a gold desk and screens everywhere. */
+export function warRoom(f: Fit): void {
+  const { i0, j0, w, h } = f.r;
+  f.put('exec_desk_gold', i0 + Math.floor(w / 2), j0 + 2);
+  meetingSeats(f, i0 + Math.floor(w / 2), j0 + Math.floor(h / 2) + 2);
+  f.settle();
+  for (let k = 0; k < 4; k++) f.mountAnywhere('tv_wall', 3);
+  f.corners(['server_rack', 'server_rack', 'lamp'], 1);
+  f.commit();
+}
+
+/** The vault: piles of cash bags and boxes. */
+export function vaultRoom(f: Fit): void {
+  const { w, h } = f.r;
+  f.spot('boxes', f.r.i0 + Math.floor(w / 2), f.r.j0 + Math.floor(h / 2), 'ne');
+  f.settle();
+  f.clutter(['cashbag', 'cashbag', 'cashbag', 'box_pile', 'box_half', 'filing'], Math.round((w * h) / 3), 0.3);
+  f.commit();
+}
+
+function meetingSeats(f: Fit, ti: number, tj: number): void {
+  if (!f.put('round_table', ti, tj)) return;
+  f.spot('meeting', ti + 1, tj - 1, 'nw', 'sit', { i: ti + 0.7, j: tj - 0.55 });
+  f.spot('meeting', ti + 1, tj, 'nw', 'sit', { i: ti + 0.7, j: tj + 0.25 });
+  f.spot('meeting', ti - 1, tj + 1, 'ne', 'sit', { i: ti - 0.55, j: tj + 0.7 });
+  f.spot('meeting', ti, tj + 1, 'ne', 'sit', { i: ti + 0.25, j: tj + 0.7 });
 }

@@ -476,3 +476,100 @@ body {
     display: none;
   }
 }
+
+/* idle game: stage chip, milestone banner, build lines, debug slider */
+.stage-chip {
+  margin-top: 4px;
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #16182c;
+  background: #ffd23f;
+}
+.milestone {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 14px 28px;
+  text-align: center;
+  background: rgba(22, 24, 44, 0.94);
+  border: 3px solid #ffd23f;
+  box-shadow: 0 0 0 3px #16182c, 0 0 40px rgba(255, 210, 63, 0.45);
+  pointer-events: none;
+}
+.milestone.show {
+  animation: ms-in 4.2s ease-out forwards;
+}
+@keyframes ms-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  8% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+  14% {
+    transform: translateX(-50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+.ms-kicker {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #ffd23f;
+}
+.ms-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #f4f6ff;
+  margin: 4px 0;
+}
+.ms-sub {
+  font-size: 12px;
+  color: var(--dim);
+}
+.ev-tag.build {
+  background: #c79a5a;
+}
+.ev-tag.stage {
+  background: #ff6ad5;
+}
+.debug {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  width: 460px;
+  padding: 8px 10px;
+}
+.debug input {
+  width: 100%;
+}
+.debug-label {
+  font-weight: 700;
+}
+.debug-jumps {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+@media (max-width: 900px) {
+  .debug {
+    width: calc(100vw - 32px);
+    bottom: 60px;
+  }
+  .ms-title {
+    font-size: 22px;
+  }
+}

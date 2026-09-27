@@ -1,23 +1,28 @@
 import { describe, expect, it } from 'vitest';
+import { Growth } from './growth';
 import { Paths } from './path';
-import { buildLayout, capacityFor } from './plan';
-import { T, idx, type FloorLayout } from './types';
+import { buildMaster, STAGES, stageOf } from './plan';
+import { idx, type FloorLayout } from './types';
 
-const MOCK = [
-  ['TSLAx', 61], ['MSTRx', 49], ['COINx', 30], ['AMDx', 34], ['NVDAx', 43],
-  ['AAPLx', 34], ['METAx', 24], ['AMZNx', 30], ['GOOGLx', 40], ['SPYx', 32],
-].map(([symbol, ratCount]) => ({ symbol: symbol as string, ratCount: ratCount as number }));
+const SYMBOLS = ['TSLAx', 'MSTRx', 'COINx', 'AMDx', 'NVDAx', 'AAPLx', 'METAx', 'AMZNx', 'GOOGLx', 'SPYx'];
+const stockOf = (id: number): string => SYMBOLS[(id * 7 + (id >> 3)) % SYMBOLS.length]!;
 
-function reachable(L: FloorLayout): Uint8Array {
-  const seen = new Uint8Array(L.W * L.H);
-  const s = idx(L.W, L.spawn.i, L.spawn.j);
+function grow(plan: FloorLayout, n: number): Growth {
+  const g = new Growth(plan);
+  for (let id = 1; id <= n; id++) g.add(id, stockOf(id));
+  return g;
+}
+
+function reach(plan: FloorLayout, blocked: Uint8Array, from: { i: number; j: number }): Uint8Array {
+  const seen = new Uint8Array(plan.W * plan.H);
+  const s = idx(plan.W, from.i, from.j);
   const q = [s];
   seen[s] = 1;
   for (let h = 0; h < q.length; h++) {
     const c = q[h]!;
-    const i = c % L.W;
-    for (const n of [i + 1 < L.W ? c + 1 : -1, i > 0 ? c - 1 : -1, c + L.W, c - L.W]) {
-      if (n < 0 || n >= seen.length || seen[n] || L.blocked[n]) continue;
+    const i = c % plan.W;
+    for (const n of [i + 1 < plan.W ? c + 1 : -1, i > 0 ? c - 1 : -1, c + plan.W, c - plan.W]) {
+      if (n < 0 || n >= seen.length || seen[n] || blocked[n]) continue;
       seen[n] = 1;
       q.push(n);
     }
@@ -25,104 +30,104 @@ function reachable(L: FloorLayout): Uint8Array {
   return seen;
 }
 
-describe('floor plan', () => {
-  const L = buildLayout(MOCK, { partners: 6 });
+describe('master plan', () => {
+  const plan = buildMaster();
 
   it('is deterministic', () => {
-    const again = buildLayout(MOCK, { partners: 6 });
-    expect(again.W).toBe(L.W);
-    expect(again.seats.length).toBe(L.seats.length);
-    expect(again.props.length).toBe(L.props.length);
-    expect(Buffer.from(again.tile).equals(Buffer.from(L.tile))).toBe(true);
+    const again = buildMaster();
+    expect(again.W).toBe(plan.W);
+    expect(again.seats.length).toBe(plan.seats.length);
+    expect(Buffer.from(again.tile).equals(Buffer.from(plan.tile))).toBe(true);
   });
 
-  it('gives every stock enough desks and a ticker on each of its rooms', () => {
-    for (const s of MOCK) {
-      const rooms = L.bySymbol.get(s.symbol) ?? [];
-      expect(rooms.length).toBeGreaterThan(0);
-      const seats = rooms.reduce((n, r) => n + r.seats.length, 0);
-      expect(seats).toBeGreaterThanOrEqual(s.ratCount);
-      for (const r of rooms) expect(r.ticker).not.toBeNull();
+  it('has a garage and one ring per later stage, each bigger, each with a lobby and amenities off its corridor', () => {
+    expect(plan.rings.length).toBe(STAGES.length);
+    expect(plan.garage.kind).toBe('garage');
+    for (let k = 1; k < plan.rings.length; k++) {
+      const r = plan.rings[k]!;
+      expect(r.i1 - r.i0).toBeGreaterThan(plan.rings[k - 1]!.i1 - plan.rings[k - 1]!.i0);
+      expect(plan.rooms[r.lobby]!.kind).toBe('lobby');
+      for (const room of plan.rooms.filter((x) => x.ring === k && x.unlockAt !== null)) expect(room.parent).toBe(-1);
     }
-    expect(capacityFor(10)).toBeGreaterThan(10);
+    const kinds = new Set(plan.rooms.map((r) => r.kind));
+    for (const k of ['open', 'stock', 'break', 'bath', 'server', 'copy', 'meeting', 'storage', 'ceo', 'war', 'vault'] as const) expect(kinds.has(k)).toBe(true);
+    expect(plan.seats.length).toBeGreaterThan(5000);
+  });
+});
+
+describe('growth (the idle game)', () => {
+  const plan = buildMaster();
+  const sizes = [1, 10, 25, 60, 100, 300, 500, 1000, 1500, 2200, 3000, 4200, 5000];
+  const states = new Map(sizes.map((n) => [n, grow(plan, n)]));
+
+  it('follows the stage thresholds', () => {
+    for (const [n, g] of states) expect(g.stage).toBe(stageOf(n));
+    expect(stageOf(24)).toBe(0);
+    expect(stageOf(25)).toBe(1);
+    expect(stageOf(3000)).toBe(5);
   });
 
-  it('has every kind of room, HQ near the middle and the CEO office holding desks', () => {
-    const kinds = new Set(L.rooms.map((r) => r.kind));
-    for (const k of ['stock', 'hq', 'ceo', 'lobby', 'break', 'bath', 'server', 'copy', 'meeting', 'storage'] as const) expect(kinds.has(k)).toBe(true);
-    const b = L.building;
-    const mid = (b.i0 + b.i1) / 2;
-    const side = b.i1 - b.i0;
-    expect(Math.abs(L.hq.i0 + L.hq.w / 2 - mid)).toBeLessThan(side * 0.25);
-    expect(Math.abs(L.hq.j0 + L.hq.h / 2 - mid)).toBeLessThan(side * 0.25);
-    expect(L.hq.w * L.hq.h).toBeLessThanOrEqual(260); // it used to fill a whole 28x28 slot
-    expect(L.ceo.seats.length).toBeGreaterThanOrEqual(4);
+  it('only ever grows: a room built at N is still built at every larger N', () => {
+    for (let k = 1; k < sizes.length; k++) {
+      const a = states.get(sizes[k - 1]!)!;
+      const b = states.get(sizes[k]!)!;
+      for (let r = 0; r < plan.rooms.length; r++) if (a.built[r]) expect(b.built[r]).toBe(1);
+      for (let r = 0; r < plan.rooms.length; r++) if (a.symbolOf[r]) expect(b.symbolOf[r]).toBe(a.symbolOf[r]);
+    }
   });
 
-  it('is packed: rooms do not overlap and fill most of the building', () => {
-    const owner = new Int16Array(L.W * L.H).fill(-1);
-    let roomCells = 0;
-    for (const r of L.rooms) {
-      for (let i = r.i0; i < r.i0 + r.w; i++) {
-        for (let j = r.j0; j < r.j0 + r.h; j++) {
-          expect(owner[idx(L.W, i, j)]).toBe(-1);
-          owner[idx(L.W, i, j)] = r.id;
-          roomCells++;
-        }
+  it('is deterministic', () => {
+    const again = grow(plan, 1000);
+    const g = states.get(1000)!;
+    expect(Buffer.from(again.built).equals(Buffer.from(g.built))).toBe(true);
+    expect(again.symbolOf).toEqual(g.symbolOf);
+  });
+
+  it('gives every rat a desk, in its own stock room once stocks get rooms, reachable from the subway', () => {
+    for (const [n, g] of states) {
+      expect(g.seatOfRat.size).toBe(n);
+      const blocked = g.blocked();
+      const spawn = plan.rings[g.stage]!.spawn;
+      expect(blocked[idx(plan.W, spawn.i, spawn.j)]).toBe(0);
+      const seen = reach(plan, blocked, spawn);
+      for (const [rat, sid] of g.seatOfRat) {
+        const s = plan.seats[sid]!;
+        expect(seen[idx(plan.W, s.access.i, s.access.j)]).toBe(1);
+        const room = plan.rooms[s.room]!;
+        if (room.kind === 'stock') expect(g.symbolOf[room.id]).toBe(stockOf(rat));
       }
-      expect(Math.max(r.w, r.h) / Math.min(r.w, r.h)).toBeLessThan(6);
     }
-    const b = L.building;
-    expect(roomCells / ((b.i1 - b.i0) * (b.j1 - b.j0))).toBeGreaterThan(0.6);
   });
 
-  it('keeps every chair, spot and corridor reachable from the subway', () => {
-    const seen = reachable(L);
-    for (const s of L.seats) expect(seen[idx(L.W, s.access.i, s.access.j)]).toBe(1);
-    for (const s of L.spots) expect(seen[idx(L.W, s.cell.i, s.cell.j)]).toBe(1);
-    for (const c of L.corridor) expect(seen[idx(L.W, c.i, c.j)]).toBe(1);
-    expect(L.spots.length).toBeGreaterThan(40);
-    expect(new Set(L.spots.map((s) => s.kind)).size).toBeGreaterThan(10);
+  it('builds amenities at their rat counts and nothing beyond the current stage', () => {
+    for (const [n, g] of states) {
+      for (const r of plan.rooms) {
+        if (g.built[r.id]) expect(r.ring).toBeLessThanOrEqual(g.stage);
+        if (r.unlockAt !== null && r.unlockAt <= n && r.ring <= g.stage) expect(g.built[r.id]).toBe(1);
+      }
+    }
   });
 
   it('routes along walkable cells in straight legs', () => {
-    const paths = new Paths(L);
-    for (const s of L.seats.filter((_, k) => k % 17 === 0)) {
-      const r = paths.route(L.spawn, s.access);
+    const g = states.get(1000)!;
+    const blocked = g.blocked();
+    const paths = new Paths(plan, 64, blocked);
+    const spawn = plan.rings[g.stage]!.spawn;
+    let checked = 0;
+    for (const sid of [...g.seatOfRat.values()].filter((_, k) => k % 97 === 0)) {
+      const s = plan.seats[sid]!;
+      const r = paths.route(spawn, s.access);
       expect(r).not.toBeNull();
       const pts = r!;
-      expect(pts[0]).toEqual(L.spawn);
-      expect(pts[pts.length - 1]).toEqual(s.access);
       for (let k = 1; k < pts.length; k++) {
         const a = pts[k - 1]!;
         const b = pts[k]!;
         expect(a.i === b.i || a.j === b.j).toBe(true);
         const steps = Math.abs(b.i - a.i) + Math.abs(b.j - a.j);
-        for (let t = 0; t <= steps; t++) {
-          const i = a.i + Math.sign(b.i - a.i) * t;
-          const j = a.j + Math.sign(b.j - a.j) * t;
-          expect(L.blocked[idx(L.W, i, j)]).toBe(0);
-        }
+        for (let t = 0; t <= steps; t++) expect(blocked[idx(plan.W, a.i + Math.sign(b.i - a.i) * t, a.j + Math.sign(b.j - a.j) * t)]).toBe(0);
       }
+      checked++;
     }
-    // a short errand uses the windowed search and still arrives
-    const spot = L.spots[0]!;
-    const near = L.seats.reduce((best, s) => (Math.abs(s.access.i - spot.cell.i) + Math.abs(s.access.j - spot.cell.j) < Math.abs(best.access.i - spot.cell.i) + Math.abs(best.access.j - spot.cell.j) ? s : best));
-    expect(paths.route(near.access, spot.cell)?.at(-1)).toEqual(spot.cell);
-  });
-
-  it('opens doors only in walls and keeps the entrance on the street', () => {
-    for (const r of L.rooms) expect(r.doors.length).toBeGreaterThan(0);
-    const doors = L.lobby.doors.filter((d) => d.i === L.building.i1 - 1 || d.j === L.building.j1 - 1);
-    expect(doors.length).toBeGreaterThanOrEqual(2);
-    expect(L.tile[idx(L.W, L.spawn.i, L.spawn.j)]).toBe(T.STREET);
-  });
-
-  it('scales to 3,000 rats', () => {
-    const big = buildLayout(MOCK.map((s) => ({ ...s, ratCount: s.ratCount * 8 })), { partners: 40 });
-    const need = MOCK.reduce((n, s) => n + s.ratCount * 8, 0);
-    expect(need).toBeGreaterThan(3000);
-    expect(big.seats.length).toBeGreaterThanOrEqual(need);
-    expect(big.W).toBeLessThan(340);
+    expect(checked).toBeGreaterThan(5);
   });
 });

@@ -4,6 +4,10 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Idle game (owner, 2026-09-27):** the building grows with the rat count, deterministically: garage startup (under 25), small office (25+), full floor (100+), corporate floor (500+), megacorp (1500+), evil empire (3000+). `src/floor/plan.ts` draws a fixed master plan once (the garage in the middle, one ring of rooms per later stage, drawn for 5,200 rats); `src/floor/growth.ts` replays rats in id order: a new stage builds its ring corridor and lobby, amenities open at set counts, and a rat with no free desk in its stock's rooms gets the next desk-room slot built for that stock. Rooms never move or disappear. Before the full floor everyone shares the garage and open-plan offices. New stage: banner; every new room: a BUILD line in the live feed and its furniture pops in. Revert point before this work: branch `snapshot/pixel-dense-v1`.
+- **Readable from far away (owner, 2026-09-27):** a floor colour per room type (blue desk rooms, orange break rooms, aqua WCs, lilac meeting rooms, deep blue servers, grey copy rooms, brown storage, green lobbies, gold CEO office, red war room), big pixel-font signs over every room that fade in and grow as you zoom out, the stage name over the building, and a light beam from the furnace that widens with each stage. The furnace itself grows (x1, x2, x3). The evil empire gets a red sky, red corridors and darker walls.
+- **Fewer black chairs (owner, 2026-09-27):** empty desks have no chair at all; a light grey chair shows only while its rat is away. Desk rooms are built on demand, so few desks stand empty.
+- **Debug slider:** `?rats=N` (1 to 5000) shows the company at N rats (synthetic roster), with a slider and stage jump buttons. Live hires are ignored in that mode.
 - **Dense floor (owner, 2026-09-27):** the Phase 3 floor read as a spreadsheet. Rebuilt as one packed building (`src/floor/`): a slicing floor plan with 2-cell corridors only at the top splits and shared walls below, so rooms touch. HQ shrunk to about 10x10 in the centre. New room types: break room, bathroom, server room, copy room, meeting room, storage, lobby, the CEO corner office (partners sit there while it has desks). A big stock gets several stock rooms of different sizes, each laid out one of six ways (columns, rows, split, perimeter + island, pods, mixed) with jittered desks, mirrored clusters and clutter. About 7% of rats are away from their desks at any time: coffee, water cooler, vending, chats, bathroom queue, copier, filing, meetings, whiteboard, server checks, furnace watching, corridor strolls, box runs, smokers outside, naps at the desk. Night sky backdrop, street ring with lamps and the subway stairs outside the lobby.
 - **Dense floor art budget (owner, 2026-09-27):** stay free; kitbash and draw clutter in code; PixelLab only for hero props. Before that message arrived 3 generations had gone on 3 prop sheets (vending machine and server rack among them); after it, 1 hero generation (coffee machine). Gold CEO desk is a free recolor. Everything else is kitbashed or drawn in `tools/build_props2.py`.
 - **Data loading (owner, 2026-09-27):** `/api/rats` is about 1.7 MB at 3,000 rats. Load it once on page open, then follow `/api/events` (every 5 s) for new hires, freezes and burns. Never re-poll the full roster. Live PnL and tiers are recomputed in the browser from `/api/state` stock prices with the `@rat/contract` display math (`valueUsd = tokenAmount x priceUsd`). A rat hired after page load has no `tokenAmount` in its hire event, so its value is estimated as `costUsd x price_now / price_at_hire` (price at hire = the stock price in the latest `/api/state` when the hire event arrives). Small error from slippage; exact again after a reload.
@@ -18,6 +22,7 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Blockers
 
+- **Git tags cannot be pushed through the git proxy (HTTP 403)**, so the revert point is a branch: `snapshot/pixel-dense-v1` (commit 6bc2627, the dense floor before the idle game).
 - **CC0 asset hosts are blocked by the network policy** (itch.io, img.itch.zone, kenney.nl, opengameart.org all refused at CONNECT). No third-party props were used, so there are no outside licenses to log. To try CC0 props later, add those hosts under the environment's Network access settings.
 - **Real-GPU frame rate for the dense floor is still unmeasured.** Measured here (headless Chromium, software rasterizer): whole frame on the CPU 2.4 ms with the mock's ~560 rats, 7.2 ms zoomed in and 5.9 ms (max 17) zoomed all the way out at 3,000 rats with about 80 walking. Our own per-frame code is 1 to 2 ms; the rest is the software renderer drawing about 22k sprites plus a 70k-tile floor. Confirm on a real machine with `?perf=1&stress=3000`.
 - **PixelLab `animate_character` v3 (custom action) fails instantly** on this account's character ("Generation failed, try a lower frame_count or smaller character size" at 8 and 4 frames; failures uncharged). Worked around with `edit_image_pixen` (seated pose) + `animate_image` (type, slump, cheer) at the same cost, 1 generation each. PixelLab's help bot confirms v3 is not trial-locked; cause unknown.
@@ -47,6 +52,21 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | `create_map_object` (basic, any size up to 400x400) | 1 |
 | `create_building_kit`, `create_tiles_pro`, `create_character_state`, objects | 20 to 40 (out of budget) |
 | `pixelart_workbench` (recolor, edit, draw) | free |
+
+### Idle game: assets per stage (nothing generated yet, 4 generations left)
+
+Every stage works today with existing art, kitbashes and code-drawn pieces. Optional hero props, 1 generation each (`create_map_object`), waiting on the owner's go:
+
+| Stage | Uses now (free) | Optional hero prop |
+|---|---|---|
+| Garage startup | concrete floor (tinted tile), boxes, sofa, coffee machine, small furnace | garage roll-up door, workbench |
+| Small office | shared desks, break room, WC, lobby | none needed |
+| Full floor | desk rooms with tickers, meeting, server, copy, storage | glass partition wall |
+| Corporate floor | gold CEO desk (recolor), marble | elevator doors, gold rat statue |
+| Megacorp | TV walls (kitbash), furnace x2 | security turnstiles |
+| Evil empire | red sky, red corridors, dark walls, furnace x3 and a wide beam | evil throne |
+
+7 candidates for 4 generations; suggested: garage door, gold rat statue, elevator, evil throne.
 
 ### Generation log
 

@@ -21,8 +21,14 @@ export class Effects {
 
   constructor(
     private readonly atlas: Atlas,
-    private readonly world: World,
+    private world: World,
   ) {
+    this.baseGlow = world.furnaceGlow.scale.x;
+  }
+
+  /** The world was rebuilt: aim at the new furnace. */
+  setWorld(world: World): void {
+    this.world = world;
     this.baseGlow = world.furnaceGlow.scale.x;
   }
 

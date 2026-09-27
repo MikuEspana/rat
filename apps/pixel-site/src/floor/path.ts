@@ -12,13 +12,18 @@ export class Paths {
   private readonly order: number[] = [];
   computed = 0;
 
+  private readonly blocked: Uint8Array;
+
   constructor(
     private readonly L: FloorLayout,
     private readonly cacheSize = 96,
-  ) {}
+    blocked?: Uint8Array,
+  ) {
+    this.blocked = blocked ?? L.blocked;
+  }
 
   private walkable(k: number): boolean {
-    return this.L.blocked[k] === 0;
+    return this.blocked[k] === 0;
   }
 
   /** Distance (in steps) from every cell to `target`. */

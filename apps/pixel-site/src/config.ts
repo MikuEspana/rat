@@ -13,5 +13,7 @@ export const POLL_EVENTS_MS = 5000; // CONTRACT.md: /api/events every 5 s (the r
 export const STRESS_RATS = num('stress', 0); // debug: pad the roster to this many rats
 export const STRESS_WALKERS = num('walkers', 0); // debug: synthetic hires per 10 s
 export const SHOW_PERF = params.has('perf');
+/** debug: run the idle game at exactly this many rats (1 to 5000), with a slider to scrub through the stages */
+export const DEBUG_RATS = params.has('rats') ? Math.max(1, Math.min(5000, Math.round(num('rats', 1)))) : 0;
 /** Stock 24h change beyond this counts as up (cheer) or down (slump). */
 export const MOOD_THRESHOLD_PCT = 0.25;

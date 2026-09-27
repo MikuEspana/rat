@@ -8,6 +8,7 @@ import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, type LayerItem, type SortedLayer } from '../gfx/layer';
 import { cellCentre, type Cell } from '../iso';
 import { Paths } from '../floor/path';
+import type { Growth } from '../floor/growth';
 import { hash32 } from '../floor/rng';
 import { standCells } from '../floor/plan';
 import type { Face, FloorLayout, Seat, Spot } from '../floor/types';
@@ -74,16 +75,18 @@ export class RatSystem {
   private list: Agent[] = [];
   private moods = new Map<string, Mood>();
   private walkers = new Set<Agent>();
-  private owner: Int32Array;
-  private pools = new Map<string, Seat[]>();
-  private ceoSeats: Seat[];
+  /** CEO office desks in use (partners), by seat id */
+  private ceoOwner = new Map<number, number>();
+  private ceoSeats: Seat[] = [];
+  private spots: Spot[] = [];
+  private spawn: Cell;
   private taken = new Set<number>(); // spot ids in use
   private strollCells: Cell[];
   private spotsByKind = new Map<string, Spot[]>();
   /** spots by 24-cell neighbourhood, so errands stay local */
   private spotGrid = new Map<string, Spot[]>();
   private stand = new Map<number, Cell[]>();
-  private readonly paths: Paths;
+  private paths: Paths;
   private time = 0;
   private tripClock = 0;
   private away = 0;
@@ -95,23 +98,31 @@ export class RatSystem {
   constructor(
     private readonly atlas: Atlas,
     private readonly layout: FloorLayout,
-    private readonly layer: SortedLayer,
+    private readonly growth: Growth,
+    private layer: SortedLayer,
+    private blocked: Uint8Array,
   ) {
-    this.paths = new Paths(layout, layout.W * layout.H > 40000 ? 48 : 128);
-    this.owner = new Int32Array(layout.seats.length).fill(-1);
-    for (const r of layout.rooms) {
-      if (r.kind !== 'stock' || !r.symbol) continue;
-      const l = this.pools.get(r.symbol) ?? [];
-      l.push(...r.seats);
-      this.pools.set(r.symbol, l);
-    }
-    // fill order is a fixed shuffle, so half-full rooms look evenly busy
-    for (const [sym, l] of this.pools) l.sort((x, y) => hash32(`${sym}:${x.id}`) - hash32(`${sym}:${y.id}`));
-    this.ceoSeats = [...layout.ceo.seats];
-    const corridor = layout.corridor;
+    this.paths = new Paths(layout, 64, blocked);
+    this.spawn = layout.rings[growth.stage]!.spawn;
+    this.strollCells = [];
+    this.boxFrame = atlas.frame('world:box_s');
+    this.index();
+  }
+
+  /** What rats can use right now: spots in built rooms, the current street, built corridors, the CEO office. */
+  private index(): void {
+    const L = this.layout;
+    const g = this.growth;
+    this.spawn = L.rings[g.stage]!.spawn;
+    this.ceoSeats = L.ceo.kind === 'ceo' && g.isBuilt(L.ceo) ? [...L.ceo.seats] : [];
+    this.spots = L.spots.filter((s) => (s.room >= 0 ? g.built[s.room] === 1 : s.ring === g.stage));
+    this.spotsByKind.clear();
+    this.spotGrid.clear();
+    this.stand.clear();
+    const corridor = L.corridor.filter((c) => !this.blocked[c.j * L.W + c.i]);
     this.strollCells = [];
     for (let k = 0; k < 40 && corridor.length; k++) this.strollCells.push(corridor[hash32(`stroll:${k}`) % corridor.length]!);
-    for (const s of layout.spots) {
+    for (const s of this.spots) {
       const l = this.spotsByKind.get(s.kind) ?? [];
       l.push(s);
       this.spotsByKind.set(s.kind, l);
@@ -124,7 +135,32 @@ export class RatSystem {
         }
       }
     }
-    this.boxFrame = atlas.frame('world:box_s');
+  }
+
+  /** The world was rebuilt (a room went up): move every rat onto the new layer and walk mask. */
+  rebind(layer: SortedLayer, blocked: Uint8Array): void {
+    this.layer = layer;
+    this.blocked = blocked;
+    this.paths = new Paths(this.layout, 64, blocked);
+    this.index();
+    for (const a of this.list) {
+      a.item = layer.add(a.item.p, this.depthOf(a));
+      if (a.box) a.box = layer.add(a.box.p, this.depthOf(a) + 0.01);
+      if (a.seat && !a.seated) this.onChair(a.seat.id, true);
+    }
+    // rats that just got a desk in a new room walk over to it
+    for (const id of this.growth.moved.splice(0)) {
+      const a = this.agents.get(id);
+      const sid = this.growth.seatOfRat.get(id);
+      if (!a || sid === undefined || a.trip || a.mode === 'walk') continue;
+      const seat = this.layout.seats[sid]!;
+      const from = { i: Math.round(a.pos.i), j: Math.round(a.pos.j) };
+      const route = this.paths.route(from, seat.access);
+      a.seat = seat;
+      if (route) this.walkTo(a, [a.pos, ...route, seat.pos], { kind: 'move', spot: null, back: [], stay: 0 });
+      else this.sit(a);
+    }
+    layer.sync(true);
   }
 
   get count(): number {
@@ -143,23 +179,33 @@ export class RatSystem {
     return this.atlas.anim(`${look}/${anim}`);
   }
 
-  private freeSeat(list: Seat[]): Seat | null {
-    for (const s of list) if (this.owner[s.id] === -1) return s;
+  private freeCeo(): Seat | null {
+    for (const s of this.ceoSeats) if (!this.ceoOwner.has(s.id)) return s;
     return null;
   }
 
+  /** Home desk from the growth state; partners take a CEO office desk while one is free. */
   private claim(rec: RatRecord): Seat | null {
-    let seat: Seat | null = null;
-    if (rec.view.tier === 'partner' && rec.facts.status !== 'frozen') seat = this.freeSeat(this.ceoSeats);
-    seat ??= this.freeSeat(this.pools.get(rec.facts.stock) ?? []);
-    if (seat) this.owner[seat.id] = rec.facts.id;
-    return seat;
+    if (rec.view.tier === 'partner' && rec.facts.status !== 'frozen') {
+      const s = this.freeCeo();
+      if (s) {
+        this.ceoOwner.set(s.id, rec.facts.id);
+        return s;
+      }
+    }
+    const sid = this.growth.seatOfRat.get(rec.facts.id);
+    return sid === undefined ? null : this.layout.seats[sid]!;
+  }
+
+  private homeSeat(a: Agent): Seat | null {
+    const sid = this.growth.seatOfRat.get(a.id);
+    return sid === undefined ? null : this.layout.seats[sid]!;
   }
 
   private homeFor(rec: RatRecord): Cell {
-    const room = this.layout.bySymbol.get(rec.facts.stock)?.[0] ?? this.layout.hq;
+    const room = this.layout.hq;
     let cells = this.stand.get(room.id);
-    if (!cells) this.stand.set(room.id, (cells = standCells(this.layout, room)));
+    if (!cells) this.stand.set(room.id, (cells = standCells(this.layout, room, this.blocked)));
     return cells.length ? cells[hash32(`home:${rec.facts.id}`) % cells.length]! : { i: room.i0 + 1, j: room.j0 + 1 };
   }
 
@@ -254,7 +300,7 @@ export class RatSystem {
     const home = seat ? seat.pos : this.homeFor(rec);
     const look = lookOf(rec);
     const first = this.frames(look, 'type')[0]!;
-    const start = walk ? { ...this.layout.spawn } : { ...home };
+    const start = walk ? { ...this.spawn } : { ...home };
     const c = cellCentre(start.i, start.j);
     const item = this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0);
     const a: Agent = {
@@ -266,7 +312,7 @@ export class RatSystem {
     this.list.push(a);
     if (walk) {
       const target = seat ? seat.access : home;
-      const back = this.paths.route(target, this.layout.spawn);
+      const back = this.paths.route(target, this.spawn);
       const route = back ? back.reverse() : [start, target];
       this.walkTo(a, seat ? [...route, seat.pos] : route, null);
     } else {
@@ -334,18 +380,18 @@ export class RatSystem {
   /** Promoted to partner: move into the corner office if a desk is free there. Demoted: back to the stock's rooms. */
   private relocate(a: Agent): boolean {
     if (!a.seat || a.look === 'frozen') return false;
-    const inCeo = a.seat.room === this.layout.ceo.id;
+    const inCeo = this.ceoOwner.get(a.seat.id) === a.id;
     const partner = a.rec.view.tier === 'partner';
     let next: Seat | null = null;
-    if (partner && !inCeo) next = this.freeSeat(this.ceoSeats);
-    else if (!partner && inCeo) next = this.freeSeat(this.pools.get(a.rec.facts.stock) ?? []);
+    if (partner && !inCeo) next = this.freeCeo();
+    else if (!partner && inCeo) next = this.homeSeat(a);
     if (!next) return false;
     const route = this.paths.route(a.seat.access, next.access);
     if (!route) return false;
     const from = a.seat;
     this.standUp(a);
-    this.owner[from.id] = -1;
-    this.owner[next.id] = a.id;
+    if (inCeo) this.ceoOwner.delete(from.id);
+    if (partner) this.ceoOwner.set(next.id, a.id);
     a.seat = next;
     a.home = next.access;
     this.walkTo(a, [from.pos, ...route, next.pos], { kind: 'move', spot: null, back: [], stay: 0 });
@@ -387,7 +433,7 @@ export class RatSystem {
         stay = 1.2 + Math.random();
       } else {
         const near = this.spotGrid.get(`${Math.floor(a.seat.access.i / 24)},${Math.floor(a.seat.access.j / 24)}`);
-        spot = this.nearestFree(a, near && near.length > 3 ? near : this.layout.spots, 6, false);
+        spot = this.nearestFree(a, near && near.length > 3 ? near : this.spots, 6, false);
       }
       if (spot) targetCell = spot.cell;
       if (!targetCell) continue;

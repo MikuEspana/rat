@@ -1,6 +1,6 @@
 # RAT RACE pixel site
 
-An isometric pixel-art office building at night that you pan around and click into. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Burns send cash bags flying into the HQ furnace.
+An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, an evil empire. Pan around and click into it. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Burns send cash bags flying into the HQ furnace.
 
 ## Run it
 
@@ -34,7 +34,20 @@ Controls: drag to pan, mouse wheel or pinch to zoom, click a rat for its card (E
 
 Under 900 px wide the HUD compacts, the leaderboard starts folded and the card becomes a bottom sheet.
 
-Debug URL flags: `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
+Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 5000, with a slider and stage buttons), `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
+
+### Stages
+
+| Rats | Stage | What gets built |
+|---|---|---|
+| under 25 | Garage startup | the garage: furnace, shared desks, couch, boxes, coffee |
+| 25+ | Small office | ring 1: open-plan offices (shared desks), break room, WC, lobby |
+| 100+ | Full floor | ring 2: a desk room per stock (on demand), meeting, server, copy, storage |
+| 500+ | Corporate floor | ring 3: the CEO office (partners move in), more of everything |
+| 1500+ | Megacorp | ring 4 |
+| 3000+ | Evil empire | ring 5: war room, vaults, red sky |
+
+Screenshots: `assets/preview/idle_stages_*.png` (every stage at zoom 0.4 and 0.9, and the whole building), `assets/preview/idle_milestone.png`.
 
 ## Data
 
@@ -49,11 +62,12 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 
 | File | What |
 |---|---|
-| `src/floor/plan.ts` | The building from the stock list: the room list (several stock rooms per big stock, break rooms, bathrooms, meeting, copy, server and storage rooms, the CEO corner office, HQ, the lobby), doors until every room is reachable, the street with the subway stairs and lamps. Pure, deterministic and tested. |
-| `src/floor/pack.ts` | Packs the rooms into one square with no gaps (a slicing floor plan): 2-cell corridors at the top splits, shared walls below, splits chosen for near-square rooms, HQ pinned to the centre. |
+| `src/floor/plan.ts` | The master plan, drawn once: the garage, then one ring per stage (ring corridor, four strips of rooms with shared walls, a lobby with the subway outside), doors that keep each ring connected on its own, amenity thresholds, the build order of desk-room slots. Pure, deterministic and tested. |
+| `src/floor/growth.ts` | The idle game: replays rats in id order, builds stages, amenities and desk rooms on demand, gives every rat a desk, and the walk mask of what stands. |
+| `src/floor/pack.ts` | Packs rooms into a rectangle with no gaps (a slicing floor plan), splits chosen for near-square rooms. |
 | `src/floor/furnish.ts` | Fills each room: desk clusters in six layouts with jitter and mirrored orientations, props along walls, activity spots, clutter that never cuts off a chair, things hung on walls. |
 | `src/floor/path.ts` | Walking routes: breadth-first distance fields (cached per target, windowed for short errands), walked with as few turns as possible. |
-| `src/world/build.ts` | Tiles, walls, desks, chairs, props, wall pieces, stairs, furnace, lamp glows, blinking server lights, wall tickers (5x7 pixel font, pre-skewed onto either back wall). |
+| `src/world/build.ts` | What stands: tiles in room-type colours, empty lots, the street, walls, desks, props, wall pieces, furnace and light beam, glows, blinking server lights, wall tickers, room signs. Rebuilt when something gets built; new rooms pop in. |
 | `src/world/rats.ts` | One particle per rat: walk, type, slump, cheer, nap, stand, sit, frozen; errands to activity spots; box carrying; desk pools (CEO office for partners); chairs reappear when a rat gets up. |
 | `src/gfx/sky.ts` | The night sky behind the building. |
 | `src/world/effects.ts` | Burn: cash bags arc from desks into the furnace, furnace flares. |

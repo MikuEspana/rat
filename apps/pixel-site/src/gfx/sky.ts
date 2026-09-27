@@ -4,16 +4,26 @@ import { Sprite, Texture } from 'pixi.js';
 export class Sky {
   readonly sprite = new Sprite(Texture.EMPTY);
   private tex: Texture | null = null;
+  private evil = false;
+  private size = { w: 1, h: 1 };
+
+  /** The evil empire gets a blood-red horizon. */
+  setEvil(on: boolean): void {
+    if (on === this.evil) return;
+    this.evil = on;
+    this.resize(this.size.w, this.size.h);
+  }
 
   resize(w: number, h: number): void {
+    this.size = { w, h };
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.ceil(w / 2));
     c.height = Math.max(1, Math.ceil(h / 2));
     const ctx = c.getContext('2d')!;
     const g = ctx.createLinearGradient(0, 0, 0, c.height);
-    g.addColorStop(0, '#03050c');
-    g.addColorStop(0.55, '#0a1124');
-    g.addColorStop(1, '#151d3a');
+    g.addColorStop(0, this.evil ? '#0a0205' : '#03050c');
+    g.addColorStop(0.55, this.evil ? '#26070d' : '#0a1124');
+    g.addColorStop(1, this.evil ? '#5a0e16' : '#151d3a');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, c.width, c.height);
     // stars: fixed pseudo-random field, denser and brighter near the top
