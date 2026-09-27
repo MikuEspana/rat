@@ -1,5 +1,5 @@
 // Alerts: Telegram (throttled per key) and console. Alert failures never break the bot.
-import type { AlertLevel, Alerts, Clock, Logger } from '@rat/core';
+import { type AlertLevel, type Alerts, type Clock, type Logger, redactSecrets } from '@rat/core';
 
 const ICON: Record<AlertLevel, string> = { info: 'i', warn: '!', critical: '!!!' };
 
@@ -17,7 +17,8 @@ export class ThrottledAlerts implements Alerts {
     const last = this.lastSent.get(key);
     if (last !== undefined && now - last < this.throttleMs) return;
     this.lastSent.set(key, now);
-    await this.sink(level, text);
+    // an error text can carry an RPC URL with its api key: never send that to a chat
+    await this.sink(level, redactSecrets(text));
   }
 }
 

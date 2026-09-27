@@ -9,7 +9,7 @@ import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { Command } from 'commander';
 import { dryRunResetCommand } from './commands/dry-run';
-import { keysImportRoleCommand, keysRotateCommand } from './commands/keys';
+import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { ledgerShowCommand } from './commands/ledger';
 import { printPreflight, runPreflightChecks, telegramCheck } from './commands/preflight';
@@ -73,6 +73,18 @@ keys
       await keysRotateCommand(ctx, r);
     }),
   );
+
+keys
+  .command('backup')
+  .description('write every stored key (rat wallets, creator, fund) to a file, still encrypted; every key is checked first')
+  .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force)')
+  .option('--force', 'overwrite an existing file')
+  .action((o) => withContext(async (ctx, cfg) => void (await keysBackupCommand(ctx, ring(cfg), o.out, { force: Boolean(o.force) }))));
+keys
+  .command('restore')
+  .description('restore keys from a backup file (every key must decrypt with KEY_ENCRYPTION_KEY; existing keys are kept)')
+  .requiredOption('--in <file>', 'backup file')
+  .action((o) => withContext(async (ctx, cfg) => void (await keysRestoreCommand(ctx, ring(cfg), o.in))));
 
 program
   .command('ledger')
@@ -164,6 +176,15 @@ program
             return q.usdPrice;
           },
           telegram: () => telegramCheck(cfg.telegram.botToken ?? '', cfg.telegram.chatId ?? ''),
+          ratKeys:
+            store && cfg.keyEncryptionKey
+              ? async () => {
+                  const records = (await store!.keys.all()).filter((r) => r.role === 'rat');
+                  const have = new Set(records.map((r) => r.pubkey));
+                  const rats = await store!.rats.listByStatus(['hiring', 'active', 'frozen', 'failed']);
+                  return { total: records.length, bad: verifyKeyRecords(records, ring(cfg)).bad.length, ratsWithoutKey: rats.filter((r) => !have.has(r.wallet)).length };
+                }
+              : undefined,
           now: () => Date.now(),
         },
         { live: Boolean(o.live) },

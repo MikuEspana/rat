@@ -25,6 +25,8 @@ export interface PreflightDeps {
   jupiterSolPrice: () => Promise<number>;
   /** Telegram bot + chat check (read-only: getMe + getChat) */
   telegram: () => Promise<{ ok: boolean; detail: string }>;
+  /** every stored rat key decrypts with the current master key, and every rat has a stored key */
+  ratKeys?: () => Promise<{ total: number; bad: number; ratsWithoutKey: number }>;
   now: () => number;
 }
 
@@ -132,6 +134,20 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
       } catch (err) {
         add('FAIL', `${role} key`, errText(err));
       }
+    }
+  }
+
+  // 6b. rat wallet keys: they exist nowhere else (back them up with rat keys backup)
+  if (d.ratKeys) {
+    try {
+      const k = await d.ratKeys();
+      if (k.bad > 0 || k.ratsWithoutKey > 0) {
+        add('FAIL', 'rat keys', `${k.bad} of ${k.total} stored rat keys do not decrypt with KEY_ENCRYPTION_KEY, ${k.ratsWithoutKey} rats have no stored key. Their tokens cannot be moved.`);
+      } else {
+        add('PASS', 'rat keys', `${k.total} rat wallet keys stored, all decrypt with the current master key. Back them up: rat keys backup --out <file>.`);
+      }
+    } catch (err) {
+      add('FAIL', 'rat keys', `check failed: ${errText(err)}`);
     }
   }
 

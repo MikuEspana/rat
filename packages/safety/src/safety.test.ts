@@ -384,6 +384,26 @@ describe('red team: SpendGuard races and overspend', () => {
   });
 });
 
+describe('secrets never reach a chat or the attempt log', () => {
+  it('alert texts and stored send errors are redacted', async () => {
+    const sent: string[] = [];
+    const a = new ThrottledAlerts(async (_l, t) => void sent.push(t), clock, 0);
+    await a.send('warn', 'task_failing_claim', 'claim failed 3 times: request to https://rpc.example/?api-key=TOPSECRET failed');
+    expect(sent[0]).toBe('claim failed 3 times: request to https://rpc.example/?api-key=[redacted] failed');
+    const chain = new SimChain();
+    const sim = new SimTxSender(chain);
+    const payer = Keypair.generate();
+    chain.fundAccount(payer.publicKey.toBase58(), SOL);
+    sim.submit = async () => {
+      throw new Error('request to https://rpc.example/?api-key=TOPSECRET failed');
+    };
+    const gs = new GuardedSender(sim, { attempts: store.attempts, killSwitch: new DbKillSwitch(store.settings, false), dryRun: false });
+    const ix = SystemProgram.transfer({ fromPubkey: payer.publicKey, toPubkey: Keypair.generate().publicKey, lamports: 1 });
+    await gs.execute({ request: { kind: 'sweep', label: 's', feePayer: payer, signers: [], instructions: [ix], computeUnitLimit: 1 }, ref: { type: 'sweep', id: '1' } });
+    expect((await store.attempts.latestForRef('sweep', '1'))?.error).not.toContain('TOPSECRET');
+  });
+});
+
 describe('limitViolations', () => {
   it('flags every broken limit and a simulation that did not report all accounts', () => {
     const limits = { solOut: [{ account: 'A', maxLamports: 100n }], tokens: [{ owner: 'R', mint: 'M', tokenProgram: TOKEN_2022_PROGRAM, minDelta: 5n }] };
