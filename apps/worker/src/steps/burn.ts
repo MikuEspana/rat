@@ -118,9 +118,13 @@ async function reconcileOpenBurns(d: WorkerDeps): Promise<void> {
   }
 }
 
-/** SOL the fund may burn right now: min(burn bucket, fund wallet - reserve, room under the hourly cap). */
+/**
+ * SOL the fund may burn right now: min(burn bucket - fund share still owed, fund wallet - reserve, room under the
+ * hourly cap). A fund share that is booked but still sits in the creator wallet (it rides in the next claim tx)
+ * is not burnable yet: burning it early would spend the fund's own SOL.
+ */
 async function burnSpendable(d: WorkerDeps, alertOnCap: boolean): Promise<bigint> {
-  let spendable = await d.store.ledger.balance('burn');
+  let spendable = (await d.store.ledger.balance('burn')) - (await d.store.claims.pendingFundTransfer());
   if (d.store.mode === 'live') {
     const sol = (await d.chain.getSolBalances([d.fund])).get(d.fund) ?? 0n;
     spendable = minBig(spendable, sol - d.config.fundReserveLamports);
