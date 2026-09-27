@@ -25,6 +25,8 @@ type Cmd =
   | { t: 'authorize'; bucket: Bucket; lamports: bigint; parallel: number }
   | { t: 'settle'; pick: number; pct: number }
   | { t: 'release'; pick: number }
+  /** settle or release an ALREADY closed reservation again (a retry after a crash): must book nothing */
+  | { t: 'reclose'; pick: number; settle: boolean; pct: number }
   | { t: 'advance'; seconds: number }
   | { t: 'kill'; on: boolean };
 
@@ -49,6 +51,7 @@ const cmdArb = (x: Scale): fc.Arbitrary<Cmd> =>
     { weight: 5, arbitrary: fc.record({ t: fc.constant('authorize' as const), bucket, lamports: fc.bigInt({ min: -1n, max: x.spend }), parallel: fc.integer({ min: 1, max: 4 }) }) },
     { weight: 2, arbitrary: fc.record({ t: fc.constant('settle' as const), pick: fc.nat(), pct: fc.integer({ min: 0, max: 100 }) }) },
     { weight: 1, arbitrary: fc.record({ t: fc.constant('release' as const), pick: fc.nat() }) },
+    { weight: 1, arbitrary: fc.record({ t: fc.constant('reclose' as const), pick: fc.nat(), settle: fc.boolean(), pct: fc.integer({ min: 0, max: 150 }) }) },
     { weight: 1, arbitrary: fc.record({ t: fc.constant('advance' as const), seconds: fc.integer({ min: 1, max: 5_400 }) }) },
     { weight: 1, arbitrary: fc.record({ t: fc.constant('kill' as const), on: fc.boolean() }) },
   );
@@ -94,6 +97,7 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
   );
   const m = new Model();
   const open: Reservation[] = [];
+  const closed: Reservation[] = [];
   let credited = 0n;
   let fees = 0n;
 
@@ -139,6 +143,7 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
         const actual = (r.lamports * BigInt(c.pct)) / 100n;
         await guard.settle(r, actual);
         if (actual !== r.lamports) m.entries.push({ bucket: r.bucket, delta: r.lamports - actual, spend: true, at: now });
+        closed.push(r);
         break;
       }
       case 'release': {
@@ -146,7 +151,15 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
         const r = open.splice(c.pick % open.length, 1)[0]!;
         await guard.release(r, 'test');
         m.entries.push({ bucket: r.bucket, delta: r.lamports, spend: true, at: now });
+        closed.push(r);
         break;
+      }
+      case 'reclose': {
+        if (closed.length === 0) break;
+        const r = closed[c.pick % closed.length]!;
+        if (c.settle) await guard.settle(r, (r.lamports * BigInt(c.pct)) / 100n);
+        else await guard.release(r, 'retry');
+        break; // the model does not change: nothing may be booked
       }
       case 'advance':
         clock.advanceSeconds(c.seconds);
