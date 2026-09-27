@@ -1,0 +1,188 @@
+# Frontend Contract (schemaVersion 1)
+
+This is the exact JSON the website reads. Animate against the mock files now, then switch the base URL to the live API.
+
+- Mock files: `packages/contract/mock/state.json`, `rats.json`, `events.json` (250 rats, 10 stocks, COINx paused so you can see frozen rats).
+- TypeScript types + zod schemas + display math: `packages/contract` (`@rat/contract`). Browser safe: no Node APIs, only `zod`.
+
+## Endpoints
+
+| Endpoint | Poll | Size | Purpose |
+|---|---|---|---|
+| `GET /api/state` | every 5s | small (~30-50KB) | bot status, coin, treasury, portfolio, stocks, leaderboard, last 50 events |
+| `GET /api/rats` | every 30s | large (6,000 rats ~ 300-400KB gzipped) | full roster with live PnL. `?afterId=N` returns only rats with id > N |
+| `GET /api/events?afterId=N&limit=100` | every 5s | small | event feed, oldest first after `afterId` (limit max 500) |
+| `GET /health` | n/a | tiny | `{ ok, mode, heartbeatAgeSec }` |
+
+All responses: `Content-Type: application/json`, gzip, CORS open, cached 3s (`Cache-Control: public, max-age=3, s-maxage=3`).
+
+## Rules
+
+- Every response has `schemaVersion: 1` and `generatedAt`.
+- SOL and USD values are JSON **numbers** (display only). Token amounts are **strings** (decimal, UI units).
+- Times are ISO 8601 UTC strings.
+- Rats never disappear. Frozen rats stay in the list with `status: "frozen"`, valued at the last known price.
+- Dry run: `bot.mode === "dry_run"` and every event has `dryRun: true`. Show a banner.
+
+## Display math (same code on server and site: `@rat/contract`)
+
+| Field | Formula |
+|---|---|
+| `valueUsd` | `tokenAmount x stock.priceUsd` (`tokenAmount` is already scaled for stock splits) |
+| `costUsd` | SOL that went into the swap x SOL/USD at hire time. New rats start slightly red from slippage (honest). |
+| `pnlUsd` | `valueUsd - costUsd` |
+| `pnlPct` | `pnlUsd / costUsd x 100` (0 when cost is 0) |
+| `rank` | sort by `pnlPct` desc, ties: earlier `hiredAt`, then lower `id`. 1 = best |
+| `tier` | by `pnlPct`: `intern` < 0 <= `analyst` < 10 <= `associate` < 25 <= `vp` < 50 <= `partner` |
+| `sizeScale` | `clamp(1 + pnlPct / 100, 0.5, 3)` |
+| `avatarSeed` | first 8 hex chars of sha256(wallet), computed server side. Same wallet, same avatar, forever. |
+| `allocationPct` | stock `valueUsd` / portfolio `valueUsd` x 100 |
+| `hireWeightPct` | chance a new hire gets this stock right now (24h return rank weighting, 5% floor, 0 when paused) |
+
+Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices unrounded.
+
+## Enums
+
+| Field | Values |
+|---|---|
+| `bot.mode` | `live`, `dry_run`, `paused` (kill switch on) |
+| `stock.status` | `active`, `paused` |
+| `rat.status` | `active`, `frozen` |
+| `rat.tier` | `intern`, `analyst`, `associate`, `vp`, `partner` |
+| `event.type` | `claim`, `hire`, `burn`, `freeze`, `unfreeze` |
+| `claim.data.source` | `bot` (our claim), `external` (someone else triggered our claim, auto split the same way) |
+| `freeze.data.scope` | `stock` (issuer paused the whole stock), `rat` (one rat's account frozen or mismatched) |
+
+## `GET /api/state`
+
+```json
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-01T18:00:05Z",
+  "bot": {
+    "mode": "live",
+    "lastClaimAt": "2026-10-01T17:59:50Z",
+    "nextClaimAt": "2026-10-01T18:00:25Z",
+    "nextBurnAt": "2026-10-01T18:08:00Z"
+  },
+  "coin": {
+    "mint": "COINMINTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxpump",
+    "symbol": "RAT",
+    "priceUsd": 0.00182,
+    "supply": "987654321.12",
+    "marketCapUsd": 1797531,
+    "burnedTokens": "12345678.90"
+  },
+  "wallets": {
+    "creator": "CREATORxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "fund": "FUNDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "treasury": {
+    "totalClaimedSol": 182.4,
+    "totalToHiresSol": 91.2,
+    "totalToFundSol": 91.2,
+    "fundWalletSol": 2.31,
+    "totalBurnSpentSol": 88.89,
+    "burnCount": 41,
+    "lastBurnAt": "2026-10-01T17:58:00Z"
+  },
+  "portfolio": {
+    "ratCount": 2987,
+    "activeCount": 2950,
+    "frozenCount": 37,
+    "costUsd": 16420.5,
+    "valueUsd": 17102.9,
+    "pnlUsd": 682.4,
+    "pnlPct": 4.16
+  },
+  "stocks": [
+    {
+      "symbol": "TSLAx",
+      "name": "Tesla",
+      "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+      "priceUsd": 412.33,
+      "change24hPct": 6.2,
+      "status": "active",
+      "ratCount": 512,
+      "costUsd": 2811.2,
+      "valueUsd": 3001.4,
+      "pnlUsd": 190.2,
+      "pnlPct": 6.77,
+      "allocationPct": 17.55,
+      "hireWeightPct": 14.1
+    }
+  ],
+  "leaderboard": { "top": [], "bottom": [] },
+  "events": []
+}
+```
+
+- `coin.*` fields are `null` before launch (no `COIN_MINT` yet), except `symbol` and `burnedTokens`.
+- `bot.lastClaimAt`, `treasury.lastBurnAt`, `bot.nextBurnAt` can be `null`.
+- `stock.priceUsd` and `stock.change24hPct` can be `null` if Jupiter has no fresh price.
+- `leaderboard.top` = 10 best `RatView`, `leaderboard.bottom` = 10 worst (worst first).
+- `events` = last 50 events, newest first.
+
+## `RatView` (same shape in `/api/rats` and the leaderboard)
+
+```json
+{
+  "id": 1042,
+  "name": "Rat #1042",
+  "wallet": "7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT",
+  "solscanUrl": "https://solscan.io/account/7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT",
+  "stock": "TSLAx",
+  "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+  "status": "active",
+  "avatarSeed": "a91f3c07",
+  "hiredAt": "2026-10-01T17:40:12Z",
+  "hireTx": "5hTx...sig",
+  "tokenAmount": "0.014139",
+  "costUsd": 5.41,
+  "valueUsd": 5.83,
+  "pnlUsd": 0.42,
+  "pnlPct": 7.76,
+  "rank": 88,
+  "tier": "analyst",
+  "sizeScale": 1.08
+}
+```
+
+`name` is `"Rat #" + id` padded to 4 digits (`Rat #0042`, `Rat #1042`, `Rat #12345`).
+
+## `GET /api/rats`
+
+```json
+{ "schemaVersion": 1, "generatedAt": "2026-10-01T18:00:05Z", "total": 2987, "rats": [ "RatView..." ] }
+```
+
+Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
+
+## `GET /api/events`
+
+```json
+{ "schemaVersion": 1, "generatedAt": "2026-10-01T18:00:05Z", "lastId": 90213, "events": [ "Event..." ] }
+```
+
+## Event shapes
+
+```json
+[
+  { "id": 90210, "type": "claim", "at": "2026-10-01T17:59:50Z", "txSig": "3cL...", "txUrl": "https://solscan.io/tx/3cL...", "dryRun": false,
+    "data": { "amountSol": 1.284, "toHiresSol": 0.642, "toFundSol": 0.642, "source": "bot" } },
+  { "id": 90211, "type": "hire", "at": "2026-10-01T17:59:58Z", "txSig": "5hT...", "txUrl": "https://solscan.io/tx/5hT...", "dryRun": false,
+    "data": { "ratId": 1042, "ratName": "Rat #1042", "wallet": "7xKp...RAT", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
+  { "id": 90212, "type": "burn", "at": "2026-10-01T18:00:01Z", "txSig": "4bR...", "txUrl": "https://solscan.io/tx/4bR...", "dryRun": false,
+    "data": { "solSpent": 2.4, "tokensBurned": "7123456.12" } },
+  { "id": 90213, "type": "freeze", "at": "2026-10-01T18:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
+    "data": { "scope": "stock", "stock": "COINx", "ratId": null, "ratCount": 37, "reason": "stock_paused" } },
+  { "id": 90214, "type": "unfreeze", "at": "2026-10-01T19:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
+    "data": { "scope": "stock", "stock": "COINx", "ratId": null, "ratCount": 37, "reason": "stock_resumed" } }
+]
+```
+
+Freeze reasons: `stock_paused`, `account_frozen`, `balance_mismatch`. Unfreeze reasons: `stock_resumed`, `account_thawed`, `balance_restored`.
+
+## Versioning
+
+Any breaking change bumps `schemaVersion`. New optional fields can be added without a bump, so ignore unknown fields.

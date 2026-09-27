@@ -1,0 +1,1343 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-01T18:00:05Z",
+  "bot": {
+    "mode": "live",
+    "lastClaimAt": "2026-10-01T17:59:50Z",
+    "nextClaimAt": "2026-10-01T18:00:25Z",
+    "nextBurnAt": "2026-10-01T18:08:05Z"
+  },
+  "coin": {
+    "mint": "RaTRaceMockMint1111111111111111111111111pump",
+    "symbol": "RAT",
+    "priceUsd": 0.00182,
+    "supply": "987654321.12",
+    "marketCapUsd": 1797531,
+    "burnedTokens": "12345678.90"
+  },
+  "wallets": {
+    "creator": "CreatorMockWa11et1111111111111111111111111",
+    "fund": "FundMockWa11et11111111111111111111111111111"
+  },
+  "treasury": {
+    "totalClaimedSol": 15.0,
+    "totalToHiresSol": 7.5,
+    "totalToFundSol": 7.5,
+    "fundWalletSol": 0.62,
+    "totalBurnSpentSol": 6.88,
+    "burnCount": 36,
+    "lastBurnAt": "2026-10-01T17:58:05Z"
+  },
+  "portfolio": {
+    "ratCount": 250,
+    "activeCount": 227,
+    "frozenCount": 23,
+    "costUsd": 1125.6,
+    "valueUsd": 1134.71,
+    "pnlUsd": 9.11,
+    "pnlPct": 0.81
+  },
+  "stocks": [
+    {
+      "symbol": "TSLAx",
+      "name": "Tesla",
+      "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+      "priceUsd": 412.33,
+      "change24hPct": 6.2,
+      "status": "active",
+      "ratCount": 40,
+      "costUsd": 180.0,
+      "valueUsd": 178.31,
+      "pnlUsd": -1.69,
+      "pnlPct": -0.94,
+      "allocationPct": 15.71,
+      "hireWeightPct": 19.29
+    },
+    {
+      "symbol": "MSTRx",
+      "name": "Strategy",
+      "mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+      "priceUsd": 338.1,
+      "change24hPct": -4.8,
+      "status": "active",
+      "ratCount": 35,
+      "costUsd": 157.58,
+      "valueUsd": 155.08,
+      "pnlUsd": -2.5,
+      "pnlPct": -1.59,
+      "allocationPct": 13.67,
+      "hireWeightPct": 5.0
+    },
+    {
+      "symbol": "COINx",
+      "name": "Coinbase",
+      "mint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+      "priceUsd": 291.55,
+      "change24hPct": 3.1,
+      "status": "paused",
+      "ratCount": 23,
+      "costUsd": 103.62,
+      "valueUsd": 103.7,
+      "pnlUsd": 0.08,
+      "pnlPct": 0.08,
+      "allocationPct": 9.14,
+      "hireWeightPct": 0.0
+    },
+    {
+      "symbol": "AMDx",
+      "name": "AMD",
+      "mint": "XsXcJ6GZ9kVnjqGsjBnktRcuwMBmvKWh8S93RefZ1rF",
+      "priceUsd": 164.2,
+      "change24hPct": 2.4,
+      "status": "active",
+      "ratCount": 26,
+      "costUsd": 117.04,
+      "valueUsd": 119.77,
+      "pnlUsd": 2.73,
+      "pnlPct": 2.33,
+      "allocationPct": 10.56,
+      "hireWeightPct": 17.14
+    },
+    {
+      "symbol": "NVDAx",
+      "name": "NVIDIA",
+      "mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+      "priceUsd": 181.75,
+      "change24hPct": 1.7,
+      "status": "active",
+      "ratCount": 37,
+      "costUsd": 166.62,
+      "valueUsd": 173.97,
+      "pnlUsd": 7.35,
+      "pnlPct": 4.41,
+      "allocationPct": 15.33,
+      "hireWeightPct": 15.0
+    },
+    {
+      "symbol": "AAPLx",
+      "name": "Apple",
+      "mint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+      "priceUsd": 238.9,
+      "change24hPct": 0.4,
+      "status": "active",
+      "ratCount": 19,
+      "costUsd": 85.67,
+      "valueUsd": 86.78,
+      "pnlUsd": 1.11,
+      "pnlPct": 1.3,
+      "allocationPct": 7.65,
+      "hireWeightPct": 10.71
+    },
+    {
+      "symbol": "METAx",
+      "name": "Meta",
+      "mint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
+      "priceUsd": 742.15,
+      "change24hPct": -0.9,
+      "status": "active",
+      "ratCount": 17,
+      "costUsd": 76.47,
+      "valueUsd": 77.02,
+      "pnlUsd": 0.55,
+      "pnlPct": 0.72,
+      "allocationPct": 6.79,
+      "hireWeightPct": 5.0
+    },
+    {
+      "symbol": "AMZNx",
+      "name": "Amazon",
+      "mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+      "priceUsd": 228.4,
+      "change24hPct": 0.8,
+      "status": "active",
+      "ratCount": 15,
+      "costUsd": 67.43,
+      "valueUsd": 67.78,
+      "pnlUsd": 0.35,
+      "pnlPct": 0.52,
+      "allocationPct": 5.97,
+      "hireWeightPct": 12.86
+    },
+    {
+      "symbol": "GOOGLx",
+      "name": "Alphabet",
+      "mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+      "priceUsd": 251.6,
+      "change24hPct": -0.3,
+      "status": "active",
+      "ratCount": 22,
+      "costUsd": 99.05,
+      "valueUsd": 99.01,
+      "pnlUsd": -0.04,
+      "pnlPct": -0.04,
+      "allocationPct": 8.73,
+      "hireWeightPct": 6.43
+    },
+    {
+      "symbol": "SPYx",
+      "name": "S&P 500 ETF",
+      "mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+      "priceUsd": 663.05,
+      "change24hPct": 0.2,
+      "status": "active",
+      "ratCount": 16,
+      "costUsd": 72.12,
+      "valueUsd": 73.29,
+      "pnlUsd": 1.17,
+      "pnlPct": 1.62,
+      "allocationPct": 6.46,
+      "hireWeightPct": 8.57
+    }
+  ],
+  "leaderboard": {
+    "top": [
+      {
+        "id": 246,
+        "name": "Rat #0246",
+        "wallet": "MHcb4RLLq9vvk13sRCdZYVhaXGvMaMrpRhSKxSpLrRAT",
+        "solscanUrl": "https://solscan.io/account/MHcb4RLLq9vvk13sRCdZYVhaXGvMaMrpRhSKxSpLrRAT",
+        "stock": "TSLAx",
+        "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "status": "active",
+        "avatarSeed": "333f286e",
+        "hiredAt": "2026-10-01T17:54:35Z",
+        "hireTx": "p8fUo9EKjC8gAnUtAC5DC2Lm53KBgHbEs8KoYZydrxmx86XxgVAuqTegfgJdma7iBZmD8pc24FyUUT2pmpBn141P",
+        "tokenAmount": "0.01386815",
+        "costUsd": 4.51,
+        "valueUsd": 5.72,
+        "pnlUsd": 1.21,
+        "pnlPct": 26.83,
+        "rank": 1,
+        "tier": "vp",
+        "sizeScale": 1.27
+      },
+      {
+        "id": 46,
+        "name": "Rat #0046",
+        "wallet": "is3RyhHrbg4f4j7iv24m8TVR8cHXmAEmkh1LTj7jaRAT",
+        "solscanUrl": "https://solscan.io/account/is3RyhHrbg4f4j7iv24m8TVR8cHXmAEmkh1LTj7jaRAT",
+        "stock": "AMDx",
+        "stockMint": "XsXcJ6GZ9kVnjqGsjBnktRcuwMBmvKWh8S93RefZ1rF",
+        "status": "active",
+        "avatarSeed": "3a5f1d84",
+        "hiredAt": "2026-10-01T13:06:41Z",
+        "hireTx": "Jgfm9Tvz7Zog8K8s7YDfDrHvaDPnTKB3cYEmXNG11j68vdjYA6rZ5oo7zHiFWKHW47uCx3wKQtkMUp87wqy31w9j",
+        "tokenAmount": "0.03398825",
+        "costUsd": 4.48,
+        "valueUsd": 5.58,
+        "pnlUsd": 1.1,
+        "pnlPct": 24.53,
+        "rank": 2,
+        "tier": "associate",
+        "sizeScale": 1.25
+      },
+      {
+        "id": 204,
+        "name": "Rat #0204",
+        "wallet": "FqUGuZjM9WYbdPR8DEV5zjbKLHe4oBxeM4AxSKZ3uRAT",
+        "solscanUrl": "https://solscan.io/account/FqUGuZjM9WYbdPR8DEV5zjbKLHe4oBxeM4AxSKZ3uRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "5c8bedd9",
+        "hiredAt": "2026-10-01T16:53:53Z",
+        "hireTx": "7UJK4GVEkHv7SXb7AzWpsYjZBC51vBh6yYzuebuC7hDHaTBdbNpvYsokfVFqUxuFxubGy8wZCbkMT2NFdqVp2Ysm",
+        "tokenAmount": "0.03063091",
+        "costUsd": 4.47,
+        "valueUsd": 5.57,
+        "pnlUsd": 1.09,
+        "pnlPct": 24.43,
+        "rank": 3,
+        "tier": "associate",
+        "sizeScale": 1.24
+      },
+      {
+        "id": 20,
+        "name": "Rat #0020",
+        "wallet": "6aQ5abZsZc2RxX3hRQHp2Ps5PGojh7repqN93PbNuRAT",
+        "solscanUrl": "https://solscan.io/account/6aQ5abZsZc2RxX3hRQHp2Ps5PGojh7repqN93PbNuRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "bd77b089",
+        "hiredAt": "2026-10-01T12:29:14Z",
+        "hireTx": "iCvrkWmXhCt95nrW3KD3sDy3MLZSubXH3qiDKPxr4xiNJ8tQUySpVzRNCYmYQtaJt6oU6UfuCbKM76MjKLVfnUBm",
+        "tokenAmount": "0.03018528",
+        "costUsd": 4.49,
+        "valueUsd": 5.49,
+        "pnlUsd": 1.0,
+        "pnlPct": 22.32,
+        "rank": 4,
+        "tier": "associate",
+        "sizeScale": 1.22
+      },
+      {
+        "id": 229,
+        "name": "Rat #0229",
+        "wallet": "ze81JP93yEU3ZgmqK55bLhg7FiNyggzCbPPqqGQkdRAT",
+        "solscanUrl": "https://solscan.io/account/ze81JP93yEU3ZgmqK55bLhg7FiNyggzCbPPqqGQkdRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "e9b34728",
+        "hiredAt": "2026-10-01T17:30:12Z",
+        "hireTx": "NA3QR534TYdd1i2SdUuc45bRnVXH3rmzGXZJmk9nyEjDdwKLemQxF21SYWRqwwBNM1EBhPv15YERMH9zSCK7WbHC",
+        "tokenAmount": "0.03010937",
+        "costUsd": 4.47,
+        "valueUsd": 5.47,
+        "pnlUsd": 1.0,
+        "pnlPct": 22.29,
+        "rank": 5,
+        "tier": "associate",
+        "sizeScale": 1.22
+      },
+      {
+        "id": 78,
+        "name": "Rat #0078",
+        "wallet": "moTE9PKGi62XjLBnWwdpe2WWr9xnSCsxQhWnh1xh5RAT",
+        "solscanUrl": "https://solscan.io/account/moTE9PKGi62XjLBnWwdpe2WWr9xnSCsxQhWnh1xh5RAT",
+        "stock": "MSTRx",
+        "stockMint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+        "status": "active",
+        "avatarSeed": "786378da",
+        "hiredAt": "2026-10-01T13:52:24Z",
+        "hireTx": "RzmNa3KUqJmgbdsEsk6gyNp4ZkQy48RQWg3QQCicn5cnrE9NGb8iXpqexmEqpqFMPzJZkUJ45QPVYZav8Xnbkubz",
+        "tokenAmount": "0.01610546",
+        "costUsd": 4.51,
+        "valueUsd": 5.45,
+        "pnlUsd": 0.94,
+        "pnlPct": 20.81,
+        "rank": 6,
+        "tier": "associate",
+        "sizeScale": 1.21
+      },
+      {
+        "id": 213,
+        "name": "Rat #0213",
+        "wallet": "tppi1tEnjdfP9rmeYu2r7FW8AJDUPcMbQRLq9Ew2HRAT",
+        "solscanUrl": "https://solscan.io/account/tppi1tEnjdfP9rmeYu2r7FW8AJDUPcMbQRLq9Ew2HRAT",
+        "stock": "COINx",
+        "stockMint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+        "status": "frozen",
+        "avatarSeed": "2def2cbe",
+        "hiredAt": "2026-10-01T17:06:50Z",
+        "hireTx": "5yprA2AX4U8QgBXFcYJ4Bfg4Voo6UUxe2TF99xKaiz7NMHxBuykhi1FmnxK3G482gQzSYdrhVQUzsLg5QVekrPQK",
+        "tokenAmount": "0.0187428",
+        "costUsd": 4.52,
+        "valueUsd": 5.46,
+        "pnlUsd": 0.94,
+        "pnlPct": 20.8,
+        "rank": 7,
+        "tier": "associate",
+        "sizeScale": 1.21
+      },
+      {
+        "id": 237,
+        "name": "Rat #0237",
+        "wallet": "jsvhUnqHbxHrSXDMVqH9AEEmAABnZ2h7qfKHAPcjwRAT",
+        "solscanUrl": "https://solscan.io/account/jsvhUnqHbxHrSXDMVqH9AEEmAABnZ2h7qfKHAPcjwRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "dfaa35c8",
+        "hiredAt": "2026-10-01T17:41:36Z",
+        "hireTx": "pdAnujkhxCCoPS4RCuygNEQi4zRGvzhsoXxtG5wi8b4JSksYJ7uG1YjMFwcLr8icMA1yj5FrRCSj4ZsKjSFdvoXj",
+        "tokenAmount": "0.02997701",
+        "costUsd": 4.53,
+        "valueUsd": 5.45,
+        "pnlUsd": 0.92,
+        "pnlPct": 20.24,
+        "rank": 8,
+        "tier": "associate",
+        "sizeScale": 1.2
+      },
+      {
+        "id": 209,
+        "name": "Rat #0209",
+        "wallet": "xM5E1MNX3aEhhUcpCk7KLKwaagRRegnYAYwmFUVzhRAT",
+        "solscanUrl": "https://solscan.io/account/xM5E1MNX3aEhhUcpCk7KLKwaagRRegnYAYwmFUVzhRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "eab2881b",
+        "hiredAt": "2026-10-01T17:01:12Z",
+        "hireTx": "sVoKiTAp19QwZpnBQKE5aEtuCnbtu7p9Dv59DfAyvi1hLg64Rp1y6aGTHYBEncWP2bBrXSan6jWCsCzPXWMHpQch",
+        "tokenAmount": "0.02932193",
+        "costUsd": 4.48,
+        "valueUsd": 5.33,
+        "pnlUsd": 0.85,
+        "pnlPct": 18.93,
+        "rank": 9,
+        "tier": "associate",
+        "sizeScale": 1.19
+      },
+      {
+        "id": 207,
+        "name": "Rat #0207",
+        "wallet": "zd7NSBH6kkMCbqNoXCNRBdBSeFxmFNafskQ7FxZ7cRAT",
+        "solscanUrl": "https://solscan.io/account/zd7NSBH6kkMCbqNoXCNRBdBSeFxmFNafskQ7FxZ7cRAT",
+        "stock": "COINx",
+        "stockMint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+        "status": "frozen",
+        "avatarSeed": "bdf1d55a",
+        "hiredAt": "2026-10-01T16:58:39Z",
+        "hireTx": "nSQQ2iYaHRwcM2gMqYrkKuHF1DLhg8ykzZud5v8XfXB4DavnNeGJs36vQESL6MKW7MuMD7EoCQgyEuTXowa7GtUV",
+        "tokenAmount": "0.01816641",
+        "costUsd": 4.49,
+        "valueUsd": 5.3,
+        "pnlUsd": 0.81,
+        "pnlPct": 18.07,
+        "rank": 10,
+        "tier": "associate",
+        "sizeScale": 1.18
+      }
+    ],
+    "bottom": [
+      {
+        "id": 210,
+        "name": "Rat #0210",
+        "wallet": "xd3MAg6ZurwjpWRzjcGo7S4cxCnV8iXC5WkEDVsnoRAT",
+        "solscanUrl": "https://solscan.io/account/xd3MAg6ZurwjpWRzjcGo7S4cxCnV8iXC5WkEDVsnoRAT",
+        "stock": "MSTRx",
+        "stockMint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+        "status": "active",
+        "avatarSeed": "8a2b1a4d",
+        "hiredAt": "2026-10-01T17:02:33Z",
+        "hireTx": "EdieCv2MCCAddgEpTyB7oUtMjwe5hLGccAGzBMiQmGsdwzbEMcLJT8YoiWppyYFBtSKG2dNHxHdtrYgno8CzVfuw",
+        "tokenAmount": "0.00917252",
+        "costUsd": 4.48,
+        "valueUsd": 3.1,
+        "pnlUsd": -1.38,
+        "pnlPct": -30.81,
+        "rank": 250,
+        "tier": "intern",
+        "sizeScale": 0.69
+      },
+      {
+        "id": 15,
+        "name": "Rat #0015",
+        "wallet": "xjaLWi24XwSUk7YnV5z6MfA59JghecnMRfaKWZfU7RAT",
+        "solscanUrl": "https://solscan.io/account/xjaLWi24XwSUk7YnV5z6MfA59JghecnMRfaKWZfU7RAT",
+        "stock": "TSLAx",
+        "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "status": "active",
+        "avatarSeed": "05302780",
+        "hiredAt": "2026-10-01T12:22:06Z",
+        "hireTx": "sm8wiiyrcoxEUVyFTNuWSTo7MUMjHQAkX56v66U7ppQt9c4eccNj8TPxjqUxo4KfLP7dZEAjXFw7PwcQ8qJdFtUw",
+        "tokenAmount": "0.00793317",
+        "costUsd": 4.48,
+        "valueUsd": 3.27,
+        "pnlUsd": -1.21,
+        "pnlPct": -26.93,
+        "rank": 249,
+        "tier": "intern",
+        "sizeScale": 0.73
+      },
+      {
+        "id": 84,
+        "name": "Rat #0084",
+        "wallet": "5Yk2CRfkMALgg7q5jqarYsWDKjYYZHbNtxbb2q3UyRAT",
+        "solscanUrl": "https://solscan.io/account/5Yk2CRfkMALgg7q5jqarYsWDKjYYZHbNtxbb2q3UyRAT",
+        "stock": "TSLAx",
+        "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "status": "active",
+        "avatarSeed": "b344d228",
+        "hiredAt": "2026-10-01T14:01:28Z",
+        "hireTx": "8RVMwRVW33CcjxrLynBYU9LnRYq8dkYjckbdXXcwBZ4SHYeRgkPrKM42e39vQPtpe2qzhNR7UPPTP4jGGGiLe6m5",
+        "tokenAmount": "0.0082248",
+        "costUsd": 4.52,
+        "valueUsd": 3.39,
+        "pnlUsd": -1.13,
+        "pnlPct": -24.93,
+        "rank": 248,
+        "tier": "intern",
+        "sizeScale": 0.75
+      },
+      {
+        "id": 91,
+        "name": "Rat #0091",
+        "wallet": "UT7WjoduHPHe6rZ28pjWCsCvS36TynLMeoWqjVgtHRAT",
+        "solscanUrl": "https://solscan.io/account/UT7WjoduHPHe6rZ28pjWCsCvS36TynLMeoWqjVgtHRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "8695ed8d",
+        "hiredAt": "2026-10-01T14:11:23Z",
+        "hireTx": "NxtCEC6pfHxk7Ub21S81BiXWmSxjpfoYLgugQmkmkStL6991D8u2mDw2EXiAiGUvhwsbD6LrWAXU28BzApmVYX2x",
+        "tokenAmount": "0.01897724",
+        "costUsd": 4.5,
+        "valueUsd": 3.45,
+        "pnlUsd": -1.06,
+        "pnlPct": -23.43,
+        "rank": 247,
+        "tier": "intern",
+        "sizeScale": 0.77
+      },
+      {
+        "id": 119,
+        "name": "Rat #0119",
+        "wallet": "F2FURAPiKFykRkynuz8YB8F7KP5gN8Q6z3fACUaNfRAT",
+        "solscanUrl": "https://solscan.io/account/F2FURAPiKFykRkynuz8YB8F7KP5gN8Q6z3fACUaNfRAT",
+        "stock": "MSTRx",
+        "stockMint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+        "status": "active",
+        "avatarSeed": "58974194",
+        "hiredAt": "2026-10-01T14:51:55Z",
+        "hireTx": "CkUAzjkLguKPy7JYjQHtnt5s1xAriAMARVossXu58dUoJA6M9CrRPMYUXmTfshN9tiGRTcYbbYbbuFR6enTadrmt",
+        "tokenAmount": "0.01050343",
+        "costUsd": 4.48,
+        "valueUsd": 3.55,
+        "pnlUsd": -0.93,
+        "pnlPct": -20.78,
+        "rank": 246,
+        "tier": "intern",
+        "sizeScale": 0.79
+      },
+      {
+        "id": 220,
+        "name": "Rat #0220",
+        "wallet": "LMUxQYqVNbz2dVsLrMFDsZtf2U9GwsQHtSyRs9whCRAT",
+        "solscanUrl": "https://solscan.io/account/LMUxQYqVNbz2dVsLrMFDsZtf2U9GwsQHtSyRs9whCRAT",
+        "stock": "TSLAx",
+        "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "status": "active",
+        "avatarSeed": "6106f5a9",
+        "hiredAt": "2026-10-01T17:17:22Z",
+        "hireTx": "rTNmK47ShNffPF41mkUBwC8CAKCqtVUyXmjXLS9qMg5R276CJn76QwZuHbtahR41qzb17XeaSXnYc9Dx6CdfyPVs",
+        "tokenAmount": "0.00873784",
+        "costUsd": 4.52,
+        "valueUsd": 3.6,
+        "pnlUsd": -0.92,
+        "pnlPct": -20.34,
+        "rank": 245,
+        "tier": "intern",
+        "sizeScale": 0.8
+      },
+      {
+        "id": 227,
+        "name": "Rat #0227",
+        "wallet": "fHJXr8Tvo6gsoZAXDtLtb6Ezror53HN3APrcjgSFkRAT",
+        "solscanUrl": "https://solscan.io/account/fHJXr8Tvo6gsoZAXDtLtb6Ezror53HN3APrcjgSFkRAT",
+        "stock": "NVDAx",
+        "stockMint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "status": "active",
+        "avatarSeed": "cb803045",
+        "hiredAt": "2026-10-01T17:27:01Z",
+        "hireTx": "C5WzKEyssoQVHaqyuGNxATa4SxJbU3pUVDecFnHzLbZDcLCMtFRthwLS9b4NN4VuVJn4SQVgNP6QSBEdCou1f3bN",
+        "tokenAmount": "0.01991586",
+        "costUsd": 4.5,
+        "valueUsd": 3.62,
+        "pnlUsd": -0.88,
+        "pnlPct": -19.54,
+        "rank": 244,
+        "tier": "intern",
+        "sizeScale": 0.8
+      },
+      {
+        "id": 172,
+        "name": "Rat #0172",
+        "wallet": "6MerQmkfk5dHovMVPptXQYLqYMbpDFeB3mPTWyWMsRAT",
+        "solscanUrl": "https://solscan.io/account/6MerQmkfk5dHovMVPptXQYLqYMbpDFeB3mPTWyWMsRAT",
+        "stock": "AMDx",
+        "stockMint": "XsXcJ6GZ9kVnjqGsjBnktRcuwMBmvKWh8S93RefZ1rF",
+        "status": "active",
+        "avatarSeed": "6688c319",
+        "hiredAt": "2026-10-01T16:08:06Z",
+        "hireTx": "wSWxzWVAApqRT2x9sMRxhASQ1UsujzCAeCE72SXAJND2YSBLvwcJFDYfoYUUwBYj4P75MnXfKAGaYtETY1LhBNhL",
+        "tokenAmount": "0.02269605",
+        "costUsd": 4.53,
+        "valueUsd": 3.73,
+        "pnlUsd": -0.81,
+        "pnlPct": -17.77,
+        "rank": 243,
+        "tier": "intern",
+        "sizeScale": 0.82
+      },
+      {
+        "id": 82,
+        "name": "Rat #0082",
+        "wallet": "vDszcgmvawbncmqt8TW58u92XPLmQ9uVyfaqNCnL2RAT",
+        "solscanUrl": "https://solscan.io/account/vDszcgmvawbncmqt8TW58u92XPLmQ9uVyfaqNCnL2RAT",
+        "stock": "TSLAx",
+        "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "status": "active",
+        "avatarSeed": "c8bfdb04",
+        "hiredAt": "2026-10-01T13:58:16Z",
+        "hireTx": "pu8F9wmAmFL9E96Umqs852rXqU3D73sjZe4X8H35Lj1q7s8fEezDCjP26AwpJePPBwZrogGZd57ueq1aEnDKBzqb",
+        "tokenAmount": "0.00896933",
+        "costUsd": 4.48,
+        "valueUsd": 3.7,
+        "pnlUsd": -0.78,
+        "pnlPct": -17.51,
+        "rank": 242,
+        "tier": "intern",
+        "sizeScale": 0.82
+      },
+      {
+        "id": 108,
+        "name": "Rat #0108",
+        "wallet": "ox67hdrtPuAJpEpSmL1BuY175rmTaTiKoUBCQCn9DRAT",
+        "solscanUrl": "https://solscan.io/account/ox67hdrtPuAJpEpSmL1BuY175rmTaTiKoUBCQCn9DRAT",
+        "stock": "MSTRx",
+        "stockMint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+        "status": "active",
+        "avatarSeed": "041255c0",
+        "hiredAt": "2026-10-01T14:36:04Z",
+        "hireTx": "YCZ8VduECD4pCtqDHzxTVhg7xhB6K6R8J5N2eGXYkq714Jq1jes37Eas1RfaqJYXqNfUNQkyNMuGQjSRg4PxNt71",
+        "tokenAmount": "0.011002",
+        "costUsd": 4.5,
+        "valueUsd": 3.72,
+        "pnlUsd": -0.78,
+        "pnlPct": -17.31,
+        "rank": 241,
+        "tier": "intern",
+        "sizeScale": 0.83
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": 5061,
+      "type": "freeze",
+      "at": "2026-10-01T17:59:25Z",
+      "txSig": null,
+      "txUrl": null,
+      "dryRun": false,
+      "data": {
+        "scope": "stock",
+        "stock": "COINx",
+        "ratId": null,
+        "ratCount": 23,
+        "reason": "stock_paused"
+      }
+    },
+    {
+      "id": 5060,
+      "type": "hire",
+      "at": "2026-10-01T18:00:05Z",
+      "txSig": "Y5wZrZaA9EVaibiX4NjbwK5Ra4Rm5oDmoHdiQSLWpdfbxJS2qkMZUkVgJdrsRDykbG1wgwVADSt84vb4dyAT6RS9",
+      "txUrl": "https://solscan.io/tx/Y5wZrZaA9EVaibiX4NjbwK5Ra4Rm5oDmoHdiQSLWpdfbxJS2qkMZUkVgJdrsRDykbG1wgwVADSt84vb4dyAT6RS9",
+      "dryRun": false,
+      "data": {
+        "ratId": 2,
+        "ratName": "Rat #0002",
+        "wallet": "iWAH9GpcbHpeUzeSQF9ZY6q4x8AhBskUf5RRfWaHcRAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5059,
+      "type": "hire",
+      "at": "2026-10-01T17:59:45Z",
+      "txSig": "nZU3epgyMuM1xKfmtjEAuTrxUKE99pFeHzR797Bncenybti5jx7NgKcNFH21m5CkVUpmyB9DueanLYLCuyhBNSnW",
+      "txUrl": "https://solscan.io/tx/nZU3epgyMuM1xKfmtjEAuTrxUKE99pFeHzR797Bncenybti5jx7NgKcNFH21m5CkVUpmyB9DueanLYLCuyhBNSnW",
+      "dryRun": false,
+      "data": {
+        "ratId": 192,
+        "ratName": "Rat #0192",
+        "wallet": "eczsG6NBCidmx7ht2XEon9BpuxkZGT1kayJdsorvDRAT",
+        "stock": "COINx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5058,
+      "type": "hire",
+      "at": "2026-10-01T17:59:25Z",
+      "txSig": "6ou3hXsnLo49zYJ2kixUXsqQZBUWT9Qd1vUvB1v3GnSDtZjPhwstSysHTo5KdVJMfYieE7aEemrdkYpdvbnJvfs5",
+      "txUrl": "https://solscan.io/tx/6ou3hXsnLo49zYJ2kixUXsqQZBUWT9Qd1vUvB1v3GnSDtZjPhwstSysHTo5KdVJMfYieE7aEemrdkYpdvbnJvfs5",
+      "dryRun": false,
+      "data": {
+        "ratId": 66,
+        "ratName": "Rat #0066",
+        "wallet": "VxgYmMxWyGUSr3fpuRoMSgpdfbaiyns3a7VWuy3yGRAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5057,
+      "type": "claim",
+      "at": "2026-10-01T17:59:05Z",
+      "txSig": "f1tkXNuMx6NvJmN9zR4VMUdmfg5DcF821nvSsKGEkACrqUhorA9YVWWEE5TyoZm3SSLoX2tV1EcQ4GRt3NgMBgZs",
+      "txUrl": "https://solscan.io/tx/f1tkXNuMx6NvJmN9zR4VMUdmfg5DcF821nvSsKGEkACrqUhorA9YVWWEE5TyoZm3SSLoX2tV1EcQ4GRt3NgMBgZs",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.5216,
+        "toHiresSol": 0.2608,
+        "toFundSol": 0.2608,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5056,
+      "type": "claim",
+      "at": "2026-10-01T17:58:45Z",
+      "txSig": "QUYGEDwuAmnfmXEsk9EdxSKH3Cxc9MGqBuStzWRgxeiCHBVXGgnBFobxNiA39GkC2d7Hm15UgDFqtCaJK9ELYj5f",
+      "txUrl": "https://solscan.io/tx/QUYGEDwuAmnfmXEsk9EdxSKH3Cxc9MGqBuStzWRgxeiCHBVXGgnBFobxNiA39GkC2d7Hm15UgDFqtCaJK9ELYj5f",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.966,
+        "toHiresSol": 0.483,
+        "toFundSol": 0.483,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5055,
+      "type": "hire",
+      "at": "2026-10-01T17:58:25Z",
+      "txSig": "LVdH4nRHopQE7ktMmWe4MoW8dp6qiahdbSUpLwnSeEUNRy8cGDyMnfYHhjcWSc1QkW4rCGpmXwXto6bHGw1ti7dC",
+      "txUrl": "https://solscan.io/tx/LVdH4nRHopQE7ktMmWe4MoW8dp6qiahdbSUpLwnSeEUNRy8cGDyMnfYHhjcWSc1QkW4rCGpmXwXto6bHGw1ti7dC",
+      "dryRun": false,
+      "data": {
+        "ratId": 42,
+        "ratName": "Rat #0042",
+        "wallet": "PtbTqeFc4vRuaTbkxXdyGXL6Szwn3ZdzatdkgA8qVRAT",
+        "stock": "AAPLx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5054,
+      "type": "hire",
+      "at": "2026-10-01T17:58:05Z",
+      "txSig": "wKqNSSBxBfskQA8YgY4MmTR1GtT7tTv9LbU2V1KVxhAqTzS29DPt5QZQ25QDk15VFkoh6UYt7MU4PaVd4Q9CHL5E",
+      "txUrl": "https://solscan.io/tx/wKqNSSBxBfskQA8YgY4MmTR1GtT7tTv9LbU2V1KVxhAqTzS29DPt5QZQ25QDk15VFkoh6UYt7MU4PaVd4Q9CHL5E",
+      "dryRun": false,
+      "data": {
+        "ratId": 63,
+        "ratName": "Rat #0063",
+        "wallet": "CYuzmmdu7fiL3otdR6r4rNPyuUTx8xrFpiwf1hrhRRAT",
+        "stock": "NVDAx",
+        "salarySol": 0.03,
+        "costUsd": 4.49
+      }
+    },
+    {
+      "id": 5053,
+      "type": "hire",
+      "at": "2026-10-01T17:57:45Z",
+      "txSig": "e3e8B4tpGh2AQ92fHNBmDrWqQdWmfQFw8diuCS34gnbU39xWPuYKjMHtJhe93MKpcfKmKNFZ68c2hc8ncfRPhPaE",
+      "txUrl": "https://solscan.io/tx/e3e8B4tpGh2AQ92fHNBmDrWqQdWmfQFw8diuCS34gnbU39xWPuYKjMHtJhe93MKpcfKmKNFZ68c2hc8ncfRPhPaE",
+      "dryRun": false,
+      "data": {
+        "ratId": 73,
+        "ratName": "Rat #0073",
+        "wallet": "pAjVQtCHsmGYCtax3N6AfuAvYqTrRGjVohBEdovP4RAT",
+        "stock": "AMZNx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5052,
+      "type": "burn",
+      "at": "2026-10-01T17:57:25Z",
+      "txSig": "zD6Vq5KRp5ugdNoGdJTysYtRT9xTCGMmqdR1QF19pR5pbL29QYucV1ERaS4Nu4SG3SSGUv1Q39oayi6ihUJv1gbe",
+      "txUrl": "https://solscan.io/tx/zD6Vq5KRp5ugdNoGdJTysYtRT9xTCGMmqdR1QF19pR5pbL29QYucV1ERaS4Nu4SG3SSGUv1Q39oayi6ihUJv1gbe",
+      "dryRun": false,
+      "data": {
+        "solSpent": 0.9827,
+        "tokensBurned": "99483.14"
+      }
+    },
+    {
+      "id": 5051,
+      "type": "hire",
+      "at": "2026-10-01T17:57:05Z",
+      "txSig": "fcX3fB3kn8fmg6bvoumhyKxF66DkwAtRR77NbJcNc4NBtSGCj88fiS3KWtkkBA2MFfzXk1XXJQnJKXoms4xbkzkr",
+      "txUrl": "https://solscan.io/tx/fcX3fB3kn8fmg6bvoumhyKxF66DkwAtRR77NbJcNc4NBtSGCj88fiS3KWtkkBA2MFfzXk1XXJQnJKXoms4xbkzkr",
+      "dryRun": false,
+      "data": {
+        "ratId": 36,
+        "ratName": "Rat #0036",
+        "wallet": "DpSKi4szsGYR8GYhf5ay1QM9RxvdTQbkCqXr52e51RAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5050,
+      "type": "hire",
+      "at": "2026-10-01T17:56:45Z",
+      "txSig": "8bJ2qGfsnbAC6tb2kEeRSrBrpo3GZQubcSkJhmp2jVbb1ASMBfmN6zRKmUnfExEoGNoT9D4DfWLHw2ZZz4qrvUY3",
+      "txUrl": "https://solscan.io/tx/8bJ2qGfsnbAC6tb2kEeRSrBrpo3GZQubcSkJhmp2jVbb1ASMBfmN6zRKmUnfExEoGNoT9D4DfWLHw2ZZz4qrvUY3",
+      "dryRun": false,
+      "data": {
+        "ratId": 130,
+        "ratName": "Rat #0130",
+        "wallet": "xGX83u2dkKvFaZBqAr77LtpNVYpPbHjYHQW1uPLnNRAT",
+        "stock": "SPYx",
+        "salarySol": 0.03,
+        "costUsd": 4.51
+      }
+    },
+    {
+      "id": 5049,
+      "type": "burn",
+      "at": "2026-10-01T17:56:25Z",
+      "txSig": "y1mvXTM5rqf5sXh3mcwrP6XmGjBxbeP6JPRDH3fu5csPZ1PPbp6opt7MzvVHJntgSjQGfj8S4iYuX14K1eGzvt1n",
+      "txUrl": "https://solscan.io/tx/y1mvXTM5rqf5sXh3mcwrP6XmGjBxbeP6JPRDH3fu5csPZ1PPbp6opt7MzvVHJntgSjQGfj8S4iYuX14K1eGzvt1n",
+      "dryRun": false,
+      "data": {
+        "solSpent": 1.7459,
+        "tokensBurned": "176745.31"
+      }
+    },
+    {
+      "id": 5048,
+      "type": "hire",
+      "at": "2026-10-01T17:56:05Z",
+      "txSig": "sLYH8nBMF5jDXjgMwS714YYYDiB5YP4FT6qdqjC3AmNvgpvefo5eDaXDEW3DLoCtKwLJwVKcf1rJYU2VpbTx9rFM",
+      "txUrl": "https://solscan.io/tx/sLYH8nBMF5jDXjgMwS714YYYDiB5YP4FT6qdqjC3AmNvgpvefo5eDaXDEW3DLoCtKwLJwVKcf1rJYU2VpbTx9rFM",
+      "dryRun": false,
+      "data": {
+        "ratId": 17,
+        "ratName": "Rat #0017",
+        "wallet": "gWvmQ6Uw7GUeSa6SxLpNFNrB5Zh8aZDzrPPouiuAGRAT",
+        "stock": "COINx",
+        "salarySol": 0.03,
+        "costUsd": 4.49
+      }
+    },
+    {
+      "id": 5047,
+      "type": "hire",
+      "at": "2026-10-01T17:55:45Z",
+      "txSig": "93egbUiMvjRLBpsjm9K1NgniA4aCFNvF2dYUUft7gHczgS9durbu3iwQSb9y16XjQGh1VgTT7aUdNXAqqioirKww",
+      "txUrl": "https://solscan.io/tx/93egbUiMvjRLBpsjm9K1NgniA4aCFNvF2dYUUft7gHczgS9durbu3iwQSb9y16XjQGh1VgTT7aUdNXAqqioirKww",
+      "dryRun": false,
+      "data": {
+        "ratId": 2,
+        "ratName": "Rat #0002",
+        "wallet": "iWAH9GpcbHpeUzeSQF9ZY6q4x8AhBskUf5RRfWaHcRAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5046,
+      "type": "hire",
+      "at": "2026-10-01T17:55:25Z",
+      "txSig": "XxScZWnYVgCQrU1L8GHaC4axtHzfuG7MDfapDqf6A9S121z5KL4ijmWSAvgop5sLpijFw3xKod5EL82EatdYMAzh",
+      "txUrl": "https://solscan.io/tx/XxScZWnYVgCQrU1L8GHaC4axtHzfuG7MDfapDqf6A9S121z5KL4ijmWSAvgop5sLpijFw3xKod5EL82EatdYMAzh",
+      "dryRun": false,
+      "data": {
+        "ratId": 216,
+        "ratName": "Rat #0216",
+        "wallet": "Vt15nuHByUwj92EW4ZWuzbwB76T4vBjjj2htjhH7wRAT",
+        "stock": "NVDAx",
+        "salarySol": 0.03,
+        "costUsd": 4.53
+      }
+    },
+    {
+      "id": 5045,
+      "type": "hire",
+      "at": "2026-10-01T17:55:05Z",
+      "txSig": "8PxndVYGaQJnSTAD9FU3RStWfrgaTKe59QeLduYwyjzC9p4HCfaRCBTdg91RTS5WdeTCDzPRgeyfjuAepfsocGEM",
+      "txUrl": "https://solscan.io/tx/8PxndVYGaQJnSTAD9FU3RStWfrgaTKe59QeLduYwyjzC9p4HCfaRCBTdg91RTS5WdeTCDzPRgeyfjuAepfsocGEM",
+      "dryRun": false,
+      "data": {
+        "ratId": 193,
+        "ratName": "Rat #0193",
+        "wallet": "hAERPDxjwjGYYJU4H1UWB4syv4pWaKET8yKAKJCUrRAT",
+        "stock": "COINx",
+        "salarySol": 0.03,
+        "costUsd": 4.51
+      }
+    },
+    {
+      "id": 5044,
+      "type": "hire",
+      "at": "2026-10-01T17:54:45Z",
+      "txSig": "z16C1ppKtjjALBjyQETf2e6AFWQG1CcJdVSuun4GgRiqV19qKGRM9wqzmL3PPFmqUHZq6mbuVsQrJk2GxSumJvyz",
+      "txUrl": "https://solscan.io/tx/z16C1ppKtjjALBjyQETf2e6AFWQG1CcJdVSuun4GgRiqV19qKGRM9wqzmL3PPFmqUHZq6mbuVsQrJk2GxSumJvyz",
+      "dryRun": false,
+      "data": {
+        "ratId": 131,
+        "ratName": "Rat #0131",
+        "wallet": "W3EKue84YL1UPjv14H9PyKswZjrcA6nJAoDUe6KF3RAT",
+        "stock": "AAPLx",
+        "salarySol": 0.03,
+        "costUsd": 4.52
+      }
+    },
+    {
+      "id": 5043,
+      "type": "hire",
+      "at": "2026-10-01T17:54:25Z",
+      "txSig": "CixrKvLvaMq2jw2WAaZjeNdCiiWhJ65Tb1Uek8ofyzRw8BtXSS91c3a9v2Gg8W4hqtCTDkzyHJJEMtfRhiCiHNak",
+      "txUrl": "https://solscan.io/tx/CixrKvLvaMq2jw2WAaZjeNdCiiWhJ65Tb1Uek8ofyzRw8BtXSS91c3a9v2Gg8W4hqtCTDkzyHJJEMtfRhiCiHNak",
+      "dryRun": false,
+      "data": {
+        "ratId": 211,
+        "ratName": "Rat #0211",
+        "wallet": "B4NGjzfWqaYo8EYnzuM9ecaG9A2tkq79sQSosox4cRAT",
+        "stock": "AMZNx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5042,
+      "type": "hire",
+      "at": "2026-10-01T17:54:05Z",
+      "txSig": "sxmkup5Wob8TXZx1RhRiJjFk8Nyiaexqqz47RiwHyreojAzwiZ6N1DVr38X4fAThL3Vy4E2Zhb3ahzxw5WBSAaBf",
+      "txUrl": "https://solscan.io/tx/sxmkup5Wob8TXZx1RhRiJjFk8Nyiaexqqz47RiwHyreojAzwiZ6N1DVr38X4fAThL3Vy4E2Zhb3ahzxw5WBSAaBf",
+      "dryRun": false,
+      "data": {
+        "ratId": 243,
+        "ratName": "Rat #0243",
+        "wallet": "5tetptr26WnBBjt9K4yQ4VuyoTvHjybWor7vXihmYRAT",
+        "stock": "GOOGLx",
+        "salarySol": 0.03,
+        "costUsd": 4.51
+      }
+    },
+    {
+      "id": 5041,
+      "type": "hire",
+      "at": "2026-10-01T17:53:45Z",
+      "txSig": "BY8cATmMyrErtFW6Wp1bUuvLgHBSeKB2EnmebkjGy6krGMLkhfm28KPrdgTV2RfC5gNubVD1QHfaBJFcZprJjsGt",
+      "txUrl": "https://solscan.io/tx/BY8cATmMyrErtFW6Wp1bUuvLgHBSeKB2EnmebkjGy6krGMLkhfm28KPrdgTV2RfC5gNubVD1QHfaBJFcZprJjsGt",
+      "dryRun": false,
+      "data": {
+        "ratId": 14,
+        "ratName": "Rat #0014",
+        "wallet": "LiT8933LY87Gyb9RWQjpmbTepoAyTi7vYgTJ3mQEVRAT",
+        "stock": "NVDAx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5040,
+      "type": "hire",
+      "at": "2026-10-01T17:53:25Z",
+      "txSig": "3RXqEdTELkuBmZmgxwZqXS2pwMthMw2wjhLd99v8mW4HiwcUqmq5bxSkoV2TSECv4q5SqBdkzy1XDteeCrvZvg6k",
+      "txUrl": "https://solscan.io/tx/3RXqEdTELkuBmZmgxwZqXS2pwMthMw2wjhLd99v8mW4HiwcUqmq5bxSkoV2TSECv4q5SqBdkzy1XDteeCrvZvg6k",
+      "dryRun": false,
+      "data": {
+        "ratId": 146,
+        "ratName": "Rat #0146",
+        "wallet": "eoQa1jSTvjj45DuqZAoJ6CV3JfDmZTChpvv1LJcP8RAT",
+        "stock": "COINx",
+        "salarySol": 0.03,
+        "costUsd": 4.52
+      }
+    },
+    {
+      "id": 5039,
+      "type": "burn",
+      "at": "2026-10-01T17:53:05Z",
+      "txSig": "AVXmBdv81raLN3mWivvcR2KGQTqyU3Nz3FnGVJUeZGE2SXiVjE2uSXmsyz8c9CpCTTywXdiJr6g2rZVZiZUNEZqN",
+      "txUrl": "https://solscan.io/tx/AVXmBdv81raLN3mWivvcR2KGQTqyU3Nz3FnGVJUeZGE2SXiVjE2uSXmsyz8c9CpCTTywXdiJr6g2rZVZiZUNEZqN",
+      "dryRun": false,
+      "data": {
+        "solSpent": 3.205,
+        "tokensBurned": "324456.57"
+      }
+    },
+    {
+      "id": 5038,
+      "type": "hire",
+      "at": "2026-10-01T17:52:45Z",
+      "txSig": "XpJC6SoJGMref2vt3erFXb5HkU4LYwihTp7KFWZaHJEW4SoR6bqVviwPyTHzTwW9kyRqFSctzs5QjLym6aQuapfd",
+      "txUrl": "https://solscan.io/tx/XpJC6SoJGMref2vt3erFXb5HkU4LYwihTp7KFWZaHJEW4SoR6bqVviwPyTHzTwW9kyRqFSctzs5QjLym6aQuapfd",
+      "dryRun": false,
+      "data": {
+        "ratId": 9,
+        "ratName": "Rat #0009",
+        "wallet": "6GoTYcqGmXinYVs26KFSmGLjeQXcaPUpcNPmWJLHFRAT",
+        "stock": "NVDAx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5037,
+      "type": "hire",
+      "at": "2026-10-01T17:52:25Z",
+      "txSig": "wN7ZcV26vwYggdDCLmC3yBKcFVLJrJ5rYBFJPUrNsDZuRdHVdq1BPxKrbQpFRvq9Tcd3JmWCDaUonJ5i11fNFZxN",
+      "txUrl": "https://solscan.io/tx/wN7ZcV26vwYggdDCLmC3yBKcFVLJrJ5rYBFJPUrNsDZuRdHVdq1BPxKrbQpFRvq9Tcd3JmWCDaUonJ5i11fNFZxN",
+      "dryRun": false,
+      "data": {
+        "ratId": 161,
+        "ratName": "Rat #0161",
+        "wallet": "Lu8bpgWA5yqoNyJ3RvzH8hWUeBynmxsYqKFa76offRAT",
+        "stock": "AMDx",
+        "salarySol": 0.03,
+        "costUsd": 4.49
+      }
+    },
+    {
+      "id": 5036,
+      "type": "burn",
+      "at": "2026-10-01T17:52:05Z",
+      "txSig": "x9SKEnanP11dMFWCDJU6VuUjAwFk8ExyDsT81isgHKn6UL9Dn7RPJzuK8pDWCWXjzRaQXTzq3UwmEsHfKCg3uJyU",
+      "txUrl": "https://solscan.io/tx/x9SKEnanP11dMFWCDJU6VuUjAwFk8ExyDsT81isgHKn6UL9Dn7RPJzuK8pDWCWXjzRaQXTzq3UwmEsHfKCg3uJyU",
+      "dryRun": false,
+      "data": {
+        "solSpent": 3.7354,
+        "tokensBurned": "378151.35"
+      }
+    },
+    {
+      "id": 5035,
+      "type": "claim",
+      "at": "2026-10-01T17:51:45Z",
+      "txSig": "dCf1s1fmiTSBvmV39TS1HvzNuv4eQUDC5XvKi32nFg54pq6dFGQqDbgC9BLvW66eFRw1m3T2aAWYj3MSJS8kpTvv",
+      "txUrl": "https://solscan.io/tx/dCf1s1fmiTSBvmV39TS1HvzNuv4eQUDC5XvKi32nFg54pq6dFGQqDbgC9BLvW66eFRw1m3T2aAWYj3MSJS8kpTvv",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.1351,
+        "toHiresSol": 0.0675,
+        "toFundSol": 0.0675,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5034,
+      "type": "hire",
+      "at": "2026-10-01T17:51:25Z",
+      "txSig": "ssPpaaDvpbBrMmUnsX9SsC2pZJSX9jerBQLExrhxMpQ6seSBcBCCxP1q7bCPosjhSBqyLVCcTDeqHyCi16wBsBGJ",
+      "txUrl": "https://solscan.io/tx/ssPpaaDvpbBrMmUnsX9SsC2pZJSX9jerBQLExrhxMpQ6seSBcBCCxP1q7bCPosjhSBqyLVCcTDeqHyCi16wBsBGJ",
+      "dryRun": false,
+      "data": {
+        "ratId": 23,
+        "ratName": "Rat #0023",
+        "wallet": "RxgTGxzBuMdoMDqBYZWYyLY26SZWGEeP44KYfyvikRAT",
+        "stock": "AMDx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5033,
+      "type": "claim",
+      "at": "2026-10-01T17:51:05Z",
+      "txSig": "r97eh7LGjv4awVYeWh9HWf9QmpHx9A6ZbGnuHhtkMmbs8eCp1LrbXY3UYhRvdDEyGqBeecUP7Pxg4BNWnbjKUJ4y",
+      "txUrl": "https://solscan.io/tx/r97eh7LGjv4awVYeWh9HWf9QmpHx9A6ZbGnuHhtkMmbs8eCp1LrbXY3UYhRvdDEyGqBeecUP7Pxg4BNWnbjKUJ4y",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.8556,
+        "toHiresSol": 0.4278,
+        "toFundSol": 0.4278,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5032,
+      "type": "claim",
+      "at": "2026-10-01T17:50:45Z",
+      "txSig": "1RCfrxJi6dEzVNgs7e9CSV5mF7XQFoS9UwJXMAjwZhSHR7zzAm2ygU8VtrF21deBjpybzJMx9J4DBn75PmFxNP1M",
+      "txUrl": "https://solscan.io/tx/1RCfrxJi6dEzVNgs7e9CSV5mF7XQFoS9UwJXMAjwZhSHR7zzAm2ygU8VtrF21deBjpybzJMx9J4DBn75PmFxNP1M",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.1958,
+        "toHiresSol": 0.0979,
+        "toFundSol": 0.0979,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5031,
+      "type": "claim",
+      "at": "2026-10-01T17:50:25Z",
+      "txSig": "gyoFNKNsnkz3FwSeZuctcKmsEgDqrGDyBKwGSBeU91tb2PdppbiF89vsJqJ6Bye4VrNqfSMxgfg948AGYSD5XWLe",
+      "txUrl": "https://solscan.io/tx/gyoFNKNsnkz3FwSeZuctcKmsEgDqrGDyBKwGSBeU91tb2PdppbiF89vsJqJ6Bye4VrNqfSMxgfg948AGYSD5XWLe",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.6261,
+        "toHiresSol": 0.313,
+        "toFundSol": 0.313,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5030,
+      "type": "hire",
+      "at": "2026-10-01T17:50:05Z",
+      "txSig": "LPEeYHgpheQ2Vo1ZwbULu1TpYQqTwx2B3b1jn7dvwBf3BCr5zQruLyuGg3JHbd3eFCzBPDGEC1BGP53AtQzitNPw",
+      "txUrl": "https://solscan.io/tx/LPEeYHgpheQ2Vo1ZwbULu1TpYQqTwx2B3b1jn7dvwBf3BCr5zQruLyuGg3JHbd3eFCzBPDGEC1BGP53AtQzitNPw",
+      "dryRun": false,
+      "data": {
+        "ratId": 250,
+        "ratName": "Rat #0250",
+        "wallet": "kS7eyxrfPiE2PRK7cHrdDuVbjwzKUVd4ZqXo2i8aXRAT",
+        "stock": "AAPLx",
+        "salarySol": 0.03,
+        "costUsd": 4.52
+      }
+    },
+    {
+      "id": 5029,
+      "type": "claim",
+      "at": "2026-10-01T17:49:45Z",
+      "txSig": "CTvWCHJRdFw8xtVBdJsVUGc1bFd3pSqMH4ByPgogucM7mfFpfF9WmBqYCbx6Bzd8uRFPi4LrduU49vUnTVSiNuBW",
+      "txUrl": "https://solscan.io/tx/CTvWCHJRdFw8xtVBdJsVUGc1bFd3pSqMH4ByPgogucM7mfFpfF9WmBqYCbx6Bzd8uRFPi4LrduU49vUnTVSiNuBW",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.3877,
+        "toHiresSol": 0.6938,
+        "toFundSol": 0.6938,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5028,
+      "type": "hire",
+      "at": "2026-10-01T17:49:25Z",
+      "txSig": "QiyYUf8Y7UB4rKBgybQ8KJvcSdcF3QC7vUe1EewtCC2zCpTdsc17yJCkSJYv54Ub2x5VWyyq2Et6SDVyr3yNk13K",
+      "txUrl": "https://solscan.io/tx/QiyYUf8Y7UB4rKBgybQ8KJvcSdcF3QC7vUe1EewtCC2zCpTdsc17yJCkSJYv54Ub2x5VWyyq2Et6SDVyr3yNk13K",
+      "dryRun": false,
+      "data": {
+        "ratId": 150,
+        "ratName": "Rat #0150",
+        "wallet": "CpHoipy6vU8sDdHLgZbwsGmt4QdXEqUJpmrCJZj3fRAT",
+        "stock": "AAPLx",
+        "salarySol": 0.03,
+        "costUsd": 4.5
+      }
+    },
+    {
+      "id": 5027,
+      "type": "claim",
+      "at": "2026-10-01T17:49:05Z",
+      "txSig": "NrQrGH1Ps2kavfrAXDdTp6zMfwVUHr1MDkipMTV4pXZfyWYnNPHBUw5enx2GvsaHAwCXExSpv9WoEC4nCCiAX77q",
+      "txUrl": "https://solscan.io/tx/NrQrGH1Ps2kavfrAXDdTp6zMfwVUHr1MDkipMTV4pXZfyWYnNPHBUw5enx2GvsaHAwCXExSpv9WoEC4nCCiAX77q",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.1663,
+        "toHiresSol": 0.0832,
+        "toFundSol": 0.0832,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5026,
+      "type": "hire",
+      "at": "2026-10-01T17:48:45Z",
+      "txSig": "Ku5vLZwMnWjCR4BdCNHrqSkaSAzVCcavL3VTUH91VizRkEAX5xvnENEocSXTm9Pf9EzaUoZvXf4Tzjm2tHaaSekF",
+      "txUrl": "https://solscan.io/tx/Ku5vLZwMnWjCR4BdCNHrqSkaSAzVCcavL3VTUH91VizRkEAX5xvnENEocSXTm9Pf9EzaUoZvXf4Tzjm2tHaaSekF",
+      "dryRun": false,
+      "data": {
+        "ratId": 46,
+        "ratName": "Rat #0046",
+        "wallet": "is3RyhHrbg4f4j7iv24m8TVR8cHXmAEmkh1LTj7jaRAT",
+        "stock": "AMDx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5025,
+      "type": "claim",
+      "at": "2026-10-01T17:48:25Z",
+      "txSig": "br5zVYNt79FeQqdYZ7NQHARwh3qjtfWBFoR2AKsKUqpvQrJUrWWA3P5V72WE4uZW8QRtHqiXbiqFXjo4E7YMLFa2",
+      "txUrl": "https://solscan.io/tx/br5zVYNt79FeQqdYZ7NQHARwh3qjtfWBFoR2AKsKUqpvQrJUrWWA3P5V72WE4uZW8QRtHqiXbiqFXjo4E7YMLFa2",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.2533,
+        "toHiresSol": 0.6267,
+        "toFundSol": 0.6267,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5024,
+      "type": "claim",
+      "at": "2026-10-01T17:48:05Z",
+      "txSig": "bxFd9KbwKZ5F21L7pUftt5u1MwF3A7Q5RXoQqtncRmKSnsGFjxgxNFLc661M2u8yqJYTHrAYZutesUw8MXGcNMpq",
+      "txUrl": "https://solscan.io/tx/bxFd9KbwKZ5F21L7pUftt5u1MwF3A7Q5RXoQqtncRmKSnsGFjxgxNFLc661M2u8yqJYTHrAYZutesUw8MXGcNMpq",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.4673,
+        "toHiresSol": 0.7337,
+        "toFundSol": 0.7337,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5023,
+      "type": "hire",
+      "at": "2026-10-01T17:47:45Z",
+      "txSig": "1BiHjxKDtr9EySCBu8Se3sRfjqRcPwWHSjX2RtVkkP5Ugm8GdwQmpyA6M4p8vTzLuAR51X1EDQ3uiarHzsBKwEmp",
+      "txUrl": "https://solscan.io/tx/1BiHjxKDtr9EySCBu8Se3sRfjqRcPwWHSjX2RtVkkP5Ugm8GdwQmpyA6M4p8vTzLuAR51X1EDQ3uiarHzsBKwEmp",
+      "dryRun": false,
+      "data": {
+        "ratId": 178,
+        "ratName": "Rat #0178",
+        "wallet": "vmzqDn1zsZt7YA5mLGqSLuEbh7uD222K8ECurk55HRAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.51
+      }
+    },
+    {
+      "id": 5022,
+      "type": "claim",
+      "at": "2026-10-01T17:47:25Z",
+      "txSig": "VNFNaBn82XBcakxvVap1X9rWfq4nFW8T7U2cmZ8rgXvA9zDkfyqehRHXYr8bDYNvF3VyTcx7zz1CtKc1koncQsPW",
+      "txUrl": "https://solscan.io/tx/VNFNaBn82XBcakxvVap1X9rWfq4nFW8T7U2cmZ8rgXvA9zDkfyqehRHXYr8bDYNvF3VyTcx7zz1CtKc1koncQsPW",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.3941,
+        "toHiresSol": 0.697,
+        "toFundSol": 0.697,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5021,
+      "type": "burn",
+      "at": "2026-10-01T17:47:05Z",
+      "txSig": "U1uGYA7noixZR44DB4mD7fVcuegf466tJ31ELXu8G7qmYp7euWqicT3rp7yhqRyAqPkngq4oZH7eiKwhWuaNxQ1h",
+      "txUrl": "https://solscan.io/tx/U1uGYA7noixZR44DB4mD7fVcuegf466tJ31ELXu8G7qmYp7euWqicT3rp7yhqRyAqPkngq4oZH7eiKwhWuaNxQ1h",
+      "dryRun": false,
+      "data": {
+        "solSpent": 0.9819,
+        "tokensBurned": "99402.16"
+      }
+    },
+    {
+      "id": 5020,
+      "type": "claim",
+      "at": "2026-10-01T17:46:45Z",
+      "txSig": "SjmJtKiu6r87jngYrDbc6aAWG1wjUFLFNkesKZxxZtCo5aaJetTb2SSHxr2Pw7u73C6BuyQLDjpJ6toCGx28nS4L",
+      "txUrl": "https://solscan.io/tx/SjmJtKiu6r87jngYrDbc6aAWG1wjUFLFNkesKZxxZtCo5aaJetTb2SSHxr2Pw7u73C6BuyQLDjpJ6toCGx28nS4L",
+      "dryRun": false,
+      "data": {
+        "amountSol": 0.9975,
+        "toHiresSol": 0.4988,
+        "toFundSol": 0.4988,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5019,
+      "type": "claim",
+      "at": "2026-10-01T17:46:25Z",
+      "txSig": "SwTntRPmsSAw9J5gyVyTwbVZwwJsgKXWv6jBe4hEQ13T7tZLZdXLA9GMxJtEL4LoTypqRcA8A6NshUvHfpqPBPHd",
+      "txUrl": "https://solscan.io/tx/SwTntRPmsSAw9J5gyVyTwbVZwwJsgKXWv6jBe4hEQ13T7tZLZdXLA9GMxJtEL4LoTypqRcA8A6NshUvHfpqPBPHd",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.2678,
+        "toHiresSol": 0.6339,
+        "toFundSol": 0.6339,
+        "source": "bot"
+      }
+    },
+    {
+      "id": 5018,
+      "type": "burn",
+      "at": "2026-10-01T17:46:05Z",
+      "txSig": "dphU5P692izHbnQ1YpUUqMFurzoqHLRo3yLiCzAVTFwhLRu27g6NG1QYopthEoLYwAHGPcT6YTbBBMq7pk9uWjCS",
+      "txUrl": "https://solscan.io/tx/dphU5P692izHbnQ1YpUUqMFurzoqHLRo3yLiCzAVTFwhLRu27g6NG1QYopthEoLYwAHGPcT6YTbBBMq7pk9uWjCS",
+      "dryRun": false,
+      "data": {
+        "solSpent": 2.3123,
+        "tokensBurned": "234084.53"
+      }
+    },
+    {
+      "id": 5017,
+      "type": "burn",
+      "at": "2026-10-01T17:45:45Z",
+      "txSig": "AzSA3aPZy5YHmMz9WFsPhDTLBFPW21K6Bg7rc9cmN7c8kT5hCshMPd2KjxzS8y34WfCF4HUT2469cGaAW626oypC",
+      "txUrl": "https://solscan.io/tx/AzSA3aPZy5YHmMz9WFsPhDTLBFPW21K6Bg7rc9cmN7c8kT5hCshMPd2KjxzS8y34WfCF4HUT2469cGaAW626oypC",
+      "dryRun": false,
+      "data": {
+        "solSpent": 1.302,
+        "tokensBurned": "131807.32"
+      }
+    },
+    {
+      "id": 5016,
+      "type": "hire",
+      "at": "2026-10-01T17:45:25Z",
+      "txSig": "ovGV67ay6M6jfciQmHNZAqdtLA2DhHtwj15QEMqGJTT2VMRdffHKeynJxSUVAn474c9Jyio2t9nrb6mZA9iFZVfr",
+      "txUrl": "https://solscan.io/tx/ovGV67ay6M6jfciQmHNZAqdtLA2DhHtwj15QEMqGJTT2VMRdffHKeynJxSUVAn474c9Jyio2t9nrb6mZA9iFZVfr",
+      "dryRun": false,
+      "data": {
+        "ratId": 74,
+        "ratName": "Rat #0074",
+        "wallet": "64fjzvEfh8n86wf9RjqzidtCz8mCHKWj5hWJrUmzjRAT",
+        "stock": "MSTRx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5015,
+      "type": "hire",
+      "at": "2026-10-01T17:45:05Z",
+      "txSig": "GsKpnSWGe8g11aadrrd68H8St12eww6RdqphAuG9kYDWpvekbrdoWpng3R1bsoNLbv6wxcUXHRG342fuveZJkFGU",
+      "txUrl": "https://solscan.io/tx/GsKpnSWGe8g11aadrrd68H8St12eww6RdqphAuG9kYDWpvekbrdoWpng3R1bsoNLbv6wxcUXHRG342fuveZJkFGU",
+      "dryRun": false,
+      "data": {
+        "ratId": 31,
+        "ratName": "Rat #0031",
+        "wallet": "UJTLXs5QHGohYfgDW79L1SNvgRtxNVNUuuxif9LMfRAT",
+        "stock": "TSLAx",
+        "salarySol": 0.03,
+        "costUsd": 4.48
+      }
+    },
+    {
+      "id": 5014,
+      "type": "hire",
+      "at": "2026-10-01T17:44:45Z",
+      "txSig": "FVujc6d8d3YKgwd96UL34SdpoqaurzDSfoh9vDsMFJbJZUJV3ZB8FdaTMJUCAnw1B5BDpoYkpAx1PzN1yEqE1422",
+      "txUrl": "https://solscan.io/tx/FVujc6d8d3YKgwd96UL34SdpoqaurzDSfoh9vDsMFJbJZUJV3ZB8FdaTMJUCAnw1B5BDpoYkpAx1PzN1yEqE1422",
+      "dryRun": false,
+      "data": {
+        "ratId": 141,
+        "ratName": "Rat #0141",
+        "wallet": "3TmHgRheGhPXajCyLvFyKjYYshSfPbXK7F8yzqqKTRAT",
+        "stock": "TSLAx",
+        "salarySol": 0.03,
+        "costUsd": 4.49
+      }
+    },
+    {
+      "id": 5013,
+      "type": "hire",
+      "at": "2026-10-01T17:44:25Z",
+      "txSig": "XyCRg2EkCTihPM7F9XT6iWfuLoc2k9JPumPebP8R3977dj8Mbev6BtUbySqmKoftbyTHXcUsyZkT9EWR41ZaJLWH",
+      "txUrl": "https://solscan.io/tx/XyCRg2EkCTihPM7F9XT6iWfuLoc2k9JPumPebP8R3977dj8Mbev6BtUbySqmKoftbyTHXcUsyZkT9EWR41ZaJLWH",
+      "dryRun": false,
+      "data": {
+        "ratId": 7,
+        "ratName": "Rat #0007",
+        "wallet": "HqGvhJrraYhGJV5nKGJNMzb69AFRmAnE5TTNbWT4ERAT",
+        "stock": "GOOGLx",
+        "salarySol": 0.03,
+        "costUsd": 4.53
+      }
+    },
+    {
+      "id": 5012,
+      "type": "claim",
+      "at": "2026-10-01T17:44:05Z",
+      "txSig": "r3iVBB67EbuRd3pZXy5iRYAC82tuHMxnrJpTs8Y8dBct5Xv1WHLGT4AuFqLKwsz9CQA6iS1ANCEeJq6Aojo2eJLp",
+      "txUrl": "https://solscan.io/tx/r3iVBB67EbuRd3pZXy5iRYAC82tuHMxnrJpTs8Y8dBct5Xv1WHLGT4AuFqLKwsz9CQA6iS1ANCEeJq6Aojo2eJLp",
+      "dryRun": false,
+      "data": {
+        "amountSol": 1.3261,
+        "toHiresSol": 0.6631,
+        "toFundSol": 0.6631,
+        "source": "bot"
+      }
+    }
+  ]
+}
