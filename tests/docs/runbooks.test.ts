@@ -9,10 +9,10 @@ const runbooks = [...readdirSync(new URL('docs/runbooks/', root)).filter((f) => 
 
 describe('infra config', () => {
   it('railway files are valid and point at the Dockerfile', () => {
-    for (const f of ['infra/railway.worker.json', 'infra/railway.api.json']) {
+    for (const f of ['infra/railway.worker.json', 'infra/railway.api.json', 'infra/railway.admin.json']) {
       const j = JSON.parse(read(f)) as { build: { dockerfilePath: string }; deploy: { startCommand: string } };
       expect(j.build.dockerfilePath).toBe('infra/Dockerfile');
-      expect(j.deploy.startCommand).toMatch(/^pnpm --filter @rat\/(worker|api) start$/);
+      expect(j.deploy.startCommand).toMatch(/^pnpm --filter @rat\/(worker|api|admin) start$/);
     }
     expect(JSON.parse(read('infra/railway.worker.json')).deploy.numReplicas).toBe(1);
     const docker = read('infra/Dockerfile');
@@ -20,7 +20,7 @@ describe('infra config', () => {
     expect(docker).toMatch(/DRY_RUN=true/);
     expect(docker).toContain('USER node');
     // every workspace package.json is copied before the install
-    for (const dir of ['packages/core', 'packages/contract', 'packages/db', 'packages/keys', 'packages/chain', 'packages/pump', 'packages/jupiter', 'packages/safety', 'apps/worker', 'apps/api', 'apps/cli', 'tests']) {
+    for (const dir of ['packages/core', 'packages/contract', 'packages/db', 'packages/keys', 'packages/chain', 'packages/pump', 'packages/jupiter', 'packages/safety', 'apps/worker', 'apps/api', 'apps/cli', 'apps/admin', 'tests']) {
       expect(docker, dir).toContain(`COPY ${dir}/package.json ${dir}/`);
     }
   });

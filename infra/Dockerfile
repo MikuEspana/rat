@@ -1,6 +1,7 @@
-# One image for both services. Railway picks the start command per service (infra/railway.*.json).
+# One image for every service. Railway picks the start command per service (infra/railway.*.json).
 #   worker: pnpm --filter @rat/worker start
 #   api:    pnpm --filter @rat/api start
+#   admin:  pnpm --filter @rat/admin start
 
 FROM node:22-slim
 
@@ -22,6 +23,7 @@ COPY packages/safety/package.json packages/safety/
 COPY apps/worker/package.json apps/worker/
 COPY apps/api/package.json apps/api/
 COPY apps/cli/package.json apps/cli/
+COPY apps/admin/package.json apps/admin/
 COPY tests/package.json tests/
 RUN pnpm install --frozen-lockfile
 

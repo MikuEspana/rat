@@ -9,15 +9,16 @@ Agents did not create any of these resources. Everything below is done by the ow
 4. Build `DATABASE_URL_READONLY` with the `rat_api` user (the transaction pooler is fine for the API).
 5. Turn on daily backups (see `backup-restore.md`).
 
-## 2. Railway (worker + API)
+## 2. Railway (worker, API, admin page)
 1. New project from the GitHub repo `MikuEspana/rat`.
 2. Service **worker**: config file path `infra/railway.worker.json`. Exactly 1 replica.
 3. Service **api**: config file path `infra/railway.api.json`. Generate a public domain.
-4. Variables (Railway > Variables), from `.env.example`:
+4. Service **admin** (private admin page, optional but recommended): config file path `infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), the worker's `DATABASE_URL` (the kill switch is a database setting), `DRY_RUN` like the worker. It serves HTTPS on Railway; open it, log in with any user name and the password.
+5. Variables (Railway > Variables), from `.env.example`:
    - both: `DATABASE_URL` (worker) / `DATABASE_URL_READONLY` (api), `DRY_RUN=true`, `COIN_MINT` (empty until launch), `CREATOR_PUBKEY`, `FUND_PUBKEY`, `STOCKS_FILE=config/stocks.json`
    - worker only: `KEY_ENCRYPTION_KEY` (32 random bytes, base64), `KEY_VERSION=1`, `RPC_URL`, `RPC_URL_BACKUP`, `JUPITER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
    - api only: `CORS_ORIGIN` (your site domain), `API_CACHE_SEC=3` (the API listens on the `PORT` Railway injects, `API_PORT` is only a fallback)
-5. Leave `LIVE_CONFIRM` empty until launch.
+6. Leave `LIVE_CONFIRM` empty until launch.
 
 Generate the master key on your own machine: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Store it in your password manager too.
 

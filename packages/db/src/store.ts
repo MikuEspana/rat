@@ -286,6 +286,11 @@ export class AttemptRepo implements AttemptStore {
       .where(eq(txAttempts.id, id));
   }
 
+  /** The newest attempts of this mode (admin page). */
+  async latest(limit: number): Promise<AttemptRow[]> {
+    return this.db.select().from(txAttempts).where(eq(txAttempts.mode, this.mode)).orderBy(desc(txAttempts.id)).limit(limit);
+  }
+
   async latestForRef(refType: string, refId: string): Promise<AttemptRow | null> {
     const r = await this.db
       .select()
