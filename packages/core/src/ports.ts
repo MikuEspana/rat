@@ -58,6 +58,32 @@ export interface SwapBuilder {
   build(req: SwapBuildRequest): Promise<SwapBuild>;
 }
 
+// ---------- pump.fun ----------
+
+export interface Claimable {
+  /** bonding curve creator vault, lamports above rent */
+  bondingLamports: bigint;
+  /** PumpSwap coin creator vault, WSOL */
+  ammLamports: bigint;
+  totalLamports: bigint;
+}
+
+export interface CoinInfo {
+  mint: Pubkey;
+  decimals: number;
+  /** SPL Token or Token-2022, detected at runtime */
+  tokenProgram: Pubkey;
+  supply: bigint;
+}
+
+export interface PumpClient {
+  getClaimable(creator: Pubkey): Promise<Claimable>;
+  /** Claim (+ WSOL unwrap) instructions for what is claimable. The fund transfer is added by the caller. */
+  buildClaimInstructions(args: { creator: Pubkey; claimable: Claimable }): TransactionInstruction[];
+  getCoinInfo(mint: Pubkey): Promise<CoinInfo>;
+  buildBurnInstruction(args: { owner: Pubkey; mint: Pubkey; amount: bigint; decimals: number; tokenProgram: Pubkey }): TransactionInstruction;
+}
+
 // ---------- chain reads ----------
 
 export interface MintState {
