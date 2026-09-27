@@ -377,6 +377,8 @@ export class SimChain {
       for (const k of ix.keys) addKey(k.pubkey.toBase58());
     }
     for (const ix of tx.instructions) addKey(ix.programId.toBase58());
+    // Safety net for mock programs: anything touched is recorded (a real program can only touch passed accounts).
+    for (const k of ctx.touched) addKey(k);
 
     const lamportsIn = (s: SimState, k: string) => s.tokens.get(k)?.lamports ?? s.sol.get(k) ?? 0n;
     const tokenBalances = (s: SimState): TxTokenBalanceRecord[] =>

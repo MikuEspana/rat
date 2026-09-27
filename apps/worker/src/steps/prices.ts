@@ -1,0 +1,53 @@
+// Prices: ONE batched Jupiter Price v3 call per loop for every stock + SOL + the coin.
+// Missing prices keep the last value and age into "stale" (never zero).
+import { NATIVE_SOL_MINT, SETTINGS } from '@rat/core';
+import type { WorkerDeps, WorkerState } from '../deps';
+
+const HISTORY_EVERY_MS = 60_000;
+
+export async function runPriceStep(d: WorkerDeps, s: WorkerState): Promise<{ priced: number; missing: string[] }> {
+  const stocks = (await d.store.stocks.list()).filter((x) => x.enabled);
+  const mints = [...stocks.map((x) => x.mint), NATIVE_SOL_MINT];
+  if (d.config.coinMint) mints.push(d.config.coinMint);
+  const quotes = await d.prices.getPrices(mints);
+  const now = d.clock.now();
+  const history: { mint: string; priceUsd: number; at: Date }[] = [];
+  const missing: string[] = [];
+  for (const st of stocks) {
+    const q = quotes.get(st.mint);
+    if (!q) {
+      missing.push(st.symbol);
+      continue;
+    }
+    await d.store.stocks.setPrice(st.mint, q.usdPrice, q.change24hPct, now);
+    const last = s.lastPriceHistoryAt.get(st.mint) ?? 0;
+    if (now.getTime() - last >= HISTORY_EVERY_MS) {
+      history.push({ mint: st.mint, priceUsd: q.usdPrice, at: now });
+      s.lastPriceHistoryAt.set(st.mint, now.getTime());
+    }
+  }
+  await d.store.stocks.addPriceHistory(history);
+  const sol = quotes.get(NATIVE_SOL_MINT);
+  if (sol) {
+    s.solUsd = sol.usdPrice;
+    await d.store.settings.set(SETTINGS.priceSol, JSON.stringify({ usd: sol.usdPrice, change24hPct: sol.change24hPct, at: now.toISOString() }));
+  }
+  if (d.config.coinMint) {
+    const coin = quotes.get(d.config.coinMint);
+    if (coin) {
+      s.coinUsd = coin.usdPrice;
+      await d.store.settings.set(SETTINGS.priceCoin, JSON.stringify({ usd: coin.usdPrice, change24hPct: coin.change24hPct, at: now.toISOString() }));
+    }
+  }
+  if (missing.length > 0) d.log.debug({ missing }, 'prices missing (kept last value)');
+  return { priced: stocks.length - missing.length, missing };
+}
+
+/** Latest SOL price from memory, falling back to the database. */
+export async function solUsd(d: WorkerDeps, s: WorkerState): Promise<number | null> {
+  if (s.solUsd !== null) return s.solUsd;
+  const raw = await d.store.settings.get(SETTINGS.priceSol);
+  if (!raw) return null;
+  s.solUsd = (JSON.parse(raw) as { usd: number }).usd;
+  return s.solUsd;
+}

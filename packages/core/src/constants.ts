@@ -18,6 +18,13 @@ export const SETTINGS = {
   fundWatchCursor: 'fund_watch_cursor',
   lastBurnAt: 'last_burn_at',
   lastClaimAt: 'last_claim_at',
+  lastBurnRunAt: 'last_burn_run_at',
+  /** JSON { usd, change24hPct, at } */
+  priceSol: 'price_sol',
+  priceCoin: 'price_coin',
+  /** JSON { mint, decimals, supplyRaw, tokenProgram } */
+  coinInfo: 'coin_info',
+  expectedMintAuthority: 'expected_mint_authority',
 } as const;
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
