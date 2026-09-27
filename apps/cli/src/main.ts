@@ -64,10 +64,12 @@ keys
   .action((dir, o) => withContext((ctx, cfg) => keysImportDirCommand(ctx, ring(cfg), dir, { shred: o.shred })));
 keys
   .command('grind')
-  .description('grind vanity rat keys with the built-in grinder')
+  .description('grind vanity rat keys straight into the encrypted pool, in batches (no plaintext files)')
   .requiredOption('--count <n>', 'number of keys', (v) => Number(v))
-  .option('--threads <n>', 'worker threads', (v) => Number(v))
-  .action((o) => withContext((ctx, cfg) => keysGrindCommand(ctx, ring(cfg), o.count, o.threads)));
+  .option('--threads <n>', 'grind threads (default: CPU count minus one, max 4; pass your core count on a laptop)', (v) => Number(v))
+  .option('--grinder <kind>', 'auto | js | solana-keygen (auto = js, the faster one for suffixes)')
+  .option('--batch <n>', 'keys stored per batch (default 250)', (v) => Number(v))
+  .action((o) => withContext((ctx, cfg) => keysGrindCommand(ctx, ring(cfg), o.count, { threads: o.threads, grinder: o.grinder, batch: o.batch })));
 keys.command('pool').description('key pool counts').action(() => withContext((ctx) => keysPoolCommand(ctx)));
 keys
   .command('rotate')

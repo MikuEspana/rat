@@ -16,7 +16,7 @@ Built on 2026-09-27 in one session, workstream by workstream (WS01 to WS12), eac
 | Foundation | `packages/core` | types, ports, config (DRY RUN default, live needs `LIVE_CONFIRM`), lamports math, redacting logger |
 | Frontend contract | `packages/contract`, `CONTRACT.md` | zod schemas + display math (PnL, tier, rank, size) + mock JSON for your animations |
 | Database | `packages/db` | 13 tables, migrations, ledger, paper vs live separation, lease lock |
-| Keys | `packages/keys` | AES-256-GCM vault, vanity grinder, solana-keygen importer, key store |
+| Keys | `packages/keys` | AES-256-GCM vault, key store, background refiller (built-in grinder at low priority, `solana-keygen` optional and in the image), importer |
 | Chain | `packages/chain` | RPC reader, the only transaction sender, SimChain (in-memory Solana for tests) |
 | pump.fun | `packages/pump` | claim instructions from the official IDL, external claim parser, burn, direct buy fallback |
 | Jupiter | `packages/jupiter` | Price v3 (one batched call), Swap v2 `/build` (taker + payer), rate limiter, mocks |
@@ -126,7 +126,7 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Telegram bot token + chat id | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 | Master key (32 random bytes, base64), backed up | `KEY_ENCRYPTION_KEY` |
 | Fresh creator, fund and cold wallets | `CREATOR_PUBKEY`, `FUND_PUBKEY`; import keys with `rat keys import` |
-| 3,000 pre-ground `RAT` keys | `solana-keygen grind --ends-with RAT:3000` then `rat keys import-dir` |
+| 10,000 pre-ground `RAT` keys | `rat keys grind --count 10000 --threads <cores>` on a clean machine (straight into the encrypted pool), see `docs/runbooks/keys.md` |
 | Stock approvals | verify mints on xstocks.fi, set `approved: true` in `config/stocks.json` |
 | Optional: confirmed xStocks mint authority | `XSTOCKS_MINT_AUTHORITY` |
 | Funding | creator: 0.05 SOL reserve + launch cost; fund: 0.01 SOL; smoke test: ~0.12 SOL on throwaway wallets |

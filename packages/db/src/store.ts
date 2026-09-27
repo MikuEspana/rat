@@ -494,6 +494,15 @@ export class RatRepo {
     return Object.fromEntries(r.map((x) => [x.status, Number(x.n)]));
   }
 
+  /** Rats created (vanity keys taken) since `since`. Drives the key pool runway alert. */
+  async countCreatedSince(since: Date): Promise<number> {
+    const r = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(rats)
+      .where(and(eq(rats.mode, this.mode), gte(rats.createdAt, since)));
+    return Number(r[0]?.n ?? 0);
+  }
+
   /** Active and frozen rats after `afterId`, for the rotating reconcile check. */
   async batchAfter(afterId: number, limit: number): Promise<RatRow[]> {
     return this.db

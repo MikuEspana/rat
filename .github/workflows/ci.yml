@@ -33,3 +33,7 @@ jobs:
         run: docker build -f infra/Dockerfile -t rat-race:ci .
       - name: The image starts (CLI status on an in-memory database, DRY RUN default)
         run: docker run --rm -e DATABASE_URL=memory:// rat-race:ci pnpm --silent --filter @rat/cli rat status
+      - name: solana-keygen is in the image
+        run: docker run --rm rat-race:ci solana-keygen --version
+      - name: The worker's key grinder works with the real solana-keygen (throwaway test keys, in-memory database)
+        run: docker run --rm rat-race:ci pnpm --silent --filter @rat/keys check:keygen

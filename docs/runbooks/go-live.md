@@ -8,7 +8,7 @@
 - [ ] `XSTOCKS_MINT_AUTHORITY` set to the confirmed xStocks mint authority (optional, recommended).
 - [ ] Worker + API deployed in DRY RUN (`deploy.md`). Site points at the API and shows the dry run banner.
 - [ ] Rehearsal: `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, watch the site, then set it back to `0` and run `rat dry-run-reset --yes`.
-- [ ] `rat keys pool` shows at least 2,000 keys.
+- [ ] `rat keys pool` shows at least 10,000 keys (pre-ground on a clean machine, `keys.md`).
 - [ ] `rat status` shows both keys imported. Master key backed up.
 - [ ] `rat alert-test` arrives on Telegram. `rat kill` / `rat resume` tested.
 
