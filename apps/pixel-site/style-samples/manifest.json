@@ -167,7 +167,157 @@
       },
       "pixellabId": "09a0ae94-377a-42c7-93eb-741b6614ed51",
       "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat",
+      "file": "a-blueprint/rat_rotations.png",
+      "style": "A",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat A Blueprint",
+        "description": "anthropomorphic grey rat office worker standing upright, crisp light grey business suit, white shirt, thin blue tie, pink ears and long pink tail, clean corporate look",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"stylized\"}"
+      },
+      "pixellabId": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat_idle",
+      "file": "a-blueprint/rat_idle.gif",
+      "style": "A",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "9a2e6da8-7f9b-48dc-81c9-33ad2bc45490",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat_walk",
+      "file": "a-blueprint/rat_walk.gif",
+      "style": "A",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "23723beb-1b88-4b40-9ff8-aa5c77a8a7af",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat",
+      "file": "b-arcade/rat_rotations.png",
+      "style": "B",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat B Arcade",
+        "description": "cute chubby brown rat standing upright wearing a navy blue business suit and bright red tie, big round pink ears, pink tail, bold saturated colors",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 32,
+        "view": "high top-down",
+        "outline": "single color black outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"chibi\"}"
+      },
+      "pixellabId": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat_idle",
+      "file": "b-arcade/rat_idle.gif",
+      "style": "B",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "6cc724e2-abb9-4cc9-8876-352b460bdeb4",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat_walk",
+      "file": "b-arcade/rat_walk.gif",
+      "style": "B",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "d32a2067-e319-4e3f-8111-67f66f21dd6f",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat",
+      "file": "c-noir/rat_rotations.png",
+      "style": "C",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat C Noir",
+        "description": "scrawny tired sewer rat standing upright in a rumpled dark charcoal pinstripe suit, loosened green tie, dark circles under eyes, long pink tail, moody dim lighting",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 48,
+        "view": "high top-down",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"cartoon\"}"
+      },
+      "pixellabId": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat_idle",
+      "file": "c-noir/rat_idle.gif",
+      "style": "C",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "0b8a576b-54e2-4901-93cb-8f4a58701011",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat_walk",
+      "file": "c-noir/rat_walk.gif",
+      "style": "C",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "d0b75169-3629-43d5-b284-07753dba5f89",
+      "costGenerations": 1
     }
   ],
-  "totalGenerations": 9
+  "totalGenerations": 18
 }
