@@ -8,7 +8,7 @@ import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { Command } from 'commander';
 import { dryRunResetCommand } from './commands/dry-run';
-import { keysGrindCommand, keysImportDirCommand, keysImportRoleCommand, keysPoolCommand } from './commands/keys';
+import { keysGrindCommand, keysImportDirCommand, keysImportRoleCommand, keysPoolCommand, keysRotateCommand } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { ledgerShowCommand } from './commands/ledger';
 import { statusCommand } from './commands/status';
@@ -69,6 +69,20 @@ keys
   .option('--threads <n>', 'worker threads', (v) => Number(v))
   .action((o) => withContext((ctx, cfg) => keysGrindCommand(ctx, ring(cfg), o.count, o.threads)));
 keys.command('pool').description('key pool counts').action(() => withContext((ctx) => keysPoolCommand(ctx)));
+keys
+  .command('rotate')
+  .description('re-encrypt every key under the current KEY_ENCRYPTION_KEY (needs KEY_ENCRYPTION_KEY_PREVIOUS + KEY_VERSION_PREVIOUS)')
+  .action(() =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['keyEncryptionKey']);
+      const prev = process.env.KEY_ENCRYPTION_KEY_PREVIOUS;
+      const prevVersion = Number(process.env.KEY_VERSION_PREVIOUS);
+      if (!prev || !Number.isInteger(prevVersion)) throw new Error('set KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS');
+      if (prevVersion === cfg.keyVersion) throw new Error('KEY_VERSION must differ from KEY_VERSION_PREVIOUS');
+      const r = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! }, [{ version: prevVersion, base64: prev }]);
+      await keysRotateCommand(ctx, r);
+    }),
+  );
 
 program
   .command('ledger')
