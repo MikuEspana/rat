@@ -24,6 +24,7 @@ Built on 2026-09-27 in one session, workstream by workstream (WS01 to WS12), eac
 | Operator CLI | `apps/cli` | status, kill/resume, key import/grind/rotate, ledger, dry-run reset, stocks sync, alert test, emergency sweep |
 | The bot | `apps/worker` | prices, mint checks, claim + wallet watch + hire, buy + burn (random 8 to 12 min rounds, chunks of at most 1 SOL, 1.5% slippage, optional Jito), reconcile, key pool; tick scheduler; single-worker lease |
 | State API | `apps/api` | `/api/state`, `/api/rats`, `/api/events`, `/health` exactly per `CONTRACT.md` |
+| Live mock API | `apps/api/src/mock`, `pnpm mock:api` | the same 4 endpoints with live-changing mock data (hires, price drift, tier changes, claims, burns every minute, a stock pausing and resuming) for building the site |
 | Tests | `tests/` | e2e simulations (`SIMULATION.md`), smoke script (not run), runbook checks |
 | Deploy | `infra/`, `docs/runbooks/` | Dockerfile, Railway config, read-only DB role, runbooks |
 

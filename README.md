@@ -31,6 +31,7 @@ Rules that never change:
 | `ROADMAP.md` | Workstreams, safety, testing, launch checklist |
 | `CONTRACT.md` | The JSON the website reads |
 | `packages/contract/mock/` | Mock `state.json`, `rats.json`, `events.json` to animate against |
+| `pnpm mock:api` | The same API with live-changing mock data on `localhost:8787` (hires, price drift, burns, a stock pausing) |
 | `config/stocks.json` | The stock list (needs owner approval before live hires) |
 | `OPEN-QUESTIONS.md` | Decisions only the owner can make, with the safe default picked |
 | `STATUS.md` | What is built, tested, mocked, and how to go live |

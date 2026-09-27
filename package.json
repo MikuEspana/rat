@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:guards": "node scripts/check-guards.mjs",
+    "mock:api": "pnpm --filter @rat/api mock",
     "ci": "pnpm check:guards && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

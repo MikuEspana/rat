@@ -1,9 +1,17 @@
 // Hono app: read-only, cached (API_CACHE_SEC), gzip, CORS, per-IP rate limit.
+import type { BotMode, EventsResponse, RatsResponse, StateResponse } from '@rat/contract';
 import type { Clock } from '@rat/core';
 import { Hono } from 'hono';
 import { compress } from 'hono/compress';
 import { cors } from 'hono/cors';
-import type { StateService } from './state-service';
+
+/** What the app serves: the database-backed StateService, or the live mock (pnpm mock:api). */
+export interface StateProvider {
+  stateResponse(): Promise<StateResponse>;
+  ratsResponse(afterId: number): Promise<RatsResponse>;
+  eventsResponse(afterId: number, limit: number): Promise<EventsResponse>;
+  health(): Promise<{ ok: boolean; mode: BotMode; heartbeatAgeSec: number | null }>;
+}
 
 class TtlCache {
   private readonly entries = new Map<string, { expires: number; body: string }>();
@@ -42,7 +50,7 @@ class RateLimiter {
 }
 
 export interface AppOptions {
-  service: StateService;
+  service: StateProvider;
   clock: Clock;
   cacheSec: number;
   corsOrigin: string;
