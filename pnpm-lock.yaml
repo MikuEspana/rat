@@ -76,6 +76,18 @@ importers:
         specifier: ^0.31.0
         version: 0.31.11
 
+  packages/jupiter:
+    dependencies:
+      '@rat/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@rat/core':
+        specifier: workspace:*
+        version: link:../core
+      '@solana/web3.js':
+        specifier: ^1.98.2
+        version: 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+
   packages/keys:
     dependencies:
       '@rat/core':
