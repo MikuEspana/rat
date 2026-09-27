@@ -24,8 +24,9 @@ jobs:
       - name: Tests
         run: pnpm test
 
-  chaos:
-    # worker killed before every step of a hire and a burn, RPC / database outages at every call, Jupiter 429 storm
+  long:
+    # chaos (worker killed before every step of a hire and a burn, RPC / database outages at every call, Jupiter 429
+    # storm) and the 3-hour launch simulation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -36,8 +37,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Chaos tests
-        run: pnpm test:chaos
+      - name: Chaos tests and the 3-hour launch simulation
+        run: pnpm test:long
 
   docker:
     runs-on: ubuntu-latest

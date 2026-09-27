@@ -9,12 +9,13 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --exclude 'tests/chaos/**'",
-    "test:chaos": "vitest run tests/chaos",
+    "test": "vitest run --exclude 'tests/chaos/**' --exclude 'tests/sim/**'",
+    "test:long": "vitest run tests/chaos tests/sim",
+    "sim:3h": "WRITE_SIMULATION=1 vitest run tests/sim/launch-3h.test.ts",
     "test:watch": "vitest",
     "check:guards": "node scripts/check-guards.mjs",
     "mock:api": "pnpm --filter @rat/api mock",
-    "ci": "pnpm check:guards && pnpm typecheck && pnpm test && pnpm test:chaos"
+    "ci": "pnpm check:guards && pnpm typecheck && pnpm test && pnpm test:long"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

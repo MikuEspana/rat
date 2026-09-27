@@ -151,6 +151,9 @@ const envSchema = z.object({
   BURN_INTERVAL_MIN_SEC: intStr(480, 1),
   BURN_INTERVAL_MAX_SEC: intStr(720, 1),
   BURN_CHUNK_MAX_SOL: solStr('1'),
+  // Optional: at most this much per round (0 = no limit: a round burns everything the caps allow). About
+  // SPEND_CAP_SOL_PER_HOUR_BURN / 6 spreads burns evenly over the hour instead of hitting the cap early.
+  BURN_ROUND_MAX_SOL: solStr('0'),
   BURN_CHUNK_GAP_MIN_SEC: intStr(3, 1, 3600),
   BURN_CHUNK_GAP_MAX_SEC: intStr(8, 1, 3600),
   // rpc = normal send. jito = burns go to the Jito block engine as bundle-only transactions with a tip.
@@ -239,6 +242,8 @@ export interface AppConfig {
 export interface BurnConfig {
   /** burns above this are split into chunks of (almost) equal size */
   chunkMaxLamports: bigint;
+  /** at most this much per round; 0 = no limit */
+  roundMaxLamports: bigint;
   chunkGapMinSec: number;
   chunkGapMaxSec: number;
   sendVia: 'rpc' | 'jito';
@@ -273,6 +278,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   if (e.BURN_CHUNK_MAX_SOL < e.MIN_BURN_SOL) {
     throw new ConfigError('BURN_CHUNK_MAX_SOL must be >= MIN_BURN_SOL');
+  }
+  if (e.BURN_ROUND_MAX_SOL > 0n && e.BURN_ROUND_MAX_SOL < e.MIN_BURN_SOL) {
+    throw new ConfigError('BURN_ROUND_MAX_SOL must be 0 (no limit) or >= MIN_BURN_SOL');
   }
   const jitoTip = e.BURN_SEND_VIA === 'jito' ? e.JITO_TIP_SOL : 0n;
   if (e.BURN_SEND_VIA === 'jito' && (jitoTip <= 0n || jitoTip > solToLamports('0.01'))) {
@@ -331,6 +339,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     burn: {
       chunkMaxLamports: e.BURN_CHUNK_MAX_SOL,
+      roundMaxLamports: e.BURN_ROUND_MAX_SOL,
       chunkGapMinSec: e.BURN_CHUNK_GAP_MIN_SEC,
       chunkGapMaxSec: e.BURN_CHUNK_GAP_MAX_SEC,
       sendVia: e.BURN_SEND_VIA,

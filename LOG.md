@@ -11,7 +11,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q1 | Remove vanity keys | [#34](https://github.com/MikuEspana/rat/pull/34) | merged |
 | Q2 | Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | merged, 14 bugs fixed |
 | Q3 | Property tests (fast-check) | [#36](https://github.com/MikuEspana/rat/pull/36) | merged, 1 bug fixed |
-| Q4 | Chaos tests | (this PR) | done, 3 bugs fixed |
+| Q4 | Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | merged, 3 bugs fixed |
+| Q5 | 3-hour launch simulation | (this PR) | done, 2 settings recommended |
 
 ## Q1. Remove vanity keys
 
@@ -76,7 +77,7 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 **What changed**
 - Chaos harness (`tests/chaos/chaos.ts`): wraps every database repository, the RPC reader and sender, and Jupiter. It can kill the worker right before its k-th operation (every later call hangs forever, like a dead process), or make one kind of dependency fail from its k-th call on.
 - `SimWorld.rebuildDeps()`: a fresh deps graph over the same database and chain (empty key cache, new guards), used as "the restarted process".
-- Suites (in a separate `chaos` CI job, `pnpm test:chaos`; `pnpm run ci` runs everything):
+- Suites (in a separate `chaos` CI job, `pnpm test:long`; `pnpm run ci` runs everything):
   - **A. killed at every step**: 172 kill points across a hire (single mode, two-step mode, and with the tx dropped so the release path runs) and a burn (clean and dropped). After each kill a restarted worker must finish the job.
   - **B. RPC down** from each of the 29 RPC calls of those steps, then back.
   - **C. database drop** from each of the 138 database calls (mid-transaction), then back.
@@ -94,3 +95,22 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 **Tests added**: 12 chaos tests (each runs up to 43 scenarios), 1 HTTP storm test, 1 regression test (`resilience.test.ts` G, fails without the RT-16 fix).
 
 **Bugs found**: 3 (RT-16 High, RT-17 Medium, RT-18 Low), all fixed.
+
+## Q5. 3-hour launch simulation
+
+**What changed**
+- `tests/sim/launch-3h.test.ts`: a 3-hour launch run live on SimChain by the real worker, 5 second ticks: launch rush (90 SOL of creator fees in 30 min), cooling (35 SOL), a second pump (40 SOL at 90 to 120 min), dying (15 SOL). 180 SOL = the ~3,000 rat plan. Runs twice (default settings, paced settings) and checks every limit plus the full money check. `pnpm sim:3h` writes the numbers into `SIMULATION.md`; it also runs in the long CI job (`pnpm test:long`, about 4 minutes).
+- New optional setting `BURN_ROUND_MAX_SOL` (default 0 = off, current behavior): at most this much per burn round.
+- `sim:launch-hour` keeps the 3-hour section when it rewrites `SIMULATION.md`.
+
+**Numbers** (full tables in `SIMULATION.md`)
+- 3,042 rats, every lamport claimed and spent, ledger = chain exactly, in both runs.
+- The 30 SOL/h caps set the pace: the rush pays 45 SOL into each budget in 30 minutes, the rest waits and is spent over the next hours (everything spent by minute 185).
+- **Default settings hire in bursts: no new rat for 30 minutes** (minute 30 to 60, and again during the second pump), and **no burn for up to 39 minutes**.
+- Paced (`MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5`): longest hiring pause 1 minute (about 17 rats a minute all the way), longest burn gap 12 minutes (the normal round spacing). Trade-off: the burn budget is fully spent about 27 minutes later.
+- Jupiter: at most 54 calls per minute by default (limit 55), 29 paced.
+- `/api/rats` at 3,042 rats: 1.66 MB (412 KB gzipped). The site must fetch it once and then follow `/api/events` (input for Q9).
+
+**Tests added**: 1 long test (two 3-hour runs).
+
+**Bugs found**: none in the money paths. One launch-day issue (bursty hiring and burning with the default settings) with a settings-only fix: Miguel decides (STATUS.md).
