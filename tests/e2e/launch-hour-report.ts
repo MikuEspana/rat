@@ -24,7 +24,7 @@ async function snapshot(w: SimWorld) {
 }
 
 async function scenarioA() {
-  const w = await createSimWorld({ dryRun: true, ratKeys: 1100 });
+  const w = await createSimWorld({ dryRun: true });
   const cfg = w.deps.config;
   const creatorStart = w.chain.sol(w.creator.publicKey.toBase58());
   const timeline: string[] = [];
@@ -87,7 +87,7 @@ async function scenarioA() {
 }
 
 async function scenarioB() {
-  const w = await createSimWorld({ dryRun: true, ratKeys: 3500 });
+  const w = await createSimWorld({ dryRun: true });
   await runLaunch(w, { seconds: HOUR, totalFees: 100n * SOL });
   const first = await snapshot(w);
   await w.run(HOUR + 120, { stepSec: 5 });
@@ -107,7 +107,7 @@ async function scenarioB() {
 }
 
 async function scenarioC() {
-  const w = await createSimWorld({ dryRun: false, ratKeys: 1100 });
+  const w = await createSimWorld({ dryRun: false });
   const creator = w.creator.publicKey.toBase58();
   const fund = w.fund.publicKey.toBase58();
   const cStart = w.chain.sol(creator);

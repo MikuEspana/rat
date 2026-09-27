@@ -1,6 +1,6 @@
 // Live mock of the public API, for building and animating the site before the bot runs.
 // Starts from packages/contract/mock/*.json (timestamps shifted to "now") and keeps changing like the real bot:
-//   - a new rat every 2 to 6 seconds (stock picked like the bot: better 24h change, more hires, 5% floor)
+//   - a new rat every 2 to 6 seconds (fresh wallet; stock picked like the bot: better 24h change, more hires, 5% floor)
 //   - stock prices drift every second in trends that flip, exaggerated so rats visibly change tier
 //   - a claim every 35 seconds (50/50 split), a burn round every minute (chunks of <= 1 SOL, 3 to 8 s apart)
 //   - one stock (COINx) pauses (its rats freeze) and resumes (they unfreeze) every couple of minutes
@@ -205,7 +205,7 @@ export class LiveMock implements StateProvider {
     const stock = active.find((s) => s.mint === mint);
     if (!stock) return;
     const id = (this.rats.at(-1)?.id ?? 0) + 1;
-    const wallet = `${this.b58(41)}RAT`;
+    const wallet = this.b58(44);
     const costUsd = SWAP_SOL * SOL_USD;
     const tokens = (costUsd * 0.995) / stock.price; // a little under cost: new rats start slightly red
     const sig = this.b58(88);

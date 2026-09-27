@@ -12,7 +12,7 @@ afterEach(async () => w?.close());
 
 describe('scale: 6,000 rats', () => {
   it('worker loops stay fast, reconcile checks every rat, the API serves all of them', async () => {
-    w = await createSimWorld({ dryRun: false, ratKeys: 50 });
+    w = await createSimWorld({ dryRun: false });
     await w.worker.tick();
     const stocks = await w.store.stocks.list();
     const now = w.clock.now();

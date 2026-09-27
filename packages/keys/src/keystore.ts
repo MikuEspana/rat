@@ -1,4 +1,6 @@
-// KeyStore backed by the encrypted key_pool table.
+// KeyStore backed by the encrypted key table (key_pool). Rat wallets are plain fresh keypairs made at hire time:
+// each one is encrypted, stored and read back BEFORE its public key is handed to the hire step, so the key of a
+// wallet that receives SOL always exists in the database, even if the worker crashes right after sending.
 import type { KeyPoolStore, KeyStore, Pubkey } from '@rat/core';
 import { Keypair } from '@solana/web3.js';
 import { type MasterKeyRing, decryptSecret, encryptSecret } from './vault';
@@ -46,31 +48,24 @@ export class DbKeyStore implements KeyStore {
     return this.role('fund', this.opts.expectedFund);
   }
 
-  takeRatKey(): Promise<Pubkey | null> {
-    return this.pool.takeAvailableRat();
+  async newRatKey(): Promise<Pubkey> {
+    const kp = Keypair.generate();
+    const pubkey = kp.publicKey.toBase58();
+    await this.pool.insertRatKey({ pubkey, secretEnc: encryptSecret(kp.secretKey, this.ring.current(), pubkey), keyVersion: this.ring.currentVersion, role: 'rat' });
+    // Read it back and decrypt it: the wallet is only used if its key provably survives in the database.
+    const stored = await this.load(pubkey);
+    if (!stored.publicKey.equals(kp.publicKey)) throw new Error(`stored rat key ${pubkey} did not round trip`);
+    return pubkey;
   }
 
   ratSigner(pubkey: Pubkey): Promise<Keypair> {
     return this.load(pubkey);
   }
 
-  async releaseRatKey(pubkey: Pubkey): Promise<void> {
+  async discardRatKey(pubkey: Pubkey): Promise<void> {
     this.cache.delete(pubkey);
-    await this.pool.release(pubkey);
+    await this.pool.markUnused(pubkey);
   }
-
-  availableRatKeys(): Promise<number> {
-    return this.pool.countAvailableRats();
-  }
-}
-
-/** Encrypts and stores keypairs as rat keys. Returns how many were inserted. */
-export async function storeRatKeys(pool: KeyPoolStore, ring: MasterKeyRing, keys: Keypair[]): Promise<number> {
-  const records = keys.map((kp) => {
-    const pubkey = kp.publicKey.toBase58();
-    return { pubkey, secretEnc: encryptSecret(kp.secretKey, ring.current(), pubkey), keyVersion: ring.currentVersion, role: 'rat' as const };
-  });
-  return pool.insertMany(records);
 }
 
 /** Encrypts an imported creator or fund key. */

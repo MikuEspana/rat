@@ -1,15 +1,4 @@
-import { type GrinderChoice, formatSol } from '@rat/core';
-import {
-  type MasterKeyRing,
-  decryptSecret,
-  detectSolanaKeygen,
-  encryptRoleKey,
-  encryptSecret,
-  grindIntoPool,
-  importKeypairFiles,
-  parseSecretKey,
-  resolveGrinder,
-} from '@rat/keys';
+import { type MasterKeyRing, decryptSecret, encryptRoleKey, encryptSecret, parseSecretKey } from '@rat/keys';
 import type { CliContext } from '../context';
 
 /** Imports the creator or fund private key (read from stdin, never from argv). */
@@ -28,55 +17,6 @@ export async function keysImportRoleCommand(
   }
   await ctx.store.keys.setRoleKey(encryptRoleKey(kp, ring, role), { replace: opts.replace });
   ctx.out(`${role} key ${expected} imported (encrypted, key version ${ring.currentVersion}).`);
-}
-
-export async function keysImportDirCommand(ctx: CliContext, ring: MasterKeyRing, dir: string, opts: { shred?: boolean } = {}): Promise<void> {
-  const r = await importKeypairFiles(dir, ctx.store.keys, ring, { suffix: ctx.config.vanitySuffix, shredAfterImport: opts.shred !== false });
-  ctx.out(`imported ${r.imported} rat keys${opts.shred !== false ? ' (files shredded)' : ''}.`);
-  for (const s of r.skipped) ctx.out(`skipped ${s.file}: ${s.reason}`);
-}
-
-/**
- * Grinds keys straight into the encrypted pool in batches (progress survives an interruption). With the built-in
- * grinder no plaintext key ever touches the disk. `--grinder solana-keygen` uses the Agave CLI instead.
- */
-export async function keysGrindCommand(
-  ctx: CliContext,
-  ring: MasterKeyRing,
-  count: number,
-  opts: { threads?: number; grinder?: GrinderChoice; batch?: number } = {},
-): Promise<void> {
-  const kp = ctx.config.keypool;
-  const kind = resolveGrinder(opts.grinder ?? kp.grinder, ctx.config.vanitySuffix, () => detectSolanaKeygen(kp.keygenPath)) ?? 'js';
-  const batch = Math.max(1, opts.batch ?? 250);
-  const started = Date.now();
-  let added = 0;
-  while (added < count) {
-    const want = Math.min(batch, count - added);
-    const r = await grindIntoPool(ctx.store.keys, ring, {
-      kind,
-      suffix: ctx.config.vanitySuffix,
-      count: want,
-      threads: opts.threads ?? kp.grindThreads,
-      timeoutMs: 24 * 3600 * 1000,
-      keygenPath: kp.keygenPath,
-    });
-    if (r.error) throw new Error(r.error);
-    added += r.added;
-    const hours = (Date.now() - started) / 3_600_000;
-    ctx.out(`${added} / ${count} keys ending in ${ctx.config.vanitySuffix} stored (${kind}, ${hours > 0 ? Math.round(added / hours) : 0} keys/h)`);
-    if (r.added === 0) throw new Error('the grinder produced no keys; stopping');
-  }
-  ctx.out(`done: ${added} keys in ${((Date.now() - started) / 1000).toFixed(1)}s.`);
-}
-
-export async function keysPoolCommand(ctx: CliContext): Promise<void> {
-  const c = await ctx.store.keys.counts();
-  const kp = ctx.config.keypool;
-  ctx.out(`rat keys: ${c.available} available, ${c.assigned} assigned. Refill below ${kp.refillBelow}, target ${kp.target}.`);
-  const worker = resolveGrinder(kp.grinder, ctx.config.vanitySuffix, () => detectSolanaKeygen(kp.keygenPath));
-  ctx.out(`worker grinder: ${worker ?? 'off'} (KEYPOOL_GRINDER=${kp.grinder})`);
-  ctx.out(`salary per rat: ${formatSol(ctx.config.salaryLamports)} SOL`);
 }
 
 /**

@@ -22,12 +22,12 @@ Agents did not create any of these resources. Everything below is done by the ow
 Generate the master key on your own machine: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Store it in your password manager too.
 
 ## 3. Keys (from a machine with the production env)
-See `keys.md`: import the creator and fund keys, fill the rat key pool.
+See `keys.md`: import the creator and fund keys. Rat wallets are created at hire time (nothing to prepare).
 
 ## 4. Vercel (your site)
 - Point the site at the API domain: it reads `/api/state` every 5s, `/api/rats` every 30s, `/api/events?afterId=` every 5s (see `CONTRACT.md`).
 - Until the API is up, animate against `pnpm mock:api` (live-changing mock data on localhost:8787, see `CONTRACT.md`) or the static `packages/contract/mock/*.json`.
 
 ## 5. Check
-- `rat status` shows DRY RUN, both keys imported, the key pool, heartbeats.
+- `rat status` shows DRY RUN, both keys imported, heartbeats.
 - `curl https://<api-domain>/health` returns `{ "ok": true, "mode": "dry_run", ... }` once the worker runs.

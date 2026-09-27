@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { FakeClock, LIVE_CONFIRM_PHRASE, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
 import { SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
-import { DbKeyStore, MasterKeyRing, encryptRoleKey, storeRatKeys } from '@rat/keys';
+import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { DbKillSwitch, GuardedSender } from '@rat/safety';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
@@ -90,18 +90,18 @@ describe('emergency sweep (SimChain, in-memory)', () => {
     chain.createMint({ mint, decimals: 8, tokenProgram: TOKEN_2022_PROGRAM, supply: 10_000_000n });
     await ctx.store.stocks.syncConfig([{ symbol: 'TSTx', name: 'Test', mint, group: 'volatile', enabled: true, approved: true }]);
     await ctx.store.stocks.setMintFacts(mint, { decimals: 8, tokenProgram: TOKEN_2022_PROGRAM, mintAuthority: null, uiMultiplier: 1 });
-    const ratKeys = [Keypair.generate(), Keypair.generate(), Keypair.generate()];
-    await storeRatKeys(ctx.store.keys, ring, ratKeys);
-    for (const k of ratKeys) {
-      await ctx.store.keys.takeAvailableRat();
-      const r = await live.rats.create({ wallet: k.publicKey.toBase58(), stockMint: mint, salaryLamports: 30_000_000n, avatarSeed: 'aaaaaaaa' });
+    const keys = new DbKeyStore(ctx.store.keys, ring);
+    const ratWallets: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const wallet = await keys.newRatKey();
+      ratWallets.push(wallet);
+      const r = await live.rats.create({ wallet, stockMint: mint, salaryLamports: 30_000_000n, avatarSeed: 'aaaaaaaa' });
       await live.rats.update(r.id, { status: 'active' });
-      chain.setTokenBalance(k.publicKey.toBase58(), mint, 1_000_000n, TOKEN_2022_PROGRAM);
-      chain.fundAccount(k.publicKey.toBase58(), 3_000_000n);
+      chain.setTokenBalance(wallet, mint, 1_000_000n, TOKEN_2022_PROGRAM);
+      chain.fundAccount(wallet, 3_000_000n);
     }
     const sender = new GuardedSender(sim, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, false), dryRun: ctx.config.dryRun });
-    const keys = new DbKeyStore(ctx.store.keys, ring);
-    return { chain, reader, sim, ctx, live, cold, mint, ratKeys, deps: { chain: reader, keys, sender } };
+    return { chain, reader, sim, ctx, live, cold, mint, ratWallets, deps: { chain: reader, keys, sender } };
   }
 
   it('prints the plan and refuses without the exact typed phrase', async () => {
@@ -125,7 +125,7 @@ describe('emergency sweep (SimChain, in-memory)', () => {
     const r = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold), limit: 2 });
     expect(r).toMatchObject({ executed: true, ok: 2, failed: 0 });
     expect(w.chain.tokenBalance(w.cold, w.mint, TOKEN_2022_PROGRAM)).toBe(2_000_000n);
-    expect(w.chain.sol(w.ratKeys[0]!.publicKey.toBase58())).toBe(0n);
+    expect(w.chain.sol(w.ratWallets[0]!)).toBe(0n);
     expect((await w.live.rats.listByStatus(['frozen'])).length).toBe(2);
     w.chain.updateMint(w.mint, { paused: true });
     const r2 = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
@@ -139,8 +139,9 @@ describe('keys rotate', () => {
     const oldB64 = randomBytes(32).toString('base64');
     const newB64 = randomBytes(32).toString('base64');
     const oldRing = new MasterKeyRing({ version: 1, base64: oldB64 });
-    const kps = [Keypair.generate(), Keypair.generate(), Keypair.generate()];
-    await storeRatKeys(ctx.store.keys, oldRing, kps);
+    const oldStore = new DbKeyStore(ctx.store.keys, oldRing);
+    const kps = [];
+    for (let i = 0; i < 3; i++) kps.push(await oldStore.ratSigner(await oldStore.newRatKey()));
     const both = new MasterKeyRing({ version: 2, base64: newB64 }, [{ version: 1, base64: oldB64 }]);
     expect(await keysRotateCommand(ctx, both)).toEqual({ rotated: 3, skipped: 0 });
     expect(await keysRotateCommand(ctx, both)).toEqual({ rotated: 0, skipped: 3 });

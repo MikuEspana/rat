@@ -92,21 +92,6 @@ const envSchema = z.object({
   KEY_VERSION: intStr(1, 1),
   CREATOR_PUBKEY: optPubkey,
   FUND_PUBKEY: optPubkey,
-  VANITY_SUFFIX: z
-    .string()
-    .trim()
-    .default('RAT')
-    .refine((v) => /^[1-9A-HJ-NP-Za-km-z]{0,5}$/.test(v), { message: 'base58 characters only, max 5' }),
-  // Key pool: the worker grinds in the background while available keys < KEYPOOL_REFILL_BELOW, up to KEYPOOL_TARGET.
-  KEYPOOL_REFILL_BELOW: intStr(9000),
-  KEYPOOL_TARGET: intStr(10000),
-  KEYPOOL_LOW_ALERT: intStr(500),
-  KEYPOOL_RUNWAY_ALERT_HOURS: numStr(2),
-  KEYPOOL_REFILL_BATCH: intStr(200, 1, 100_000),
-  KEYPOOL_GRINDER: z.enum(['auto', 'solana-keygen', 'js', 'off']).default('auto'),
-  KEYPOOL_GRIND_THREADS: intStr(0, 0, 256),
-  KEYPOOL_GRIND_TIMEOUT_SEC: intStr(900, 10, 86_400),
-  SOLANA_KEYGEN_PATH: z.string().trim().default('solana-keygen'),
 
   RPC_URL: optStr,
   RPC_URL_BACKUP: optStr,
@@ -206,8 +191,6 @@ export interface AppConfig {
   keyVersion: number;
   creatorPubkey?: string;
   fundPubkey?: string;
-  vanitySuffix: string;
-  keypool: KeypoolConfig;
 
   rpcUrl?: string;
   rpcUrlBackup?: string;
@@ -264,27 +247,6 @@ export interface BurnConfig {
   jitoTipLamports: bigint;
 }
 
-export type GrinderChoice = 'auto' | 'solana-keygen' | 'js' | 'off';
-
-export interface KeypoolConfig {
-  /** background grinding starts while available keys are below this */
-  refillBelow: number;
-  /** ... and stops at this many available keys */
-  target: number;
-  /** alert when fewer keys than this are left */
-  lowAlert: number;
-  /** alert when the pool lasts less than this many hours at the current hire rate (0 = off) */
-  runwayAlertHours: number;
-  /** keys per grinder run */
-  refillBatch: number;
-  /** auto = solana-keygen when installed, else the built-in JS grinder */
-  grinder: GrinderChoice;
-  /** 0 = CPU count minus one */
-  grindThreads: number;
-  grindTimeoutSec: number;
-  keygenPath: string;
-}
-
 export type ConfigKey = keyof AppConfig;
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): AppConfig {
@@ -319,10 +281,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.MIN_BURN_SOL <= e.HIRE_OVERHEAD_EST_SOL + jitoTip) {
     throw new ConfigError('MIN_BURN_SOL must be larger than HIRE_OVERHEAD_EST_SOL (+ JITO_TIP_SOL)');
   }
-  if (e.KEYPOOL_TARGET < e.KEYPOOL_REFILL_BELOW) {
-    throw new ConfigError('KEYPOOL_TARGET must be >= KEYPOOL_REFILL_BELOW');
-  }
-
   return {
     nodeEnv: e.NODE_ENV,
     logLevel: e.LOG_LEVEL,
@@ -337,18 +295,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     keyVersion: e.KEY_VERSION,
     creatorPubkey: e.CREATOR_PUBKEY,
     fundPubkey: e.FUND_PUBKEY,
-    vanitySuffix: e.VANITY_SUFFIX,
-    keypool: {
-      refillBelow: e.KEYPOOL_REFILL_BELOW,
-      target: e.KEYPOOL_TARGET,
-      lowAlert: e.KEYPOOL_LOW_ALERT,
-      runwayAlertHours: e.KEYPOOL_RUNWAY_ALERT_HOURS,
-      refillBatch: e.KEYPOOL_REFILL_BATCH,
-      grinder: e.KEYPOOL_GRINDER,
-      grindThreads: e.KEYPOOL_GRIND_THREADS,
-      grindTimeoutSec: e.KEYPOOL_GRIND_TIMEOUT_SEC,
-      keygenPath: e.SOLANA_KEYGEN_PATH,
-    },
     rpcUrl: e.RPC_URL,
     rpcUrlBackup: e.RPC_URL_BACKUP,
     coinMint: e.COIN_MINT,
@@ -431,7 +377,6 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
     },
     maxHiresPerLoop: cfg.maxHiresPerLoop,
     burnSendVia: cfg.burn.sendVia,
-    keypool: { refillBelow: cfg.keypool.refillBelow, target: cfg.keypool.target, grinder: cfg.keypool.grinder },
     jupiterMaxRpm: cfg.jupiter.maxRpm,
     hasRpc: Boolean(cfg.rpcUrl),
     hasJupiterKey: Boolean(cfg.jupiter.apiKey),

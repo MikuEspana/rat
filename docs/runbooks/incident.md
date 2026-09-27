@@ -9,8 +9,7 @@ First move: `rat kill --reason "<what you saw>"`. Then look.
 | `stock_paused_*` / `mint_rejected_*` | `rat stocks-sync` output | Issuer paused a stock (rats frozen automatically) or a mint failed verification (never hired into). Check the issuer's announcements. |
 | `rat_balance_*` | Solscan for the rat wallet | Tokens moved by the issuer's permanent delegate. The rat is frozen. |
 | `claim_failed`, `burn_failed`, many failed txs | `rat status` (txs last hour), RPC provider status | Usually RPC trouble. Switch `RPC_URL` / `RPC_URL_BACKUP`. |
-| `keypool_empty` / `keypool_low` / `keypool_runway` | `rat keys pool`, `rat status` (runway) | `keys.md`: grind or import more keys before the pool runs out. |
-| `hire_idle` (no rat hired for 30 min while more than 0.1 SOL waits) | the alert text (reason), `rat status`, the site's stock prices | Stale prices (weekend or Jupiter omits the xStocks): hires resume by themselves when prices are fresh. No approved or verified stock: fix `config/stocks.json`, `rat stocks-sync`. Key pool empty: `keys.md`. |
+| `hire_idle` (no rat hired for 30 min while more than 0.1 SOL waits) | the alert text (reason), `rat status`, the site's stock prices | Stale prices (weekend or Jupiter omits the xStocks): hires resume by themselves when prices are fresh. No approved or verified stock: fix `config/stocks.json`, `rat stocks-sync`. |
 | `preflight_failed` (worker refused to start LIVE) | Railway logs of the worker (each reason on its own line) | Fix what it says (0 approved stocks, no approved stock passing the mint check, `WATCH_FROM_SLOT` ahead of the chain), redeploy. |
 | `burn_jito_unavailable` | Jito status | Burns wait (budget carries over). Keep waiting or set `BURN_SEND_VIA=rpc`. |
 | `inflow_*` | Solscan | Someone sent SOL to our wallet. It is never spent by the bot. |

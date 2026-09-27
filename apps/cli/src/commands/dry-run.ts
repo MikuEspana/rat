@@ -6,5 +6,5 @@ export async function dryRunResetCommand(ctx: CliContext, yes: boolean): Promise
     return;
   }
   const r = await ctx.store.resetPaper();
-  ctx.out(`paper data reset: ${r.rats} paper rats removed, ${r.keysReleased} keys back in the pool.`);
+  ctx.out(`paper data reset: ${r.rats} paper rats removed, ${r.keysRetired} paper wallets retired (never reused).`);
 }

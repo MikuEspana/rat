@@ -11,7 +11,6 @@ Loop (tick-based scheduler, loops never overlap, single worker via a lease lock)
 | claim | 35s | claim both vaults + unwrap + fund share in ONE tx; then wallet watch; then hires |
 | burn | 10 min | buy the coin with the burn bucket and burn it in the same tx (skip under 0.01 SOL) |
 | reconcile | 35s | 500 rat token accounts: issuer freeze or balance mismatch -> rat frozen + alert |
-| keypool | 60s | alert when low, grind more |
 
 Hire state machine: attempt recorded before sending; never retried while it can still land; before a retry the rat wallet is read on-chain; reservations are settled with the real cost or released. `HIRE_MODE=two_step` funds first, then the rat buys.
 

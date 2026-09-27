@@ -1,5 +1,7 @@
 # RAT RACE v1 Roadmap (approved)
 
+> Update after the owner review: rat wallets are plain fresh keypairs made at hire time (no vanity suffix, no key pool, no grinder), and burns run in random 8 to 12 minute rounds. Lines below that say otherwise are the original plan. Current state: `STATUS.md`.
+
 Approved by the owner on 2026-09-27 with the answers below. Mechanics are in `README.md`, the website JSON is in `CONTRACT.md`.
 
 Tags for external facts: **VERIFIED** (read in official docs or code), **REPORTED** (secondhand), **UNCLEAR**. Numbers like [1] point to Sources at the bottom.

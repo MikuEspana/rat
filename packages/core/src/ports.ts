@@ -224,11 +224,14 @@ export interface TxSender {
 export interface KeyStore {
   creator(): Promise<Keypair>;
   fund(): Promise<Keypair>;
-  /** Reserves an unused vanity rat key. null when the pool is empty. */
-  takeRatKey(): Promise<Pubkey | null>;
+  /**
+   * A brand new rat wallet: a fresh keypair, encrypted and stored (and read back) BEFORE its public key is
+   * returned, so the key always exists before any SOL can be sent to it. Keys are never reused.
+   */
+  newRatKey(): Promise<Pubkey>;
   ratSigner(pubkey: Pubkey): Promise<Keypair>;
-  releaseRatKey(pubkey: Pubkey): Promise<void>;
-  availableRatKeys(): Promise<number>;
+  /** The hire was abandoned before any transaction was sent: the key is kept but never handed out again. */
+  discardRatKey(pubkey: Pubkey): Promise<void>;
 }
 
 // ---------- stores (implemented by @rat/db) ----------
@@ -281,13 +284,12 @@ export interface KeyPoolRecord {
 }
 
 export interface KeyPoolStore {
-  insertMany(records: KeyPoolRecord[]): Promise<number>;
-  /** Atomically marks one available rat key as assigned and returns it. */
-  takeAvailableRat(): Promise<Pubkey | null>;
-  release(pubkey: Pubkey): Promise<void>;
+  /** Inserts one new rat key (status assigned). Throws if the public key already exists. */
+  insertRatKey(record: KeyPoolRecord): Promise<void>;
+  /** Marks a rat key as never used (never funded); it is never handed out again. */
+  markUnused(pubkey: Pubkey): Promise<void>;
   get(pubkey: Pubkey): Promise<KeyPoolRecord | null>;
   getRole(role: 'creator' | 'fund'): Promise<KeyPoolRecord | null>;
-  countAvailableRats(): Promise<number>;
 }
 
 // ---------- safety ----------

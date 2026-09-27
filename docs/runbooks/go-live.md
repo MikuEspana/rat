@@ -8,7 +8,6 @@
 - [ ] `XSTOCKS_MINT_AUTHORITY` set to the confirmed xStocks mint authority (optional, recommended).
 - [ ] Worker + API deployed in DRY RUN (`deploy.md`). Site points at the API and shows the dry run banner.
 - [ ] Rehearsal: `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, watch the site, then set it back to `0` and run `rat dry-run-reset --yes`.
-- [ ] `rat keys pool` shows at least 10,000 keys (pre-ground on a clean machine, `keys.md`).
 - [ ] `rat status` shows both keys imported. Master key backed up.
 - [ ] `rat alert-test` arrives on Telegram. `rat kill` / `rat resume` tested.
 
@@ -30,8 +29,8 @@ Order matters: the coin launch is a creator-wallet transaction the bot did not s
 
 ## T-0: start live (only after the steps above)
 - [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows). This is the worker's first live start. Its preflight refuses to start live if 0 stocks are approved, if no approved stock passes the mint check, or if `WATCH_FROM_SLOT` is ahead of the chain (it would hide a real leak); the logs and a Telegram alert say exactly why.
-- [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (addresses end in RAT, each holds its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
+- [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (each a fresh wallet holding its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
 
 ## T+1 hour
-- [ ] `rat status`: buckets, spent in the last hour vs caps, txs, key pool, heartbeats.
+- [ ] `rat status`: buckets, spent in the last hour vs caps, txs, heartbeats.
 - [ ] Any doubt: `rat kill`.

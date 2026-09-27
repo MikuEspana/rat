@@ -6,9 +6,6 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "scripts": {
-    "check:keygen": "tsx scripts/check-keygen.ts"
-  },
   "dependencies": {
     "@rat/core": "workspace:*",
     "@solana/web3.js": "^1.98.2",

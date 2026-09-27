@@ -8,7 +8,7 @@ import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { Command } from 'commander';
 import { dryRunResetCommand } from './commands/dry-run';
-import { keysGrindCommand, keysImportDirCommand, keysImportRoleCommand, keysPoolCommand, keysRotateCommand } from './commands/keys';
+import { keysImportRoleCommand, keysRotateCommand } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { ledgerShowCommand } from './commands/ledger';
 import { statusCommand } from './commands/status';
@@ -41,7 +41,7 @@ async function readStdin(): Promise<string> {
 
 const program = new Command().name('rat').description('RAT RACE operator CLI');
 
-program.command('status').description('mode, kill switch, buckets, caps, key pool, rats, loops').action(() => withContext((ctx) => statusCommand(ctx)));
+program.command('status').description('mode, kill switch, buckets, caps, keys, rats, loops').action(() => withContext((ctx) => statusCommand(ctx)));
 program.command('kill').description('engage the kill switch').option('-r, --reason <text>', 'reason', 'manual').action((o) => withContext((ctx) => killCommand(ctx, o.reason)));
 program.command('resume').description('release the database kill switch').action(() => withContext((ctx) => resumeCommand(ctx)));
 
@@ -57,20 +57,6 @@ keys
       await keysImportRoleCommand(ctx, ring(cfg), o.role, await readStdin(), { replace: Boolean(o.replace) });
     }),
   );
-keys
-  .command('import-dir <dir>')
-  .description('import solana-keygen grind files (verified, encrypted, then shredded)')
-  .option('--no-shred', 'keep the files')
-  .action((dir, o) => withContext((ctx, cfg) => keysImportDirCommand(ctx, ring(cfg), dir, { shred: o.shred })));
-keys
-  .command('grind')
-  .description('grind vanity rat keys straight into the encrypted pool, in batches (no plaintext files)')
-  .requiredOption('--count <n>', 'number of keys', (v) => Number(v))
-  .option('--threads <n>', 'grind threads (default: CPU count minus one, max 4; pass your core count on a laptop)', (v) => Number(v))
-  .option('--grinder <kind>', 'auto | js | solana-keygen (auto = js, the faster one for suffixes)')
-  .option('--batch <n>', 'keys stored per batch (default 250)', (v) => Number(v))
-  .action((o) => withContext((ctx, cfg) => keysGrindCommand(ctx, ring(cfg), o.count, { threads: o.threads, grinder: o.grinder, batch: o.batch })));
-keys.command('pool').description('key pool counts').action(() => withContext((ctx) => keysPoolCommand(ctx)));
 keys
   .command('rotate')
   .description('re-encrypt every key under the current KEY_ENCRYPTION_KEY (needs KEY_ENCRYPTION_KEY_PREVIOUS + KEY_VERSION_PREVIOUS)')
