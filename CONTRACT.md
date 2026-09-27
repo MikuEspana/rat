@@ -3,6 +3,13 @@
 This is the exact JSON the website reads. Animate against the mock files now, then switch the base URL to the live API.
 
 - Mock files: `packages/contract/mock/state.json`, `rats.json`, `events.json` (250 rats, 10 stocks, COINx paused so you can see frozen rats).
+- **Live mock API**: `pnpm install` once, then `pnpm mock:api` serves the same 4 endpoints on `http://localhost:8787`, starting from the mock files and changing like the real bot:
+  - a new rat every 2 to 6 seconds (hire events, `/api/rats?afterId=` picks them up)
+  - stock prices drift every second in trends that flip (exaggerated so ranks, tiers and sizes visibly change)
+  - a claim every 35 seconds, a burn round every minute (1 to 3 `burn` events a few seconds apart)
+  - COINx pauses (its rats freeze, `freeze` event) and resumes (`unfreeze` event) every couple of minutes
+  - options: `MOCK_API_PORT=9000`, `MOCK_SPEED=3` (three times as busy), `MOCK_SEED=42` (the same run every time)
+  - same JSON, schemaVersion 1, CORS open. No database, no chain, nothing real.
 - TypeScript types + zod schemas + display math: `packages/contract` (`@rat/contract`). Browser safe: no Node APIs, only `zod`.
 
 ## Endpoints

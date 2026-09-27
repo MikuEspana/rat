@@ -26,7 +26,7 @@ See `keys.md`: import the creator and fund keys, fill the rat key pool.
 
 ## 4. Vercel (your site)
 - Point the site at the API domain: it reads `/api/state` every 5s, `/api/rats` every 30s, `/api/events?afterId=` every 5s (see `CONTRACT.md`).
-- Until the API is up, animate against `packages/contract/mock/*.json`.
+- Until the API is up, animate against `pnpm mock:api` (live-changing mock data on localhost:8787, see `CONTRACT.md`) or the static `packages/contract/mock/*.json`.
 
 ## 5. Check
 - `rat status` shows DRY RUN, both keys imported, the key pool, heartbeats.
