@@ -21,7 +21,7 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | merged |
 | Q12 | Extra launch-risk reduction | [#43](https://github.com/MikuEspana/rat/pull/43) | merged, 4 items |
 | Final | STATUS.md | [#44](https://github.com/MikuEspana/rat/pull/44) | merged, queue empty |
-| Decision | Pacing defaults | (this PR) | done |
+| Decision | Pacing defaults | [#46](https://github.com/MikuEspana/rat/pull/46) | merged |
 
 ## Q1. Remove vanity keys
 
