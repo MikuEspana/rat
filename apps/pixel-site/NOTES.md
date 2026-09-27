@@ -4,7 +4,8 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Blockers
 
-- **2026-09-27 18:57 UTC, PixelLab `create_character` failing.** Every character request (MCP and REST v2, standard mode, 4 or 8 directions, any size) fails within seconds with `Generation failed due to heavy load. Please try again in a moment.` Tiles and map objects work fine at the same time. Failed jobs are not charged (balance confirmed). Retrying in a loop; v3 mode (about 2 generations per character instead of 1) is the fallback if standard stays down.
+- **Host `backblaze.pixellab.ai` is blocked by the environment network policy (403).** `get_character` lists rotation and frame URLs on that host. Not blocking: the character ZIP from `https://api.pixellab.ai/mcp/characters/{id}/download` carries the same PNGs, so all downloads go through that. Allow `backblaze.pixellab.ai` only if a future tool returns files with no `api.pixellab.ai` alternative. Note: the ZIP returns an error JSON while any animation on the character is still rendering.
+- **Resolved 19:10 UTC. 2026-09-27 18:57 UTC, PixelLab `create_character` failing.** Every character request (MCP and REST v2, standard mode, 4 or 8 directions, any size) failed within seconds with `Generation failed due to heavy load. Please try again in a moment.` for about 13 minutes while tiles and map objects worked. Failed jobs were not charged. A retry loop (every 90 s) got all 3 through on the 4th round.
 
 ## PixelLab setup
 
