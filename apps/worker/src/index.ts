@@ -11,3 +11,4 @@ export * from './steps/burn';
 export * from './steps/reconcile';
 export * from './steps/keypool';
 export * from './production';
+export * from './preflight';

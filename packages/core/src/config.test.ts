@@ -20,6 +20,18 @@ describe('loadConfig', () => {
     expect(cfg.intervals).toEqual({ claimSec: 35, burnMinSec: 480, burnMaxSec: 720, priceSec: 15, freezeSec: 35 });
   });
 
+  it('wallet watch: WATCH_FROM_SLOT and KNOWN_OWNER_TX_SIGS', () => {
+    const d = loadConfig({});
+    expect(d.watchFromSlot).toBe(0);
+    expect(d.knownOwnerTxSigs).toEqual([]);
+    const sig = '5'.repeat(88);
+    const c = loadConfig({ WATCH_FROM_SLOT: '312345678', KNOWN_OWNER_TX_SIGS: ` ${sig}, ${'4'.repeat(87)} ` });
+    expect(c.watchFromSlot).toBe(312_345_678);
+    expect(c.knownOwnerTxSigs).toEqual([sig, '4'.repeat(87)]);
+    expect(() => loadConfig({ KNOWN_OWNER_TX_SIGS: 'not-a-signature' })).toThrow(/signature/);
+    expect(() => loadConfig({ WATCH_FROM_SLOT: '-5' })).toThrow();
+  });
+
   it('burns: random 8 to 12 minute rounds, 1 SOL chunks, 1.5% slippage, Jito off by default', () => {
     const cfg = loadConfig({});
     expect(cfg.slippageBpsCoin).toBe(150);
