@@ -114,6 +114,13 @@ export class SpendGuard {
     return { ok: true, reservation: { ledgerId, bucket, lamports, refType: req.refType, refId: req.refId } };
   }
 
+  /** SOL that can still be spent from `bucket` in the current rolling hour. */
+  async remainingCap(bucket: Bucket): Promise<bigint> {
+    const since = new Date(this.deps.clock.now().getTime() - HOUR_MS);
+    const left = this.cfg.capPerHour[bucket] - (await this.deps.ledger.netOutflowSince(bucket, since));
+    return left > 0n ? left : 0n;
+  }
+
   /** Books the real cost: the difference to the reservation is credited back (or debited). */
   async settle(r: Reservation, actualLamports: bigint): Promise<void> {
     const diff = r.lamports - actualLamports;

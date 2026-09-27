@@ -70,6 +70,16 @@ describe('SpendGuard', () => {
     expect((await g.authorize({ bucket: 'hire', lamports: SOL, refType: 'rat', refId: '4' })).ok).toBe(true);
   });
 
+  it('reports the room left under the cap', async () => {
+    await credit('burn', 5n * SOL);
+    const g = guard();
+    expect(await g.remainingCap('burn')).toBe(SOL);
+    await g.authorize({ bucket: 'burn', lamports: (SOL * 3n) / 10n, refType: 'burn', refId: '1' });
+    expect(await g.remainingCap('burn')).toBe((SOL * 7n) / 10n);
+    clock.advanceSeconds(3601);
+    expect(await g.remainingCap('burn')).toBe(SOL);
+  });
+
   it('alerts once when a bucket crosses 50% of its cap', async () => {
     await credit('hire', 10n * SOL);
     const g = guard();

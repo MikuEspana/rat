@@ -1,5 +1,5 @@
 // TxSender over SimChain with failure injection. In-memory only.
-import type { PreparedTx, TxKind, TxOutcome, TxRequest, TxSender } from '@rat/core';
+import type { PreparedTx, Rng, TxKind, TxOutcome, TxRequest, TxSender } from '@rat/core';
 import { ComputeBudgetProgram } from '@solana/web3.js';
 import type { SimChain } from './sim-chain';
 
@@ -19,6 +19,7 @@ interface Injection {
 
 export class SimTxSender implements TxSender {
   private readonly injections: Injection[] = [];
+  private random: { rate: number; rng: Rng; modes: FailureMode[]; kinds: TxKind[] } | null = null;
   private readonly prepared = new Map<string, TxRequest>();
   /** number of submit() calls that reached the chain (for assertions) */
   submitted = 0;
@@ -34,12 +35,31 @@ export class SimTxSender implements TxSender {
     this.injections.push({ mode, match: fn, remaining: times });
   }
 
+  /** Every submitted tx of `kinds` fails with probability `rate`, in a random mode. */
+  setRandomFailures(rate: number, rng: Rng, modes: FailureMode[] = ['drop', 'fail', 'land_timeout', 'reject'], kinds: TxKind[] = ['claim', 'hire', 'burn']): void {
+    this.random = { rate, rng, modes, kinds };
+  }
+
+  clearFailures(): void {
+    this.random = null;
+    this.injections.length = 0;
+  }
+
   private takeInjection(req: TxRequest): FailureMode | null {
     const inj = this.injections.find((i) => i.remaining > 0 && i.match(req));
-    if (!inj) return null;
-    inj.remaining -= 1;
-    return inj.mode;
+    if (inj) {
+      inj.remaining -= 1;
+      return inj.mode;
+    }
+    if (this.random && this.random.kinds.includes(req.kind) && this.random.rng.next() < this.random.rate) {
+      this.randomInjected++;
+      return this.random.modes[Math.floor(this.random.rng.next() * this.random.modes.length)]!;
+    }
+    return null;
   }
+
+  /** number of random failures injected so far */
+  randomInjected = 0;
 
   private spec(p: PreparedTx) {
     const req = p.request;
