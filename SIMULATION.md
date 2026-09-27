@@ -21,7 +21,7 @@ Creator fee rates depend on the coin's market cap tier (set on-chain by pump.fun
 
 ### Result
 
-| | Default (20 hires per loop, no round limit) | Paced (10 hires per loop, 5 SOL per burn round) |
+| | Unpaced (20 hires per loop, no round limit) | **Defaults** (10 hires per loop, 5 SOL per burn round) |
 |---|---|---|
 | Rats hired | **3042** | **3042** |
 | Last hire | 180 min | 180 min |
@@ -33,13 +33,13 @@ Creator fee rates depend on the coin's market cap tier (set on-chain by pump.fun
 | Most hires in one loop | 20 (limit 20) | 10 (limit 10) |
 | Most Jupiter calls in any minute | 54 (limit 55) | 29 (limit 55) |
 | Transactions sent | 3450 | 3445 |
-| Slowest worker loop (in memory) | 704 ms | 498 ms |
-| `/api/state` size at the end | 34.4 KB (10.2 KB gzipped) | 34.4 KB (10.4 KB gzipped) |
-| `/api/rats` size at the end | 1659.7 KB (412.3 KB gzipped) | 1659.6 KB (423.5 KB gzipped) |
+| Slowest worker loop (in memory) | 743 ms | 512 ms |
+| `/api/state` size at the end | 34.4 KB (10.2 KB gzipped) | 34.5 KB (10.4 KB gzipped) |
+| `/api/rats` size at the end | 1659.6 KB (412.2 KB gzipped) | 1659.3 KB (423.6 KB gzipped) |
 | Money check (ledger = chain, to the lamport) | exact | exact |
-| Simulation runtime | 118 s | 115 s |
+| Simulation runtime | 123 s | 114 s |
 
-### Timeline: default settings
+### Timeline: unpaced (MAX_HIRES_PER_LOOP=20, BURN_ROUND_MAX_SOL=0)
 
 Every 10 minutes. "Waiting" = claimed SOL not spent yet. "Last hour" = rolling 60-minute spend vs the 30 SOL cap.
 
@@ -65,7 +65,7 @@ Every 10 minutes. "Waiting" = claimed SOL not spent yet. "Last hour" = rolling 6
 | 180 | dying | 0.51 | 179.99 | 3041 | 8 | 0.03 | 29.97 | 1 | 89.90 | 0.09 | 29.91 |
 | 190 | after | 0.00 | 180.00 | 3042 | 1 | 0.00 | 20.21 | 1 | 89.99 | 0.01 | 30.00 |
 
-### Timeline: paced (MAX_HIRES_PER_LOOP=10, BURN_ROUND_MAX_SOL=5)
+### Timeline: defaults (MAX_HIRES_PER_LOOP=10, BURN_ROUND_MAX_SOL=5)
 
 Every 10 minutes. "Waiting" = claimed SOL not spent yet. "Last hour" = rolling 60-minute spend vs the 30 SOL cap.
 
@@ -97,17 +97,17 @@ Every 10 minutes. "Waiting" = claimed SOL not spent yet. "Last hour" = rolling 6
 ### What this means
 
 - **The 30 SOL/hour caps set the pace, not the fees.** The rush pays 45 SOL into each budget in 30 minutes; at most 30 SOL per bucket can be spent in any 60 minutes, so the rest waits (peak 26.78 SOL of hire budget) and is spent over the next hours. Nothing is lost: every lamport is spent by minute 185.
-- **Default settings hire in bursts.** 20 hires per loop reach the hourly cap in about half an hour, then hiring stops for up to **30 min** until the window slides, right when the site has the most visitors. Paced at 10 per loop, the longest pause is 1 min and the office fills evenly (about 17 rats a minute), finishing at about the same time.
-- **Burns do the same by default**: whole rounds burn everything the cap allows, so burning stops for up to **39 min**. With `BURN_ROUND_MAX_SOL=5` the longest gap is 12 min (just the random 8 to 12 minute spacing of rounds): steady buy pressure on the chart, and smaller, less tempting rounds for sandwich bots. The price: the burn budget is fully spent at minute 212 instead of 185.
-- **Recommendation for launch day**: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` (settings only). Raise the hourly caps only if you want the money spent faster.
+- **Unpaced settings hire in bursts.** 20 hires per loop reach the hourly cap in about half an hour, then hiring stops for up to **30 min** until the window slides, right when the site has the most visitors. The defaults (10 per loop) keep the longest pause to 1 min: the office fills evenly (about 17 rats a minute) and finishes at about the same time.
+- **Unpaced burns do the same**: whole rounds burn everything the cap allows, so burning stops for up to **39 min**. With the default `BURN_ROUND_MAX_SOL=5` the longest gap is 12 min (just the random 8 to 12 minute spacing of rounds): steady buy pressure on the chart, and smaller, less tempting rounds for sandwich bots. The price: the burn budget is fully spent at minute 212 instead of 185.
+- **These are the defaults** (`MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5`, chosen by Miguel after this simulation). Raise the hourly caps only if you want the money spent faster.
 - Burns keep the random 8 to 12 minute rhythm with chunks of at most 1 SOL, and keep going after the coin dies until the burn budget is spent.
-- **The site** must handle 3042 rats: `/api/rats` is 1659.7 KB (412.3 KB gzipped). Fetch it once, then follow `/api/events`.
+- **The site** must handle 3042 rats: `/api/rats` is 1659.6 KB (412.2 KB gzipped). Fetch it once, then follow `/api/events`.
 - Not modelled: real Jupiter routes and xStock liquidity, real priority fees, real RPC latency (the worker loop time above is in memory).
 <!-- sim-3h:end -->
 
 ## A. DRY RUN launch hour: 50 SOL of creator fees
 
-Fees accrue on a launch-shaped curve (front-loaded, decaying) for 60 minutes: bonding curve for 20 minutes, then PumpSwap after graduation. The worker runs on a fake clock in 5 second ticks. Config: salary 0.03 SOL, split 50% / 50%, caps 30 SOL/h per bucket (alert at 50%), max 20 hires per loop, claim every 35s, burn rounds at a random 8 to 12 min, split into chunks of at most 1 SOL a few seconds apart, coin slippage 1.5%. Then 14 more minutes with no new fees so the last claims get burned.
+Fees accrue on a launch-shaped curve (front-loaded, decaying) for 60 minutes: bonding curve for 20 minutes, then PumpSwap after graduation. The worker runs on a fake clock in 5 second ticks. Config: salary 0.03 SOL, split 50% / 50%, caps 30 SOL/h per bucket (alert at 50%), max 10 hires per loop, claim every 35s, burn rounds at a random 8 to 12 min, split into chunks of at most 1 SOL a few seconds apart, coin slippage 1.5%. Then 14 more minutes with no new fees so the last claims get burned.
 
 | Check | Result |
 |---|---|
@@ -115,48 +115,48 @@ Fees accrue on a launch-shaped curve (front-loaded, decaying) for 60 minutes: bo
 | Credited to hires / fund | 25.000000026 / 24.999999974 SOL (odd lamports go to hires) |
 | Rats hired | **833** (paper), 24.99 SOL of salaries |
 | Hire budget left | 0.010000026 SOL (less than one salary) |
-| Buy + burns | **7 rounds** (10.2 to 11.4 min apart) in **29 transactions** of at most 0.971466671 SOL, 24.999999974 SOL spent, burn budget left 0 SOL |
-| Max hires in one loop | 16 (limit 20) |
-| Max Jupiter calls in any minute | 35 (limit 55) |
+| Buy + burns | **7 rounds** (9.1 to 11.4 min apart) in **27 transactions** of at most 1 SOL, 24.999999974 SOL spent, burn budget left 0 SOL |
+| Max hires in one loop | 10 (limit 10) |
+| Max Jupiter calls in any minute | 29 (limit 55) |
 | Cap alerts | cap_alert_hire, cap_alert_burn (50% crossed once per bucket); cap reached: no |
-| Transactions sent | **0** (DRY RUN simulated 966) |
+| Transactions sent | **0** (DRY RUN simulated 964) |
 | Creator wallet change | 0 SOL |
-| Simulation runtime | 23.3s |
+| Simulation runtime | 22.6s |
 
 Timeline (cumulative; outflow = rolling last hour vs the 30 SOL cap):
 
 | Time | Claimed SOL | Rats | Burn txs | Burn SOL | Hire outflow | Burn outflow |
 |---|---|---|---|---|---|---|
-| 10 min | 14.236568999 | 237 | 1 | 0.066972943 | 7.11 / 30 | 0.066972943 / 30 |
-| 20 min | 25.242608298 | 420 | 9 | 7.838706311 | 12.6 / 30 | 7.838706311 / 30 |
-| 30 min | 33.831996239 | 563 | 16 | 14.25998918 | 16.89 / 30 | 14.25998918 / 30 |
-| 40 min | 40.535369107 | 675 | 21 | 18.793545289 | 20.25 / 30 | 18.793545289 / 30 |
-| 50 min | 45.766848699 | 762 | 25 | 21.884222376 | 22.86 / 30 | 21.884222376 / 30 |
-| 60 min | 49.849626021 | 830 | 28 | 24.60033383 | 24.9 / 30 | 24.60033383 / 30 |
+| 10 min | 14.236568999 | 172 | 1 | 0.066972943 | 5.16 / 30 | 0.066972943 / 30 |
+| 20 min | 25.242608298 | 342 | 6 | 5.066972943 | 10.26 / 30 | 5.066972943 / 30 |
+| 30 min | 33.831996239 | 512 | 11 | 10.066972943 | 15.36 / 30 | 10.066972943 / 30 |
+| 40 min | 40.535369107 | 675 | 16 | 15.066972943 | 20.25 / 30 | 15.066972943 / 30 |
+| 50 min | 45.766848699 | 762 | 21 | 20.066972943 | 22.86 / 30 | 20.066972943 / 30 |
+| 60 min | 49.849626021 | 830 | 25 | 23.537205064 | 24.9 / 30 | 23.537205064 / 30 |
 
 Hires by stock. Weights follow the 24h change rank at each hire (better performers get more new hires, 5% floor). Prices move during the simulated hour, so this table shows the change at the end:
 
 | Stock | 24h change (end) | Rats |
 |---|---|---|
-| TSLAx | 15.14% | 143 |
-| AMZNx | 4.02% | 64 |
-| SPYx | 3.85% | 101 |
-| AAPLx | 1.55% | 85 |
-| NVDAx | 1.05% | 132 |
-| AMDx | -1.28% | 88 |
-| MSTRx | -2.31% | 60 |
-| METAx | -3.87% | 45 |
-| GOOGLx | -6.34% | 57 |
-| COINx | -10.78% | 58 |
+| TSLAx | 21.19% | 146 |
+| COINx | 5.05% | 124 |
+| AMDx | 3.49% | 115 |
+| AMZNx | 2.34% | 72 |
+| METAx | 1.37% | 55 |
+| NVDAx | 0.84% | 95 |
+| GOOGLx | 0.01% | 52 |
+| SPYx | -1.04% | 55 |
+| AAPLx | -1.70% | 74 |
+| MSTRx | -3.70% | 45 |
 
 ## B. DRY RUN double volume: 100 SOL in one hour (caps)
 
 | Check | Result |
 |---|---|
 | Hire outflow in the first hour | **30 SOL** (cap 30) |
-| Burn outflow in the first hour | **30 SOL** (cap 30) |
-| Alerts | cap_alert_hire, cap_alert_burn, cap_reached_hire, cap_reached_burn |
-| Budget carried into hour 2 | hires 19.849626042 SOL, burns 19.849625996 SOL |
+| Burn outflow in the first hour | **25.1339457 SOL** (cap 30) |
+| Alerts | cap_alert_hire, cap_reached_burn, cap_alert_burn, cap_reached_hire |
+| Budget carried into hour 2 | hires 19.849626042 SOL, burns 24.715680296 SOL |
 | After hour 2 | 1666 rats, hire budget left 0.020000023 SOL, burn budget left 0 SOL |
 | Transactions sent | 0 |
 
@@ -167,7 +167,7 @@ Same hour, but every claim, hire and burn is executed on SimChain (real System/A
 | Check | Result |
 |---|---|
 | Creator wallet change vs ledger | 0.000932426 SOL vs 0.000932426 SOL: **exact** |
-| Fund wallet change vs ledger | 0.862474147 SOL vs 0.862474147 SOL: **exact** |
+| Fund wallet change vs ledger | 0.00499 SOL vs 0.00499 SOL: **exact** |
 | Rats | 845, real cost per rat 0.02958408 SOL (salary 0.03) |
 | Each rat on-chain | holds exactly its database token amount and 0.003 SOL buffer |
 | Transactions | 976 submitted to SimChain |

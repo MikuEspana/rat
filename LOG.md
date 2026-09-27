@@ -20,7 +20,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q10 | Site deploy docs (Vercel) | none | **skipped by Miguel** (part of Tier 3) |
 | Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | merged |
 | Q12 | Extra launch-risk reduction | [#43](https://github.com/MikuEspana/rat/pull/43) | merged, 4 items |
-| Final | STATUS.md | (this PR) | queue empty |
+| Final | STATUS.md | [#44](https://github.com/MikuEspana/rat/pull/44) | merged, queue empty |
+| Decision | Pacing defaults | (this PR) | done |
 
 ## Q1. Remove vanity keys
 
@@ -190,3 +191,15 @@ Added to the queue, then done:
 ## Queue empty
 
 `STATUS.md` now opens with the queue table (Item | PR | Result | Anything Miguel must do) and the top 5 risks left. The integration PR into `main` ([#27](https://github.com/MikuEspana/rat/pull/27)) stays open for Miguel.
+
+## Miguel's decision: pacing on by default
+
+After reading `SIMULATION.md`, Miguel chose to make the pacing settings the defaults.
+
+**What changed**
+- `MAX_HIRES_PER_LOOP` default 20 -> 10 (about 17 rats a minute, steady under the 30 SOL/h cap) and `BURN_ROUND_MAX_SOL` default 0 -> 5 (burns spread over the hour). `.env.example`, config tests.
+- Tests that relied on the old defaults: the paper hire test now expects the configured per-loop limit; the 100 SOL cap test turns burn pacing off explicitly (it tests the cap itself).
+- `SIMULATION.md` regenerated: the 3-hour run now compares "unpaced" (the old values, set explicitly) with the new defaults; the launch-hour sections use the new defaults.
+- `LAUNCH-DAY.md`, `STATUS.md`, `SECURITY-REVIEW.md` updated.
+
+**Tests**: main suite 249 passed, chaos suite 16 passed, 3-hour simulation passed (same numbers: 3,042 rats, longest hiring pause 1 min, longest burn gap 12 min, ledger = chain).

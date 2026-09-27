@@ -320,7 +320,8 @@ describe('DRY RUN (paper)', () => {
     // the same fees are not counted twice on the next loop
     expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
     const h = await runHireStep(w.deps, w.worker.state);
-    expect(h.hired).toBe(16);
+    // the 0.5 SOL budget covers 16 salaries; one loop hires up to MAX_HIRES_PER_LOOP of them
+    expect(h.hired).toBe(w.deps.config.maxHiresPerLoop);
     const b = await runBurnStep(w.deps, w.worker.state);
     expect(b.status).toBe('paper');
     expect(w.simSender.submitted).toBe(0);
@@ -330,7 +331,7 @@ describe('DRY RUN (paper)', () => {
     for (const r of rats) expect(w.chain.tokenBalance(r.wallet, r.stockMint, TOKEN_2022_PROGRAM)).toBe(0n);
     expect(await w.store.forMode('live').ledger.balance('hire')).toBe(0n);
     const types = await w.store.events.countByType();
-    expect(types).toMatchObject({ claim: 1, hire: 16, burn: 1 });
+    expect(types).toMatchObject({ claim: 1, hire: w.deps.config.maxHiresPerLoop, burn: 1 });
     // fees that keep accruing are counted once more
     w.accrue({ bondingLamports: SOL / 10n });
     expect((await runClaimStep(w.deps, w.worker.state)).claimedLamports).toBe(SOL / 10n);

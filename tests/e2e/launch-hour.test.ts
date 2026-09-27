@@ -109,7 +109,8 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
 
 describe('B. DRY RUN double volume: 100 SOL in one hour hits the caps', () => {
   it('stops each bucket at 30 SOL/h, alerts, and spends the carried budget in the next hour', async () => {
-    w = await createSimWorld({ dryRun: true });
+    // burn round pacing off: this test is about the hourly cap itself (pacing is covered by tests/sim)
+    w = await createSimWorld({ dryRun: true, env: { BURN_ROUND_MAX_SOL: '0' } });
     await runLaunch(w, { seconds: HOUR, totalFees: 100n * SOL });
     const hourAgo = () => new Date(w.clock.now().getTime() - HOUR * 1000);
     const hireOut = await w.store.ledger.netOutflowSince('hire', hourAgo());

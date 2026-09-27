@@ -221,7 +221,7 @@ function report(runs: Run[]): string {
   o.push('');
   o.push('### Result');
   o.push('');
-  o.push(`| | Default (${base.maxHiresPerLoop} hires per loop, no round limit) | Paced (${paced.maxHiresPerLoop} hires per loop, 5 SOL per burn round) |`);
+  o.push(`| | Unpaced (${base.maxHiresPerLoop} hires per loop, no round limit) | **Defaults** (${paced.maxHiresPerLoop} hires per loop, 5 SOL per burn round) |`);
   o.push('|---|---|---|');
   const both = (name: string, f: (r: Run) => string) => o.push(`| ${name} | ${f(base)} | ${f(paced)} |`);
   both('Rats hired', (r) => `**${r.rats}**`);
@@ -257,9 +257,9 @@ function report(runs: Run[]): string {
   o.push('### What this means');
   o.push('');
   o.push(`- **The 30 SOL/hour caps set the pace, not the fees.** The rush pays ${PHASES[0]!.sol / 2} SOL into each budget in 30 minutes; at most 30 SOL per bucket can be spent in any 60 minutes, so the rest waits (peak ${sol(base.peakHireWaiting.sol)} SOL of hire budget) and is spent over the next hours. Nothing is lost: every lamport is spent by minute ${base.budgetsSpentMin === null ? '?' : Math.round(base.budgetsSpentMin)}.`);
-  o.push(`- **Default settings hire in bursts.** ${base.maxHiresPerLoop} hires per loop reach the hourly cap in about half an hour, then hiring stops for up to **${min(base.longestStall.min)}** until the window slides, right when the site has the most visitors. Paced at ${paced.maxHiresPerLoop} per loop, the longest pause is ${min(paced.longestStall.min)} and the office fills evenly (about ${Math.round((60 / 35) * paced.maxHiresPerLoop)} rats a minute), finishing at about the same time.`);
-  o.push(`- **Burns do the same by default**: whole rounds burn everything the cap allows, so burning stops for up to **${min(base.longestBurnGap.min)}**. With \`BURN_ROUND_MAX_SOL=5\` the longest gap is ${min(paced.longestBurnGap.min)} (just the random 8 to 12 minute spacing of rounds): steady buy pressure on the chart, and smaller, less tempting rounds for sandwich bots. The price: the burn budget is fully spent at minute ${paced.budgetsSpentMin === null ? '?' : Math.round(paced.budgetsSpentMin)} instead of ${base.budgetsSpentMin === null ? '?' : Math.round(base.budgetsSpentMin)}.`);
-  o.push(`- **Recommendation for launch day**: \`MAX_HIRES_PER_LOOP=${paced.maxHiresPerLoop}\` and \`BURN_ROUND_MAX_SOL=5\` (settings only). Raise the hourly caps only if you want the money spent faster.`);
+  o.push(`- **Unpaced settings hire in bursts.** ${base.maxHiresPerLoop} hires per loop reach the hourly cap in about half an hour, then hiring stops for up to **${min(base.longestStall.min)}** until the window slides, right when the site has the most visitors. The defaults (${paced.maxHiresPerLoop} per loop) keep the longest pause to ${min(paced.longestStall.min)}: the office fills evenly (about ${Math.round((60 / 35) * paced.maxHiresPerLoop)} rats a minute) and finishes at about the same time.`);
+  o.push(`- **Unpaced burns do the same**: whole rounds burn everything the cap allows, so burning stops for up to **${min(base.longestBurnGap.min)}**. With the default \`BURN_ROUND_MAX_SOL=5\` the longest gap is ${min(paced.longestBurnGap.min)} (just the random 8 to 12 minute spacing of rounds): steady buy pressure on the chart, and smaller, less tempting rounds for sandwich bots. The price: the burn budget is fully spent at minute ${paced.budgetsSpentMin === null ? '?' : Math.round(paced.budgetsSpentMin)} instead of ${base.budgetsSpentMin === null ? '?' : Math.round(base.budgetsSpentMin)}.`);
+  o.push(`- **These are the defaults** (\`MAX_HIRES_PER_LOOP=${paced.maxHiresPerLoop}\`, \`BURN_ROUND_MAX_SOL=5\`, chosen by Miguel after this simulation). Raise the hourly caps only if you want the money spent faster.`);
   o.push(`- Burns keep the random 8 to 12 minute rhythm with chunks of at most 1 SOL, and keep going after the coin dies until the burn budget is spent.`);
   o.push(`- **The site** must handle ${base.rats} rats: \`/api/rats\` is ${base.api.ratsKb} KB (${base.api.ratsGzKb} KB gzipped). Fetch it once, then follow \`/api/events\`.`);
   o.push('- Not modelled: real Jupiter routes and xStock liquidity, real priority fees, real RPC latency (the worker loop time above is in memory).');
@@ -268,10 +268,10 @@ function report(runs: Run[]): string {
 }
 
 describe('Q5: 3-hour launch simulation', () => {
-  it('default and paced: every limit holds, all money is spent, ledger equals chain', async () => {
+  it('unpaced vs the defaults: every limit holds, all money is spent, ledger equals chain', async () => {
     const runs = [
-      await simulate('default settings', {}),
-      await simulate('paced (MAX_HIRES_PER_LOOP=10, BURN_ROUND_MAX_SOL=5)', { MAX_HIRES_PER_LOOP: '10', BURN_ROUND_MAX_SOL: '5' }),
+      await simulate('unpaced (MAX_HIRES_PER_LOOP=20, BURN_ROUND_MAX_SOL=0)', { MAX_HIRES_PER_LOOP: '20', BURN_ROUND_MAX_SOL: '0' }),
+      await simulate('defaults (MAX_HIRES_PER_LOOP=10, BURN_ROUND_MAX_SOL=5)', {}),
     ];
     for (const r of runs) check(r);
     // pacing removes the long mid-launch pauses

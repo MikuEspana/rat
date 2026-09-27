@@ -133,7 +133,8 @@ const envSchema = z.object({
   MIN_BURN_SOL: solStr('0.01'),
   CREATOR_RESERVE_SOL: solStr('0.05'),
   FUND_RESERVE_SOL: solStr('0.01'),
-  MAX_HIRES_PER_LOOP: intStr(20, 0, 200),
+  // 10 per 35 s loop = about 17 rats a minute, just under the 30 SOL/h cap: steady hiring, no mid-launch pause
+  MAX_HIRES_PER_LOOP: intStr(10, 0, 200),
   MIN_STOCK_WEIGHT_BPS: intStr(500, 0, 10_000),
   SLIPPAGE_BPS_STOCK: intStr(100, 1, 5_000),
   SLIPPAGE_BPS_COIN: intStr(150, 1, 5_000),
@@ -151,9 +152,9 @@ const envSchema = z.object({
   BURN_INTERVAL_MIN_SEC: intStr(480, 1),
   BURN_INTERVAL_MAX_SEC: intStr(720, 1),
   BURN_CHUNK_MAX_SOL: solStr('1'),
-  // Optional: at most this much per round (0 = no limit: a round burns everything the caps allow). About
-  // SPEND_CAP_SOL_PER_HOUR_BURN / 6 spreads burns evenly over the hour instead of hitting the cap early.
-  BURN_ROUND_MAX_SOL: solStr('0'),
+  // At most this much per burn round (0 = no limit: a round burns everything the caps allow). 5 = about
+  // SPEND_CAP_SOL_PER_HOUR_BURN / 6, which spreads burns evenly over the hour instead of hitting the cap early.
+  BURN_ROUND_MAX_SOL: solStr('5'),
   BURN_CHUNK_GAP_MIN_SEC: intStr(3, 1, 3600),
   BURN_CHUNK_GAP_MAX_SEC: intStr(8, 1, 3600),
   // rpc = normal send. jito = burns go to the Jito block engine as bundle-only transactions with a tip.

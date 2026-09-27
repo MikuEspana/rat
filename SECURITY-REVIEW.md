@@ -52,7 +52,7 @@ RT-15 was found by the property tests in Q3, RT-16 to RT-18 by the chaos tests i
 | A3 | Token protection covers the rat's stock account only. Other tokens in the creator wallet (for example a dev buy of the coin) are not protected by the effects check. | Do the dev buy from a separate wallet, or move those tokens out before setting `WATCH_FROM_SLOT` (see `docs/runbooks/go-live.md`). |
 | A4 | The lease uses each worker's own clock. Two machines with clocks more than 2 minutes apart could overlap. | One container; the fence limits any overlap to a single send. |
 | A5 | Alerts are only as reliable as Telegram. | Alert failures never stop the bot; the kill switch and caps work without alerts. |
-| A6 | The effects check costs 2 extra RPC calls per live send. | At most 20 hires per loop; well inside normal RPC limits. |
+| A6 | The effects check costs 2 extra RPC calls per live send. | At most 10 hires per loop by default; well inside normal RPC limits. |
 
 ## Sources
 
