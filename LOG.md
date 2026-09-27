@@ -13,7 +13,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q3 | Property tests (fast-check) | [#36](https://github.com/MikuEspana/rat/pull/36) | merged, 1 bug fixed |
 | Q4 | Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | merged, 3 bugs fixed |
 | Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | done, 2 settings recommended |
-| Q6 | `rat preflight` | (this PR) | done |
+| Q6 | `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | done |
+| Q7 | LAUNCH-DAY.md | (this PR) | done |
 
 ## Q1. Remove vanity keys
 
@@ -125,5 +126,15 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 - Docs: CLI README, go-live runbook (`rat preflight` at T-1 day, `rat preflight --live` right before going live).
 
 **Tests added**: 6 (`apps/cli/src/preflight.test.ts`): all good, `--live` blockers, missing settings / dead RPC / keys that do not decrypt, rejected Jupiter key, wallets under reserve / failing mint check / unapproved stocks / watch floor in the future, Telegram token and chat checks.
+
+**Bugs found**: none.
+
+## Q7. LAUNCH-DAY.md
+
+**What changed**
+- `LAUNCH-DAY.md`: the short checklist for a tired, nervous launch day. The 3 emergency moves first (kill, leaked key, sweep), then the night before, T-1 hour (launch the coin in DRY RUN), T-0 (go live with `rat preflight --live`), what normal looks like, which Telegram alerts matter (and which to ignore), what never to do while live, end of day, numbers to remember. `docs/runbooks/go-live.md` keeps the details.
+- README links `LAUNCH-DAY.md` and `SECURITY-REVIEW.md`.
+
+**Tests added**: the docs test now also checks `LAUNCH-DAY.md`: every `rat <command>` it names exists in the CLI and every setting exists in `.env.example`.
 
 **Bugs found**: none.
