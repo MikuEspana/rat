@@ -8,7 +8,7 @@ import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dryRunResetCommand } from './commands/dry-run';
-import { keysImportRoleCommand } from './commands/keys';
+import { keysImportRoleCommand, keysRotateCommand } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { statusCommand } from './commands/status';
 import { stocksSyncCommand } from './commands/stocks';
@@ -130,5 +130,22 @@ describe('emergency sweep (SimChain, in-memory)', () => {
     w.chain.updateMint(w.mint, { paused: true });
     const r2 = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
     expect(r2.failed).toBe(1);
+  });
+});
+
+describe('keys rotate', () => {
+  it('re-encrypts every key under the new master key; old key no longer needed', async () => {
+    const ctx = ctxFor();
+    const oldB64 = randomBytes(32).toString('base64');
+    const newB64 = randomBytes(32).toString('base64');
+    const oldRing = new MasterKeyRing({ version: 1, base64: oldB64 });
+    const kps = [Keypair.generate(), Keypair.generate(), Keypair.generate()];
+    await storeRatKeys(ctx.store.keys, oldRing, kps);
+    const both = new MasterKeyRing({ version: 2, base64: newB64 }, [{ version: 1, base64: oldB64 }]);
+    expect(await keysRotateCommand(ctx, both)).toEqual({ rotated: 3, skipped: 0 });
+    expect(await keysRotateCommand(ctx, both)).toEqual({ rotated: 0, skipped: 3 });
+    const onlyNew = new DbKeyStore(ctx.store.keys, new MasterKeyRing({ version: 2, base64: newB64 }));
+    for (const kp of kps) expect((await onlyNew.ratSigner(kp.publicKey.toBase58())).publicKey.equals(kp.publicKey)).toBe(true);
+    expect(lines.join('\n')).not.toContain(bs58.encode(kps[0]!.secretKey));
   });
 });
