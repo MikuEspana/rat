@@ -21,6 +21,40 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@22.20.4)(tsx@4.23.15)
 
+  apps/cli:
+    dependencies:
+      '@rat/chain':
+        specifier: workspace:*
+        version: link:../../packages/chain
+      '@rat/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@rat/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@rat/keys':
+        specifier: workspace:*
+        version: link:../../packages/keys
+      '@rat/safety':
+        specifier: workspace:*
+        version: link:../../packages/safety
+      '@solana/spl-token':
+        specifier: ^0.4.13
+        version: 0.4.15(@solana/web3.js@1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      '@solana/web3.js':
+        specifier: ^1.98.2
+        version: 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      commander:
+        specifier: ^14.0.0
+        version: 14.0.2
+    devDependencies:
+      '@rat/jupiter':
+        specifier: workspace:*
+        version: link:../../packages/jupiter
+      bs58:
+        specifier: ^6.0.0
+        version: 6.0.0
+
   packages/chain:
     dependencies:
       '@rat/core':
@@ -128,6 +162,22 @@ importers:
       '@types/bn.js':
         specifier: ^5.1.6
         version: 5.2.0
+
+  packages/safety:
+    dependencies:
+      '@rat/core':
+        specifier: workspace:*
+        version: link:../core
+      '@solana/web3.js':
+        specifier: ^1.98.2
+        version: 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+    devDependencies:
+      '@rat/chain':
+        specifier: workspace:*
+        version: link:../chain
+      '@rat/db':
+        specifier: workspace:*
+        version: link:../db
 
 packages:
 
