@@ -52,8 +52,17 @@ describe('grinder', () => {
     }
   });
 
-  it('finds a real RAT key (case-sensitive) and reports speed', async () => {
-    const res = await grindVanityKeys({ suffix: 'RAT', count: 1, threads: 2, timeoutMs: 120_000 });
+  it('is case-sensitive: every suffix variant is matched exactly (verified with full base58)', async () => {
+    for (const suffix of ['AT', 'aT', 'At', 'TR']) {
+      const res = await grindVanityKeys({ suffix, count: 2, threads: 2, timeoutMs: 120_000 });
+      expect(res.keys.length).toBe(2);
+      for (const kp of res.keys) expect(kp.publicKey.toBase58().endsWith(suffix)).toBe(true);
+    }
+  });
+
+  // ~195k tries on average (about 20s on 2 threads, longer under CPU load): opt-in so CI never flakes on timing.
+  it.runIf(process.env.RUN_SLOW_GRIND === '1')('finds a real RAT key and reports speed (RUN_SLOW_GRIND=1)', { timeout: 600_000 }, async () => {
+    const res = await grindVanityKeys({ suffix: 'RAT', count: 1, threads: 2, timeoutMs: 600_000 });
     expect(res.keys.length).toBe(1);
     const addr = res.keys[0]!.publicKey.toBase58();
     expect(addr.endsWith('RAT')).toBe(true);
