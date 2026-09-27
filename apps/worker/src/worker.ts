@@ -1,9 +1,10 @@
 // Assembles the steps into the loop:
-//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> burn (10 min) -> reconcile (35s) -> key pool (60s)
+//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> burn (random 8 to 12 min, chunks seconds apart)
+//   -> reconcile (35s) -> key pool (60s)
 import type { WorkerDeps } from './deps';
 import { WorkerState } from './deps';
 import { Scheduler } from './scheduler';
-import { runBurnStep } from './steps/burn';
+import { type BurnResult, nextBurnRoundSec, runBurnStep } from './steps/burn';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
 import { runKeypoolStep } from './steps/keypool';
@@ -35,7 +36,13 @@ export function createWorker(d: WorkerDeps): Worker {
           return { claim, watch, hire };
         },
       },
-      { name: 'burn', everySec: c.intervals.burnSec, run: () => runBurnStep(d, state) },
+      {
+        name: 'burn',
+        everySec: c.intervals.burnMinSec,
+        run: () => runBurnStep(d, state),
+        // the step picks the next delay: a few seconds for the next chunk, a random 8 to 12 minutes for the next round
+        nextDelaySec: (out) => (out as BurnResult | undefined)?.nextInSec ?? nextBurnRoundSec(d),
+      },
       { name: 'reconcile', everySec: c.intervals.claimSec, run: () => runReconcileStep(d, state) },
       { name: 'keypool', everySec: 60, run: () => runKeypoolStep(d) },
     ],

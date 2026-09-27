@@ -59,3 +59,33 @@ export function sol(n: number): bigint {
 }
 
 export { SOL };
+
+export interface BurnRounds {
+  rounds: number;
+  txs: number;
+  /** largest single burn transaction (lamports reserved) */
+  maxChunk: bigint;
+  /** seconds from the last chunk of a round to the first chunk of the next (the random delay) */
+  roundGaps: number[];
+  /** seconds between chunks of the same round */
+  chunkGaps: number[];
+}
+
+/** Groups burn rows (oldest first) into rounds: chunks less than a minute apart belong to one round. */
+export function burnRounds(rows: { at: Date; reservedLamports: bigint }[]): BurnRounds {
+  const sorted = [...rows].sort((a, b) => a.at.getTime() - b.at.getTime());
+  let rounds = 0;
+  const roundGaps: number[] = [];
+  const chunkGaps: number[] = [];
+  let maxChunk = 0n;
+  sorted.forEach((b, i) => {
+    if (b.reservedLamports > maxChunk) maxChunk = b.reservedLamports;
+    const gap = i > 0 ? (b.at.getTime() - sorted[i - 1]!.at.getTime()) / 1000 : Number.POSITIVE_INFINITY;
+    if (gap < 60) chunkGaps.push(gap);
+    else {
+      rounds++;
+      if (i > 0) roundGaps.push(gap);
+    }
+  });
+  return { rounds, txs: sorted.length, maxChunk, roundGaps, chunkGaps };
+}

@@ -119,6 +119,7 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 
 - `coin.*` fields are `null` before launch (no `COIN_MINT` yet), except `symbol` and `burnedTokens`.
 - `bot.lastClaimAt`, `treasury.lastBurnAt`, `bot.nextBurnAt` can be `null`.
+- `bot.nextBurnAt` is the **earliest** the next burn round can start. The real start is a random moment up to 4 minutes later (anti front-running), so show it as "next burn soon after", not a countdown to the second. A round with more than 1 SOL arrives as several `burn` events a few seconds apart.
 - `stock.priceUsd` and `stock.change24hPct` can be `null` if Jupiter has no fresh price.
 - `leaderboard.top` = 10 best `RatView`, `leaderboard.bottom` = 10 worst (worst first).
 - `events` = last 50 events, newest first.

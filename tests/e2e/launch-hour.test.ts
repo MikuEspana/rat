@@ -5,7 +5,7 @@ import { StateResponseSchema } from '@rat/contract';
 import { TOKEN_2022_PROGRAM, formatSol } from '@rat/core';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { afterEach, describe, expect, it } from 'vitest';
-import { runLaunch } from './helpers';
+import { burnRounds, runLaunch } from './helpers';
 
 let w: SimWorld;
 afterEach(async () => w?.close());
@@ -35,8 +35,8 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
     const fundStart = w.chain.sol(w.fund.publicKey.toBase58());
     const t0 = performance.now();
     const meter = await runLaunch(w, { seconds: HOUR, totalFees: 50n * SOL, graduateAtSec: 20 * 60 });
-    // fees claimed after the last burn wait for the next 10-minute burn: drain past one more burn window
-    await drain(w, 11 * 60);
+    // fees claimed after the last burn wait for the next round (random 8 to 12 min): drain past one more round
+    await drain(w, 14 * 60);
     const elapsed = (performance.now() - t0) / 1000;
 
     const claims = await w.store.claims.totals();
@@ -56,8 +56,22 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
     expect(await w.store.ledger.balance('hire')).toBeLessThan(salary);
     expect(await w.store.ledger.balance('hire')).toBeGreaterThanOrEqual(0n);
     expect(rats.length).toBe(Number(l.hireCredited / salary));
-    // burns every 10 minutes (t = 0, 10, ..., 60, 70 min), whole burn bucket spent
-    expect(burns.count).toBe(8);
+    // burn rounds a random 8 to 12 minutes apart, each split into chunks of at most 1 SOL a few seconds apart;
+    // the whole burn bucket is spent
+    const r = burnRounds(await w.store.burns.listByStatus(['simulated']));
+    expect(r.txs).toBe(burns.count);
+    expect(r.rounds).toBeGreaterThanOrEqual(6);
+    expect(r.rounds).toBeLessThanOrEqual(10);
+    expect(r.maxChunk).toBeLessThanOrEqual(w.deps.config.burn.chunkMaxLamports);
+    for (const g of r.roundGaps) {
+      expect(g).toBeGreaterThanOrEqual(480);
+      expect(g).toBeLessThanOrEqual(725);
+    }
+    for (const g of r.chunkGaps) {
+      expect(g).toBeGreaterThanOrEqual(3);
+      expect(g).toBeLessThanOrEqual(13);
+    }
+    expect(new Set(r.roundGaps).size).toBeGreaterThan(1);
     expect(burns.spent).toBe(l.burnCredited);
     expect(await w.store.ledger.balance('burn')).toBe(0n);
     // caps: 25 SOL per bucket is under the 30 SOL/h cap; the 50% alert fired once per bucket
@@ -83,10 +97,10 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
     expect(state.portfolio.ratCount).toBe(rats.length);
     const events = await w.store.events.countByType();
     expect(events.hire).toBe(rats.length);
-    expect(events.burn).toBe(8);
+    expect(events.burn).toBe(burns.count);
 
     console.log(
-      `[A] 50 SOL hour (DRY RUN): ${rats.length} rats, ${burns.count} burns, hire spent ${formatSol(l.hireSpent)} SOL, ` +
+      `[A] 50 SOL hour (DRY RUN): ${rats.length} rats, ${r.rounds} burn rounds in ${burns.count} txs (max ${formatSol(r.maxChunk)} SOL each), hire spent ${formatSol(l.hireSpent)} SOL, ` +
         `burn spent ${formatSol(burns.spent)} SOL, max ${meter.maxHiresPerLoop} hires/loop, max ${meter.maxJupiterPerMinute} Jupiter calls/min, ` +
         `0 txs sent, ran in ${elapsed.toFixed(1)}s`,
     );

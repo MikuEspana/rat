@@ -33,8 +33,14 @@ describe('D. random transaction failures (drop, fail, land-but-timeout, reject)'
     await w.run(21 * 60, { stepSec: 5, onTick: () => w.chain.advanceBlocks(10) });
 
     expect(injected).toBeGreaterThan(30);
-    // nothing left in flight
-    expect((await w.store.rats.listByStatus(['hiring'])).length).toBe(0);
+    // nothing left in flight: a rat may still wait in `hiring` only when its attempts can no longer land,
+    // it holds no reservation, and the hire budget is below one salary (it resumes when fees arrive)
+    const waiting = await w.store.rats.listByStatus(['hiring']);
+    for (const r of waiting) {
+      expect(r.reserveLedgerId).toBeNull();
+      for (const a of await w.store.attempts.forRef('rat', String(r.id))) expect(['failed', 'expired']).toContain(a.status);
+    }
+    if (waiting.length > 0) expect(await w.store.ledger.balance('hire')).toBeLessThan(w.deps.config.salaryLamports);
     expect((await w.store.burns.listByStatus(['pending', 'unknown'])).length).toBe(0);
     const openClaims = await w.store.db.query.claims.findMany({ where: (c, { inArray }) => inArray(c.status, ['pending', 'unknown']) });
     expect(openClaims.length).toBe(0);

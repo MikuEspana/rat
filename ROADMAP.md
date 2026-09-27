@@ -72,7 +72,7 @@ config/stocks.json
 3. Jupiter Swap v2 `GET /swap/v2/build` with `taker` = rat, `payer` = creator (VERIFIED [6]). One tx: creator transfers salary minus overhead to the rat, rat swaps salary minus buffer. Both sign.
 4. Attempt recorded before send. Never retry while an attempt can still land. Before a retry, read the rat wallet: if it holds the stock, it is active.
 
-**Burn (every 10 min)**: `min(burn bucket, fund balance - reserve)`, skip under 0.01 SOL. `/build` SOL to coin with `taker` = fund, burn in the same tx (min out + leftovers). Fallback: direct pump.fun buy (`sharing_config` account is mandatory for buys, VERIFIED [3]). Burn uses the coin's token program (pump `create_v2` coins are Token-2022, VERIFIED [2]).
+**Burn (random 8 to 12 min, chunks of at most 1 SOL, 1.5% slippage; updated after the owner review)**: `min(burn bucket, fund balance - reserve)`, skip under 0.01 SOL. `/build` SOL to coin with `taker` = fund, burn in the same tx (min out + leftovers). Fallback: direct pump.fun buy (`sharing_config` account is mandatory for buys, VERIFIED [3]). Burn uses the coin's token program (pump `create_v2` coins are Token-2022, VERIFIED [2]).
 
 **Prices (every 15s)**: one Jupiter Price v3 call for all stocks + SOL + coin (max 50 ids per call, `x-api-key` header, VERIFIED [5]). Missing tokens are marked stale, never zero.
 

@@ -40,6 +40,8 @@ export interface WorkerDeps {
   stocks: StockConfigEntry[];
   creator: Pubkey;
   fund: Pubkey;
+  /** Jito tip accounts (BURN_SEND_VIA=jito); optional */
+  jitoTipAccounts?: () => Promise<string[]>;
   /** background vanity key grinder (KeyPoolRefiller from @rat/keys); optional */
   keyRefiller?: KeyRefillerPort;
 }
@@ -61,4 +63,14 @@ export class WorkerState {
   consecutiveFailures = new Map<string, number>();
   lastPaperClaimAt: number | null = null;
   paperFakeAccrued = 0n;
+  /** the burn round in progress (chunks left); null between rounds */
+  burnRound: BurnRound | null = null;
+}
+
+export interface BurnRound {
+  /** SOL still to burn in this round */
+  remaining: bigint;
+  chunkSize: bigint;
+  chunks: number;
+  done: number;
 }

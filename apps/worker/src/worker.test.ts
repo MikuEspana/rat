@@ -72,7 +72,7 @@ describe('live mode on SimChain (in-memory only)', () => {
     const leftover = w.chain.tokenBalance(w.fund.publicKey.toBase58(), w.coinMint, TOKEN_2022_PROGRAM);
     expect(w.chain.mintState(w.coinMint)!.supply).toBe(supplyBefore + leftover);
     expect(r.burnedRaw).toBeGreaterThan(0n);
-    expect(leftover).toBeLessThan(r.burnedRaw / 30n); // ~3% slippage buffer
+    expect(leftover).toBeLessThan(r.burnedRaw / 60n); // 1.5% slippage buffer
     // next burn burns the leftover too
     w.accrue({ bondingLamports: SOL });
     await runClaimStep(w.deps, w.worker.state);

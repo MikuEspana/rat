@@ -19,6 +19,8 @@ export const SETTINGS = {
   lastBurnAt: 'last_burn_at',
   lastClaimAt: 'last_claim_at',
   lastBurnRunAt: 'last_burn_run_at',
+  /** earliest time the next burn round can start (the exact time is random and never published) */
+  burnWindowOpensAt: 'burn_window_opens_at',
   /** JSON { usd, change24hPct, at } */
   priceSol: 'price_sol',
   priceCoin: 'price_coin',

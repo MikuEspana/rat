@@ -4,7 +4,7 @@
 import { writeFileSync } from 'node:fs';
 import { formatSol, lamportsToSol } from '@rat/core';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
-import { runLaunch } from './helpers';
+import { burnRounds, runLaunch } from './helpers';
 
 const HOUR = 3600;
 const lines: string[] = [];
@@ -42,8 +42,9 @@ async function scenarioA() {
       }
     },
   });
-  await w.run(11 * 60, { stepSec: 5 });
+  await w.run(14 * 60, { stepSec: 5 });
   const seconds = (performance.now() - t0) / 1000;
+  const br = burnRounds(await w.store.burns.listByStatus(['simulated']));
   const s = await snapshot(w);
   const sums = await w.store.ledger.sumByReason();
   const rats = await w.store.rats.listByStatus(['active']);
@@ -54,7 +55,7 @@ async function scenarioA() {
 
   out('## A. DRY RUN launch hour: 50 SOL of creator fees');
   out();
-  out(`Fees accrue on a launch-shaped curve (front-loaded, decaying) for 60 minutes: bonding curve for 20 minutes, then PumpSwap after graduation. The worker runs on a fake clock in 5 second ticks. Config: salary ${formatSol(cfg.salaryLamports)} SOL, split ${cfg.hireSplitBps / 100}% / ${100 - cfg.hireSplitBps / 100}%, caps 30 SOL/h per bucket (alert at ${cfg.spendAlertPct}%), max ${cfg.maxHiresPerLoop} hires per loop, claim every ${cfg.intervals.claimSec}s, burn every ${cfg.intervals.burnSec / 60} min. Then 11 more minutes with no new fees so the last claims get burned.`);
+  out(`Fees accrue on a launch-shaped curve (front-loaded, decaying) for 60 minutes: bonding curve for 20 minutes, then PumpSwap after graduation. The worker runs on a fake clock in 5 second ticks. Config: salary ${formatSol(cfg.salaryLamports)} SOL, split ${cfg.hireSplitBps / 100}% / ${100 - cfg.hireSplitBps / 100}%, caps 30 SOL/h per bucket (alert at ${cfg.spendAlertPct}%), max ${cfg.maxHiresPerLoop} hires per loop, claim every ${cfg.intervals.claimSec}s, burn rounds at a random ${cfg.intervals.burnMinSec / 60} to ${cfg.intervals.burnMaxSec / 60} min, split into chunks of at most ${formatSol(cfg.burn.chunkMaxLamports)} SOL a few seconds apart, coin slippage ${cfg.slippageBpsCoin / 100}%. Then 14 more minutes with no new fees so the last claims get burned.`);
   out();
   out('| Check | Result |');
   out('|---|---|');
@@ -62,7 +63,7 @@ async function scenarioA() {
   out(`| Credited to hires / fund | ${formatSol(sums.get('hire:claim_credit') ?? 0n)} / ${formatSol(sums.get('burn:claim_credit') ?? 0n)} SOL (odd lamports go to hires) |`);
   out(`| Rats hired | **${s.rats}** (paper), ${formatSol(BigInt(s.rats) * cfg.salaryLamports)} SOL of salaries |`);
   out(`| Hire budget left | ${formatSol(s.hireBal)} SOL (less than one salary) |`);
-  out(`| Buy + burns | **${s.burns.count}**, ${formatSol(s.burns.spent)} SOL spent, burn budget left ${formatSol(s.burnBal)} SOL |`);
+  out(`| Buy + burns | **${br.rounds} rounds** (${Math.round(Math.min(...br.roundGaps) / 6) / 10} to ${Math.round(Math.max(...br.roundGaps) / 6) / 10} min apart) in **${br.txs} transactions** of at most ${formatSol(br.maxChunk)} SOL, ${formatSol(s.burns.spent)} SOL spent, burn budget left ${formatSol(s.burnBal)} SOL |`);
   out(`| Max hires in one loop | ${meter.maxHiresPerLoop} (limit ${cfg.maxHiresPerLoop}) |`);
   out(`| Max Jupiter calls in any minute | ${meter.maxJupiterPerMinute} (limit ${cfg.jupiter.maxRpm}) |`);
   out(`| Cap alerts | ${w.alerts.keys().filter((k) => k.startsWith('cap_alert')).join(', ') || 'none'} (50% crossed once per bucket); cap reached: ${w.alerts.keys().filter((k) => k.startsWith('cap_reached')).length > 0 ? 'yes' : 'no'} |`);
@@ -72,7 +73,7 @@ async function scenarioA() {
   out();
   out('Timeline (cumulative; outflow = rolling last hour vs the 30 SOL cap):');
   out();
-  out('| Time | Claimed SOL | Rats | Burns | Burn SOL | Hire outflow | Burn outflow |');
+  out('| Time | Claimed SOL | Rats | Burn txs | Burn SOL | Hire outflow | Burn outflow |');
   out('|---|---|---|---|---|---|---|');
   for (const t of timeline) out(t);
   out();

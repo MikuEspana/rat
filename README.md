@@ -8,7 +8,7 @@ A memecoin on pump.fun (Solana) with a live 3D website. Trading volume pays crea
 
 1. **Claim, every ~35s.** Claim pump.fun creator fees (bonding curve, and PumpSwap after graduation). Every claim is split: **50% to hires, 50% to the fund wallet.**
 2. **Hire.** Hire budget / salary (~0.03 SOL, overhead included) = new rats. Each rat gets its own vanity wallet, its salary, buys one stock and **holds forever**. No trims, no sells, no promotions on-chain. Better performing stocks get more new hires.
-3. **Buy and burn, every ~10 min.** The fund wallet buys the coin and burns it. Skipped if under 0.01 SOL.
+3. **Buy and burn, every 8 to 12 min (random).** The fund wallet buys the coin and burns it, in chunks of at most 1 SOL a few seconds apart, at 1.5% max slippage. Skipped if under 0.01 SOL.
 
 Everything else (promotions, rat size, rank, leaderboard, PnL) is computed from live prices **for display only**.
 

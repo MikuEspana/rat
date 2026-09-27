@@ -24,7 +24,7 @@
 
 ## T-0
 - [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows).
-- [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (addresses end in RAT, each holds its stock), the first burn within 10 minutes.
+- [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (addresses end in RAT, each holds its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
 
 ## T+1 hour
 - [ ] `rat status`: buckets, spent in the last hour vs caps, txs, key pool, heartbeats.

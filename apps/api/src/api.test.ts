@@ -46,6 +46,8 @@ describe('state API on a running paper world', () => {
     expect(s.treasury.burnCount).toBeGreaterThanOrEqual(1);
     expect(s.coin.mint).toBe(w.coinMint);
     expect(s.coin.priceUsd).toBeGreaterThan(0);
+    // nextBurnAt is the earliest start of the next burn round (the real, random time is never published)
+    expect(s.bot.nextBurnAt).toBe(await w.store.settings.get(SETTINGS.burnWindowOpensAt));
 
     const rats = await getJson(app, '/api/rats');
     expectValid(RatsResponseSchema, rats.body);
