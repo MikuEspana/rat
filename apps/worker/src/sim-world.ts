@@ -153,7 +153,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
   const swap = new MockSwapBuilder(prices, { tokens, spreadBps: opts.spreadBps ?? 50 });
   const alerts = new RecordingAlerts();
   const killSwitch = new DbKillSwitch(store.settings, config.killSwitch);
-  const sender = new GuardedSender(simSender, { attempts: store.attempts, killSwitch, dryRun: config.dryRun });
+  const sender = new GuardedSender(simSender, { attempts: store.attempts, killSwitch, dryRun: config.dryRun, alerts });
   const guard = new SpendGuard(
     { ledger: store.ledger, killSwitch, alerts, clock, chain: reader, pendingFundTransfer: () => store.claims.pendingFundTransfer() },
     {

@@ -93,8 +93,17 @@ async function finish(
 }
 
 async function reconcileOpenBurns(d: WorkerDeps): Promise<void> {
-  for (const b of await d.store.burns.listByStatus(['pending', 'unknown'])) {
+  for (let b of await d.store.burns.listByStatus(['pending', 'unknown'])) {
     const res = reservationOf(b);
+    if (!b.sig) {
+      // Crash between "attempt written" and "burn row updated": the attempt log knows the signature, and that
+      // tx may have landed. Only a burn with no attempt at all was never sent.
+      const sent = await d.store.attempts.latestForRef('burn', String(b.id));
+      if (sent) {
+        await d.store.burns.update(b.id, { sig: sent.signature });
+        b = { ...b, sig: sent.signature };
+      }
+    }
     if (!b.sig || !res) {
       if (res) await d.guard.release(res, 'burn never sent');
       await d.store.burns.update(b.id, { status: 'released', reserveLedgerId: null });
@@ -232,6 +241,8 @@ async function burnChunk(d: WorkerDeps, amount: bigint): Promise<ChunkResult> {
       ],
       lookupTables: build.lookupTables,
       computeUnitLimit: c.computeUnitLimitSwap,
+      // the fund signs Jupiter's instructions: it may spend this chunk (swap + fees + rent + tip) and nothing more
+      limits: { solOut: [{ account: d.fund, maxLamports: amount }] },
     },
     reservation,
     ref: { type: 'burn', id: String(burnId) },

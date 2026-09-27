@@ -24,9 +24,16 @@ export interface SweepDeps {
 
 export async function sweepCommand(ctx: CliContext, deps: SweepDeps, opts: { to: string; confirm?: string; limit?: number }): Promise<{ executed: boolean; ok: number; failed: number }> {
   const { store, out } = ctx;
-  const cold = new PublicKey(opts.to).toBase58();
+  const coldKey = new PublicKey(opts.to);
+  const cold = coldKey.toBase58();
+  // The destination must be a normal wallet the owner controls: never one of the bot's own wallets (their keys
+  // live on the server, which may be exactly what leaked) and never a program address (tokens could be stuck).
+  if (!PublicKey.isOnCurve(coldKey.toBytes())) throw new Error(`sweep refused: ${cold} is not a normal wallet address (off-curve / program address)`);
+  const own = [ctx.config.creatorPubkey, ctx.config.fundPubkey].filter(Boolean);
+  if (own.includes(cold) || (await store.keys.get(cold))) throw new Error(`sweep refused: ${cold} is one of the bot's own wallets; sweep to a cold wallet only the owner holds`);
   const liveStore = store.forMode('live');
-  const rats = (await liveStore.rats.listByStatus(['active', 'frozen'])).slice(0, opts.limit ?? Number.MAX_SAFE_INTEGER);
+  // failed rats are included: a two-step hire that funded the rat but never bought leaves its SOL there
+  const rats = (await liveStore.rats.listByStatus(['active', 'frozen', 'failed'])).slice(0, opts.limit ?? Number.MAX_SAFE_INTEGER);
   const stocks = new Map((await store.stocks.list()).map((s) => [s.mint, s]));
   const accounts = await deps.chain.getTokenAccounts(
     rats.map((r) => ({ owner: r.wallet, mint: r.stockMint, tokenProgram: stocks.get(r.stockMint)?.tokenProgram ?? TOKEN_2022_PROGRAM })),

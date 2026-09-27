@@ -13,6 +13,11 @@ import { engageKillSwitch } from '@rat/safety';
 import type { WorkerDeps } from '../deps';
 import { creditClaim } from './claim';
 
+/** Newest signatures fetched per wallet per loop (the reader pages through them). More = a flood: critical alert. */
+export const WATCH_SIG_LIMIT = 10_000;
+/** Transactions fetched per wallet per loop; the rest waits for the next loop (the cursor stops before it). */
+export const WATCH_RECORDS_PER_LOOP = 250;
+
 export interface WatchResult {
   externalClaims: number;
   unexplainedInflows: number;
@@ -38,7 +43,7 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
   const cursorKey = role === 'creator' ? SETTINGS.creatorWatchCursor : SETTINGS.fundWatchCursor;
   // null = never ran. '' = ran while the wallet had no history (process everything that comes).
   const cursor = await d.store.settings.get(cursorKey);
-  const sigs = await d.chain.getSignaturesSince(wallet, cursor || null, 1000);
+  const sigs = await d.chain.getSignaturesSince(wallet, cursor || null, WATCH_SIG_LIMIT);
   if (cursor === null && d.config.watchFromSlot <= 0) {
     // First run without WATCH_FROM_SLOT: start watching from now; history before the bot started is not ours to book.
     await d.store.settings.set(cursorKey, sigs[0]?.signature ?? '');
@@ -49,15 +54,26 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
     if (cursor === null) await d.store.settings.set(cursorKey, '');
     return;
   }
+  if (sigs.length >= WATCH_SIG_LIMIT) {
+    await d.alerts.send(
+      'critical',
+      `watch_overflow_${role}`,
+      `More than ${WATCH_SIG_LIMIT} new transactions on the ${role} wallet since the last check (spam flood?). Older ones may not have been checked: review the wallet on Solscan.`,
+    );
+  }
   const known = new Set(d.config.knownOwnerTxSigs);
   const unseen = new Set(await d.store.seen.unseen(sigs.map((s) => s.signature)));
   const ours = await d.store.attempts.signaturesKnown(sigs.map((s) => s.signature));
   const now = d.clock.now();
-  // If a record is not visible yet (RPC indexing lag), keep the cursor where it was: the seen table stops
-  // anything already booked from being booked twice, and the missing one is retried next loop.
+  // Oldest first. The cursor only moves past signatures that are fully handled: if a record is not visible yet
+  // (RPC indexing lag) or this loop's fetch budget runs out, the rest is retried next loop. The seen table stops
+  // anything already booked from being booked twice.
   let incomplete = false;
+  let cursorTo: string | null = null;
+  let fetched = 0;
   for (const info of [...sigs].reverse()) {
     const sig = info.signature;
+    if (!incomplete) cursorTo = sig;
     if (!unseen.has(sig)) continue;
     if (info.slot < floor) {
       res.beforeFloor++;
@@ -74,8 +90,14 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
       await d.alerts.send('info', `owner_tx_${sig}`, `Owner transaction on the ${role} wallet accepted (KNOWN_OWNER_TX_SIGS): ${sig}`);
       continue;
     }
+    if (fetched >= WATCH_RECORDS_PER_LOOP) {
+      if (!incomplete) cursorTo = previous(sigs, sig);
+      break;
+    }
+    fetched++;
     const record = await d.chain.getTransactionRecord(sig);
     if (!record) {
+      if (!incomplete) cursorTo = previous(sigs, sig);
       incomplete = true;
       continue;
     }
@@ -84,15 +106,16 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
       await d.store.seen.add(sig, wallet, 'before_watch', now);
       continue;
     }
-    if (record.err) {
-      await d.store.seen.add(sig, wallet, 'failed_other', now);
-      continue;
-    }
+    // Signers first: even a FAILED transaction signed by our key proves someone else has the key.
     if (record.signers.includes(wallet)) {
       res.unknownSigned++;
       await d.store.seen.add(sig, wallet, 'outflow_unknown', now);
       await engageKillSwitch(d.store.settings, `unknown transaction signed by the ${role} wallet: ${sig}`);
       await d.alerts.send('critical', `unknown_signed_${sig}`, `A transaction signed by the ${role} wallet was NOT sent by the bot: ${sig}. Kill switch engaged. Check for a key leak.`);
+      continue;
+    }
+    if (record.err) {
+      await d.store.seen.add(sig, wallet, 'failed_other', now);
       continue;
     }
     if (role === 'creator') {
@@ -109,12 +132,20 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
     if (delta > 0n) {
       res.unexplainedInflows++;
       await d.store.seen.add(sig, wallet, 'inflow', now);
-      await d.alerts.send('warn', `inflow_${sig}`, `${formatSol(delta)} SOL arrived in the ${role} wallet from an unknown source (${sig}). Left unspent.`);
+      // one alert key per wallet: a dust spam of thousands of transfers must not flood Telegram and bury real alerts
+      await d.alerts.send('warn', `inflow_${role}`, `${formatSol(delta)} SOL arrived in the ${role} wallet from an unknown source (${sig}). Left unspent. Further unknown inflows in the next 10 minutes are not alerted.`);
       continue;
     }
     await d.store.seen.add(sig, wallet, 'other', now);
   }
-  if (!incomplete) await d.store.settings.set(cursorKey, sigs[0]!.signature);
+  if (cursorTo !== null) await d.store.settings.set(cursorKey, cursorTo);
+  else if (cursor === null) await d.store.settings.set(cursorKey, '');
+}
+
+/** The signature just older than `sig` in a newest-first list (null = `sig` is the oldest: keep the old cursor). */
+function previous(sigs: { signature: string }[], sig: string): string | null {
+  const i = sigs.findIndex((x) => x.signature === sig);
+  return sigs[i + 1]?.signature ?? null;
 }
 
 export async function runWatchStep(d: WorkerDeps): Promise<WatchResult> {

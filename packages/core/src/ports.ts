@@ -187,6 +187,29 @@ export interface TxRequest {
   computeUnitLimit: number;
   /** if omitted the sender estimates a priority fee (capped by config) */
   computeUnitPriceMicroLamports?: number;
+  /**
+   * Spend limits. Live mode: the GuardedSender simulates the signed transaction first and refuses to send it
+   * if any limit is broken (required for claim, hire and burn). Instructions from an outside API (Jupiter)
+   * can therefore never move more than the reserved amount out of our wallets.
+   */
+  limits?: TxLimits;
+}
+
+export interface TxLimits {
+  /** each account may lose at most `maxLamports` (transfers, rent and fees included) */
+  solOut: { account: Pubkey; maxLamports: bigint }[];
+  /** the owner's associated token account of `mint` must change by at least `minDelta` (0 = must not drop) */
+  tokens?: { owner: Pubkey; mint: Pubkey; tokenProgram: Pubkey; minDelta: bigint }[];
+}
+
+/** What a simulated transaction would do to the accounts named in its TxLimits. */
+export interface TxEffects {
+  /** set when the simulation failed (the transaction would fail on-chain) */
+  error?: string;
+  /** lamport change of each `limits.solOut` account, same order */
+  solDelta: bigint[];
+  /** raw token change of each `limits.tokens` entry, same order */
+  tokenDelta: bigint[];
 }
 
 export interface PreparedTx {
@@ -217,6 +240,8 @@ export interface TxSender {
   simulate(tx: PreparedTx): Promise<TxOutcome>;
   /** Re-checks a previously sent signature. `unknown` = may still land. */
   status(signature: string, lastValidBlockHeight: number): Promise<TxOutcome>;
+  /** Simulates the signed tx and reports the balance changes of the accounts named in `limits`. Never sends. */
+  simulateEffects(tx: PreparedTx, limits: TxLimits): Promise<TxEffects>;
 }
 
 // ---------- keys ----------

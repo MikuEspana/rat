@@ -15,6 +15,7 @@
 Order matters: the coin launch is a creator-wallet transaction the bot did not send. The wallet watch must know about it before the worker's first live start, or it looks like a leaked key and trips the kill switch.
 1. [ ] Fund the creator wallet with the 0.05 SOL reserve + launch cost, the fund wallet with 0.01 SOL (sending SOL **to** them is fine).
 2. [ ] Launch the coin on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**. Do any other manual step with the creator or fund wallet now too.
+   - Dev buy: do it from a **separate** wallet, or move the bought coins out of the creator wallet right now. The bot's spend check protects the creator's SOL, not other tokens sitting in it (SECURITY-REVIEW.md A3).
 3. [ ] Open the launch transaction on Solscan and wait until it shows **Finalized**. Note its **signature** and its **slot** (block).
 4. [ ] On the worker set:
    - `COIN_MINT` = the coin mint

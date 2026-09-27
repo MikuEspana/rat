@@ -34,7 +34,7 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
       log,
       jito: cfg.burn.sendVia === 'jito' ? { url: cfg.burn.jitoUrl, kinds: ['burn'] } : undefined,
     }),
-    { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log },
+    { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log, alerts },
   );
   const guard = new SpendGuard(
     { ledger: store.ledger, killSwitch, alerts, clock: systemClock, chain, pendingFundTransfer: () => store.claims.pendingFundTransfer() },

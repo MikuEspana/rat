@@ -4,7 +4,7 @@ import { SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { DbKillSwitch, GuardedSender } from '@rat/safety';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dryRunResetCommand } from './commands/dry-run';
@@ -130,6 +130,27 @@ describe('emergency sweep (SimChain, in-memory)', () => {
     w.chain.updateMint(w.mint, { paused: true });
     const r2 = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
     expect(r2.failed).toBe(1);
+  });
+
+  it('red team: refuses the bot\'s own wallets and program addresses as destination', async () => {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE, FUND_PUBKEY: Keypair.generate().publicKey.toBase58() });
+    for (const to of [w.ctx.config.creatorPubkey!, w.ctx.config.fundPubkey!, w.ratWallets[0]!]) {
+      await expect(sweepCommand(w.ctx, w.deps, { to, confirm: sweepPhrase(to) })).rejects.toThrow(/own wallets/);
+    }
+    const pda = PublicKey.findProgramAddressSync([Buffer.from('vault')], SystemProgram.programId)[0].toBase58();
+    await expect(sweepCommand(w.ctx, w.deps, { to: pda, confirm: sweepPhrase(pda) })).rejects.toThrow(/off-curve/);
+    expect(w.sim.submitted + w.sim.simulated).toBe(0);
+  });
+
+  it('red team: a failed rat still holding SOL (two-step hire that never bought) is swept too', async () => {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE });
+    const wallet = await w.deps.keys.newRatKey();
+    const r = await w.live.rats.create({ wallet, stockMint: w.mint, salaryLamports: 30_000_000n, avatarSeed: 'bbbbbbbb' });
+    await w.live.rats.update(r.id, { status: 'failed' });
+    w.chain.fundAccount(wallet, 29_000_000n);
+    const res = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
+    expect(res).toMatchObject({ executed: true, failed: 0 });
+    expect(w.chain.sol(wallet)).toBe(0n);
   });
 });
 

@@ -11,4 +11,4 @@ Operator CLI. Owned by WS08. Run with `pnpm --filter @rat/cli rat <command>` (re
 | `dry-run-reset --yes` | deletes all DRY RUN paper data, returns paper keys |
 | `stocks-sync` | loads `config/stocks.json` into the database |
 | `alert-test` | sends a test alert |
-| `sweep --to <cold> [--confirm "<phrase>"]` | **emergency only**. Prints the plan; executes only with the exact phrase `SWEEP ALL RATS TO <cold>`. DRY RUN simulates. Never run by the bot. |
+| `sweep --to <cold> [--confirm "<phrase>"]` | **emergency only**. Prints the plan; executes only with the exact phrase `SWEEP ALL RATS TO <cold>`. DRY RUN simulates. Never run by the bot. Refuses the bot's own wallets and program addresses as `<cold>`. Sweeps active, frozen and failed rats. |

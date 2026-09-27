@@ -89,11 +89,20 @@ export class RpcChainReader implements ChainReader {
     });
   }
 
+  /** Pages back (1,000 per call, the RPC maximum) until `untilSignature` or `limit` signatures: none are skipped. */
   async getSignaturesSince(address: Pubkey, untilSignature: string | null, limit = 1000): Promise<SignatureInfo[]> {
-    const res = await this.withFailover((c) =>
-      c.getSignaturesForAddress(new PublicKey(address), { until: untilSignature ?? undefined, limit }, 'confirmed'),
-    );
-    return res.map((s) => ({ signature: s.signature, slot: s.slot, err: s.err, blockTime: s.blockTime ?? null }));
+    const out: SignatureInfo[] = [];
+    let before: string | undefined;
+    while (out.length < limit) {
+      const page = Math.min(1000, limit - out.length);
+      const res = await this.withFailover((c) =>
+        c.getSignaturesForAddress(new PublicKey(address), { until: untilSignature ?? undefined, before, limit: page }, 'confirmed'),
+      );
+      out.push(...res.map((s) => ({ signature: s.signature, slot: s.slot, err: s.err, blockTime: s.blockTime ?? null })));
+      if (res.length < page) break;
+      before = res[res.length - 1]!.signature;
+    }
+    return out;
   }
 
   async getSlot(): Promise<number> {

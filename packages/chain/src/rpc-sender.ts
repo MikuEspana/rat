@@ -5,7 +5,8 @@
 // Optional Jito route (BURN_SEND_VIA=jito): chosen tx kinds go to the Jito block engine as bundle-only
 // transactions (JSON-RPC sendTransaction on /transactions?bundleOnly=true, base64), never to a public RPC.
 // Request shape from Jito's official client (github.com/jito-labs/jito-js-rpc src/index.ts).
-import { BlockedError, type Logger, type PreparedTx, type TxKind, type TxOutcome, type TxRequest, type TxSender, sleep } from '@rat/core';
+import { BlockedError, type Logger, type PreparedTx, type TxEffects, type TxKind, type TxLimits, type TxOutcome, type TxRequest, type TxSender, sleep } from '@rat/core';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import {
   ComputeBudgetProgram,
   type Connection,
@@ -26,6 +27,7 @@ export type SenderConnection = Pick<
   | 'getBlockHeight'
   | 'getTransaction'
   | 'simulateTransaction'
+  | 'getMultipleAccountsInfoAndContext'
 >;
 
 export interface RpcTxSenderOptions {
@@ -54,6 +56,12 @@ export interface JitoRoute {
 }
 
 const DEFAULT_PRIORITY_FALLBACK = 10_000;
+
+/** Raw amount of an SPL / Token-2022 token account (mint 0..32, owner 32..64, amount u64 LE at 64). */
+export function tokenAmountOf(data: Uint8Array | null): bigint {
+  if (!data || data.length < 72) return 0n;
+  return Buffer.from(data.buffer, data.byteOffset, data.byteLength).readBigUInt64LE(64);
+}
 
 function hasAllSignatures(tx: VersionedTransaction): boolean {
   return tx.signatures.every((s) => s.some((b) => b !== 0));
@@ -179,6 +187,39 @@ export class RpcTxSender implements TxSender {
       feeLamports: 0n,
       error: res.value.err ? JSON.stringify(res.value.err) : undefined,
       logs: res.value.logs ?? [],
+    };
+  }
+
+  /**
+   * Balance changes the signed tx would cause, from `simulateTransaction` with the `accounts` option (post state)
+   * against the same accounts read just before (pre state). Token amounts are the u64 at byte 64 of the account.
+   */
+  async simulateEffects(p: PreparedTx, limits: TxLimits): Promise<TxEffects> {
+    const solKeys = limits.solOut.map((l) => l.account);
+    const tokenKeys = (limits.tokens ?? []).map((t) =>
+      getAssociatedTokenAddressSync(new PublicKey(t.mint), new PublicKey(t.owner), true, new PublicKey(t.tokenProgram)).toBase58(),
+    );
+    const addresses = [...solKeys, ...tokenKeys];
+    const pre = await this.conn.getMultipleAccountsInfoAndContext(addresses.map((a) => new PublicKey(a)), 'confirmed');
+    const tx = VersionedTransaction.deserialize(p.serialized);
+    const res = await this.conn.simulateTransaction(tx, {
+      sigVerify: false,
+      replaceRecentBlockhash: true,
+      commitment: 'confirmed',
+      minContextSlot: pre.context.slot,
+      accounts: { encoding: 'base64', addresses },
+    });
+    if (res.value.err) return { error: JSON.stringify(res.value.err), solDelta: [], tokenDelta: [] };
+    const post = res.value.accounts;
+    if (!post || post.length !== addresses.length) throw new Error('simulation returned no account states');
+    const before = pre.value;
+    return {
+      solDelta: solKeys.map((_, i) => BigInt(post[i]?.lamports ?? 0) - BigInt(before[i]?.lamports ?? 0)),
+      tokenDelta: tokenKeys.map((_, j) => {
+        const i = solKeys.length + j;
+        const after = post[i] ? Buffer.from(post[i]!.data[0] ?? '', 'base64') : null;
+        return tokenAmountOf(after) - tokenAmountOf(before[i]?.data ?? null);
+      }),
     };
   }
 
