@@ -1,0 +1,17 @@
+{
+  "name": "@rat/keys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@rat/core": "workspace:*",
+    "@solana/web3.js": "^1.98.2",
+    "bs58": "^6.0.0"
+  },
+  "devDependencies": {
+    "@rat/db": "workspace:*"
+  }
+}
