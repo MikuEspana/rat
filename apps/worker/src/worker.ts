@@ -81,6 +81,18 @@ export class LockedRunner {
     return true;
   }
 
+  /**
+   * Called by the GuardedSender right before every send: renews the lease and says whether we still hold it.
+   * A tick can run longer than the lease (many hires waiting for confirmations). If another worker took over
+   * in the meantime (for example a redeploy started the new container first), this worker sends nothing more.
+   */
+  async fence(): Promise<boolean> {
+    const now = this.deps.clock.now();
+    this.holding = await this.deps.store.locks.acquire('worker', this.deps.holder, now, this.deps.ttlSec ?? 120);
+    if (this.holding) this.lastRenew = now.getTime();
+    return this.holding;
+  }
+
   async release(): Promise<void> {
     await this.deps.store.locks.release('worker', this.deps.holder);
     this.holding = false;

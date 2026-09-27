@@ -1,5 +1,5 @@
 // TxSender over SimChain with failure injection. In-memory only.
-import type { PreparedTx, Rng, TxKind, TxOutcome, TxRequest, TxSender } from '@rat/core';
+import { type PreparedTx, type Rng, type TxEffects, type TxKind, type TxLimits, type TxOutcome, type TxRequest, type TxSender, solDelta, tokenOwnerDelta } from '@rat/core';
 import { ComputeBudgetProgram } from '@solana/web3.js';
 import type { SimChain } from './sim-chain';
 
@@ -122,6 +122,21 @@ export class SimTxSender implements TxSender {
       record: res.record,
       error: res.record.err ? JSON.stringify(res.record.err) : undefined,
       logs: res.record.logs,
+    };
+  }
+
+  /** number of simulateEffects() calls (for assertions) */
+  effectsChecked = 0;
+
+  async simulateEffects(p: PreparedTx, limits: TxLimits): Promise<TxEffects> {
+    this.effectsChecked += 1;
+    const res = this.chain.execute(this.spec(p), { mutate: false });
+    if (!res.landed) return { error: res.reason, solDelta: [], tokenDelta: [] };
+    const r = res.record;
+    if (r.err) return { error: JSON.stringify(r.err), solDelta: [], tokenDelta: [] };
+    return {
+      solDelta: limits.solOut.map((l) => solDelta(r, l.account)),
+      tokenDelta: (limits.tokens ?? []).map((t) => tokenOwnerDelta(r, t.owner, t.mint)),
     };
   }
 

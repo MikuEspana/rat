@@ -7,6 +7,8 @@
 //   4. in smoke mode, the lifetime outflow stays under the smoke cap (0.1 SOL)
 //   5. (live) the wallet still holds the amount + its reserve (+ for the creator: the fund's pending share)
 // Then a negative ledger entry (the reservation) is written before any transaction is built.
+// authorize() calls are serialized (one at a time per guard), so two callers can never both pass the same check.
+// Across processes, the worker lease fence in the GuardedSender makes sure only one worker sends.
 import {
   type Alerts,
   type Bucket,
@@ -58,7 +60,15 @@ export class SpendGuard {
     private readonly cfg: SpendGuardConfig,
   ) {}
 
-  async authorize(req: { bucket: Bucket; lamports: bigint; refType: string; refId: string }): Promise<AuthorizeResult> {
+  private queue: Promise<unknown> = Promise.resolve();
+
+  authorize(req: { bucket: Bucket; lamports: bigint; refType: string; refId: string }): Promise<AuthorizeResult> {
+    const run = this.queue.then(() => this.authorizeNow(req));
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async authorizeNow(req: { bucket: Bucket; lamports: bigint; refType: string; refId: string }): Promise<AuthorizeResult> {
     const { ledger, killSwitch, alerts, clock } = this.deps;
     const { bucket, lamports } = req;
     if (lamports <= 0n) return { ok: false, reason: 'invalid_amount', detail: 'amount must be positive' };
@@ -125,6 +135,14 @@ export class SpendGuard {
   async settle(r: Reservation, actualLamports: bigint): Promise<void> {
     const diff = r.lamports - actualLamports;
     if (diff === 0n) return;
+    if (diff < 0n) {
+      // The real cost is booked either way; spending more than was reserved must never go unnoticed.
+      await this.deps.alerts.send(
+        'critical',
+        `overspend_${r.bucket}`,
+        `${r.bucket} ${r.refType} ${r.refId} cost ${formatSol(actualLamports)} SOL, ${formatSol(-diff)} more than the ${formatSol(r.lamports)} SOL reserved.`,
+      );
+    }
     await this.deps.ledger.append({
       bucket: r.bucket,
       deltaLamports: diff,

@@ -29,6 +29,8 @@ async function main(): Promise<void> {
     clock: systemClock,
     holder: `${hostname()}:${process.pid}:${randomBytes(4).toString('hex')}`,
   });
+  // every send first proves this worker still holds the lease
+  deps.sender.setFence(() => runner.fence());
 
   let stopping = false;
   const stop = () => {

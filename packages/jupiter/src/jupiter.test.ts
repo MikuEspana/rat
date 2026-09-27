@@ -153,6 +153,22 @@ describe('JupiterSwapBuilder', () => {
     expect(() => parseBuildResponse({ ...sample, outAmount: '0' }, { inputMint: NATIVE_SOL_MINT, outputMint: out, amount: 1n, taker, slippageBps: 100 })).toThrow(/zero/);
   });
 
+  it('red team: a quote that spends a different amount, or ignores our slippage, is rejected', () => {
+    const req = { inputMint: NATIVE_SOL_MINT, outputMint: out, amount: 24_500_000n, taker, slippageBps: 100 };
+    // spends more (or less) SOL than asked
+    expect(() => parseBuildResponse({ ...sample, inAmount: '24500001' }, req)).toThrow(/quoted 24500001 in/);
+    // minimum output far below outAmount - 1%: a sandwich could take the difference
+    expect(() => parseBuildResponse({ ...sample, otherAmountThreshold: '1' }, req)).toThrow(/slippage floor/);
+    expect(() => parseBuildResponse({ ...sample, otherAmountThreshold: '1385000' }, req)).toThrow(/slippage floor 1399761/);
+    // exact floor and 1 raw unit of rounding are fine
+    expect(parseBuildResponse(sample, req).minOutAmount).toBe(1_399_761n);
+    expect(parseBuildResponse({ ...sample, otherAmountThreshold: '1399760' }, req).minOutAmount).toBe(1_399_760n);
+    // Jupiter's own compute-budget and tip instructions are never used (we set our own)
+    const programs = parseBuildResponse({ ...sample, tipInstruction: sample.swapInstruction }, req).instructions.map((i) => i.programId.toBase58());
+    expect(programs).not.toContain('ComputeBudget111111111111111111111111111111');
+    expect(programs.filter((p) => p === 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4')).toHaveLength(1);
+  });
+
   it('sends taker, payer (only when different), slippage and maxAccounts', async () => {
     const urls: URL[] = [];
     const http = new JupiterHttp({

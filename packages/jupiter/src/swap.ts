@@ -81,9 +81,17 @@ export function parseBuildResponse(res: BuildResponse, req: SwapBuildRequest): S
     throw new Error(`Jupiter /build returned a different pair (${res.inputMint} -> ${res.outputMint})`);
   }
   if (!res.swapInstruction) throw new Error('Jupiter /build returned no swap instruction');
+  const inAmount = BigInt(res.inAmount);
   const outAmount = BigInt(res.outAmount);
   const minOut = BigInt(res.otherAmountThreshold);
   if (outAmount <= 0n || minOut <= 0n) throw new Error('Jupiter /build returned a zero output');
+  // The quote must spend exactly what we asked, and its minimum output must honour OUR slippage: a wider
+  // minimum would let a sandwich bot take the difference. 1 raw unit of rounding is tolerated.
+  if (inAmount !== req.amount) throw new Error(`Jupiter /build quoted ${inAmount} in, asked for ${req.amount}`);
+  const floor = (outAmount * BigInt(10_000 - req.slippageBps)) / 10_000n;
+  if (minOut + 1n < floor) {
+    throw new Error(`Jupiter /build minimum output ${minOut} is below the ${req.slippageBps} bps slippage floor ${floor}`);
+  }
   const instructions = [
     ...res.setupInstructions.map(toInstruction),
     toInstruction(res.swapInstruction),
@@ -93,7 +101,7 @@ export function parseBuildResponse(res: BuildResponse, req: SwapBuildRequest): S
   return {
     instructions,
     lookupTables: toLookupTables(res.addressesByLookupTableAddress),
-    inAmount: BigInt(res.inAmount),
+    inAmount,
     outAmount,
     minOutAmount: minOut,
     priceImpactPct: 0,

@@ -47,11 +47,20 @@ interface Amounts {
   swap: bigint;
 }
 
+/** compute units of the two-step funding tx (one System transfer) */
+const FUND_TX_CU = 50_000;
+
+/** Worst-case fee of the two-step funding tx: base fee (1 signature) + the capped priority fee. */
+export function fundTxFeeMax(d: WorkerDeps): bigint {
+  return 5_000n + (BigInt(d.config.priorityFeeMicroLamportsMax) * BigInt(FUND_TX_CU) + 999_999n) / 1_000_000n;
+}
+
 function amounts(d: WorkerDeps): Amounts {
   const c = d.config;
   if (c.hireMode === 'two_step') {
-    // The rat pays its own token account rent and fees out of the overhead allowance.
-    return { transfer: c.salaryLamports, swap: c.salaryLamports - c.hireOverheadEstLamports - c.ratBufferLamports };
+    // The creator pays the funding tx fee out of the salary (never on top of it); the rat pays its own token
+    // account rent and swap fees out of the overhead allowance.
+    return { transfer: c.salaryLamports - fundTxFeeMax(d), swap: c.salaryLamports - c.hireOverheadEstLamports - c.ratBufferLamports };
   }
   // The creator pays fee + rent (Jupiter `payer`) out of the overhead allowance.
   const transfer = c.salaryLamports - c.hireOverheadEstLamports;
@@ -213,6 +222,11 @@ async function handleOutcome(
   return 'retry_later';
 }
 
+/** The rat must receive at least the quote's guaranteed minimum of its stock. */
+function stockLimit(rat: RatRow, stock: StockRow, build: SwapBuild) {
+  return { owner: rat.wallet, mint: stock.mint, tokenProgram: stock.tokenProgram!, minDelta: build.minOutAmount };
+}
+
 async function sendHire(
   d: WorkerDeps,
   s: WorkerState,
@@ -236,7 +250,8 @@ async function sendHire(
           feePayer: creatorKp,
           signers: [],
           instructions: [SystemProgram.transfer({ fromPubkey: creatorKp.publicKey, toPubkey: ratKp.publicKey, lamports: a.transfer })],
-          computeUnitLimit: 50_000,
+          computeUnitLimit: FUND_TX_CU,
+          limits: { solOut: [{ account: d.creator, maxLamports: reservation.lamports }] },
         },
         reservation,
         ref,
@@ -261,6 +276,8 @@ async function sendHire(
         instructions: swapBuild.instructions,
         lookupTables: swapBuild.lookupTables,
         computeUnitLimit: d.config.computeUnitLimitSwap,
+        // the rat pays with its own salary; the creator is not a signer
+        limits: { solOut: [{ account: rat.wallet, maxLamports: rat.salaryLamports }], tokens: [stockLimit(rat, stock, swapBuild)] },
       },
       reservation: prefunded(rat),
       ref,
@@ -279,6 +296,9 @@ async function sendHire(
       instructions: [SystemProgram.transfer({ fromPubkey: creatorKp.publicKey, toPubkey: new PublicKey(rat.wallet), lamports: a.transfer }), ...build.instructions],
       lookupTables: build.lookupTables,
       computeUnitLimit: d.config.computeUnitLimitSwap,
+      // the creator signs Jupiter's instructions: it may lose the salary (transfer + rent + fees) and nothing more,
+      // and the rat must end up with at least the quoted minimum of its stock
+      limits: { solOut: [{ account: d.creator, maxLamports: reservation.lamports }], tokens: [stockLimit(rat, stock, build)] },
     },
     reservation,
     ref,

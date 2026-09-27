@@ -54,19 +54,34 @@ export async function creditClaim(
   await d.store.settings.set(SETTINGS.lastClaimAt, d.clock.now().toISOString());
 }
 
+async function openBotClaims(d: WorkerDeps): Promise<ClaimRow[]> {
+  return (await d.store.db.query.claims.findMany({
+    where: (c, { and, eq, inArray }) => and(eq(c.mode, d.store.mode), eq(c.source, 'bot'), inArray(c.status, ['pending', 'unknown'])),
+  })) as ClaimRow[];
+}
+
 /** Re-checks claims whose tx status was unknown (they may have landed later). */
 async function reconcileOpenClaims(d: WorkerDeps): Promise<void> {
-  const open = await d.store.db.query.claims.findMany({
-    where: (c, { and, eq, inArray }) => and(eq(c.mode, d.store.mode), eq(c.source, 'bot'), inArray(c.status, ['pending', 'unknown'])),
-  });
-  for (const c of open as ClaimRow[]) {
+  for (let c of await openBotClaims(d)) {
     if (!c.sig) {
-      await d.store.claims.update(c.id, { status: 'failed' });
+      // Crash between "attempt written" and "claim row updated": the attempt log knows the signature.
+      const sent = await d.store.attempts.latestForRef('claim', String(c.id));
+      if (!sent) {
+        await d.store.claims.update(c.id, { status: 'failed', toFundLamports: 0n });
+        continue;
+      }
+      await d.store.claims.update(c.id, { sig: sent.signature });
+      c = { ...c, sig: sent.signature };
+    }
+    const sig = c.sig!;
+    const attempt = await d.store.attempts.bySignature(sig);
+    if (!attempt) {
+      // cannot be checked, and an open claim blocks new ones: close it (unbooked income is the safe direction)
+      await d.store.claims.update(c.id, { status: 'failed', toFundLamports: 0n });
+      await d.alerts.send('warn', `claim_unverifiable_${c.id}`, `Claim #${c.id} (${sig}) has no attempt record; marked failed. Check it on Solscan.`);
       continue;
     }
-    const attempt = await d.store.attempts.bySignature(c.sig);
-    if (!attempt) continue;
-    const st = await d.sender.status(c.sig, attempt.lastValidBlockHeight);
+    const st = await d.sender.status(sig, attempt.lastValidBlockHeight);
     await d.store.attempts.finish(attempt.id, { status: st.status, error: st.error, feeLamports: st.feeLamports });
     if (st.status === 'confirmed' && st.record) {
       const m = d.pump.parseClaim(st.record, d.creator);
@@ -91,6 +106,8 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
   if (d.store.mode === 'paper') return runPaperClaim(d, s);
 
   await reconcileOpenClaims(d);
+  // A claim that may still land would forward the same fund share twice: wait until it lands or expires.
+  if ((await openBotClaims(d)).length > 0) return { status: 'skipped', claimedLamports: 0n, reason: 'previous claim unresolved' };
   const claimable = (await d.pump.getClaimable(d.creator)) as PumpClaimable;
   const owed = await d.store.claims.pendingFundTransfer();
   const worthClaiming = claimable.totalLamports >= d.config.minClaimLamports;
@@ -114,7 +131,16 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
     toFundLamports: toFund,
   });
   const r = await d.sender.execute({
-    request: { kind: 'claim', label: `claim #${claimId}`, feePayer: creatorKp, signers: [], instructions: ixs, computeUnitLimit: d.config.computeUnitLimitClaim },
+    request: {
+      kind: 'claim',
+      label: `claim #${claimId}`,
+      feePayer: creatorKp,
+      signers: [],
+      instructions: ixs,
+      computeUnitLimit: d.config.computeUnitLimitClaim,
+      // the claim pays in; the creator may only lose what it already owes the fund, plus fees
+      limits: { solOut: [{ account: d.creator, maxLamports: owed + d.config.hireOverheadEstLamports }] },
+    },
     ref: { type: 'claim', id: String(claimId) },
   });
   if (r.status !== 'done') {

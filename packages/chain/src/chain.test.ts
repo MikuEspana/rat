@@ -439,3 +439,69 @@ describe('RpcTxSender Jito route', () => {
     await expect(empty.get()).rejects.toThrow(/getTipAccounts/);
   });
 });
+
+describe('red team: RPC effects simulation and signature paging', () => {
+  it('simulateEffects reads pre state, then post state from simulateTransaction, and diffs SOL and token amounts', async () => {
+    const req = request();
+    const payer = req.feePayer;
+    const rat = Keypair.generate().publicKey.toBase58();
+    const mint = Keypair.generate().publicKey.toBase58();
+    const tokenAcct = (amount: bigint) => {
+      const d = Buffer.alloc(170);
+      d.writeBigUInt64LE(amount, 64);
+      return d;
+    };
+    let simConfig: { accounts?: { addresses: string[] }; minContextSlot?: number } = {};
+    const { conn } = fakeConnection({
+      getMultipleAccountsInfoAndContext: async () => ({ context: { slot: 77 }, value: [{ lamports: 1_000_000_000, data: Buffer.alloc(0) }, null] }),
+      simulateTransaction: async (_tx: unknown, cfg: typeof simConfig) => {
+        simConfig = cfg;
+        return {
+          context: { slot: 78 },
+          value: { err: null, logs: [], accounts: [{ lamports: 969_000_000, data: ['', 'base64'] }, { lamports: 2_074_080, data: [tokenAcct(12_345n).toString('base64'), 'base64'] }] },
+        };
+      },
+    });
+    const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1 });
+    const p = await s.prepare(req);
+    const limits = { solOut: [{ account: payer.publicKey.toBase58(), maxLamports: 30_000_000n }], tokens: [{ owner: rat, mint, tokenProgram: TOKEN_2022_PROGRAM, minDelta: 1n }] };
+    const eff = await s.simulateEffects(p, limits);
+    expect(eff).toEqual({ solDelta: [-31_000_000n], tokenDelta: [12_345n] });
+    // the token account asked for is the rat's associated token account; the simulation is at least as new as the pre read
+    expect(simConfig.accounts?.addresses[1]).toBe(getAssociatedTokenAddressSync(new PublicKey(mint), new PublicKey(rat), true, new PublicKey(TOKEN_2022_PROGRAM)).toBase58());
+    expect(simConfig.minContextSlot).toBe(77);
+  });
+
+  it('simulateEffects reports a failing simulation and refuses a response without account states', async () => {
+    const failing = fakeConnection({
+      getMultipleAccountsInfoAndContext: async () => ({ context: { slot: 1 }, value: [null] }),
+      simulateTransaction: async () => ({ context: { slot: 1 }, value: { err: { InstructionError: [2, 'Custom'] }, logs: [], accounts: null } }),
+    });
+    const s = new RpcTxSender(failing.conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1 });
+    const limits = { solOut: [{ account: Keypair.generate().publicKey.toBase58(), maxLamports: 1n }] };
+    expect((await s.simulateEffects(await s.prepare(request()), limits)).error).toMatch(/InstructionError/);
+    const empty = fakeConnection({ getMultipleAccountsInfoAndContext: async () => ({ context: { slot: 1 }, value: [null] }) });
+    const s2 = new RpcTxSender(empty.conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1 });
+    await expect(s2.simulateEffects(await s2.prepare(request()), limits)).rejects.toThrow(/no account states/);
+  });
+
+  it('getSignaturesSince pages back with `before` until it reaches the cursor: no signature is skipped', async () => {
+    const all = Array.from({ length: 2_345 }, (_, i) => `sig${2_345 - i}`); // newest first
+    const calls: { before?: string; limit?: number }[] = [];
+    const conn = {
+      getSignaturesForAddress: async (_a: unknown, o: { before?: string; until?: string; limit: number }) => {
+        calls.push({ before: o.before, limit: o.limit });
+        const start = o.before ? all.indexOf(o.before) + 1 : 0;
+        const stop = o.until ? all.indexOf(o.until) : all.length;
+        return all.slice(start, stop).slice(0, o.limit).map((signature) => ({ signature, slot: 1, err: null, blockTime: null }));
+      },
+    };
+    const { RpcChainReader } = await import('./rpc-reader');
+    const reader = new RpcChainReader(conn as never);
+    const got = await reader.getSignaturesSince(Keypair.generate().publicKey.toBase58(), 'sig5', 10_000);
+    expect(got.length).toBe(2_340);
+    expect(got.at(-1)?.signature).toBe('sig6');
+    expect(calls.map((c) => c.limit)).toEqual([1000, 1000, 1000]);
+    expect(calls[1]?.before).toBe(all[999]);
+  });
+});
