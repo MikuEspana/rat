@@ -54,11 +54,10 @@ export async function runLaunch(
   return { maxJupiterPerMinute: maxPerMinute, maxHiresPerLoop: maxHires };
 }
 
-export function sol(n: number): bigint {
+function sol(n: number): bigint {
   return BigInt(Math.round(n * 1e9));
 }
 
-export { SOL };
 
 export interface BurnRounds {
   rounds: number;

@@ -1,5 +1,5 @@
-// Reconcile (live only): each loop checks RECONCILE_BATCH rat token accounts on-chain (all 6,000 rats about
-// every 7 minutes at 500 per loop). An issuer-frozen account or a balance lower than the database (the issuer
+// Reconcile (live only): each loop checks RECONCILE_BATCH rat token accounts on-chain (3,000 rats about every
+// 3.5 minutes at 500 per loop, 6,000 in 7). An issuer-frozen account or a balance lower than the database (the issuer
 // has a permanent delegate) freezes that rat and alerts. Recovery unfreezes it.
 import type { WorkerDeps, WorkerState } from '../deps';
 
