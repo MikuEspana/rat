@@ -16,6 +16,8 @@ export const SETTINGS = {
   paperClaimWatermark: 'paper_claim_watermark',
   creatorWatchCursor: 'creator_watch_cursor',
   fundWatchCursor: 'fund_watch_cursor',
+  /** slot of the first live wallet watch run: nothing older is ever looked at */
+  watchFromSlot: 'watch_from_slot',
   lastBurnAt: 'last_burn_at',
   lastClaimAt: 'last_claim_at',
   lastBurnRunAt: 'last_burn_run_at',

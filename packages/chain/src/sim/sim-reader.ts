@@ -49,6 +49,11 @@ export class SimChainReader implements ChainReader {
     return out;
   }
 
+  async getSlot(): Promise<number> {
+    this.calls++;
+    return this.chain.slot;
+  }
+
   async getTransactionRecord(signature: string): Promise<TxRecord | null> {
     this.calls++;
     return this.chain.transaction(signature) ?? null;

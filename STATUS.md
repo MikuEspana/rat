@@ -37,7 +37,7 @@ Your answers, as built:
 | 4 | Direct pump.fun buy fallback | `PumpDirectBuyBuilder` (official SDK), used when Jupiter has no route. |
 | 5 | Coin token program at runtime | Read from the mint account owner. |
 | 6 | Scaled UI vs price | Script `check:scaled-ui` ready. Current valuation: scaled amount x price (display only). |
-| 7 | External claims | Our vault claimed by anyone: split 50/50 automatically (fund share rides in the next claim tx). Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch. |
+| 7 | External claims | Our vault claimed by anyone: split 50/50 automatically (fund share rides in the next claim tx). Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
 | 8 | Tier names | intern, analyst, associate, vp, partner. |
 | 10 | Jupiter free tier, limit in config | `JUPITER_MAX_RPM=55`. |
 | 11 | Emergency sweep | `rat sweep`, CLI only, exact typed phrase, never called by the bot. |
@@ -143,7 +143,7 @@ Details in `docs/runbooks/go-live.md`.
 5. Run the smoke test on a throwaway coin: `tests/smoke/README.md`. Read `tests/smoke/REPORT.md`. If the 1-tx hire failed, set `HIRE_MODE=two_step`.
 6. Rehearse in DRY RUN with `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, then set it back to `0` and run `rat dry-run-reset --yes`.
 7. `rat alert-test`, then test `rat kill` / `rat resume`.
-8. Launch the coin on pump.fun from the creator wallet: normal mode, **no holder rewards, no fee sharing**. Set `COIN_MINT`, redeploy (still DRY RUN), check the site.
+8. Launch the coin on pump.fun from the creator wallet: normal mode, **no holder rewards, no fee sharing**. When the launch tx is finalized, set `COIN_MINT`, `WATCH_FROM_SLOT` (launch slot + 1) and `KNOWN_OWNER_TX_SIGS` (the launch signature), redeploy (still DRY RUN), check the site.
 9. Go live: `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, `DRY_RUN=false` on the API. Watch the first claim, hires and burn on Solscan.
 10. First hour: `rat status`. Any doubt: `rat kill`.
 

@@ -111,6 +111,25 @@ const envSchema = z.object({
   RPC_URL: optStr,
   RPC_URL_BACKUP: optStr,
   COIN_MINT: optPubkey,
+  // Wallet watch: transactions of the creator/fund wallets before this slot are never looked at (set it to the
+  // slot right after the coin launch). 0 = the slot of the worker's first live run.
+  WATCH_FROM_SLOT: intStr(0),
+  // Comma-separated signatures of transactions YOU signed with the creator or fund wallet (the coin launch, a
+  // manual transfer). The wallet watch accepts them instead of engaging the kill switch.
+  KNOWN_OWNER_TX_SIGS: z
+    .string()
+    .trim()
+    .default('')
+    .transform((v, ctx) => {
+      const sigs = v.split(',').map((x) => x.trim()).filter(Boolean);
+      for (const sig of sigs) {
+        if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(sig)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: `not a transaction signature: "${sig.slice(0, 20)}"` });
+          return z.NEVER;
+        }
+      }
+      return sigs;
+    }),
   PRIORITY_FEE_MICROLAMPORTS_MAX: intStr(200_000),
   COMPUTE_UNIT_LIMIT_SWAP: intStr(400_000, 1, 1_400_000),
   COMPUTE_UNIT_LIMIT_CLAIM: intStr(200_000, 1, 1_400_000),
@@ -190,6 +209,10 @@ export interface AppConfig {
   rpcUrl?: string;
   rpcUrlBackup?: string;
   coinMint?: string;
+  /** wallet watch floor (0 = slot of the first live run) */
+  watchFromSlot: number;
+  /** owner-signed transactions the wallet watch accepts */
+  knownOwnerTxSigs: string[];
   priorityFeeMicroLamportsMax: number;
   computeUnitLimitSwap: number;
   computeUnitLimitClaim: number;
@@ -325,6 +348,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     rpcUrl: e.RPC_URL,
     rpcUrlBackup: e.RPC_URL_BACKUP,
     coinMint: e.COIN_MINT,
+    watchFromSlot: e.WATCH_FROM_SLOT,
+    knownOwnerTxSigs: e.KNOWN_OWNER_TX_SIGS,
     priorityFeeMicroLamportsMax: e.PRIORITY_FEE_MICROLAMPORTS_MAX,
     computeUnitLimitSwap: e.COMPUTE_UNIT_LIMIT_SWAP,
     computeUnitLimitClaim: e.COMPUTE_UNIT_LIMIT_CLAIM,
@@ -388,6 +413,8 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
     killSwitch: cfg.killSwitch,
     smokeMode: cfg.smokeMode,
     coinMint: cfg.coinMint ?? null,
+    watchFromSlot: cfg.watchFromSlot || 'first live run',
+    knownOwnerTxSigs: cfg.knownOwnerTxSigs.length,
     creatorPubkey: cfg.creatorPubkey ?? null,
     fundPubkey: cfg.fundPubkey ?? null,
     hireMode: cfg.hireMode,

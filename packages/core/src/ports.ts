@@ -169,6 +169,8 @@ export interface ChainReader {
   /** Newest first, stopping before `untilSignature` (exclusive). */
   getSignaturesSince(address: Pubkey, untilSignature: string | null, limit?: number): Promise<SignatureInfo[]>;
   getTransactionRecord(signature: string): Promise<TxRecord | null>;
+  /** current slot (confirmed) */
+  getSlot(): Promise<number>;
 }
 
 // ---------- sending ----------

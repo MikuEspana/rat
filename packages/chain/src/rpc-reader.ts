@@ -96,6 +96,10 @@ export class RpcChainReader implements ChainReader {
     return res.map((s) => ({ signature: s.signature, slot: s.slot, err: s.err, blockTime: s.blockTime ?? null }));
   }
 
+  async getSlot(): Promise<number> {
+    return this.withFailover((c) => c.getSlot('confirmed'));
+  }
+
   async getTransactionRecord(signature: string): Promise<TxRecord | null> {
     const tx = await this.withFailover((c) =>
       c.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }),
