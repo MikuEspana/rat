@@ -90,3 +90,37 @@ export function burnRounds(rows: { at: Date; reservedLamports: bigint }[]): Burn
   return { rounds, txs: sorted.length, maxChunk, roundGaps, chunkGaps };
 }
 
+
+export interface Phase {
+  label: string;
+  fromMin: number;
+  toMin: number;
+  /** creator fees paid into our vaults during this phase */
+  sol: number;
+  /** decay: front-loaded and falling; bump: rises then falls (a pump); flat: even */
+  shape: 'decay' | 'bump' | 'flat';
+  /** steepness of a decay (higher = more front-loaded) */
+  k?: number;
+}
+
+/** Fees per tick for a list of phases; each phase sums EXACTLY to its SOL. */
+export function phasedCurve(phases: Phase[], stepSec: number): { fees: bigint[]; phaseAt: (tick: number) => string } {
+  const fees: bigint[] = [];
+  const labels: string[] = [];
+  for (const p of phases) {
+    const ticks = Math.round(((p.toMin - p.fromMin) * 60) / stepSec);
+    const weights = Array.from({ length: ticks }, (_, i) => {
+      const x = (i + 0.5) / ticks;
+      if (p.shape === 'decay') return Math.exp(-(p.k ?? 2) * x);
+      if (p.shape === 'bump') return Math.sin(Math.PI * x);
+      return 1;
+    });
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const total = sol(p.sol);
+    const part = weights.map((w) => BigInt(Math.floor((Number(total) * w) / sum)));
+    part[0] = part[0]! + (total - part.reduce((a, b) => a + b, 0n));
+    fees.push(...part);
+    labels.push(...part.map(() => p.label));
+  }
+  return { fees, phaseAt: (tick) => labels[tick] ?? 'after' };
+}

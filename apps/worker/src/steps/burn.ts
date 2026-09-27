@@ -162,6 +162,8 @@ export async function runBurnStep(d: WorkerDeps, s: WorkerState): Promise<BurnRe
     if ((await d.killSwitch.status()).on) return endRound(skip('kill_switch'));
     await reconcileOpenBurns(d);
     spendableNow = await burnSpendable(d, true);
+    // optional pacing: a round burns at most BURN_ROUND_MAX_SOL, the rest waits for the next rounds
+    if (c.burn.roundMaxLamports > 0n) spendableNow = minBig(spendableNow, c.burn.roundMaxLamports);
     if (spendableNow < c.minBurnLamports) {
       return endRound(skip(`under ${formatSol(c.minBurnLamports)} SOL (have ${formatSol(spendableNow)})`));
     }

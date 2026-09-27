@@ -42,6 +42,7 @@ describe('loadConfig', () => {
     expect(cfg.slippageBpsCoin).toBe(150);
     expect(cfg.burn).toEqual({
       chunkMaxLamports: 1_000_000_000n,
+      roundMaxLamports: 0n,
       chunkGapMinSec: 3,
       chunkGapMaxSec: 8,
       sendVia: 'rpc',
@@ -54,6 +55,8 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
     expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
     expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
+    expect(loadConfig({ BURN_ROUND_MAX_SOL: '5' }).burn.roundMaxLamports).toBe(5_000_000_000n);
+    expect(() => loadConfig({ BURN_ROUND_MAX_SOL: '0.001' })).toThrow(/BURN_ROUND_MAX_SOL/);
     expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
     expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
@@ -80,6 +83,7 @@ describe('loadConfig', () => {
     expect(cfg.slippageBpsCoin).toBe(150);
     expect(cfg.burn).toEqual({
       chunkMaxLamports: 1_000_000_000n,
+      roundMaxLamports: 0n,
       chunkGapMinSec: 3,
       chunkGapMaxSec: 8,
       sendVia: 'rpc',
@@ -92,6 +96,8 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
     expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
     expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
+    expect(loadConfig({ BURN_ROUND_MAX_SOL: '5' }).burn.roundMaxLamports).toBe(5_000_000_000n);
+    expect(() => loadConfig({ BURN_ROUND_MAX_SOL: '0.001' })).toThrow(/BURN_ROUND_MAX_SOL/);
     expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
     expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
