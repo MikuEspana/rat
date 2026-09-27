@@ -42,6 +42,7 @@ Your answers, as built:
 | 10 | Jupiter free tier, limit in config | `JUPITER_MAX_RPM=55`. |
 | 11 | Emergency sweep | `rat sweep`, CLI only, exact typed phrase, never called by the bot. |
 | 12 | Mint verification | Token-2022 + expected mint authority (config or majority of at least 3), else rejected. Runs at startup and every 35s. |
+| review | Live readiness | The worker refuses to start LIVE with 0 approved stocks or none passing the mint check (exact reasons in the logs + Telegram). `hire_idle` alert when no rat is hired for 30 min while more than 0.1 SOL waits. |
 | 13 | No cloud resources | Config and runbooks only. |
 
 ## 2. Test results

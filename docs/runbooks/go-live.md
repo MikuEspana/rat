@@ -29,7 +29,7 @@ Order matters: the coin launch is a creator-wallet transaction the bot did not s
 - If you really must: `rat kill`, send it, add its signature to `KNOWN_OWNER_TX_SIGS`, redeploy, check `rat status` (expect one critical alert about it), then `rat resume`.
 
 ## T-0: start live (only after the steps above)
-- [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows). This is the worker's first live start. Its preflight refuses to start live if `WATCH_FROM_SLOT` is ahead of the chain (it would hide a real leak); the logs and a Telegram alert say exactly why.
+- [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows). This is the worker's first live start. Its preflight refuses to start live if 0 stocks are approved, if no approved stock passes the mint check, or if `WATCH_FROM_SLOT` is ahead of the chain (it would hide a real leak); the logs and a Telegram alert say exactly why.
 - [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (addresses end in RAT, each holds its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
 
 ## T+1 hour

@@ -21,6 +21,8 @@ export const SETTINGS = {
   lastBurnAt: 'last_burn_at',
   lastClaimAt: 'last_claim_at',
   lastBurnRunAt: 'last_burn_run_at',
+  /** since when hires are skipped while the hire budget is above HIRE_IDLE_ALERT_SOL ('' = not idle) */
+  hireIdleSince: 'hire_idle_since',
   /** earliest time the next burn round can start (the exact time is random and never published) */
   burnWindowOpensAt: 'burn_window_opens_at',
   /** JSON { usd, change24hPct, at } */

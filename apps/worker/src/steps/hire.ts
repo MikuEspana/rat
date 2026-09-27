@@ -8,6 +8,7 @@
 // HIRE_MODE=two_step: tx 1 funds the rat, tx 2 (signed and paid by the rat) buys the stock.
 import {
   NATIVE_SOL_MINT,
+  SETTINGS,
   type Pubkey,
   type SwapBuild,
   type TxOutcome,
@@ -343,7 +344,42 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
   return sendHire(d, s, rat, stock, reservation ?? prefunded(rat), b.build);
 }
 
+/**
+ * Money sitting idle: no rat hired for HIRE_IDLE_ALERT_MIN minutes while the hire budget is above
+ * HIRE_IDLE_ALERT_SOL (for example on a weekend when stock prices go stale). The kill switch is not idle money.
+ */
+async function checkIdle(d: WorkerDeps, res: HireResult): Promise<void> {
+  const cfg = d.config.hireIdleAlert;
+  const budget = await d.store.ledger.balance('hire');
+  const idle = res.hired === 0 && budget > cfg.lamports && res.skipped !== 'kill_switch';
+  const since = await d.store.settings.get(SETTINGS.hireIdleSince);
+  if (!idle) {
+    if (since) await d.store.settings.set(SETTINGS.hireIdleSince, '');
+    return;
+  }
+  const now = d.clock.now();
+  if (!since) {
+    await d.store.settings.set(SETTINGS.hireIdleSince, now.toISOString());
+    return;
+  }
+  const minutes = (now.getTime() - new Date(since).getTime()) / 60_000;
+  if (minutes >= cfg.minutes) {
+    const why = res.skipped ?? res.blocked ?? (res.attempted > 0 ? 'hire transactions did not confirm' : 'no hire attempted');
+    await d.alerts.send(
+      'warn',
+      'hire_idle',
+      `No rat hired for ${Math.round(minutes)} min while ${formatSol(budget)} SOL waits in the hire budget. Reason: ${why}. Check stock prices (weekend?), approvals, the key pool and rat status.`,
+    );
+  }
+}
+
 export async function runHireStep(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
+  const res = await hire(d, s);
+  await checkIdle(d, res);
+  return res;
+}
+
+async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
   const res: HireResult = { hired: 0, attempted: 0, retried: 0, gaveUp: 0 };
   let slots = d.config.maxHiresPerLoop;
   const allStocks = new Map((await d.store.stocks.list()).map((st) => [st.mint, st]));
@@ -398,7 +434,10 @@ export async function runHireStep(d: WorkerDeps, s: WorkerState): Promise<HireRe
       await d.keys.releaseRatKey(wallet);
       weights.set(mint, 0);
       d.log.warn({ stock: stock.symbol, reason: b.reason }, 'skipping stock this loop');
-      if ([...weights.values()].every((w) => w === 0)) break;
+      if ([...weights.values()].every((w) => w === 0)) {
+        res.skipped = `every stock failed the route or price check (last: ${stock.symbol}: ${b.reason})`;
+        break;
+      }
       continue;
     }
     const rat = await d.store.rats.create({ wallet, stockMint: mint, salaryLamports: d.config.salaryLamports, avatarSeed: avatarSeedFor(wallet) });
