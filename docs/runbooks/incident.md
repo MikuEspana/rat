@@ -4,7 +4,7 @@ First move: `rat kill --reason "<what you saw>"`. Then look.
 
 | Symptom | Where to look | Action |
 |---|---|---|
-| Critical alert "transaction signed by the creator/fund wallet was NOT sent by the bot" | Solscan for that signature | Assume the key leaked. Keep the kill switch on. Move remaining funds with your cold wallet process; `rat sweep --to <cold>` moves the rats' stock + SOL (typed confirmation). |
+| Critical alert "transaction signed by the creator/fund wallet was NOT sent by the bot" | Solscan for that signature | If it was you (a manual transaction), check it, then `rat resume`. Otherwise assume the key leaked. Keep the kill switch on. Move remaining funds with your cold wallet process; `rat sweep --to <cold>` moves the rats' stock + SOL (typed confirmation). |
 | `cap_reached_*` alert | `rat status` (spent in the last hour) | Normal at very high volume: spending resumes as the hour rolls, the budget carries over. Raise `SPEND_CAP_SOL_PER_HOUR_*` only if you mean it. |
 | `stock_paused_*` / `mint_rejected_*` | `rat stocks-sync` output | Issuer paused a stock (rats frozen automatically) or a mint failed verification (never hired into). Check the issuer's announcements. |
 | `rat_balance_*` | Solscan for the rat wallet | Tokens moved by the issuer's permanent delegate. The rat is frozen. |

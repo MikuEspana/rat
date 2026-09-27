@@ -18,6 +18,10 @@
 - [ ] Set `COIN_MINT`, redeploy (still DRY RUN). `rat status` + the site show paper claims reading the real vault.
 - [ ] `rat dry-run-reset --yes` to start the live history clean.
 
+## Important while the bot is live
+- **Never send a transaction from the creator or fund wallet yourself** (a buy, a transfer, a claim on pump.fun). The wallet watch sees a transaction signed by a bot wallet that the bot did not send, assumes a leaked key, and engages the kill switch. Sending SOL **to** these wallets is fine (it is alerted and never spent).
+- Launch the coin and do any manual setup **before** switching `DRY_RUN=false` (the watch starts from the latest signature when it first runs live).
+
 ## T-0
 - [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows).
 - [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (addresses end in RAT, each holds its stock), the first burn within 10 minutes.

@@ -164,7 +164,7 @@ Conflict rules: write only inside owned folders; root files and `packages/core` 
 
 ### WS12 Deploy
 - Owns: `infra/**`, `docs/runbooks/**`.
-- Outputs: Dockerfiles, `railway.json`, Supabase notes (direct connection for worker), runbooks: go-live, kill, key rotation, restore, incident.
+- Outputs: Dockerfile (one image for worker and API), Railway config per service, read-only Supabase role, runbooks: deploy, go-live, kill switch, keys (incl. rotation), backup/restore, incident.
 - Acceptance: files lint as valid JSON/YAML; runbooks reference only real commands.
 
 ## 7. Safety

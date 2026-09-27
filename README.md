@@ -34,6 +34,7 @@ Rules that never change:
 | `config/stocks.json` | The stock list (needs owner approval before live hires) |
 | `OPEN-QUESTIONS.md` | Decisions only the owner can make, with the safe default picked |
 | `STATUS.md` | What is built, tested, mocked, and how to go live |
+| `SIMULATION.md` | Launch-hour simulation results (50 SOL in DRY RUN, caps, live on SimChain) |
 | `packages/*` | Backend libraries (core, contract, db, keys, chain, pump, jupiter, safety) |
 | `apps/*` | `worker` (the bot), `api` (public state API), `cli` (operator tools) |
 | `tests/*` | End to end simulation and the mainnet smoke script |
