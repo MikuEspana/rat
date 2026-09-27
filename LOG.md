@@ -12,14 +12,15 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q2 | Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | merged, 14 bugs fixed |
 | Q3 | Property tests (fast-check) | [#36](https://github.com/MikuEspana/rat/pull/36) | merged, 1 bug fixed |
 | Q4 | Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | merged, 3 bugs fixed |
-| Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | done, 2 settings recommended |
-| Q6 | `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | done |
-| Q7 | LAUNCH-DAY.md | [#40](https://github.com/MikuEspana/rat/pull/40) | done |
-| Q8 | Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | done |
+| Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | merged, 2 settings recommended |
+| Q6 | `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | merged |
+| Q7 | LAUNCH-DAY.md | [#40](https://github.com/MikuEspana/rat/pull/40) | merged |
+| Q8 | Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | merged |
 | Q9 | Site shell (Vite + React + Three.js) | none | **skipped by Miguel**: built in a separate session in `apps/pixel-site` (not touched here) |
 | Q10 | Site deploy docs (Vercel) | none | **skipped by Miguel** (part of Tier 3) |
-| Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | done |
-| Q12 | Extra launch-risk reduction | (this PR) | done, 4 items |
+| Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | merged |
+| Q12 | Extra launch-risk reduction | [#43](https://github.com/MikuEspana/rat/pull/43) | merged, 4 items |
+| Final | STATUS.md | (this PR) | queue empty |
 
 ## Q1. Remove vanity keys
 
@@ -185,3 +186,7 @@ Added to the queue, then done:
 | 12d | Error texts can carry secrets (an RPC URL with `?api-key=`, a Telegram bot URL, a database password). They were stored in the database, shown on the admin page and sent to Telegram as they were. | `redactSecrets()` on every alert text, every loop error (heartbeats) and every stored send error. The probe showed today's RPC errors do not include the URL, so this is defense in depth. | `redact.test.ts`, alerts + attempt log test |
 
 **Bugs found**: none in the money paths; 4 operational gaps closed.
+
+## Queue empty
+
+`STATUS.md` now opens with the queue table (Item | PR | Result | Anything Miguel must do) and the top 5 risks left. The integration PR into `main` ([#27](https://github.com/MikuEspana/rat/pull/27)) stays open for Miguel.
