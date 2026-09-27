@@ -240,7 +240,7 @@ export class SimChain {
 
   // ---------- direct state helpers (test setup, "the outside world") ----------
 
-  airdrop(pubkey: string, lamports: bigint): void {
+  fundAccount(pubkey: string, lamports: bigint): void {
     this.state.sol.set(pubkey, (this.state.sol.get(pubkey) ?? 0n) + lamports);
   }
 

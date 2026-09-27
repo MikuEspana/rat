@@ -244,7 +244,7 @@ describe('SimChain', () => {
     const reader = new SimChainReader(chain);
     const alice = Keypair.generate();
     const bob = Keypair.generate();
-    chain.airdrop(alice.publicKey.toBase58(), 1_000_000_000n);
+    chain.fundAccount(alice.publicKey.toBase58(), 1_000_000_000n);
     return { chain, sender, reader, alice, bob };
   };
   const tx = (payer: Keypair, instructions: TransactionInstruction[], signers: Keypair[] = []): TxRequest => ({
@@ -308,7 +308,7 @@ describe('SimChain', () => {
 
     // wrapped SOL: 0.5 SOL of WSOL closes back into native SOL
     chain.setTokenBalance(bob.publicKey.toBase58(), NATIVE_SOL_MINT, 500_000_000n, TOKEN_PROGRAM);
-    chain.airdrop(bob.publicKey.toBase58(), 1_000_000n);
+    chain.fundAccount(bob.publicKey.toBase58(), 1_000_000n);
     const wsolAta = getAssociatedTokenAddressSync(new PublicKey(NATIVE_SOL_MINT), bob.publicKey, true, new PublicKey(TOKEN_PROGRAM));
     const before = chain.sol(bob.publicKey.toBase58());
     const close = createCloseAccountInstruction(wsolAta, bob.publicKey, bob.publicKey, [], new PublicKey(TOKEN_PROGRAM));
