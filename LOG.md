@@ -10,7 +10,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 |---|---|---|---|
 | Q1 | Remove vanity keys | [#34](https://github.com/MikuEspana/rat/pull/34) | merged |
 | Q2 | Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | merged, 14 bugs fixed |
-| Q3 | Property tests (fast-check) | (this PR) | done, 1 bug fixed |
+| Q3 | Property tests (fast-check) | [#36](https://github.com/MikuEspana/rat/pull/36) | merged, 1 bug fixed |
+| Q4 | Chaos tests | (this PR) | done, 3 bugs fixed |
 
 ## Q1. Remove vanity keys
 
@@ -69,3 +70,27 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 **Tests added**: 5 (3 guard properties, 1 end-to-end property, 1 regression test for the counterexample it found).
 
 **Bugs found**: 1 (RT-15, Low), fixed.
+
+## Q4. Chaos tests
+
+**What changed**
+- Chaos harness (`tests/chaos/chaos.ts`): wraps every database repository, the RPC reader and sender, and Jupiter. It can kill the worker right before its k-th operation (every later call hangs forever, like a dead process), or make one kind of dependency fail from its k-th call on.
+- `SimWorld.rebuildDeps()`: a fresh deps graph over the same database and chain (empty key cache, new guards), used as "the restarted process".
+- Suites (in a separate `chaos` CI job, `pnpm test:chaos`; `pnpm run ci` runs everything):
+  - **A. killed at every step**: 172 kill points across a hire (single mode, two-step mode, and with the tx dropped so the release path runs) and a burn (clean and dropped). After each kill a restarted worker must finish the job.
+  - **B. RPC down** from each of the 29 RPC calls of those steps, then back.
+  - **C. database drop** from each of the 138 database calls (mid-transaction), then back.
+  - **D. Jupiter 429 storm**: 20 minutes of 429s in the middle of a launch.
+  - Every scenario ends with the full money check against the chain (the Q3 invariants, now shared in `tests/e2e/helpers.ts`) plus: no rat left half hired, no rat wallet funded twice.
+- Plus a 429 storm test on the real Jupiter HTTP client (20 callers): nobody sends before the reset time, at most 4 tries each, never over 55 requests per minute.
+- Fixes:
+  - **RT-16 (High)**: a reservation released just before a crash was reused for the next hire attempt, so that spend was never booked. Now a reservation is reused only if it is still open.
+  - **RT-17 (Medium)**: a crash between reserving and recording the reservation left it stuck forever (0.03 SOL per hire, up to 1 SOL per burn). Orphans are now released at the start of each hire and burn step.
+  - **RT-18 (Low)**: a crash or DB drop between booking the cost and marking the job done booked the difference twice. Settles and releases now close their reservation exactly once (unique `closes_id`, migration `0001` with a backfill).
+  - `claims.openBot()` moved into the store (so the chaos wrapper sees it).
+
+**Results**: all 172 kill points, 29 RPC points, 138 DB points and the storm pass with every lamport accounted for. Before the fixes, 9 kill points failed the money check.
+
+**Tests added**: 12 chaos tests (each runs up to 43 scenarios), 1 HTTP storm test, 1 regression test (`resilience.test.ts` G, fails without the RT-16 fix).
+
+**Bugs found**: 3 (RT-16 High, RT-17 Medium, RT-18 Low), all fixed.

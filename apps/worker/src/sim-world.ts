@@ -3,12 +3,16 @@
 // ledger and key store on top. No network, nothing can reach mainnet.
 import { randomBytes } from 'node:crypto';
 import {
+  type ChainReader,
   FakeClock,
   LIVE_CONFIRM_PHRASE,
   NATIVE_SOL_MINT,
   SeededRng,
+  type PriceSource,
   type StockConfigEntry,
+  type SwapBuilder,
   TOKEN_2022_PROGRAM,
+  type TxSender,
   loadConfig,
   silentLogger,
 } from '@rat/core';
@@ -63,6 +67,15 @@ export interface SimWorldOptions {
   spreadBps?: number;
 }
 
+/** Pieces a test can swap out (for example wrapped to inject failures) when rebuilding the deps. */
+export interface WorldParts {
+  store?: Store;
+  reader?: ChainReader;
+  sender?: TxSender;
+  swap?: SwapBuilder;
+  prices?: PriceSource;
+}
+
 export interface SimWorld {
   handle: DbHandle;
   clock: FakeClock;
@@ -83,6 +96,8 @@ export interface SimWorld {
   xstocksAuthority: Keypair;
   stockMints: Map<string, string>;
   coinMint: string;
+  /** A new deps graph over the same database and chain (fresh key cache, fresh guards): a restarted process. */
+  rebuildDeps(parts?: WorldParts): WorkerDeps;
   /** trading volume paying creator fees into our vaults */
   accrue(fees: { bondingLamports?: bigint; ammLamports?: bigint }): void;
   /** advances time by `seconds` in `stepSec` ticks, walking prices and running the worker each tick */
@@ -152,39 +167,45 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
 
   const swap = new MockSwapBuilder(prices, { tokens, spreadBps: opts.spreadBps ?? 50 });
   const alerts = new RecordingAlerts();
-  const killSwitch = new DbKillSwitch(store.settings, config.killSwitch);
-  const sender = new GuardedSender(simSender, { attempts: store.attempts, killSwitch, dryRun: config.dryRun, alerts });
-  const guard = new SpendGuard(
-    { ledger: store.ledger, killSwitch, alerts, clock, chain: reader, pendingFundTransfer: () => store.claims.pendingFundTransfer() },
-    {
-      capPerHour: config.spendCapLamportsPerHour,
-      alertPct: config.spendAlertPct,
-      wallets: { hire: creator.publicKey.toBase58(), burn: fund.publicKey.toBase58() },
-      reserves: { hire: config.creatorReserveLamports, burn: config.fundReserveLamports },
-      smokeMode: config.smokeMode,
-      smokeCap: config.smokeCapLamports,
-      checkWallets: !config.dryRun,
-    },
-  );
-  const deps: WorkerDeps = {
-    config,
-    store,
-    clock,
-    rng,
-    log: silentLogger(),
-    chain: reader,
-    sender,
-    guard,
-    keys: new DbKeyStore(store.keys, ring, { expectedCreator: config.creatorPubkey, expectedFund: config.fundPubkey }),
-    pump: new PumpFunClient(reader),
-    prices,
-    swap,
-    alerts,
-    killSwitch,
-    stocks: entries,
-    creator: creator.publicKey.toBase58(),
-    fund: fund.publicKey.toBase58(),
+  /** The deps graph on top of the given store / chain / Jupiter pieces: fresh caches, like a process restart. */
+  const assemble = (o: WorldParts = {}): WorkerDeps => {
+    const st = o.store ?? store;
+    const chain = o.reader ?? reader;
+    const killSwitch = new DbKillSwitch(st.settings, config.killSwitch);
+    const sender = new GuardedSender(o.sender ?? simSender, { attempts: st.attempts, killSwitch, dryRun: config.dryRun, alerts });
+    const guard = new SpendGuard(
+      { ledger: st.ledger, killSwitch, alerts, clock, chain, pendingFundTransfer: () => st.claims.pendingFundTransfer() },
+      {
+        capPerHour: config.spendCapLamportsPerHour,
+        alertPct: config.spendAlertPct,
+        wallets: { hire: creator.publicKey.toBase58(), burn: fund.publicKey.toBase58() },
+        reserves: { hire: config.creatorReserveLamports, burn: config.fundReserveLamports },
+        smokeMode: config.smokeMode,
+        smokeCap: config.smokeCapLamports,
+        checkWallets: !config.dryRun,
+      },
+    );
+    return {
+      config,
+      store: st,
+      clock,
+      rng,
+      log: silentLogger(),
+      chain,
+      sender,
+      guard,
+      keys: new DbKeyStore(st.keys, ring, { expectedCreator: config.creatorPubkey, expectedFund: config.fundPubkey }),
+      pump: new PumpFunClient(chain),
+      prices: o.prices ?? prices,
+      swap: o.swap ?? swap,
+      alerts,
+      killSwitch,
+      stocks: entries,
+      creator: creator.publicKey.toBase58(),
+      fund: fund.publicKey.toBase58(),
+    };
   };
+  const deps = assemble();
   const worker = createWorker(deps);
 
   return {
@@ -206,6 +227,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     xstocksAuthority,
     stockMints,
     coinMint,
+    rebuildDeps: assemble,
     accrue: (fees) => accrueCreatorFees(chain, creator.publicKey.toBase58(), fees),
     async run(seconds, o = {}) {
       const step = o.stepSec ?? 5;

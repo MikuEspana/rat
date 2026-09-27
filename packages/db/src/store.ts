@@ -12,6 +12,7 @@ import {
   type LedgerReason,
   type LedgerStore,
   type Mode,
+  type OpenReservation,
   type Pubkey,
   type SettingsStore,
   type StockConfigEntry,
@@ -163,6 +164,46 @@ export class LedgerRepo implements LedgerStore {
       })
       .returning({ id: ledgerEntries.id });
     return r[0]!.id;
+  }
+
+  async close(entry: LedgerEntryInput & { closesId: number }): Promise<boolean> {
+    const r = await this.db
+      .insert(ledgerEntries)
+      .values({
+        mode: this.mode,
+        at: this.clock.now(),
+        bucket: entry.bucket,
+        deltaLamports: entry.deltaLamports,
+        reason: entry.reason,
+        refType: entry.refType ?? null,
+        refId: entry.refId ?? null,
+        note: entry.note ?? null,
+        closesId: entry.closesId,
+      })
+      .onConflictDoNothing({ target: ledgerEntries.closesId })
+      .returning({ id: ledgerEntries.id });
+    return r.length > 0;
+  }
+
+  async isOpen(id: number): Promise<boolean> {
+    const r = await this.db.select({ id: ledgerEntries.id }).from(ledgerEntries).where(eq(ledgerEntries.closesId, id)).limit(1);
+    return r.length === 0;
+  }
+
+  async openReservations(bucket: Bucket): Promise<OpenReservation[]> {
+    const rows = await this.db
+      .select({ id: ledgerEntries.id, delta: ledgerEntries.deltaLamports, refType: ledgerEntries.refType, refId: ledgerEntries.refId })
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.mode, this.mode),
+          eq(ledgerEntries.bucket, bucket),
+          eq(ledgerEntries.reason, bucket === 'hire' ? 'hire_reserve' : 'burn_reserve'),
+          sql`not exists (select 1 from ledger_entries c where c.closes_id = ${ledgerEntries.id})`,
+        ),
+      )
+      .orderBy(ledgerEntries.id);
+    return rows.map((r) => ({ id: r.id, lamports: -r.delta, refType: r.refType, refId: r.refId }));
   }
 
   async balance(bucket: Bucket): Promise<bigint> {
@@ -503,6 +544,14 @@ export class ClaimRepo {
     readonly mode: Mode,
     private readonly clock: Clock,
   ) {}
+
+  /** Bot claims whose transaction may still land (pending or unknown). */
+  async openBot(): Promise<ClaimRow[]> {
+    return this.db
+      .select()
+      .from(claims)
+      .where(and(eq(claims.mode, this.mode), eq(claims.source, 'bot'), inArray(claims.status, ['pending', 'unknown'])));
+  }
 
   async insert(row: Omit<typeof claims.$inferInsert, 'mode' | 'at' | 'id'> & { at?: Date }): Promise<number> {
     const r = await this.db

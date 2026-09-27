@@ -8,7 +8,7 @@ Severity: **High** = can lose money that was never claimed, or drain a wallet. *
 
 ## Findings (all fixed)
 
-RT-15 was found by the property tests in Q3 (see `LOG.md`).
+RT-15 was found by the property tests in Q3, RT-16 to RT-18 by the chaos tests in Q4 (see `LOG.md`).
 
 | ID | Severity | Path | What could go wrong | Fix | Test |
 |---|---|---|---|---|---|
@@ -26,6 +26,9 @@ RT-15 was found by the property tests in Q3 (see `LOG.md`).
 | RT-12 | Low | two-step hire (fallback) | The funding tx sent the full salary and paid its fee on top: every hire cost salary + 5,000 to 15,000 lamports, so the hire bucket could go slightly negative (spent > claimed). Found by the new effects check. | Transfer = salary minus the worst-case funding fee. | "the funding tx fee comes out of the salary" |
 | RT-13 | Low | ledger settle | A spend that cost more than its reservation was booked silently. | Critical `overspend_hire` / `overspend_burn` alert (the real cost is still booked). | "a spend that cost more than reserved" |
 | RT-15 | Low | burn | Found later by the Q3 property test. A fund share that is booked (for example from a stranger's claim) but not yet forwarded to the fund wallet was already counted as burnable. A burn round in the same loop then burned up to 0.01 SOL of the fund's own SOL; if the owed share stayed under the forwarding minimum, that was never paid back. | The burn budget (burn step and spend guard) excludes the fund share still owed. | `tests/e2e/money.property.test.ts` (fund balance checked after every loop, plus the counterexample as a regression test) |
+| RT-16 | High | hire | Found by the Q4 chaos tests. A crash right after a hire reservation was released, before the rat row forgot it: the restarted worker reused that closed reservation for the next attempt, so the new spend was never booked (the ledger showed a whole salary as unspent). | A reservation is reused only if the ledger says it is still open. | `tests/chaos` (killed at every step, drop variant), `resilience.test.ts` G (fails without the fix: 0.0296 SOL unbooked) |
+| RT-17 | Medium | hire, burn | Found by the Q4 chaos tests. A crash (or database drop) after reserving but before the rat / burn row recorded the reservation left it open forever: 0.03 SOL per hire or up to one burn chunk stuck, never spendable. | At the start of each hire and burn step, reservations that no rat or burn row refers to are released (nothing was ever sent with them). | `tests/chaos` kill points `swap.build`, `rats.create`, `rats.update`, `chain.getTokenAccounts`, `burns.insert` |
+| RT-18 | Low | ledger settle | Found by the Q4 chaos tests. A crash (or database drop) between "book the real cost" and "mark the rat / burn done" booked the difference twice on restart (about 0.0004 SOL per hire, 0.0008 SOL per burn), so the ledger drifted from the chain. | Every settle and release carries the id of the reservation it closes, with a unique index: a reservation closes exactly once (migration `0001`). | `tests/chaos` kill points `rats.activate`, `burns.update`; DB-drop suite |
 | RT-14 | Low | emergency sweep | The destination was not checked: sweeping to the creator, fund or a rat wallet (whose keys might be exactly what leaked) or to a program address (tokens stuck). Failed rats (two-step funded, never bought) were skipped, stranding their SOL. | Refuses the bot's own wallets and off-curve addresses; failed rats are swept too. | `cli.test.ts` "red team: refuses the bot's own wallets", "a failed rat still holding SOL" |
 
 ## Checked, already safe (existing tests)

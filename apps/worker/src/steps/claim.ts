@@ -54,10 +54,8 @@ export async function creditClaim(
   await d.store.settings.set(SETTINGS.lastClaimAt, d.clock.now().toISOString());
 }
 
-async function openBotClaims(d: WorkerDeps): Promise<ClaimRow[]> {
-  return (await d.store.db.query.claims.findMany({
-    where: (c, { and, eq, inArray }) => and(eq(c.mode, d.store.mode), eq(c.source, 'bot'), inArray(c.status, ['pending', 'unknown'])),
-  })) as ClaimRow[];
+function openBotClaims(d: WorkerDeps): Promise<ClaimRow[]> {
+  return d.store.claims.openBot();
 }
 
 /** Re-checks claims whose tx status was unknown (they may have landed later). */

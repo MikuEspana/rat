@@ -117,8 +117,14 @@ export const ledgerEntries = pgTable(
     refType: text('ref_type'),
     refId: text('ref_id'),
     note: text('note'),
+    /** settle / release entries: the reservation they close. Unique, so a reservation closes exactly once. */
+    closesId: bigint('closes_id', { mode: 'number' }),
   },
-  (t) => [index('ledger_mode_bucket').on(t.mode, t.bucket), index('ledger_mode_at').on(t.mode, t.at)],
+  (t) => [
+    index('ledger_mode_bucket').on(t.mode, t.bucket),
+    index('ledger_mode_at').on(t.mode, t.at),
+    uniqueIndex('ledger_closes_id').on(t.closesId),
+  ],
 );
 
 export const claims = pgTable(

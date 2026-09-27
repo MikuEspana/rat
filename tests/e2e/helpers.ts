@@ -89,3 +89,4 @@ export function burnRounds(rows: { at: Date; reservedLamports: bigint }[]): Burn
   });
   return { rounds, txs: sorted.length, maxChunk, roundGaps, chunkGaps };
 }
+

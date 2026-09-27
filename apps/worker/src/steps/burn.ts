@@ -93,7 +93,10 @@ async function finish(
 }
 
 async function reconcileOpenBurns(d: WorkerDeps): Promise<void> {
-  for (let b of await d.store.burns.listByStatus(['pending', 'unknown'])) {
+  const open = await d.store.burns.listByStatus(['pending', 'unknown']);
+  // a crash between "reserve" and "insert the burn row" leaves a reservation nothing refers to
+  await d.guard.releaseOrphans('burn', new Set(open.flatMap((b) => (b.reserveLedgerId === null ? [] : [b.reserveLedgerId]))));
+  for (let b of open) {
     const res = reservationOf(b);
     if (!b.sig) {
       // Crash between "attempt written" and "burn row updated": the attempt log knows the signature, and that

@@ -279,6 +279,22 @@ export interface LedgerStore {
   netOutflowSince(bucket: Bucket, since: Date): Promise<bigint>;
   /** Net spend of both buckets since the beginning (smoke cap). */
   lifetimeNetOutflow(): Promise<bigint>;
+  /**
+   * Books the settle or release of reservation `closesId`, exactly once (a zero delta still records the close).
+   * Returns false, booking nothing, if that reservation was already closed (a retry after a crash).
+   */
+  close(entry: LedgerEntryInput & { closesId: number }): Promise<boolean>;
+  /** Whether reservation `id` is still open (reserved, not yet settled or released). */
+  isOpen(id: number): Promise<boolean>;
+  /** Reservations of `bucket` that were never settled or released. */
+  openReservations(bucket: Bucket): Promise<OpenReservation[]>;
+}
+
+export interface OpenReservation {
+  id: number;
+  lamports: bigint;
+  refType: string | null;
+  refId: string | null;
 }
 
 export interface AttemptInput {

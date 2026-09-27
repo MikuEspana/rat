@@ -134,11 +134,23 @@ export class SpendGuard {
     return left > 0n ? left : 0n;
   }
 
-  /** Books the real cost: the difference to the reservation is credited back (or debited). */
+  /**
+   * Books the real cost: the difference to the reservation is credited back (or debited). Exactly once per
+   * reservation: settling or releasing an already closed reservation (a retry after a crash) books nothing.
+   */
   async settle(r: Reservation, actualLamports: bigint): Promise<void> {
+    if (r.ledgerId <= 0) return; // a marker, not a real reservation
     const diff = r.lamports - actualLamports;
-    if (diff === 0n) return;
-    if (diff < 0n) {
+    const closed = await this.deps.ledger.close({
+      bucket: r.bucket,
+      deltaLamports: diff,
+      reason: r.bucket === 'hire' ? 'hire_settle' : 'burn_settle',
+      refType: r.refType,
+      refId: r.refId,
+      note: `actual ${actualLamports}`,
+      closesId: r.ledgerId,
+    });
+    if (closed && diff < 0n) {
       // The real cost is booked either way; spending more than was reserved must never go unnoticed.
       await this.deps.alerts.send(
         'critical',
@@ -146,25 +158,40 @@ export class SpendGuard {
         `${r.bucket} ${r.refType} ${r.refId} cost ${formatSol(actualLamports)} SOL, ${formatSol(-diff)} more than the ${formatSol(r.lamports)} SOL reserved.`,
       );
     }
-    await this.deps.ledger.append({
-      bucket: r.bucket,
-      deltaLamports: diff,
-      reason: r.bucket === 'hire' ? 'hire_settle' : 'burn_settle',
-      refType: r.refType,
-      refId: r.refId,
-      note: `actual ${actualLamports}`,
-    });
   }
 
-  /** Returns the whole reservation (the spend definitely did not happen). */
+  /** Returns the whole reservation (the spend definitely did not happen). Exactly once, like settle(). */
   async release(r: Reservation, note?: string): Promise<void> {
-    await this.deps.ledger.append({
+    if (r.ledgerId <= 0) return;
+    await this.deps.ledger.close({
       bucket: r.bucket,
       deltaLamports: r.lamports,
       reason: r.bucket === 'hire' ? 'hire_release' : 'burn_release',
       refType: r.refType,
       refId: r.refId,
       note,
+      closesId: r.ledgerId,
     });
+  }
+
+  /**
+   * Releases reservations that no rat or burn row refers to: the worker stopped after reserving but before
+   * recording the reservation, so nothing was ever sent with it. `inUse` = reservation ids rows still refer to.
+   * Call it only at the start of a step, before that step reserves anything.
+   */
+  async releaseOrphans(bucket: Bucket, inUse: ReadonlySet<number>): Promise<number> {
+    let released = 0;
+    for (const o of await this.deps.ledger.openReservations(bucket)) {
+      if (inUse.has(o.id)) continue;
+      await this.release(
+        { ledgerId: o.id, bucket, lamports: o.lamports, refType: o.refType ?? 'orphan', refId: o.refId ?? String(o.id) },
+        'orphan: the worker stopped before recording this reservation; nothing was sent with it',
+      );
+      released++;
+    }
+    if (released > 0) {
+      await this.deps.alerts.send('warn', `orphan_reservations_${bucket}`, `Released ${released} ${bucket} reservation(s) left by a worker restart (nothing was sent with them).`);
+    }
+    return released;
   }
 }
