@@ -20,6 +20,11 @@ describe('loadConfig', () => {
     expect(cfg.intervals).toEqual({ claimSec: 35, burnMinSec: 480, burnMaxSec: 720, priceSec: 15, freezeSec: 35 });
   });
 
+  it('idle hire budget alert: 30 min, 0.1 SOL, configurable', () => {
+    expect(loadConfig({}).hireIdleAlert).toEqual({ minutes: 30, lamports: 100_000_000n });
+    expect(loadConfig({ HIRE_IDLE_ALERT_MIN: '45', HIRE_IDLE_ALERT_SOL: '0.25' }).hireIdleAlert).toEqual({ minutes: 45, lamports: 250_000_000n });
+  });
+
   it('wallet watch: WATCH_FROM_SLOT and KNOWN_OWNER_TX_SIGS', () => {
     const d = loadConfig({});
     expect(d.watchFromSlot).toBe(0);

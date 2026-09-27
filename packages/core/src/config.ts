@@ -153,6 +153,9 @@ const envSchema = z.object({
   SLIPPAGE_BPS_STOCK: intStr(100, 1, 5_000),
   SLIPPAGE_BPS_COIN: intStr(150, 1, 5_000),
   MAX_PRICE_IMPACT_PCT: numStr(2),
+  // Alert when no rat was hired for HIRE_IDLE_ALERT_MIN minutes while more than HIRE_IDLE_ALERT_SOL waits in the hire budget.
+  HIRE_IDLE_ALERT_MIN: intStr(30, 1),
+  HIRE_IDLE_ALERT_SOL: solStr('0.1'),
   SPEND_CAP_SOL_PER_HOUR_HIRE: solStr('30'),
   SPEND_CAP_SOL_PER_HOUR_BURN: solStr('30'),
   SPEND_ALERT_PCT: intStr(50, 1, 100),
@@ -234,6 +237,7 @@ export interface AppConfig {
   slippageBpsStock: number;
   slippageBpsCoin: number;
   maxPriceImpactPct: number;
+  hireIdleAlert: { minutes: number; lamports: bigint };
   spendCapLamportsPerHour: { hire: bigint; burn: bigint };
   spendAlertPct: number;
 
@@ -369,6 +373,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     slippageBpsStock: e.SLIPPAGE_BPS_STOCK,
     slippageBpsCoin: e.SLIPPAGE_BPS_COIN,
     maxPriceImpactPct: e.MAX_PRICE_IMPACT_PCT,
+    hireIdleAlert: { minutes: e.HIRE_IDLE_ALERT_MIN, lamports: e.HIRE_IDLE_ALERT_SOL },
     spendCapLamportsPerHour: { hire: e.SPEND_CAP_SOL_PER_HOUR_HIRE, burn: e.SPEND_CAP_SOL_PER_HOUR_BURN },
     spendAlertPct: e.SPEND_ALERT_PCT,
     intervals: {
