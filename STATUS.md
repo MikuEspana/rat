@@ -2,6 +2,8 @@
 
 Built on 2026-09-27 in one session, workstream by workstream (WS01 to WS12), each on its own branch and PR, merged into the integration branch `claude/rat-race-planning-1qouxa`. The integration branch has one PR into `main`, left open for your review.
 
+**Updated after your review (same day):** five launch-day fixes, one PR each, merged into the integration branch with CI green. See section 1b.
+
 **Hard limits kept:**
 - DRY RUN is on by default everywhere.
 - No mainnet transaction was ever sent. No smoke test was run.
@@ -46,9 +48,19 @@ Your answers, as built:
 | review | Live readiness | The worker refuses to start LIVE with 0 approved stocks or none passing the mint check (exact reasons in the logs + Telegram). `hire_idle` alert when no rat is hired for 30 min while more than 0.1 SOL waits. |
 | 13 | No cloud resources | Config and runbooks only. |
 
+## 1b. Fixes from your review
+
+| Fix | PR | What changed | Tests added | You need to |
+|---|---|---|---|---|
+| 1. Key pool runs dry | [#28](https://github.com/MikuEspana/rat/pull/28) | Pre-grind **10,000** keys (docs). `KEYPOOL_REFILL_BELOW` / `KEYPOOL_TARGET` / batch / threads configurable. `keypool_runway` alert when the pool lasts < 2 h at the current hire rate. Background refill never blocks the loop. `solana-keygen` added to the image (it was not there). **Finding:** for a suffix, `solana-keygen` is ~3x slower than our built-in grinder (it skips 44-character addresses), so `auto` uses the built-in one; `solana-keygen` stays as an option. | 18 (+ CI runs the real `solana-keygen` in the image) | Run `rat keys grind --count 10000 --threads <cores>` on a clean machine (`keys.md`). |
+| 2. Burns are sandwich bait | [#29](https://github.com/MikuEspana/rat/pull/29) | Rounds a random 8 to 12 min apart (CSPRNG), chunks of at most 1 SOL 3 to 8 s apart, slippage 1.5%, a failed chunk or the kill switch ends the round. The API only publishes the earliest start. Jito built but **off** (`BURN_SEND_VIA=jito`). | 17 (+ e2e and resilience updated) | Optional: decide on Jito after a smoke test with it on (OPEN-QUESTIONS #12). |
+| 3. Launch trips the kill switch | [#30](https://github.com/MikuEspana/rat/pull/30) | Watch floor `WATCH_FROM_SLOT` (else the slot of the first live run), `KNOWN_OWNER_TX_SIGS` allowlist, preflight refuses LIVE if the floor is in the future. `go-live.md` order: launch, set the vars, then start live. | 6 | At launch: note the launch signature and slot, set `COIN_MINT`, `WATCH_FROM_SLOT`, `KNOWN_OWNER_TX_SIGS` before going live. |
+| 4. Live with 0 approved stocks | [#31](https://github.com/MikuEspana/rat/pull/31) | Preflight refuses LIVE with 0 approved stocks or none passing the mint check (exact reasons in logs + Telegram). `hire_idle` alert after 30 min with no hire while > 0.1 SOL waits. | 7 | Approve stocks in `config/stocks.json` after checking them. |
+| 5. Mock API for animations | [#32](https://github.com/MikuEspana/rat/pull/32) | `pnpm mock:api`: the 4 endpoints on `localhost:8787` with live changes (hire every 2 to 6 s, price drift and tier changes, claims, a burn round every minute, COINx pausing and resuming). Same contract. | 7 | `pnpm install` then `pnpm mock:api`, point the site at it. |
+
 ## 2. Test results
 
-**157 tests: 156 passed, 1 skipped (opt-in slow grind), 0 failed.** GitHub Actions CI (guards, typecheck, tests, Docker build + start) is green.
+**212 tests: 211 passed, 1 skipped (opt-in slow grind), 0 failed** (157 before the review fixes). GitHub Actions CI (guards, typecheck, tests, Docker build + start, the real `solana-keygen` in the image) is green on every fix PR.
 
 | Workstream | Tests | Highlights |
 |---|---|---|
@@ -64,6 +76,11 @@ Your answers, as built:
 | WS10 api | 4 | contract-exact responses, 6,000 rats (14ms cached), rate limit |
 | WS11 e2e | 7 + 3 smoke preflight | see below |
 | WS12 docs/infra | 4 | runbooks only reference real commands and env vars |
+| Review fix 1 keys | 14 + 4 | wrapper vs a test double of `solana-keygen` (exact flags, encrypted import, nothing left on disk, kill at count/timeout, no secrets in its env), runway alert, grinder threads never renice the bot loop |
+| Review fix 2 burns | 11 + 5 + 1 | random 8 to 12 min rounds, 1 SOL chunks 3 to 8 s apart, 1.5% slippage, failed chunk carries over, Jito tip + never a public send |
+| Review fix 3 watch | 5 + 1 | launch indexed late never kills (mutation-checked), `WATCH_FROM_SLOT`, `KNOWN_OWNER_TX_SIGS`, preflight |
+| Review fix 4 readiness | 6 + 1 | no LIVE start without a usable stock, `hire_idle` after 30 min |
+| Review fix 5 mock API | 7 | strict schemas while it moves, hires, tier changes, burns, pause/resume, paging |
 
 **The requested simulation** (DRY RUN, fake clock, mocked chain/price/swap, 50 SOL of fees in one hour; full tables in `SIMULATION.md`):
 
@@ -71,7 +88,7 @@ Your answers, as built:
 |---|---|
 | Fees claimed | 50 SOL of 50, every lamport once |
 | Hires | 833 rats, 24.99 SOL, less than one salary left over |
-| Burns | 8 buy + burns, 24.999999974 SOL, burn budget fully used |
+| Burns | 7 rounds (random 8 to 12 min apart) in 29 transactions of at most 0.97 SOL, 24.999999974 SOL, burn budget fully used |
 | Limits | max 16 hires per loop (limit 20), max 35 Jupiter calls per minute (limit 55) |
 | Caps | 50% alert once per bucket, cap not reached |
 | Transactions sent | 0 |
@@ -94,6 +111,9 @@ Other scenarios:
 | xStocks mints | synthetic mints | the 13 mints in `config/stocks.json` | Not checked on-chain (mainnet RPC blocked here). Run `check:stocks`. |
 | Telegram | recorded alerts | Telegram Bot API | Not called. |
 | Docker image | not built here (no daemon) | Railway | Built and started by the CI `docker` job. |
+| `solana-keygen` | test double (`packages/keys/test-fixtures`) | Agave v2.3.13 binary in the image (SHA-256 pinned) | Yes: CI runs the real binary through our wrapper (throwaway keys, in-memory DB) and measures both grinders. |
+| Jito block engine | fake HTTP endpoint | `BURN_SEND_VIA=jito` (off by default) | No: request format from Jito's official client; never called (no mainnet by rule). |
+| Live mock API | n/a | `pnpm mock:api` for the site | It is a mock: exaggerated prices, random wallets and signatures. |
 
 ## 4. PRs, in merge order
 
@@ -113,6 +133,12 @@ Other scenarios:
 | 12 | [MikuEspana/rat#24](https://github.com/MikuEspana/rat/pull/24) | WS04 fix: commit `packages/keys` |
 | 13 | [MikuEspana/rat#25](https://github.com/MikuEspana/rat/pull/25) | WS12 Deploy |
 | 14 | [MikuEspana/rat#26](https://github.com/MikuEspana/rat/pull/26) | WS09 fix: wallet watch never skips a signature during RPC lag |
+| 15 | [MikuEspana/rat#28](https://github.com/MikuEspana/rat/pull/28) | Review fix 1: key pool sized for launch day |
+| 16 | [MikuEspana/rat#29](https://github.com/MikuEspana/rat/pull/29) | Review fix 2: burns vs MEV |
+| 17 | [MikuEspana/rat#30](https://github.com/MikuEspana/rat/pull/30) | Review fix 3: coin launch vs the kill switch |
+| 18 | [MikuEspana/rat#31](https://github.com/MikuEspana/rat/pull/31) | Review fix 4: live readiness (preflight, idle alert) |
+| 19 | [MikuEspana/rat#32](https://github.com/MikuEspana/rat/pull/32) | Review fix 5: live mock API |
+| 20 | [MikuEspana/rat#33](https://github.com/MikuEspana/rat/pull/33) | This STATUS update |
 | Final | [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27) | integration branch into `main` (**open, for you to review and merge**) |
 
 Issues #1 to #12 close when the final PR merges into `main`.
@@ -132,6 +158,8 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Stock approvals | verify mints on xstocks.fi, set `approved: true` in `config/stocks.json` |
 | Optional: confirmed xStocks mint authority | `XSTOCKS_MINT_AUTHORITY` |
 | Funding | creator: 0.05 SOL reserve + launch cost; fund: 0.01 SOL; smoke test: ~0.12 SOL on throwaway wallets |
+| At launch: the launch transaction's signature and slot | `WATCH_FROM_SLOT` (slot + 1), `KNOWN_OWNER_TX_SIGS` |
+| Optional: Jito for burns | `BURN_SEND_VIA=jito` after a smoke test with it on (OPEN-QUESTIONS #12) |
 | Decisions left | `OPEN-QUESTIONS.md` |
 
 ## 6. Go live, step by step
@@ -140,13 +168,13 @@ Details in `docs/runbooks/go-live.md`.
 
 1. Review and merge the integration PR into `main`.
 2. Set up Supabase, Railway and Vercel with `docs/runbooks/deploy.md`. Keep `DRY_RUN=true`.
-3. Import keys and fill the key pool: `docs/runbooks/keys.md`.
+3. Import the creator and fund keys, fill the key pool with 10,000 keys (`rat keys grind --count 10000 --threads <cores>` on a clean machine): `docs/runbooks/keys.md`.
 4. `pnpm --filter @rat/jupiter check:stocks` and `check:scaled-ui`. Approve stocks, then `rat stocks-sync`.
 5. Run the smoke test on a throwaway coin: `tests/smoke/README.md`. Read `tests/smoke/REPORT.md`. If the 1-tx hire failed, set `HIRE_MODE=two_step`.
 6. Rehearse in DRY RUN with `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, then set it back to `0` and run `rat dry-run-reset --yes`.
 7. `rat alert-test`, then test `rat kill` / `rat resume`.
 8. Launch the coin on pump.fun from the creator wallet: normal mode, **no holder rewards, no fee sharing**. When the launch tx is finalized, set `COIN_MINT`, `WATCH_FROM_SLOT` (launch slot + 1) and `KNOWN_OWNER_TX_SIGS` (the launch signature), redeploy (still DRY RUN), check the site.
-9. Go live: `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, `DRY_RUN=false` on the API. Watch the first claim, hires and burn on Solscan.
+9. Go live: `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, `DRY_RUN=false` on the API. The worker's preflight refuses to start live without a usable stock or with a future `WATCH_FROM_SLOT`, and says why. Watch the first claim, hires and burn round (8 to 12 min, 1 SOL chunks) on Solscan.
 10. First hour: `rat status`. Any doubt: `rat kill`.
 
 ## 7. Sources for external behavior
@@ -170,6 +198,13 @@ Details in `docs/runbooks/go-live.md`.
 | Pausable blocks transfers, mints and burns | REPORTED | [solana.com Pausable docs](https://solana.com/docs/tokens/extensions/pausable); parsing VERIFIED against `@solana/spl-token` layouts |
 | xStocks mint addresses | REPORTED | [kdai03/xpaper js/tokens.js](https://github.com/kdai03/xpaper) (third party); verify on xstocks.fi |
 | Whether `usdPrice` is per scaled UI unit | UNCLEAR | `check:scaled-ui` script |
+| `solana-keygen grind --ends-with SUF:N --num-threads T`: case-sensitive, writes `<PUBKEY>.json` (mode 0600) in the working folder, prints `Wrote keypair to` | VERIFIED (source) | [agave keygen.rs v2.3.13](https://github.com/anza-xyz/agave/blob/v2.3.13/keygen/src/keygen.rs), [solana-sdk keypair](https://github.com/anza-xyz/solana-sdk/blob/master/keypair/src/lib.rs) |
+| With no prefix, `solana-keygen` skips every 44-character address (~94% of keys), so it is ~3x slower than our grinder for `RAT` and only returns 43-character addresses | VERIFIED (source + CI) | keygen.rs `skip_len_44_pubkeys` (lines 636-649, 692); CI measured 65 vs 213 RAT keys/h per thread, all addresses 43 characters |
+| Agave v2.3.13 release tarball SHA-256 `c43539eb...fade0` | VERIFIED (CI download) | `infra/Dockerfile` |
+| Installing the Solana CLI | REPORTED | [docs.anza.xyz/cli/install](https://docs.anza.xyz/cli/install) (not reachable from this sandbox) |
+| Jito: `sendTransaction` on `/api/v1/transactions?bundleOnly=true` with base64, `getTipAccounts` on `/bundles`, tip = transfer to a tip account inside the tx | VERIFIED (official client) | [jito-labs/jito-js-rpc src/index.ts](https://github.com/jito-labs/jito-js-rpc/blob/master/src/index.ts), [examples/basic_txn.js](https://github.com/jito-labs/jito-js-rpc/blob/master/examples/basic_txn.js) |
+| Jito bundle-only transactions are not included when they fail and are not exposed before inclusion; minimum tip 1,000 lamports | REPORTED | docs.jito.wtf (not reachable from this sandbox) |
+| How much sandwich protection Jito gives in practice; tip needed under congestion | UNCLEAR | smoke test with `BURN_SEND_VIA=jito` |
 
 ## 8. Problems found and fixed along the way
 
@@ -182,8 +217,11 @@ Details in `docs/runbooks/go-live.md`.
 | simulation B | a burn that would cross the cap was skipped entirely | burns use the room left under the cap and alert |
 | final review | RPC indexing lag could make the wallet watch skip a signature forever | the cursor only advances when every signature was examined ([#26](https://github.com/MikuEspana/rat/pull/26)) |
 | pump SDK | `@pump-fun/pump-sdk` ESM build does not import under Node | loaded lazily through its CommonJS build |
+| review fix 1 (CI) | `solana-keygen` was not in the Docker image, and once added it ground `RAT` keys ~3x slower than the built-in grinder (it skips 44-character addresses) | added it (SHA-256 pinned) as an option; `auto` uses the faster built-in grinder at low priority |
+| review fix 2 | publishing the exact next burn time in `/api/state` would undo the random timing | `nextBurnAt` is now only the earliest possible start |
+| review fix 2 (resilience test) | a rat can legitimately wait in `hiring` when its only attempt was rejected before broadcast and the budget is under one salary; the old test only passed by luck of the random path | the test now checks the real invariant: nothing can still land, no reservation held |
 
 ## 9. Important while live
 
-- Never send a transaction from the creator or fund wallet yourself while the bot is live: it trips the kill switch (a transaction signed by a bot wallet that the bot did not send looks like a key leak). Sending SOL to them is fine.
+- Never send a transaction from the creator or fund wallet yourself while the bot is live: it trips the kill switch (a transaction signed by a bot wallet that the bot did not send looks like a key leak). Sending SOL to them is fine. If you must: `rat kill`, send it, add its signature to `KNOWN_OWNER_TX_SIGS`, redeploy, `rat resume`.
 - The fund's buy + burn is the only way profits leave. There is no code path that pays holders.
