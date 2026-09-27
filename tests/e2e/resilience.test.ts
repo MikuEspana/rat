@@ -5,7 +5,8 @@ import { engageKillSwitch, releaseKillSwitch } from '@rat/safety';
 import { SOL, type SimWorld, createSimWorld, runClaimStep, runHireStep, runMintStep, runPriceStep, runWatchStep } from '@rat/worker';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { checkMoney, moneyStart, runLaunch } from './helpers';
+import { runLaunch } from './helpers';
+import { checkMoney, moneyStart } from './money-check';
 
 let w: SimWorld;
 afterEach(async () => w?.close());

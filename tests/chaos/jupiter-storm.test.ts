@@ -3,7 +3,8 @@
 // everything resumes afterwards, and every lamport is accounted for. Runs in the `chaos` CI job.
 import { SOL, createSimWorld, createWorker } from '@rat/worker';
 import { describe, expect, it } from 'vitest';
-import { checkMoney, launchCurve, moneyStart } from '../e2e/helpers';
+import { launchCurve } from '../e2e/helpers';
+import { checkMoney, moneyStart } from '../e2e/money-check';
 import { Chaos } from './chaos';
 
 const STEP = 35;

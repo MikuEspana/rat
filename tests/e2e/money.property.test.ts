@@ -7,7 +7,7 @@ import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { Keypair } from '@solana/web3.js';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { checkMoney } from './helpers';
+import { checkMoney } from './money-check';
 
 interface Burst {
   bonding: bigint;

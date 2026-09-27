@@ -8,7 +8,7 @@
 import { SOL, type SimWorld, WorkerState, createSimWorld, createWorker, runBurnStep, runClaimStep, runHireStep, runMintStep, runPriceStep, runWatchStep } from '@rat/worker';
 import { expect } from 'vitest';
 import { Chaos, type OpKind } from './chaos';
-import { type MoneyStart, checkMoney, moneyStart } from '../e2e/helpers';
+import { type MoneyStart, checkMoney, moneyStart } from '../e2e/money-check';
 
 export type HireMode = 'single' | 'two_step';
 export type StepName = 'hire' | 'burn';
