@@ -15,6 +15,7 @@ import { PerfMeter } from './perf';
 import { buildWorld, updateTickers } from './world/build';
 import { Effects } from './world/effects';
 import { RatSystem, type Mood } from './world/rats';
+import { Ui } from './ui/ui';
 
 const statusEl = document.getElementById('status') as HTMLDivElement;
 
@@ -47,6 +48,7 @@ export interface Site {
   camera: Camera;
   api: Api;
   layout: FloorLayout;
+  ui: Ui;
 }
 
 async function boot(): Promise<Site> {
@@ -88,7 +90,8 @@ async function boot(): Promise<Site> {
   const effects = new Effects(atlas, world);
 
   const scene = new Container();
-  scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container);
+  const markers = new Container();
+  scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, markers);
   app.stage.addChild(scene);
 
   const camera = new Camera(scene, app.canvas);
@@ -159,8 +162,9 @@ async function boot(): Promise<Site> {
     }, 10_000);
   }
 
+  const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers });
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout };
+  const site: Site = { store, rats, camera, api, layout, ui };
   (window as unknown as { __site?: Site }).__site = site;
   return site;
 }
