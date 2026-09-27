@@ -2,6 +2,7 @@ import { SETTINGS } from '@rat/core';
 import { SOL, type SimWorld, createSimWorld, runClaimStep, runHireStep, runMintStep, runPriceStep } from '@rat/worker';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createAdminApp } from './app';
+import { Watchdog } from './watchdog';
 
 const PASSWORD = 'correct horse battery staple';
 let w: SimWorld;
@@ -116,5 +117,32 @@ describe('admin page', () => {
     const notice = await app.request(`/?notice=${encodeURIComponent('<img src=x onerror=alert(1)>')}`, { headers: auth() });
     expect(await notice.text()).not.toContain('<img');
     expect(csrf).toHaveLength(64);
+  });
+});
+
+describe('worker-down watchdog', () => {
+  it('alerts once when the loops stop, repeats every 30 minutes, says when the worker is back; the page shows it', async () => {
+    const app = await world();
+    const sent: string[] = [];
+    const dog = new Watchdog({ store: w.store, clock: w.clock, alert: async (t) => void sent.push(t) });
+    expect(await dog.check()).toBe('never_ran');
+    await w.worker.tick();
+    expect(await dog.check()).toBe('ok');
+    expect(sent).toEqual([]);
+    w.clock.advanceSeconds(4 * 60); // the worker died
+    expect(await dog.check()).toBe('down');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatch(/WORKER DOWN: no loop has run for 4 min/);
+    expect((await page(app)).html).toContain('WORKER DOWN');
+    w.clock.advanceSeconds(60);
+    await dog.check();
+    expect(sent).toHaveLength(1); // not every minute
+    w.clock.advanceSeconds(30 * 60);
+    await dog.check();
+    expect(sent).toHaveLength(2); // but again while it stays down
+    await w.worker.tick(); // restarted
+    expect(await dog.check()).toBe('ok');
+    expect(sent[2]).toMatch(/Worker is back/);
+    expect((await page(app)).html).not.toContain('WORKER DOWN');
   });
 });

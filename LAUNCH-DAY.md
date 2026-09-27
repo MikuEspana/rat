@@ -18,6 +18,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 - [ ] Settings from `SIMULATION.md`: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` (steady hiring and burning, no 30 minute pauses).
 - [ ] `rat alert-test` arrives on your phone. Phone charged, Telegram notifications on, not muted.
 - [ ] `KEY_ENCRYPTION_KEY` backed up offline (without it the rat wallets are lost).
+- [ ] Admin service has `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` too: it alerts you if the worker dies (the worker cannot).
 - [ ] Cold wallet address written down (for an emergency sweep). It must NOT be the creator, fund or a rat wallet.
 - [ ] Admin page opens with your password.
 - [ ] Go to sleep.
@@ -58,6 +59,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 | `no_eligible_stocks`, `hire_idle` | No hires (usually stale stock prices: markets closed). | Check the admin page. Wait, or approve more stocks. |
 | `burn_no_route`, `burn_failed`, `claim_failed` | One attempt failed; the money waits for the next one. | Nothing, unless it repeats for 30+ minutes. |
 | `task_failing_*` | A worker loop keeps failing. | Railway logs. Restarting the worker is safe. |
+| `worker_down` (from the admin service) | The worker stopped running (crash, restarts used up). | Railway: restart the worker, read its logs. |
 | `wallet_low_*` | A bot wallet is below its reserve. | Send a little SOL **to** it. |
 | `effects_*` | A transaction was refused: it would have taken more than allowed. Nothing was sent. | **KILL.** Do not resume until you know why. |
 | `overspend_*`, `rat_balance_*`, `hire_no_tokens_*` | Money did not match what was expected. | **KILL**, then check the admin page and `rat status`. |
@@ -73,6 +75,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 ## End of the day
 
 - [ ] `rat status` and the admin page: claimed vs spent, nothing stuck.
+- [ ] `rat keys backup --out rat-keys-<date>.json` (every hour or so while hiring, and once at the end). Store it away from `KEY_ENCRYPTION_KEY`. The rat wallets' keys exist nowhere else.
 - [ ] Coin dying: the bot keeps burning what is left, then idles. Leave it running, or `rat kill`.
 
 ## Numbers to remember

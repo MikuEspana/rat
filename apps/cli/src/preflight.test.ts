@@ -107,6 +107,13 @@ describe('rat preflight', () => {
     expect(byCheck(lines, 'creator key')?.status).toBe('FAIL');
   });
 
+  it('rat keys: every stored rat key must decrypt and every rat must have one', async () => {
+    const ok = await setup({}, { ratKeys: async () => ({ total: 3042, bad: 0, ratsWithoutKey: 0 }) });
+    expect(byCheck(await runPreflightChecks(ok.deps), 'rat keys')).toMatchObject({ status: 'PASS', detail: expect.stringMatching(/3042 rat wallet keys/) });
+    const bad = await runPreflightChecks({ ...ok.deps, ratKeys: async () => ({ total: 10, bad: 2, ratsWithoutKey: 1 }) });
+    expect(byCheck(bad, 'rat keys')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/2 of 10 .* 1 rats have no stored key/) });
+  });
+
   it('a rejected Jupiter key is a FAIL', async () => {
     const { deps } = await setup({}, { jupiterSolPrice: () => Promise.reject(new Error('Jupiter /price/v3 failed: 401')) });
     expect(byCheck(await runPreflightChecks(deps), 'jupiter')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/401/) });

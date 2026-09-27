@@ -9,3 +9,4 @@ export * from './picker';
 export * from './identity';
 export * from './errors';
 export * from './tx-record';
+export * from './redact';

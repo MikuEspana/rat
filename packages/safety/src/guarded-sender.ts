@@ -19,6 +19,7 @@ import {
   type TxRequest,
   type TxSender,
   type TxStatus,
+  redactSecrets,
 } from '@rat/core';
 import { LIMITED_TX_KINDS, limitViolations } from './effects';
 import type { Reservation } from './spend-guard';
@@ -108,7 +109,7 @@ export class GuardedSender {
     try {
       outcome = this.deps.dryRun ? await this.inner.simulate(prepared) : await this.inner.submit(prepared);
     } catch (err) {
-      const message = (err as Error).message;
+      const message = redactSecrets((err as Error).message);
       if (this.deps.dryRun || err instanceof BlockedError) {
         // Nothing was broadcast: a simulation, or the sender refused before sending.
         await this.deps.attempts.finish(attemptId, { status: 'failed', error: message });
@@ -122,7 +123,7 @@ export class GuardedSender {
     }
     await this.deps.attempts.finish(attemptId, {
       status: outcome.status as TxStatus,
-      error: outcome.error,
+      error: outcome.error === undefined ? undefined : redactSecrets(outcome.error),
       feeLamports: outcome.feeLamports,
     });
     this.deps.log?.info({ sig: outcome.signature, status: outcome.status, label: request.label, dryRun: this.deps.dryRun }, 'tx');

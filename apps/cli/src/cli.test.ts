@@ -1,4 +1,7 @@
 import { randomBytes } from 'node:crypto';
+import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { FakeClock, LIVE_CONFIRM_PHRASE, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
 import { SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
@@ -8,7 +11,7 @@ import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dryRunResetCommand } from './commands/dry-run';
-import { keysImportRoleCommand, keysRotateCommand } from './commands/keys';
+import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { statusCommand } from './commands/status';
 import { stocksSyncCommand } from './commands/stocks';
@@ -169,5 +172,52 @@ describe('keys rotate', () => {
     const onlyNew = new DbKeyStore(ctx.store.keys, new MasterKeyRing({ version: 2, base64: newB64 }));
     for (const kp of kps) expect((await onlyNew.ratSigner(kp.publicKey.toBase58())).publicKey.equals(kp.publicKey)).toBe(true);
     expect(lines.join('\n')).not.toContain(bs58.encode(kps[0]!.secretKey));
+  });
+});
+
+describe('keys backup / restore (the rat wallet keys exist nowhere else)', () => {
+  it('backs up still encrypted, restores into an empty database, and the restored keys sign', async () => {
+    const ctx = ctxFor();
+    const store = new DbKeyStore(ctx.store.keys, ring);
+    const creator = Keypair.generate();
+    await ctx.store.keys.setRoleKey(encryptRoleKey(creator, ring, 'creator'));
+    const wallets = [];
+    for (let i = 0; i < 5; i++) wallets.push(await store.newRatKey());
+    const secrets = await Promise.all(wallets.map(async (w) => bs58.encode((await store.ratSigner(w)).secretKey)));
+    const dir = mkdtempSync(join(tmpdir(), 'rat-backup-'));
+    const file = join(dir, 'keys.json');
+    expect(await keysBackupCommand(ctx, ring, file)).toEqual({ keys: 6 });
+    const text = readFileSync(file, 'utf8');
+    for (const secret of [...secrets, bs58.encode(creator.secretKey)]) expect(text).not.toContain(secret);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    await expect(keysBackupCommand(ctx, ring, file)).rejects.toThrow(/EEXIST/); // never overwrites by accident
+
+    // the database is lost: a fresh one, same master key
+    const fresh = await openMemoryDatabase();
+    try {
+      const ctx2 = { ...ctx, store: new Store(fresh.db, 'paper', clock) };
+      expect(await keysRestoreCommand(ctx2, ring, file)).toEqual({ restored: 6, skipped: 0 });
+      expect(await keysRestoreCommand(ctx2, ring, file)).toEqual({ restored: 0, skipped: 6 });
+      const restored = new DbKeyStore(ctx2.store.keys, ring);
+      for (let i = 0; i < wallets.length; i++) expect(bs58.encode((await restored.ratSigner(wallets[i]!)).secretKey)).toBe(secrets[i]);
+      expect((await ctx2.store.keys.getRole('creator'))?.pubkey).toBe(creator.publicKey.toBase58());
+    } finally {
+      await fresh.close();
+    }
+    expect(lines.join('\n')).not.toContain(secrets[0]!);
+  });
+
+  it('refuses to back up or restore with the wrong master key, and names keys that do not decrypt', async () => {
+    const ctx = ctxFor();
+    const store = new DbKeyStore(ctx.store.keys, ring);
+    const wallet = await store.newRatKey();
+    const other = new MasterKeyRing({ version: 1, base64: randomBytes(32).toString('base64') });
+    const dir = mkdtempSync(join(tmpdir(), 'rat-backup-'));
+    await expect(keysBackupCommand(ctx, other, join(dir, 'a.json'))).rejects.toThrow(/do not decrypt/);
+    await keysBackupCommand(ctx, ring, join(dir, 'b.json'));
+    await expect(keysRestoreCommand(ctx, other, join(dir, 'b.json'))).rejects.toThrow(/nothing restored/);
+    const records = await ctx.store.keys.all();
+    expect(verifyKeyRecords(records, ring)).toEqual({ ok: 1, bad: [] });
+    expect(verifyKeyRecords(records, other).bad[0]?.pubkey).toBe(wallet);
   });
 });

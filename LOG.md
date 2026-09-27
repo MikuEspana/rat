@@ -18,7 +18,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q8 | Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | done |
 | Q9 | Site shell (Vite + React + Three.js) | none | **skipped by Miguel**: built in a separate session in `apps/pixel-site` (not touched here) |
 | Q10 | Site deploy docs (Vercel) | none | **skipped by Miguel** (part of Tier 3) |
-| Q11 | Cleanup | (this PR) | done |
+| Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | done |
+| Q12 | Extra launch-risk reduction | (this PR) | done, 4 items |
 
 ## Q1. Remove vanity keys
 
@@ -171,3 +172,16 @@ Miguel's instruction during the run: skip Tier 3 (the website shell and its depl
 **Tests**: 243 (3 duplicates removed), all green; guards pass.
 
 **Bugs found**: none.
+
+## Q12. Anything else that reduces launch risk
+
+Added to the queue, then done:
+
+| # | Risk found | What was added | Tests |
+|---|---|---|---|
+| 12a | Every alert comes from the worker, so a dead worker (crash loop, Railway restarts used up, out of memory) is **silent**: claims, hires and burns stop and nobody is told. | Worker-down watchdog in the admin service: no worker loop for 3 minutes = critical Telegram alert (again every 30 minutes, and once when it is back) plus a red WORKER DOWN banner on the admin page. | `admin.test.ts` watchdog test |
+| 12b | The rat wallets' keys exist **only** in the database (encrypted). Losing the database loses every rat's tokens. | `rat keys backup --out <file>` (every key checked to decrypt first, still encrypted, file 0600, never overwritten by accident) and `rat keys restore --in <file>` (every key must decrypt, existing keys kept). `LAUNCH-DAY.md`: back up every hour or so while hiring. | backup, lose the database, restore, the restored keys sign; wrong master key refused both ways; no plaintext in the file |
+| 12c | A wrong or half-rotated `KEY_ENCRYPTION_KEY` would only show up when a rat wallet must be moved (an emergency sweep). | `rat preflight`: every stored rat key decrypts with the current master key, and every rat has a stored key. | preflight rat keys test |
+| 12d | Error texts can carry secrets (an RPC URL with `?api-key=`, a Telegram bot URL, a database password). They were stored in the database, shown on the admin page and sent to Telegram as they were. | `redactSecrets()` on every alert text, every loop error (heartbeats) and every stored send error. The probe showed today's RPC errors do not include the URL, so this is defense in depth. | `redact.test.ts`, alerts + attempt log test |
+
+**Bugs found**: none in the money paths; 4 operational gaps closed.

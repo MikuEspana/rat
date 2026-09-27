@@ -13,7 +13,7 @@ Agents did not create any of these resources. Everything below is done by the ow
 1. New project from the GitHub repo `MikuEspana/rat`.
 2. Service **worker**: config file path `infra/railway.worker.json`. Exactly 1 replica.
 3. Service **api**: config file path `infra/railway.api.json`. Generate a public domain.
-4. Service **admin** (private admin page, optional but recommended): config file path `infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), the worker's `DATABASE_URL` (the kill switch is a database setting), `DRY_RUN` like the worker. It serves HTTPS on Railway; open it, log in with any user name and the password.
+4. Service **admin** (private admin page, optional but recommended): config file path `infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), the worker's `DATABASE_URL` (the kill switch is a database setting), `DRY_RUN` like the worker, and `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` for its worker-down watchdog (a Telegram alert when the worker's loops stop for 3 minutes, since a dead worker cannot alert by itself). It serves HTTPS on Railway; open it, log in with any user name and the password.
 5. Variables (Railway > Variables), from `.env.example`:
    - both: `DATABASE_URL` (worker) / `DATABASE_URL_READONLY` (api), `DRY_RUN=true`, `COIN_MINT` (empty until launch), `CREATOR_PUBKEY`, `FUND_PUBKEY`, `STOCKS_FILE=config/stocks.json`
    - worker only: `KEY_ENCRYPTION_KEY` (32 random bytes, base64), `KEY_VERSION=1`, `RPC_URL`, `RPC_URL_BACKUP`, `JUPITER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`

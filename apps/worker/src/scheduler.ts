@@ -1,6 +1,6 @@
 // Tick-based scheduler. `tick()` runs every task that is due, one after another (loops never overlap).
 // Production calls tick() about once a second; tests and the simulation drive it with a FakeClock.
-import type { Clock, Logger } from '@rat/core';
+import { type Clock, type Logger, redactSecrets } from '@rat/core';
 import type { Store } from '@rat/db';
 
 export interface Task {
@@ -36,7 +36,7 @@ export class Scheduler {
         this.failures.set(t.name, 0);
         await this.deps.store.heartbeats.beat(t.name, this.deps.clock.now(), { ok: true });
       } catch (err) {
-        const msg = (err as Error).message ?? String(err);
+        const msg = redactSecrets((err as Error).message ?? String(err));
         ran.set(t.name, { error: msg });
         const n = (this.failures.get(t.name) ?? 0) + 1;
         this.failures.set(t.name, n);

@@ -11,6 +11,7 @@
     "@rat/cli": "workspace:*",
     "@rat/core": "workspace:*",
     "@rat/db": "workspace:*",
+    "@rat/safety": "workspace:*",
     "hono": "^4.8.0"
   },
   "devDependencies": {

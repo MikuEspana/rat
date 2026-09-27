@@ -2,6 +2,7 @@
 // Read from the database only; the page never talks to the chain or Jupiter.
 import { type AppConfig, type Clock, SETTINGS, formatSol } from '@rat/core';
 import type { Store } from '@rat/db';
+import { WORKER_STALE_SEC, newestLoop } from './watchdog';
 
 const HOUR_MS = 3_600_000;
 
@@ -20,6 +21,8 @@ export interface Dashboard {
   txs: { at: string; kind: string; status: string; signature: string; url: string; error: string | null }[];
   errors: { source: string; at: string; message: string }[];
   loops: { loop: string; lastRun: string | null; lastOk: string | null; lastError: string | null; ageSec: number | null }[];
+  /** the newest worker loop is older than WORKER_STALE_SEC (null = no loop ever ran) */
+  workerDown: boolean | null;
 }
 
 export async function loadDashboard(store: Store, config: AppConfig, clock: Clock): Promise<Dashboard> {
@@ -62,7 +65,9 @@ export async function loadDashboard(store: Store, config: AppConfig, clock: Cloc
     ...loops.filter((l) => l.lastError).map((l) => ({ source: `loop ${l.loop}`, at: l.lastRun ?? '', message: l.lastError! })),
     ...txs.filter((t) => t.error && t.status !== 'confirmed').map((t) => ({ source: `${t.kind} tx ${t.status}`, at: t.at, message: t.error! })),
   ];
+  const newest = await newestLoop(store, clock);
   return {
+    workerDown: newest ? newest.ageSec > WORKER_STALE_SEC : null,
     generatedAt: now.toISOString(),
     mode: config.dryRun ? 'DRY RUN' : 'LIVE',
     smoke: config.smokeMode,
@@ -112,6 +117,8 @@ button{padding:8px 14px;border-radius:4px;border:0;font-weight:700;cursor:pointe
 <h1>RAT RACE admin <span class="banner">${esc(d.mode)}${d.smoke ? ' + SMOKE' : ''}</span></h1>
 <div style="color:var(--mute)">Updated ${esc(d.generatedAt)} (refreshes every 15 s)</div>
 ${notice ? `<div class="notice">${esc(notice)}</div>` : ''}
+${d.workerDown ? '<div class="kill on">WORKER DOWN: no loop has run for over 3 minutes. Claims, hires and burns have stopped. Check the worker on Railway.</div>' : ''}
+${d.workerDown === null ? '<div class="notice">The worker has not run yet.</div>' : ''}
 ${killBox}
 <form method="post" action="/kill"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="text" name="reason" placeholder="reason (optional)" maxlength="200"> <button class="stop" type="submit">KILL: stop everything</button></form>
 <form method="post" action="/resume"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="text" name="confirm" placeholder="type RESUME" maxlength="10" autocomplete="off"> <button class="go" type="submit">Resume</button></form>
