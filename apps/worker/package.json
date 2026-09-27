@@ -1,0 +1,22 @@
+{
+  "name": "@rat/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@rat/chain": "workspace:*",
+    "@rat/core": "workspace:*",
+    "@rat/db": "workspace:*",
+    "@rat/jupiter": "workspace:*",
+    "@rat/keys": "workspace:*",
+    "@rat/pump": "workspace:*",
+    "@rat/safety": "workspace:*",
+    "@solana/web3.js": "^1.98.2"
+  }
+}

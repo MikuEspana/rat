@@ -2,6 +2,7 @@
 // instruction is executed by SimChain (debits SOL, credits the output token). In-memory only.
 import { NATIVE_SOL_MINT, type PriceQuote, type PriceSource, type Pubkey, type Rng, type SwapBuild, type SwapBuildRequest, type SwapBuilder } from '@rat/core';
 import { type SimChain, SimError } from '@rat/chain/sim';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 
 /** Program id of the mock swap (never a real program). */
@@ -101,6 +102,9 @@ export class MockSwapBuilder implements SwapBuilder {
     const keys = [{ pubkey: new PublicKey(req.taker), isSigner: true, isWritable: true }];
     if (payer !== req.taker) keys.push({ pubkey: new PublicKey(payer), isSigner: true, isWritable: true });
     keys.push({ pubkey: new PublicKey(req.outputMint), isSigner: false, isWritable: true });
+    // like a real swap, the taker's output token account is an instruction account
+    const outAta = getAssociatedTokenAddressSync(new PublicKey(req.outputMint), new PublicKey(req.taker), true, new PublicKey(token.program));
+    keys.push({ pubkey: outAta, isSigner: false, isWritable: true });
     const ix = new TransactionInstruction({
       programId: new PublicKey(MOCK_SWAP_PROGRAM_ID),
       keys,
