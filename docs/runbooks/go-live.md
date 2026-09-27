@@ -10,6 +10,7 @@
 - [ ] Rehearsal: `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, watch the site, then set it back to `0` and run `rat dry-run-reset --yes`.
 - [ ] `rat status` shows both keys imported. Master key backed up.
 - [ ] `rat alert-test` arrives on Telegram. `rat kill` / `rat resume` tested.
+- [ ] `rat preflight` says **READY** (every FAIL line fixed; WARN lines read and understood).
 
 ## T-1 hour: launch the coin, THEN tell the worker about it
 Order matters: the coin launch is a creator-wallet transaction the bot did not send. The wallet watch must know about it before the worker's first live start, or it looks like a leaked key and trips the kill switch.
@@ -29,6 +30,7 @@ Order matters: the coin launch is a creator-wallet transaction the bot did not s
 - If you really must: `rat kill`, send it, add its signature to `KNOWN_OWNER_TX_SIGS`, redeploy, check `rat status` (expect one critical alert about it), then `rat resume`.
 
 ## T-0: start live (only after the steps above)
+- [ ] With the worker's live settings (`DRY_RUN=false`, `LIVE_CONFIRM`, `WATCH_FROM_SLOT`, ...), `rat preflight --live` says **READY**. Any FAIL: stop and fix it first.
 - [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows). This is the worker's first live start. Its preflight refuses to start live if 0 stocks are approved, if no approved stock passes the mint check, or if `WATCH_FROM_SLOT` is ahead of the chain (it would hide a real leak); the logs and a Telegram alert say exactly why.
 - [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (each a fresh wallet holding its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
 

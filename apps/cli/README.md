@@ -5,6 +5,7 @@ Operator CLI. Owned by WS08. Run with `pnpm --filter @rat/cli rat <command>` (re
 | Command | What |
 |---|---|
 | `status` | mode, kill switch, bucket balances, cap usage, fund share owed, rat keys, rats, loops |
+| `preflight [--live]` | one PASS / WARN / FAIL line per launch check: settings, database, RPC (and backup), Jupiter key, creator/fund keys, wallet reserves, coin mint, approved stocks + mint check, watch floor, kill switch, caps, Telegram, worker loops. Read-only. Exit code 1 if anything FAILs. `--live` = checking for a live start (DRY RUN still on, no watch floor, kill switch on or no Telegram become FAIL). |
 | `kill [--reason]` / `resume` | database kill switch |
 | `keys import --role creator\|fund` | reads the private key from stdin (never argv), must match `CREATOR_PUBKEY` / `FUND_PUBKEY`, stored encrypted |
 | `ledger [--limit]` | balances, sums by reason, recent entries |

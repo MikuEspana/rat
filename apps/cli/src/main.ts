@@ -2,7 +2,8 @@
 // RAT RACE operator CLI. Every command reads config from the environment (see .env.example).
 import { readFileSync } from 'node:fs';
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
-import { type AppConfig, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
+import { type AppConfig, NATIVE_SOL_MINT, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
+import { JupiterHttp, JupiterPriceSource, SlidingWindowLimiter } from '@rat/jupiter';
 import { Store, openDatabase } from '@rat/db';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
@@ -11,6 +12,7 @@ import { dryRunResetCommand } from './commands/dry-run';
 import { keysImportRoleCommand, keysRotateCommand } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
 import { ledgerShowCommand } from './commands/ledger';
+import { printPreflight, runPreflightChecks, telegramCheck } from './commands/preflight';
 import { statusCommand } from './commands/status';
 import { stocksSyncCommand } from './commands/stocks';
 import { sweepCommand } from './commands/sweep';
@@ -113,6 +115,65 @@ program
       await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to: o.to, confirm: o.confirm, limit: o.limit });
     }),
   );
+
+program
+  .command('preflight')
+  .description('PASS / WARN / FAIL for every launch check (read-only, never sends). Exit code 1 if anything FAILs.')
+  .option('--live', 'check for a live start: DRY RUN still on, no watch floor, kill switch on or no Telegram become FAIL')
+  .action(async (o) => {
+    const out = (l: string) => console.log(l);
+    let cfg: AppConfig;
+    try {
+      cfg = loadConfig();
+    } catch (err) {
+      out(`FAIL  config  ${(err as Error).message}`);
+      out('');
+      out('NOT READY: fix the configuration first.');
+      process.exitCode = 1;
+      return;
+    }
+    let handle: Awaited<ReturnType<typeof openDatabase>> | null = null;
+    let store: Store | null = null;
+    let dbError: string | undefined;
+    if (cfg.databaseUrl) {
+      try {
+        handle = await openDatabase(cfg.databaseUrl);
+        await handle.migrate();
+        store = new Store(handle.db, cfg.dryRun ? 'paper' : 'live', systemClock);
+      } catch (err) {
+        dbError = (err as Error).message;
+      }
+    }
+    try {
+      // each endpoint on its own (no failover), so a dead primary shows up
+      const chain = cfg.rpcUrl ? new RpcChainReader(createConnection(cfg.rpcUrl)) : null;
+      const backupChain = cfg.rpcUrlBackup ? new RpcChainReader(createConnection(cfg.rpcUrlBackup)) : null;
+      const keys = store && cfg.keyEncryptionKey ? new DbKeyStore(store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey, expectedFund: cfg.fundPubkey }) : null;
+      const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm), maxRetries: 1 });
+      const lines = await runPreflightChecks(
+        {
+          config: cfg,
+          store,
+          dbError,
+          chain,
+          backupChain,
+          keys,
+          jupiterSolPrice: async () => {
+            const q = (await new JupiterPriceSource(http).getPrices([NATIVE_SOL_MINT])).get(NATIVE_SOL_MINT);
+            if (!q) throw new Error('no SOL price in the answer');
+            return q.usdPrice;
+          },
+          telegram: () => telegramCheck(cfg.telegram.botToken ?? '', cfg.telegram.chatId ?? ''),
+          now: () => Date.now(),
+        },
+        { live: Boolean(o.live) },
+      );
+      const title = `RAT RACE preflight (${cfg.dryRun ? 'DRY RUN' : 'LIVE'}${o.live ? ', checking for a live start' : ''})`;
+      if (!printPreflight(lines, out, title)) process.exitCode = 1;
+    } finally {
+      await handle?.close();
+    }
+  });
 
 program.parseAsync().catch((err: Error) => {
   console.error(`error: ${err.message}`);

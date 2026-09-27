@@ -12,7 +12,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q2 | Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | merged, 14 bugs fixed |
 | Q3 | Property tests (fast-check) | [#36](https://github.com/MikuEspana/rat/pull/36) | merged, 1 bug fixed |
 | Q4 | Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | merged, 3 bugs fixed |
-| Q5 | 3-hour launch simulation | (this PR) | done, 2 settings recommended |
+| Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | done, 2 settings recommended |
+| Q6 | `rat preflight` | (this PR) | done |
 
 ## Q1. Remove vanity keys
 
@@ -114,3 +115,15 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 **Tests added**: 1 long test (two 3-hour runs).
 
 **Bugs found**: none in the money paths. One launch-day issue (bursty hiring and burning with the default settings) with a settings-only fix: Miguel decides (STATUS.md).
+
+## Q6. `rat preflight`
+
+**What changed**
+- `rat preflight [--live]`: one PASS / WARN / FAIL line per launch check, then READY or NOT READY. Exit code 1 if anything FAILs. Read-only: it never sends a transaction (Jupiter and Telegram checks are reads: a SOL price call, `getMe` + `getChat`).
+- Checks: mode (DRY RUN / LIVE), smoke mode, required settings, backup RPC, database, RPC (slot + latency, primary and backup separately so a dead primary shows), Jupiter key, creator and fund keys (imported, decrypt with `KEY_ENCRYPTION_KEY`, match the configured public keys), creator and fund wallets above their reserves, coin mint exists, approved stocks and the xStocks mint check, `WATCH_FROM_SLOT` (set, not ahead of the chain), kill switch (env and database), caps, Telegram, worker loops.
+- `--live`: anything that would stop a live launch is a FAIL (DRY RUN still on, no watch floor, kill switch on, no Telegram, no approved stock). In DRY RUN those are warnings.
+- Docs: CLI README, go-live runbook (`rat preflight` at T-1 day, `rat preflight --live` right before going live).
+
+**Tests added**: 6 (`apps/cli/src/preflight.test.ts`): all good, `--live` blockers, missing settings / dead RPC / keys that do not decrypt, rejected Jupiter key, wallets under reserve / failing mint check / unapproved stocks / watch floor in the future, Telegram token and chat checks.
+
+**Bugs found**: none.
