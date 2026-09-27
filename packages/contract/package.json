@@ -1,0 +1,16 @@
+{
+  "name": "@rat/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "RAT RACE frontend contract: types, zod schemas, display math, mock data. Browser safe.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mock/state.json": "./mock/state.json",
+    "./mock/rats.json": "./mock/rats.json",
+    "./mock/events.json": "./mock/events.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  }
+}
