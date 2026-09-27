@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const root = new URL('../../', import.meta.url);
 const read = (p: string) => readFileSync(new URL(p, root), 'utf8');
-const runbooks = readdirSync(new URL('docs/runbooks/', root)).filter((f) => f.endsWith('.md'));
+// the runbooks plus the launch-day checklist
+const runbooks = [...readdirSync(new URL('docs/runbooks/', root)).filter((f) => f.endsWith('.md')).map((f) => `docs/runbooks/${f}`), 'LAUNCH-DAY.md'];
 
 describe('infra config', () => {
   it('railway files are valid and point at the Dockerfile', () => {
@@ -34,7 +35,7 @@ describe('runbooks', () => {
 
   it('every `rat <command>` in the runbooks exists in the CLI', () => {
     for (const f of runbooks) {
-      for (const m of read(`docs/runbooks/${f}`).matchAll(/(?:`|^)rat ([a-z-]+)/gm)) {
+      for (const m of read(f).matchAll(/(?:`|^)rat ([a-z-]+)/gm)) {
         expect(commands.has(m[1]!), `${f}: rat ${m[1]}`).toBe(true);
       }
     }
@@ -42,7 +43,7 @@ describe('runbooks', () => {
 
   it('every env var named in the runbooks exists in .env.example (or is documented as extra)', () => {
     for (const f of runbooks) {
-      for (const m of read(`docs/runbooks/${f}`).matchAll(/`([A-Z][A-Z0-9_]{3,})(=[^`]*)?`/g)) {
+      for (const m of read(f).matchAll(/`([A-Z][A-Z0-9_]{3,})(=[^`]*)?`/g)) {
         const name = m[1]!;
         expect(env.has(name) || extraEnv.has(name), `${f}: ${name}`).toBe(true);
       }
@@ -51,7 +52,7 @@ describe('runbooks', () => {
 
   it('runbooks never contain a secret value', () => {
     for (const f of runbooks) {
-      const text = read(`docs/runbooks/${f}`);
+      const text = read(f);
       expect(text).not.toMatch(/KEY_ENCRYPTION_KEY=[A-Za-z0-9+/]{20,}/);
       expect(text).not.toMatch(/JUPITER_API_KEY=[A-Za-z0-9-]{8,}/);
     }
