@@ -132,14 +132,24 @@ const envSchema = z.object({
   MAX_HIRES_PER_LOOP: intStr(20, 0, 200),
   MIN_STOCK_WEIGHT_BPS: intStr(500, 0, 10_000),
   SLIPPAGE_BPS_STOCK: intStr(100, 1, 5_000),
-  SLIPPAGE_BPS_COIN: intStr(300, 1, 5_000),
+  SLIPPAGE_BPS_COIN: intStr(150, 1, 5_000),
   MAX_PRICE_IMPACT_PCT: numStr(2),
   SPEND_CAP_SOL_PER_HOUR_HIRE: solStr('30'),
   SPEND_CAP_SOL_PER_HOUR_BURN: solStr('30'),
   SPEND_ALERT_PCT: intStr(50, 1, 100),
 
   CLAIM_INTERVAL_SEC: intStr(35, 1),
-  BURN_INTERVAL_SEC: intStr(600, 1),
+  // Burns: a random time 8 to 12 minutes after the last round (never a fixed public schedule), split into
+  // chunks of at most BURN_CHUNK_MAX_SOL sent 3 to 8 seconds apart.
+  BURN_INTERVAL_MIN_SEC: intStr(480, 1),
+  BURN_INTERVAL_MAX_SEC: intStr(720, 1),
+  BURN_CHUNK_MAX_SOL: solStr('1'),
+  BURN_CHUNK_GAP_MIN_SEC: intStr(3, 1, 3600),
+  BURN_CHUNK_GAP_MAX_SEC: intStr(8, 1, 3600),
+  // rpc = normal send. jito = burns go to the Jito block engine as bundle-only transactions with a tip.
+  BURN_SEND_VIA: z.enum(['rpc', 'jito']).default('rpc'),
+  JITO_BLOCK_ENGINE_URL: z.string().trim().url().default('https://mainnet.block-engine.jito.wtf/api/v1'),
+  JITO_TIP_SOL: solStr('0.0001'),
   PRICE_INTERVAL_SEC: intStr(15, 1),
   FREEZE_INTERVAL_SEC: intStr(35, 1),
   PRICE_STALE_SEC: intStr(900, 1),
@@ -204,7 +214,9 @@ export interface AppConfig {
   spendCapLamportsPerHour: { hire: bigint; burn: bigint };
   spendAlertPct: number;
 
-  intervals: { claimSec: number; burnSec: number; priceSec: number; freezeSec: number };
+  /** burnMinSec..burnMaxSec: random delay between burn rounds */
+  intervals: { claimSec: number; burnMinSec: number; burnMaxSec: number; priceSec: number; freezeSec: number };
+  burn: BurnConfig;
   priceStaleSec: number;
   reconcileBatch: number;
   dryRunFakeClaimLamportsPerHour: bigint;
@@ -212,6 +224,17 @@ export interface AppConfig {
   telegram: { botToken?: string; chatId?: string };
   api: { port: number; cacheSec: number; corsOrigin: string };
   stocksFile: string;
+}
+
+export interface BurnConfig {
+  /** burns above this are split into chunks of (almost) equal size */
+  chunkMaxLamports: bigint;
+  chunkGapMinSec: number;
+  chunkGapMaxSec: number;
+  sendVia: 'rpc' | 'jito';
+  jitoUrl: string;
+  /** Jito tip per burn transaction, paid from the burn budget (0 when sendVia = rpc) */
+  jitoTipLamports: bigint;
 }
 
 export type GrinderChoice = 'auto' | 'solana-keygen' | 'js' | 'off';
@@ -252,6 +275,22 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   if (e.SALARY_SOL <= e.HIRE_OVERHEAD_EST_SOL + e.RAT_BUFFER_SOL) {
     throw new ConfigError('SALARY_SOL must be larger than HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL');
+  }
+  if (e.BURN_INTERVAL_MIN_SEC > e.BURN_INTERVAL_MAX_SEC) {
+    throw new ConfigError('BURN_INTERVAL_MIN_SEC must be <= BURN_INTERVAL_MAX_SEC');
+  }
+  if (e.BURN_CHUNK_GAP_MIN_SEC > e.BURN_CHUNK_GAP_MAX_SEC) {
+    throw new ConfigError('BURN_CHUNK_GAP_MIN_SEC must be <= BURN_CHUNK_GAP_MAX_SEC');
+  }
+  if (e.BURN_CHUNK_MAX_SOL < e.MIN_BURN_SOL) {
+    throw new ConfigError('BURN_CHUNK_MAX_SOL must be >= MIN_BURN_SOL');
+  }
+  const jitoTip = e.BURN_SEND_VIA === 'jito' ? e.JITO_TIP_SOL : 0n;
+  if (e.BURN_SEND_VIA === 'jito' && (jitoTip <= 0n || jitoTip > solToLamports('0.01'))) {
+    throw new ConfigError('JITO_TIP_SOL must be above 0 and at most 0.01 when BURN_SEND_VIA=jito');
+  }
+  if (e.MIN_BURN_SOL <= e.HIRE_OVERHEAD_EST_SOL + jitoTip) {
+    throw new ConfigError('MIN_BURN_SOL must be larger than HIRE_OVERHEAD_EST_SOL (+ JITO_TIP_SOL)');
   }
   if (e.KEYPOOL_TARGET < e.KEYPOOL_REFILL_BELOW) {
     throw new ConfigError('KEYPOOL_TARGET must be >= KEYPOOL_REFILL_BELOW');
@@ -309,9 +348,18 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     spendAlertPct: e.SPEND_ALERT_PCT,
     intervals: {
       claimSec: e.CLAIM_INTERVAL_SEC,
-      burnSec: e.BURN_INTERVAL_SEC,
+      burnMinSec: e.BURN_INTERVAL_MIN_SEC,
+      burnMaxSec: e.BURN_INTERVAL_MAX_SEC,
       priceSec: e.PRICE_INTERVAL_SEC,
       freezeSec: e.FREEZE_INTERVAL_SEC,
+    },
+    burn: {
+      chunkMaxLamports: e.BURN_CHUNK_MAX_SOL,
+      chunkGapMinSec: e.BURN_CHUNK_GAP_MIN_SEC,
+      chunkGapMaxSec: e.BURN_CHUNK_GAP_MAX_SEC,
+      sendVia: e.BURN_SEND_VIA,
+      jitoUrl: e.JITO_BLOCK_ENGINE_URL.replace(/\/+$/, ''),
+      jitoTipLamports: jitoTip,
     },
     priceStaleSec: e.PRICE_STALE_SEC,
     reconcileBatch: e.RECONCILE_BATCH,
@@ -350,6 +398,7 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
       burn: cfg.spendCapLamportsPerHour.burn.toString(),
     },
     maxHiresPerLoop: cfg.maxHiresPerLoop,
+    burnSendVia: cfg.burn.sendVia,
     keypool: { refillBelow: cfg.keypool.refillBelow, target: cfg.keypool.target, grinder: cfg.keypool.grinder },
     jupiterMaxRpm: cfg.jupiter.maxRpm,
     hasRpc: Boolean(cfg.rpcUrl),

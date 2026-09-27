@@ -7,6 +7,8 @@ export interface Task {
   name: string;
   everySec: number;
   run: () => Promise<unknown>;
+  /** overrides everySec per run (jittered schedules): gets the run's result, or undefined when it threw */
+  nextDelaySec?: (out: unknown) => number;
 }
 
 export class Scheduler {
@@ -25,9 +27,11 @@ export class Scheduler {
       const now = this.deps.clock.now();
       const due = this.nextAt.get(t.name) ?? 0;
       if (now.getTime() < due) continue;
-      this.nextAt.set(t.name, now.getTime() + t.everySec * 1000);
+      const startedAt = now.getTime();
+      this.nextAt.set(t.name, startedAt + t.everySec * 1000);
+      let out: unknown;
       try {
-        const out = await t.run();
+        out = await t.run();
         ran.set(t.name, out);
         this.failures.set(t.name, 0);
         await this.deps.store.heartbeats.beat(t.name, this.deps.clock.now(), { ok: true });
@@ -40,6 +44,7 @@ export class Scheduler {
         await this.deps.store.heartbeats.beat(t.name, this.deps.clock.now(), { ok: false, error: msg });
         if (n >= 3) await this.deps.onRepeatedFailure?.(t.name, msg, n);
       }
+      if (t.nextDelaySec) this.nextAt.set(t.name, startedAt + t.nextDelaySec(out) * 1000);
     }
     return ran;
   }

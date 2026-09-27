@@ -1,5 +1,5 @@
 // Production wiring (RPC, Jupiter, Postgres, encrypted keys, Telegram). Shared by main.ts and the smoke test.
-import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
+import { JitoTipAccounts, RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, openDatabase } from '@rat/db';
 import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimiter } from '@rat/jupiter';
@@ -27,7 +27,13 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
   if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log }));
   const alerts = new ThrottledAlerts(fanOut(...sinks), systemClock);
   const sender = new GuardedSender(
-    new RpcTxSender(conn, { dryRun: cfg.dryRun, liveConfirmed: cfg.liveConfirmed, priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax, log }),
+    new RpcTxSender(conn, {
+      dryRun: cfg.dryRun,
+      liveConfirmed: cfg.liveConfirmed,
+      priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax,
+      log,
+      jito: cfg.burn.sendVia === 'jito' ? { url: cfg.burn.jitoUrl, kinds: ['burn'] } : undefined,
+    }),
     { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log },
   );
   const guard = new SpendGuard(
@@ -95,6 +101,7 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
     creator: cfg.creatorPubkey!,
     fund: cfg.fundPubkey!,
     keyRefiller,
+    jitoTipAccounts: cfg.burn.sendVia === 'jito' ? ((tips) => () => tips.get())(new JitoTipAccounts(cfg.burn.jitoUrl)) : undefined,
   };
   return { deps, handle };
 }

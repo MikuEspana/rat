@@ -130,6 +130,7 @@ export class StateService {
     const lastClaim = claims.lastAt;
     const lastBurnRunRaw = await this.store.settings.get(SETTINGS.lastBurnRunAt);
     const lastBurnRun = lastBurnRunRaw ? new Date(lastBurnRunRaw) : null;
+    const burnWindow = await this.store.settings.get(SETTINGS.burnWindowOpensAt);
     const claimBeat = (await this.store.heartbeats.all()).find((h) => h.loop === 'claim');
     const events = await this.store.events.latest(50);
 
@@ -140,7 +141,8 @@ export class StateService {
         mode: await this.mode(),
         lastClaimAt: iso(lastClaim),
         nextClaimAt: claimBeat ? new Date(claimBeat.lastRunAt.getTime() + this.cfg.intervals.claimSec * 1000).toISOString() : null,
-        nextBurnAt: lastBurnRun ? new Date(lastBurnRun.getTime() + this.cfg.intervals.burnSec * 1000).toISOString() : null,
+        // earliest possible start of the next burn round: the exact time is random and deliberately not published
+        nextBurnAt: burnWindow ?? (lastBurnRun ? new Date(lastBurnRun.getTime() + this.cfg.intervals.burnMinSec * 1000).toISOString() : null),
       },
       coin: {
         mint: this.cfg.coinMint ?? null,

@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type { Clock, Rng } from './ports';
 
 export const systemClock: Clock = { now: () => new Date() };
@@ -38,7 +39,8 @@ export class SeededRng implements Rng {
   }
 }
 
-export const systemRng: Rng = { next: () => Math.random() };
+/** Production randomness (burn timing, stock picks): from the OS CSPRNG, so the schedule cannot be predicted. */
+export const systemRng: Rng = { next: () => randomInt(0, 2 ** 48 - 1) / 2 ** 48 };
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

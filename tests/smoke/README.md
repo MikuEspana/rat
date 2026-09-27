@@ -28,5 +28,6 @@
 6. Run: `pnpm --filter @rat/tests smoke -- --topup-hire 0.06 --topup-burn 0.012`
    (the top-ups only credit the ledger for SOL you already sent to the test wallets; the test coin's own fees are tiny).
 7. Read `tests/smoke/REPORT.md` and check the rats and the burn on Solscan.
+8. Optional, only if you want burns through Jito (`BURN_SEND_VIA=jito`, OPEN-QUESTIONS #12): run steps 6 and 7 again with `BURN_SEND_VIA=jito` added to the environment, on a fresh database. On Solscan the burn tx must end with a small SOL transfer to a Jito tip account. If it never lands (the worker logs "polling until the blockhash expires"), raise `JITO_TIP_SOL` or keep `BURN_SEND_VIA=rpc`.
 
 The preflight refuses to start unless: `SMOKE_MODE=true`, cap <= 0.1 SOL, live mode confirmed, `COIN_MINT` + test wallets set, `MAX_HIRES_PER_LOOP` <= 2, and the database has no live rats.

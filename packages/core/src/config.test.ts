@@ -17,7 +17,28 @@ describe('loadConfig', () => {
     expect(cfg.maxHiresPerLoop).toBe(20);
     expect(cfg.jupiter.maxRpm).toBe(55);
     expect(cfg.hireMode).toBe('single');
-    expect(cfg.intervals).toEqual({ claimSec: 35, burnSec: 600, priceSec: 15, freezeSec: 35 });
+    expect(cfg.intervals).toEqual({ claimSec: 35, burnMinSec: 480, burnMaxSec: 720, priceSec: 15, freezeSec: 35 });
+  });
+
+  it('burns: random 8 to 12 minute rounds, 1 SOL chunks, 1.5% slippage, Jito off by default', () => {
+    const cfg = loadConfig({});
+    expect(cfg.slippageBpsCoin).toBe(150);
+    expect(cfg.burn).toEqual({
+      chunkMaxLamports: 1_000_000_000n,
+      chunkGapMinSec: 3,
+      chunkGapMaxSec: 8,
+      sendVia: 'rpc',
+      jitoUrl: 'https://mainnet.block-engine.jito.wtf/api/v1',
+      jitoTipLamports: 0n,
+    });
+    const jito = loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.0002', BURN_CHUNK_MAX_SOL: '0.5', SLIPPAGE_BPS_COIN: '100' });
+    expect(jito.burn).toMatchObject({ sendVia: 'jito', jitoTipLamports: 200_000n, chunkMaxLamports: 500_000_000n });
+    expect(jito.slippageBpsCoin).toBe(100);
+    expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
+    expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
+    expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
+    expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
+    expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
 
   it('key pool: sized for launch day, every threshold configurable', () => {

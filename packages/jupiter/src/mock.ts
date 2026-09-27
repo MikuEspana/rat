@@ -70,6 +70,8 @@ export interface MockSwapOptions {
 /** Quotes from MockPriceSource prices. SOL -> token only (what hires and burns need). */
 export class MockSwapBuilder implements SwapBuilder {
   calls = 0;
+  /** the last requests (kept short for long simulations) */
+  readonly requests: SwapBuildRequest[] = [];
 
   constructor(
     private readonly prices: MockPriceSource,
@@ -78,6 +80,8 @@ export class MockSwapBuilder implements SwapBuilder {
 
   async build(req: SwapBuildRequest): Promise<SwapBuild> {
     this.calls++;
+    this.requests.push(req);
+    if (this.requests.length > 200) this.requests.shift();
     if (req.inputMint !== NATIVE_SOL_MINT) throw new Error('MockSwapBuilder only supports SOL input');
     if (this.opts.noRoute?.has(req.outputMint)) throw new Error(`no route for ${req.outputMint}`);
     const token = this.opts.tokens.get(req.outputMint);

@@ -1,8 +1,13 @@
-// Buy and burn (every ~10 min). Spendable = min(burn bucket, fund wallet - reserve). Under MIN_BURN_SOL it
-// is skipped. The swap uses spendable minus the tx overhead allowance, so fees never touch the fund's own SOL. One tx signed by the fund wallet: Jupiter SOL -> coin, then BurnChecked of the guaranteed
-// minimum output plus any leftover coin from earlier rounds. Fallback: direct pump.fun buy.
+// Buy and burn. Each ROUND starts at a random time 8 to 12 minutes after the previous one (BURN_INTERVAL_MIN/MAX_SEC),
+// never on a fixed public schedule. The round budget = min(burn bucket, fund wallet - reserve, room under the hourly
+// cap); under MIN_BURN_SOL the round is skipped. Budgets above BURN_CHUNK_MAX_SOL are split into equal chunks sent
+// 3 to 8 seconds apart, each its own tx: Jupiter SOL -> coin at SLIPPAGE_BPS_COIN (1.5%), then BurnChecked of the
+// guaranteed minimum output plus leftover coin from earlier rounds. Smaller, less predictable buys with a tight
+// slippage limit are poor sandwich targets. BURN_SEND_VIA=jito adds a tip and sends through the Jito block engine.
+// Fees (and the tip) come out of the chunk, so the fund's own SOL is never spent. Fallback: direct pump.fun buy.
 // Profits never go to holders: the only way they leave is this buy and burn.
 import { NATIVE_SOL_MINT, SETTINGS, type SwapBuild, formatSol, lamportsToSol, minBig, rawToDecimalString, solDelta } from '@rat/core';
+import { PublicKey, SystemProgram, type TransactionInstruction } from '@solana/web3.js';
 import type { BurnRow } from '@rat/db';
 import type { GuardedResult, Reservation } from '@rat/safety';
 import type { WorkerDeps, WorkerState } from '../deps';
@@ -12,6 +17,23 @@ export interface BurnResult {
   spentLamports: bigint;
   burnedRaw: bigint;
   reason?: string;
+  /** this chunk's position in the round (1-based) and the planned chunk count */
+  chunk?: { index: number; of: number };
+  /** seconds until the burn step runs again: a chunk gap, or a random 8 to 12 minutes for the next round */
+  nextInSec?: number;
+}
+
+type ChunkResult = Omit<BurnResult, 'chunk' | 'nextInSec'>;
+
+const uniform = (d: WorkerDeps, lo: number, hi: number) => lo + d.rng.next() * (hi - lo);
+
+/** Random delay before the next burn round. */
+export function nextBurnRoundSec(d: WorkerDeps): number {
+  return uniform(d, d.config.intervals.burnMinSec, d.config.intervals.burnMaxSec);
+}
+
+function ceilDiv(a: bigint, b: bigint): bigint {
+  return (a + b - 1n) / b;
 }
 
 function reservationOf(b: BurnRow): Reservation | null {
@@ -87,13 +109,8 @@ async function reconcileOpenBurns(d: WorkerDeps): Promise<void> {
   }
 }
 
-export async function runBurnStep(d: WorkerDeps, _s: WorkerState): Promise<BurnResult> {
-  await d.store.settings.set(SETTINGS.lastBurnRunAt, d.clock.now().toISOString());
-  if (!d.config.coinMint) return { status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason: 'COIN_MINT not set' };
-  const kill = await d.killSwitch.status();
-  if (kill.on) return { status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason: 'kill_switch' };
-  await reconcileOpenBurns(d);
-
+/** SOL the fund may burn right now: min(burn bucket, fund wallet - reserve, room under the hourly cap). */
+async function burnSpendable(d: WorkerDeps, alertOnCap: boolean): Promise<bigint> {
   let spendable = await d.store.ledger.balance('burn');
   if (d.store.mode === 'live') {
     const sol = (await d.chain.getSolBalances([d.fund])).get(d.fund) ?? 0n;
@@ -102,20 +119,81 @@ export async function runBurnStep(d: WorkerDeps, _s: WorkerState): Promise<BurnR
   // burn up to the room left under the hourly cap instead of skipping the whole burn
   const capRoom = await d.guard.remainingCap('burn');
   if (capRoom < spendable) {
-    await d.alerts.send('critical', 'cap_reached_burn', `burn spend cap reached: burning ${formatSol(capRoom)} of ${formatSol(spendable)} SOL now, the rest carries over.`);
+    if (alertOnCap) {
+      await d.alerts.send('critical', 'cap_reached_burn', `burn spend cap reached: burning ${formatSol(capRoom)} of ${formatSol(spendable)} SOL now, the rest carries over.`);
+    }
     spendable = capRoom;
   }
-  if (spendable < d.config.minBurnLamports) {
-    return { status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason: `under ${formatSol(d.config.minBurnLamports)} SOL (have ${formatSol(spendable > 0n ? spendable : 0n)})` };
+  return spendable > 0n ? spendable : 0n;
+}
+
+export async function runBurnStep(d: WorkerDeps, s: WorkerState): Promise<BurnResult> {
+  const c = d.config;
+  const now = d.clock.now();
+  const endRound = async (r: ChunkResult, chunk?: BurnResult['chunk']): Promise<BurnResult> => {
+    s.burnRound = null;
+    const next = nextBurnRoundSec(d);
+    // publish only the earliest possible start of the next round, never the exact (random) time
+    await d.store.settings.set(SETTINGS.burnWindowOpensAt, new Date(now.getTime() + c.intervals.burnMinSec * 1000).toISOString());
+    return { ...r, chunk, nextInSec: next };
+  };
+  const skip = (reason: string): ChunkResult => ({ status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason });
+
+  let spendableNow: bigint;
+  if (!s.burnRound) {
+    await d.store.settings.set(SETTINGS.lastBurnRunAt, now.toISOString());
+    if (!c.coinMint) return endRound(skip('COIN_MINT not set'));
+    if ((await d.killSwitch.status()).on) return endRound(skip('kill_switch'));
+    await reconcileOpenBurns(d);
+    spendableNow = await burnSpendable(d, true);
+    if (spendableNow < c.minBurnLamports) {
+      return endRound(skip(`under ${formatSol(c.minBurnLamports)} SOL (have ${formatSol(spendableNow)})`));
+    }
+    const chunks = ceilDiv(spendableNow, c.burn.chunkMaxLamports);
+    s.burnRound = { remaining: spendableNow, chunkSize: ceilDiv(spendableNow, chunks), chunks: Number(chunks), done: 0 };
+  } else {
+    if ((await d.killSwitch.status()).on) return endRound(skip('kill_switch'));
+    spendableNow = await burnSpendable(d, false);
   }
 
-  const coin = await d.pump.getCoinInfo(d.config.coinMint);
-  const auth = await d.guard.authorize({ bucket: 'burn', lamports: spendable, refType: 'burn', refId: `burn@${d.clock.now().toISOString()}` });
+  const round = s.burnRound;
+  const amount = minBig(minBig(round.remaining, round.chunkSize), spendableNow);
+  if (amount < c.minBurnLamports) return endRound(skip(`round done (${formatSol(amount)} SOL left under the minimum)`));
+  const r = await burnChunk(d, amount);
+  round.done++;
+  round.remaining -= amount;
+  const chunk = { index: round.done, of: round.chunks };
+  // a failed or unconfirmed chunk ends the round: the rest carries over to the next round
+  if (r.status !== 'burned' && r.status !== 'paper') return endRound(r, chunk);
+  if (round.done >= round.chunks || round.remaining < c.minBurnLamports) return endRound(r, chunk);
+  return { ...r, chunk, nextInSec: uniform(d, c.burn.chunkGapMinSec, c.burn.chunkGapMaxSec) };
+}
+
+/** One buy + burn transaction for `amount` lamports of the burn budget. */
+async function burnChunk(d: WorkerDeps, amount: bigint): Promise<ChunkResult> {
+  const c = d.config;
+  const coin = await d.pump.getCoinInfo(c.coinMint!);
+
+  // Jito: tip one of the block engine's tip accounts from inside the same tx (paid from this chunk).
+  let tipIx: TransactionInstruction | null = null;
+  const tip = c.burn.jitoTipLamports;
+  if (c.burn.sendVia === 'jito') {
+    const accounts = await (d.jitoTipAccounts?.() ?? Promise.resolve([])).catch(() => [] as string[]);
+    if (accounts.length === 0) {
+      // no silent fallback to a public send: the owner chose MEV protection for burns
+      await d.alerts.send('warn', 'burn_jito_unavailable', 'Jito tip accounts unavailable: burn skipped, the budget carries over.');
+      return { status: 'failed', spentLamports: 0n, burnedRaw: 0n, reason: 'jito unavailable' };
+    }
+    const to = accounts[Math.floor(d.rng.next() * accounts.length)]!;
+    tipIx = SystemProgram.transfer({ fromPubkey: new PublicKey(d.fund), toPubkey: new PublicKey(to), lamports: tip });
+  }
+
+  const auth = await d.guard.authorize({ bucket: 'burn', lamports: amount, refType: 'burn', refId: `burn@${d.clock.now().toISOString()}` });
   if (!auth.ok) return { status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason: auth.reason };
 
-  // Fees and the fund's coin account rent come out of the reservation too: only claimed money is spent.
-  const swapAmount = spendable - d.config.hireOverheadEstLamports;
-  const req = { inputMint: NATIVE_SOL_MINT, outputMint: coin.mint, amount: swapAmount, taker: d.fund, slippageBps: d.config.slippageBpsCoin };
+  // Fees, the fund's coin account rent and the Jito tip come out of the reservation: only claimed money is spent.
+  const swapAmount = amount - c.hireOverheadEstLamports - (tipIx ? tip : 0n);
+  const req = { inputMint: NATIVE_SOL_MINT, outputMint: coin.mint, amount: swapAmount, taker: d.fund, slippageBps: c.slippageBpsCoin };
   let build: SwapBuild;
   try {
     build = await d.swap.build(req);
@@ -138,7 +216,7 @@ export async function runBurnStep(d: WorkerDeps, _s: WorkerState): Promise<BurnR
   const [held] = await d.chain.getTokenAccounts([{ owner: d.fund, mint: coin.mint, tokenProgram: coin.tokenProgram }]);
   const leftover = d.store.mode === 'live' ? (held?.amount ?? 0n) : 0n;
   const burnAmount = leftover + build.minOutAmount;
-  const burnId = await d.store.burns.insert({ status: 'pending', reservedLamports: spendable, reserveLedgerId: auth.reservation.ledgerId, coinDecimals: coin.decimals, tokensBurnedRaw: burnAmount });
+  const burnId = await d.store.burns.insert({ status: 'pending', reservedLamports: amount, reserveLedgerId: auth.reservation.ledgerId, coinDecimals: coin.decimals, tokensBurnedRaw: burnAmount });
   const reservation: Reservation = { ...auth.reservation, refId: String(burnId) };
   const fundKp = await d.keys.fund();
   const r = await d.sender.execute({
@@ -150,9 +228,10 @@ export async function runBurnStep(d: WorkerDeps, _s: WorkerState): Promise<BurnR
       instructions: [
         ...build.instructions,
         d.pump.buildBurnInstruction({ owner: d.fund, mint: coin.mint, amount: burnAmount, decimals: coin.decimals, tokenProgram: coin.tokenProgram }),
+        ...(tipIx ? [tipIx] : []),
       ],
       lookupTables: build.lookupTables,
-      computeUnitLimit: d.config.computeUnitLimitSwap,
+      computeUnitLimit: c.computeUnitLimitSwap,
     },
     reservation,
     ref: { type: 'burn', id: String(burnId) },
