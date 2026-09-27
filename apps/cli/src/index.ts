@@ -1,0 +1,4 @@
+// The CLI command logic, reused by the admin page (its kill / resume buttons run exactly these).
+export type { CliContext } from './context';
+export { killCommand, resumeCommand } from './commands/kill';
+export { statusCommand } from './commands/status';

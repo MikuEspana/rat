@@ -19,10 +19,11 @@ coverage/
 id.json
 *keypair*.json
 *-keypair.json
-secrets/
-keys/
-grind-tmp/
-vanity-out/
+# root-level folders only (a bare `keys/` would also hide the packages/keys source)
+/secrets/
+/keys/
+/grind-tmp/
+/vanity-out/
 
 # os / editor
 .DS_Store

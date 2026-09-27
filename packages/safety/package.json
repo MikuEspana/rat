@@ -1,0 +1,17 @@
+{
+  "name": "@rat/safety",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@rat/core": "workspace:*",
+    "@solana/web3.js": "^1.98.2"
+  },
+  "devDependencies": {
+    "@rat/chain": "workspace:*",
+    "@rat/db": "workspace:*"
+  }
+}

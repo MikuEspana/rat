@@ -1,0 +1,18 @@
+{
+  "_readme": "Owner approval list. The bot only hires into a stock when enabled=true AND approved=true AND it passes the on-chain mint check (Token-2022 program + mint authority matching the other xStocks). Mints are REPORTED from a third-party list (github.com/kdai03/xpaper js/tokens.js); verify each on xstocks.fi, then set approved=true. HOODx and CRCLx are left out because their mints could not be verified.",
+  "stocks": [
+    { "symbol": "TSLAx", "name": "Tesla", "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", "group": "volatile", "enabled": true, "approved": false },
+    { "symbol": "MSTRx", "name": "Strategy", "mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ", "group": "volatile", "enabled": true, "approved": false },
+    { "symbol": "COINx", "name": "Coinbase", "mint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu", "group": "volatile", "enabled": true, "approved": false },
+    { "symbol": "AMDx", "name": "AMD", "mint": "XsXcJ6GZ9kVnjqGsjBnktRcuwMBmvKWh8S93RefZ1rF", "group": "volatile", "enabled": true, "approved": false },
+    { "symbol": "NVDAx", "name": "NVIDIA", "mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", "group": "volatile", "enabled": true, "approved": false },
+    { "symbol": "AAPLx", "name": "Apple", "mint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp", "group": "steady", "enabled": true, "approved": false },
+    { "symbol": "METAx", "name": "Meta", "mint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu", "group": "steady", "enabled": true, "approved": false },
+    { "symbol": "AMZNx", "name": "Amazon", "mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg", "group": "steady", "enabled": true, "approved": false },
+    { "symbol": "GOOGLx", "name": "Alphabet", "mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN", "group": "steady", "enabled": true, "approved": false },
+    { "symbol": "SPYx", "name": "S&P 500 ETF", "mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W", "group": "steady", "enabled": true, "approved": false },
+    { "symbol": "MSFTx", "name": "Microsoft", "mint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX", "group": "reserve", "enabled": false, "approved": false },
+    { "symbol": "NFLXx", "name": "Netflix", "mint": "XsEH7wWfJJu2ZT3UCFeVfALnVA6CP5ur7Ee11KmzVpL", "group": "reserve", "enabled": false, "approved": false },
+    { "symbol": "QQQx", "name": "Nasdaq 100 ETF", "mint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ", "group": "reserve", "enabled": false, "approved": false }
+  ]
+}

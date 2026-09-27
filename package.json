@@ -1,0 +1,27 @@
+{
+  "name": "rat-race",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --exclude 'tests/chaos/**' --exclude 'tests/sim/**'",
+    "test:long": "vitest run tests/chaos tests/sim",
+    "sim:3h": "WRITE_SIMULATION=1 vitest run tests/sim/launch-3h.test.ts",
+    "test:watch": "vitest",
+    "check:guards": "node scripts/check-guards.mjs",
+    "mock:api": "pnpm --filter @rat/api mock",
+    "ci": "pnpm check:guards && pnpm typecheck && pnpm test && pnpm test:long"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "fast-check": "^4.10.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@rat/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sim:launch-hour": "tsx e2e/launch-hour-report.ts",
+    "smoke": "tsx smoke/smoke.ts"
+  },
+  "dependencies": {
+    "@rat/api": "workspace:*",
+    "@rat/contract": "workspace:*",
+    "@rat/core": "workspace:*",
+    "@rat/db": "workspace:*",
+    "@rat/jupiter": "workspace:*",
+    "@rat/pump": "workspace:*",
+    "@rat/safety": "workspace:*",
+    "@rat/worker": "workspace:*",
+    "@solana/web3.js": "^1.98.2"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@rat/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "mock": "tsx src/mock/server.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "@rat/contract": "workspace:*",
+    "@rat/core": "workspace:*",
+    "@rat/db": "workspace:*",
+    "hono": "^4.8.0"
+  },
+  "devDependencies": {
+    "@rat/worker": "workspace:*"
+  }
+}

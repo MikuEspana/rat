@@ -1,0 +1,29 @@
+{
+  "name": "@rat/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "rat": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "rat": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@rat/chain": "workspace:*",
+    "@rat/core": "workspace:*",
+    "@rat/db": "workspace:*",
+    "@rat/jupiter": "workspace:*",
+    "@rat/keys": "workspace:*",
+    "@rat/safety": "workspace:*",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.2",
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "bs58": "^6.0.0"
+  }
+}
