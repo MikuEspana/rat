@@ -6,6 +6,9 @@
   "bin": {
     "rat": "./src/main.ts"
   },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "rat": "tsx src/main.ts"
   },

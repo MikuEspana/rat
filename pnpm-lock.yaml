@@ -24,6 +24,28 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@22.20.4)(tsx@4.23.15)
 
+  apps/admin:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.14.0
+        version: 1.19.17(hono@4.13.9)
+      '@rat/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@rat/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@rat/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      hono:
+        specifier: ^4.8.0
+        version: 4.13.9
+    devDependencies:
+      '@rat/worker':
+        specifier: workspace:*
+        version: link:../worker
+
   apps/api:
     dependencies:
       '@hono/node-server':

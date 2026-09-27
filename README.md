@@ -39,7 +39,7 @@ Rules that never change:
 | `SECURITY-REVIEW.md` | Every money path red-teamed: findings, fixes, accepted risks |
 | `SIMULATION.md` | 3-hour launch simulation (about 3,000 rats) and the launch-hour scenarios |
 | `packages/*` | Backend libraries (core, contract, db, keys, chain, pump, jupiter, safety) |
-| `apps/*` | `worker` (the bot), `api` (public state API), `cli` (operator tools) |
+| `apps/*` | `worker` (the bot), `api` (public state API), `cli` (operator tools), `admin` (private admin page: money, caps, last txs, errors, kill / resume) |
 | `tests/*` | End to end simulation and the mainnet smoke script |
 | `infra/`, `docs/runbooks/` | Deploy config and runbooks |
 

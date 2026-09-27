@@ -14,7 +14,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q4 | Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | merged, 3 bugs fixed |
 | Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | done, 2 settings recommended |
 | Q6 | `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | done |
-| Q7 | LAUNCH-DAY.md | (this PR) | done |
+| Q7 | LAUNCH-DAY.md | [#40](https://github.com/MikuEspana/rat/pull/40) | done |
+| Q8 | Private admin page | (this PR) | done |
 
 ## Q1. Remove vanity keys
 
@@ -136,5 +137,18 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 - README links `LAUNCH-DAY.md` and `SECURITY-REVIEW.md`.
 
 **Tests added**: the docs test now also checks `LAUNCH-DAY.md`: every `rat <command>` it names exists in the CLI and every setting exists in `.env.example`.
+
+**Bugs found**: none.
+
+## Q8. Private admin page
+
+**What changed**
+- New service `apps/admin` (Hono, server-rendered, no JavaScript, refreshes every 15 s). Shows mode, kill switch, ledger buckets (available, spent in the last hour, cap used, open reservations), claimed / burned totals, fund share owed, rats by status, the last 25 transactions with Solscan links, errors (failed transactions, worker loop errors) and worker loops.
+- KILL and Resume buttons run the CLI's own `killCommand` / `resumeCommand` (exported from `@rat/cli`). Resume needs `RESUME` typed; an env `KILL_SWITCH=true` cannot be resumed from the page.
+- Security: `ADMIN_PASSWORD` (at least 16 characters, else it refuses to start), HTTP Basic auth compared in constant time, lockout after 10 wrong passwords per IP for 15 minutes, CSRF token + same-origin check on every POST, `no-store`, no framing, strict CSP, everything HTML-escaped. It never sends a transaction or reads a private key.
+- Config only: `infra/railway.admin.json`, Dockerfile copies the new package, `ADMIN_PASSWORD` / `ADMIN_PORT` in `.env.example`, deploy runbook step, README.
+- `attempts.latest(n)` in the store.
+
+**Tests added**: 8 (`apps/admin/src/admin.test.ts`): short password refused, auth + health + headers, lockout, dashboard numbers after a claim and hires, kill / resume through the page, env kill cannot be resumed, CSRF and cross-site POSTs refused, HTML escaping (an error message with a script tag, a notice with an image tag). Docs test covers the new Railway file and Dockerfile line.
 
 **Bugs found**: none.
