@@ -15,7 +15,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 ## The night before
 
 - [ ] `rat preflight` says **READY**.
-- [ ] Settings from `SIMULATION.md`: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` (steady hiring and burning, no 30 minute pauses).
+- [ ] Pacing is on by default: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` (steady hiring and burning, no 30 minute pauses). Leave them unless you mean to change them.
 - [ ] `rat alert-test` arrives on your phone. Phone charged, Telegram notifications on, not muted.
 - [ ] `KEY_ENCRYPTION_KEY` backed up offline (without it the rat wallets are lost).
 - [ ] Admin service has `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` too: it alerts you if the worker dies (the worker cannot).
@@ -44,7 +44,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 
 ## What normal looks like
 
-- About 17 new rats a minute (with `MAX_HIRES_PER_LOOP=10`), about 1,000 an hour.
+- About 17 new rats a minute, about 1,000 an hour.
 - "Waiting" budget grows during the rush. Normal: at most 30 SOL per hour is spent per bucket; the rest waits and is spent later. Nothing is lost.
 - A burn round every 8 to 12 minutes, in chunks of at most 1 SOL a few seconds apart.
 - Worker restarts and redeploys are safe at any moment (tested at every single step).

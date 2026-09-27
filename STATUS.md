@@ -18,7 +18,7 @@ Updated 2026-09-27 at the end of the autonomous run (queue Q1 to Q12, log in `LO
 | Q2 Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | 14 bugs fixed (3 High). A compromised Jupiter can no longer drain a wallet (every live tx is simulated and checked first); an RPC failure no longer re-credits spent money; crash windows, double claims, two workers, watcher blind spots closed. `SECURITY-REVIEW.md`. | Read the accepted risks (A1 to A6). Do the dev buy from a separate wallet. |
 | Q3 Property tests | [#36](https://github.com/MikuEspana/rat/pull/36) | "SOL spent never exceeds SOL claimed, to the lamport" holds over 650+ random guard scenarios and 12 random live launches per run. 1 bug fixed (the fund could burn its own SOL). 5 deliberately broken guards all caught. | Nothing. |
 | Q4 Chaos tests | [#37](https://github.com/MikuEspana/rat/pull/37) | Worker killed before each of 172 operations of a hire and a burn, RPC down at 29 points, database dropped at 138 points, a 20 minute Jupiter 429 storm: every lamport accounted for. 3 bugs fixed (1 High). | Nothing. |
-| Q5 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | 180 SOL of fees, 3,042 rats, all money spent, ledger = chain. Default settings stop hiring for 30 min (twice) and burning for 39 min. | **Decide**: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` (recommended, settings only). |
+| Q5 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38), defaults in [#46](https://github.com/MikuEspana/rat/pull/46) | 180 SOL of fees, 3,042 rats, all money spent, ledger = chain. Unpaced settings stopped hiring for 30 min (twice) and burning for 39 min. Your decision: `MAX_HIRES_PER_LOOP=10` and `BURN_ROUND_MAX_SOL=5` are now the defaults. | Nothing. |
 | Q6 `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | PASS / WARN / FAIL for every launch check, `--live` mode, exit code 1 on FAIL. | Run `rat preflight --live` right before going live. |
 | Q7 LAUNCH-DAY.md | [#40](https://github.com/MikuEspana/rat/pull/40) | The short launch-day checklist. | Read it the night before. |
 | Q8 Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | Money, caps used, last txs, errors, worker loops, KILL / Resume (the CLI's own logic), hardened login. | Deploy the admin service with `ADMIN_PASSWORD` (16+ characters) and the Telegram settings. |
@@ -36,7 +36,7 @@ Updated 2026-09-27 at the end of the autonomous run (queue Q1 to Q12, log in `LO
 | 2 | **Outside parties can cost value inside our limits.** A wrong Jupiter quote or price; the xStocks issuer can pause, freeze or take back tokens (permanent delegate). | We cannot control them. | Worst case per tx: one salary (0.03 SOL) or one burn chunk. Hourly caps stop a long bleed. Reconcile freezes and alerts on issuer actions. |
 | 3 | **One worker, one database, one RPC.** | A small project on one host. | Restarts are safe at every step (chaos tests), the watchdog alerts if the worker dies, a backup RPC is supported. Losing the database without a key backup loses every rat wallet: turn on Supabase backups and run `rat keys backup`. |
 | 4 | **Launch-day operator mistakes.** A tx from a bot wallet (trips the kill switch), a wrong `WATCH_FROM_SLOT`, DRY RUN flipped back and forth, the dev buy left in the creator wallet. | People get tired. | `rat preflight --live`, `LAUNCH-DAY.md`, the admin page. Every mistake above stops the bot instead of losing money. |
-| 5 | **A bigger or faster launch than planned.** | The 30 SOL/h caps make money wait (for hours at 2x the plan), and Jupiter's free tier is close to its limit at default settings (54 of 55 calls a minute in the simulation). | Nothing is lost, only delayed. Use the paced settings (29 calls a minute), or a paid Jupiter key and higher caps if you want faster spending. |
+| 5 | **A bigger or faster launch than planned.** | The 30 SOL/h caps make money wait (for hours at 2x the plan). The paced defaults use 29 of Jupiter's 55 calls a minute; raising `MAX_HIRES_PER_LOOP` to 20 brings that to 54. | Nothing is lost, only delayed. For faster spending: a paid Jupiter key, then higher caps. |
 
 ## 3. Now
 
@@ -155,7 +155,7 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Funding | creator: 0.05 SOL reserve + launch cost; fund: 0.01 SOL; smoke test: ~0.12 SOL on throwaway wallets |
 | At launch: the launch transaction's signature and slot | `WATCH_FROM_SLOT` (slot + 1), `KNOWN_OWNER_TX_SIGS` |
 | Optional: Jito for burns | `BURN_SEND_VIA=jito` after a smoke test with it on (OPEN-QUESTIONS #12) |
-| Launch pacing (recommended) | `MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5` (`SIMULATION.md`) |
+| Launch pacing | on by default: `MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5` (`SIMULATION.md`) |
 | Decisions left | `OPEN-QUESTIONS.md` |
 
 ## 9. Sources for external behavior
@@ -204,7 +204,7 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | review fix 2 | publishing the exact next burn time in `/api/state` would undo the random timing | `nextBurnAt` is now only the earliest possible start |
 | review fix 2 (resilience test) | a rat can legitimately wait in `hiring` when its only attempt was rejected before broadcast and the budget is under one salary; the old test only passed by luck of the random path | the test now checks the real invariant: nothing can still land, no reservation held |
 | autonomous run (Q2 to Q4) | 18 findings on the money paths (RT-01 to RT-18: 4 High, 8 Medium, 6 Low) | all fixed with tests: `SECURITY-REVIEW.md` |
-| Q5 simulation | default settings pause hiring 30 min and burns 39 min at launch | settings-only fix recommended (`MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5`) |
+| Q5 simulation | unpaced settings pause hiring 30 min and burns 39 min at launch | `MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5` made the defaults ([#46](https://github.com/MikuEspana/rat/pull/46)) |
 | Q12 | a dead worker is silent; rat keys exist only in the database; secrets could ride in error texts | watchdog, key backup/restore, preflight key check, redaction |
 
 ## 11. Important while live
