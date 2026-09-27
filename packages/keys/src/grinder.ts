@@ -1,5 +1,7 @@
 // Vanity key grinder: ed25519 keys whose base58 public key ends with a suffix (case-sensitive).
 // Runs in worker threads using Node's native ed25519. "RAT" needs ~195k tries per key on average.
+// Every candidate is checked (unlike `solana-keygen grind --ends-with`, which skips 44-character addresses),
+// which makes this the faster grinder for suffixes: measured in CI, see docs/runbooks/keys.md.
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { Keypair } from '@solana/web3.js';
@@ -11,7 +13,9 @@ const WORKER_SOURCE = `
 const { parentPort, workerData } = require('node:worker_threads');
 const { generateKeyPairSync } = require('node:crypto');
 const ALPHABET = '${ALPHABET}';
-const { suffix, count, deadline } = workerData;
+const { suffix, count, deadline, lowPriority } = workerData;
+// Linux nice values are per thread: this lowers only this grinder thread, never the bot's main loop.
+if (lowPriority) { try { require('node:os').setPriority(10); } catch {} }
 let target = 0, modulus = 1;
 for (const ch of suffix) { target = target * 58 + ALPHABET.indexOf(ch); modulus *= 58; }
 function mod(bytes) { let r = 0; for (let i = 0; i < bytes.length; i++) r = (r * 256 + bytes[i]) % modulus; return r; }
@@ -43,6 +47,8 @@ export interface GrindOptions {
   timeoutMs?: number;
   /** stops the worker threads early; keys found so far are returned */
   signal?: AbortSignal;
+  /** run the grinder threads at a lower CPU priority (Linux only: per-thread nice) */
+  lowPriority?: boolean;
 }
 
 export interface GrindResult {
@@ -76,7 +82,7 @@ export async function grindVanityKeys(opts: GrindOptions): Promise<GrindResult> 
     perThread.map(
       (n) =>
         new Promise<void>((resolve, reject) => {
-          const worker = new Worker(WORKER_SOURCE, { eval: true, workerData: { suffix: opts.suffix, count: n, deadline } });
+          const worker = new Worker(WORKER_SOURCE, { eval: true, workerData: { suffix: opts.suffix, count: n, deadline, lowPriority: Boolean(opts.lowPriority) && process.platform === 'linux' } });
           workers.push(worker);
           if (opts.signal?.aborted) void worker.terminate();
           worker.on('message', (m: { type: string; secret?: Uint8Array; tries?: number }) => {

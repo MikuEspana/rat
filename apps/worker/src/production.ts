@@ -69,9 +69,9 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
     },
   );
   const grinder = keyRefiller.grinderKind();
-  log.info({ grinder, solanaKeygen: kp.grinder === 'off' ? null : keyRefiller.keygenInfo() }, 'key pool grinder');
-  if (kp.grinder === 'auto' && grinder === 'js') {
-    await alerts.send('warn', 'keypool_slow_grinder', `solana-keygen not found at "${kp.keygenPath}": the worker refills with the slow built-in grinder (about 180 keys/h). Pre-grind keys (docs/runbooks/keys.md).`);
+  log.info({ grinder, threads: kp.grindThreads || 'auto', solanaKeygen: kp.grinder === 'solana-keygen' ? keyRefiller.keygenInfo() : 'not used' }, 'key pool grinder');
+  if (kp.grinder === 'solana-keygen' && grinder === 'js') {
+    await alerts.send('warn', 'keypool_keygen_missing', `KEYPOOL_GRINDER=solana-keygen but "${kp.keygenPath}" does not work: the worker refills with the built-in grinder.`);
   }
 
   const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm) });

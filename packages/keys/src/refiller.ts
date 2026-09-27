@@ -1,5 +1,8 @@
 // Grinds rat keys straight into the encrypted pool, and the background refiller the worker uses.
-//   auto: solana-keygen when it is installed (it is in the Docker image), else the built-in JS grinder
+//   auto (default) = the built-in multi-threaded grinder. Measured in CI it is ~3x faster per thread than
+//   `solana-keygen grind --ends-with` for a suffix, because solana-keygen skips every 44-character address
+//   (~94% of keys) when no prefix is given (agave keygen.rs, skip_len_44_pubkeys). solana-keygen is in the
+//   Docker image and can be forced with KEYPOOL_GRINDER=solana-keygen; when it is missing, the JS grinder runs.
 // The refiller never blocks the bot loop: maybeStart() kicks off one batch in the background and returns.
 import { readdirSync, rmSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
@@ -24,6 +27,8 @@ export interface GrindIntoPoolOptions {
   /** parent folder for plaintext files (tests); default /dev/shm or the OS temp dir */
   workDirRoot?: string;
   signal?: AbortSignal;
+  /** grinder threads at a lower CPU priority (the worker sets this) */
+  lowPriority?: boolean;
   log?: Logger;
 }
 
@@ -37,15 +42,16 @@ export interface GrindIntoPoolResult {
   error?: string;
 }
 
-/** auto = solana-keygen when it works and the suffix is non-empty, else the built-in JS grinder. */
+/** auto and js = the built-in grinder. solana-keygen only when it works and the suffix is non-empty, else js. */
 export function resolveGrinder(choice: GrinderChoice, suffix: string, detect: () => KeygenInfo): GrinderKind | null {
   if (choice === 'off') return null;
-  if (choice === 'js' || choice === 'solana-keygen') return choice;
-  return suffix && detect().ok ? 'solana-keygen' : 'js';
+  if (choice === 'solana-keygen') return suffix && detect().ok ? 'solana-keygen' : 'js';
+  return 'js';
 }
 
+/** Explicit count, or CPU count minus one capped at 4 (leaves room for the bot loop and the API). */
 export function defaultGrindThreads(threads?: number): number {
-  return threads && threads > 0 ? threads : Math.max(1, availableParallelism() - 1);
+  return threads && threads > 0 ? threads : Math.max(1, Math.min(4, availableParallelism() - 1));
 }
 
 /** Removes every file left in a grind folder (zero-overwritten first), then the folder. */
@@ -68,7 +74,7 @@ export async function grindIntoPool(pool: KeyPoolStore, ring: MasterKeyRing, o: 
   const threads = defaultGrindThreads(o.threads);
   const started = Date.now();
   if (o.kind === 'js') {
-    const res = await grindVanityKeys({ suffix: o.suffix, count: o.count, threads, timeoutMs: o.timeoutMs, signal: o.signal });
+    const res = await grindVanityKeys({ suffix: o.suffix, count: o.count, threads, timeoutMs: o.timeoutMs, signal: o.signal, lowPriority: o.lowPriority });
     const added = await storeRatKeys(pool, ring, res.keys);
     return { grinder: 'js', requested: o.count, added, skipped: res.keys.length - added, elapsedMs: Date.now() - started, timedOut: res.keys.length < o.count && !o.signal?.aborted };
   }
@@ -179,6 +185,7 @@ export class KeyPoolRefiller {
       keygenPath: this.opts.keygenPath,
       workDirRoot: this.opts.workDirRoot,
       signal: abort.signal,
+      lowPriority: true,
       log: this.deps.log,
     })
       .catch((err): GrindIntoPoolResult => ({ grinder: kind, requested: count, added: 0, skipped: 0, elapsedMs: 0, timedOut: false, error: (err as Error).message }))

@@ -2,12 +2,13 @@
 // (test-fixtures/fake-solana-keygen.mjs). The real binary is exercised in CI inside the Docker image.
 import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { getPriority, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DbKeyStore } from './keystore';
 import { KeyPoolRefiller, grindIntoPool } from './refiller';
+import { grindVanityKeys } from './grinder';
 import { detectSolanaKeygen, runSolanaKeygenGrind } from './solana-keygen';
 import { MasterKeyRing } from './vault';
 
@@ -142,8 +143,8 @@ describe('KeyPoolRefiller', () => {
     ...over,
   });
 
-  it('auto uses solana-keygen when installed, grinds in the background, one batch at a time', async () => {
-    const refiller = new KeyPoolRefiller({ pool: store.keys, ring }, opts(fakeKeygen('slow').bin));
+  it('KEYPOOL_GRINDER=solana-keygen grinds in the background, one batch at a time', async () => {
+    const refiller = new KeyPoolRefiller({ pool: store.keys, ring }, opts(fakeKeygen('slow').bin, { grinder: 'solana-keygen' }));
     const first = refiller.maybeStart(0);
     // returns immediately: batch capped by KEYPOOL_REFILL_BATCH, grinding continues in the background
     expect(first).toMatchObject({ started: true, count: 5, grinder: 'solana-keygen' });
@@ -158,11 +159,16 @@ describe('KeyPoolRefiller', () => {
     expect(refiller.maybeStart(await store.keys.countAvailableRats())).toMatchObject({ started: false, reason: 'pool above refill threshold' });
   });
 
-  it('auto falls back to the built-in JS grinder when solana-keygen is missing', async () => {
+  it('auto uses the built-in grinder (faster for suffixes) even when solana-keygen is installed', () => {
+    const refiller = new KeyPoolRefiller({ pool: store.keys, ring }, opts(fakeKeygen().bin));
+    expect(refiller.grinderKind()).toBe('js');
+  });
+
+  it('solana-keygen requested but missing: falls back to the built-in grinder', async () => {
     const results: string[] = [];
     const refiller = new KeyPoolRefiller(
       { pool: store.keys, ring, onResult: (r) => void results.push(r.grinder) },
-      opts(join(tmp, 'no-such-keygen'), { batch: 2 }),
+      opts(join(tmp, 'no-such-keygen'), { batch: 2, grinder: 'solana-keygen' }),
     );
     expect(refiller.grinderKind()).toBe('js');
     expect(refiller.maybeStart(0)).toMatchObject({ started: true, grinder: 'js', count: 2 });
@@ -174,12 +180,21 @@ describe('KeyPoolRefiller', () => {
     const off = new KeyPoolRefiller({ pool: store.keys, ring }, opts(fakeKeygen().bin, { grinder: 'off' }));
     expect(off.maybeStart(0)).toMatchObject({ started: false, reason: 'grinder off' });
 
-    const o = opts(fakeKeygen('slow').bin, { batch: 500, target: 1000, refillBelow: 1000 });
+    const o = opts(fakeKeygen('slow').bin, { batch: 500, target: 1000, refillBelow: 1000, grinder: 'solana-keygen' });
     const refiller = new KeyPoolRefiller({ pool: store.keys, ring }, o);
     refiller.maybeStart(0);
     await new Promise((r) => setTimeout(r, 300));
     await refiller.stop();
     expect(refiller.busy).toBe(false);
     expect(existsSync(o.workDirRoot) && readdirSync(o.workDirRoot)).toEqual([]);
+  });
+});
+
+describe('built-in grinder priority', () => {
+  it.runIf(process.platform === 'linux')('lowers only the grinder threads, never the main (bot loop) thread', async () => {
+    const before = getPriority();
+    const r = await grindVanityKeys({ suffix: 'H', count: 3, threads: 2, timeoutMs: 60_000, lowPriority: true });
+    expect(r.keys.length).toBe(3);
+    expect(getPriority()).toBe(before);
   });
 });

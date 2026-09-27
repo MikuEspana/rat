@@ -2,14 +2,14 @@
 #   worker: pnpm --filter @rat/worker start
 #   api:    pnpm --filter @rat/api start
 
-# ---- solana-keygen (Agave CLI) for the worker's background key grinder ----
-# Only this one binary goes into the final image. Pinned release; set AGAVE_SHA256 to also verify the tarball
-# (CI prints the hash of what it downloaded). On a non-x86_64 build it is skipped and the worker falls back to
-# the built-in JS grinder (KEYPOOL_GRINDER=auto).
+# ---- solana-keygen (Agave CLI), optional key grinder (KEYPOOL_GRINDER=solana-keygen) ----
+# Only this one binary goes into the final image. Pinned release, tarball verified against its SHA-256 (recorded
+# from the first CI download). The worker's default grinder is the built-in one (faster for suffixes, see keys.md).
+# On a non-x86_64 build it is skipped.
 FROM debian:bookworm-slim AS keygen
 ARG TARGETARCH
 ARG AGAVE_VERSION=v2.3.13
-ARG AGAVE_SHA256=
+ARG AGAVE_SHA256=c43539ebdf6942472e8b87635d6ea55f428a51e3d0219f7b6f720fc6b19fade0
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl bzip2 libudev1 \
  && rm -rf /var/lib/apt/lists/*
