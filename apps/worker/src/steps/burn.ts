@@ -99,6 +99,12 @@ export async function runBurnStep(d: WorkerDeps, _s: WorkerState): Promise<BurnR
     const sol = (await d.chain.getSolBalances([d.fund])).get(d.fund) ?? 0n;
     spendable = minBig(spendable, sol - d.config.fundReserveLamports);
   }
+  // burn up to the room left under the hourly cap instead of skipping the whole burn
+  const capRoom = await d.guard.remainingCap('burn');
+  if (capRoom < spendable) {
+    await d.alerts.send('critical', 'cap_reached_burn', `burn spend cap reached: burning ${formatSol(capRoom)} of ${formatSol(spendable)} SOL now, the rest carries over.`);
+    spendable = capRoom;
+  }
   if (spendable < d.config.minBurnLamports) {
     return { status: 'skipped', spentLamports: 0n, burnedRaw: 0n, reason: `under ${formatSol(d.config.minBurnLamports)} SOL (have ${formatSol(spendable > 0n ? spendable : 0n)})` };
   }
