@@ -184,6 +184,35 @@ describe('hire state machine', () => {
     expect(hireTxs).toBe(1);
   });
 
+  for (const mode of ['single', 'two_step'] as const) {
+    it(`${mode}: the rat's key is stored encrypted BEFORE any hire tx is sent; a restarted worker can still sign for it`, async () => {
+      w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1', HIRE_MODE: mode } });
+      await funded(w);
+      const keyExisted: boolean[] = [];
+      const submit = w.simSender.submit.bind(w.simSender);
+      w.simSender.submit = async (p) => {
+        if (p.request.kind === 'hire') {
+          for (const rat of await w.store.rats.listByStatus(['hiring'])) keyExisted.push((await w.store.keys.get(rat.wallet)) !== null);
+        }
+        return submit(p);
+      };
+      // the worker dies right after sending: the tx lands but its confirmation is never seen
+      w.simSender.failNext('land_timeout', 'hire');
+      await runHireStep(w.deps, w.worker.state);
+      expect(keyExisted.length).toBeGreaterThan(0);
+      expect(keyExisted.every(Boolean)).toBe(true);
+      const [rat] = await w.store.rats.listByStatus(['hiring']);
+      // restart: a new key store with an empty cache, the same database and master key
+      const { DbKeyStore } = await import('@rat/keys');
+      const { createWorker } = await import('./worker');
+      const deps = { ...w.deps, keys: new DbKeyStore(w.store.keys, w.ring) };
+      for (let i = 0; i < 3; i++) await runHireStep(deps, createWorker(deps).state);
+      expect((await w.store.rats.get(rat!.id))?.status).toBe('active');
+      expect((await deps.keys.ratSigner(rat!.wallet)).publicKey.toBase58()).toBe(rat!.wallet);
+      expect(w.chain.sol(rat!.wallet)).toBeGreaterThan(0n);
+    });
+  }
+
   it('a dropped hire expires, its reservation is released, and the next loop retries', async () => {
     w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1' } });
     await funded(w);
@@ -322,7 +351,7 @@ describe('scheduler and single worker', () => {
     expect(counts.get('claim')).toBe(Math.ceil(1200 / 35));
     expect(counts.get('burn')).toBe(2);
     const beats = await w.store.heartbeats.all();
-    expect(beats.map((b) => b.loop).sort()).toEqual(['burn', 'claim', 'keypool', 'mints', 'prices', 'reconcile']);
+    expect(beats.map((b) => b.loop).sort()).toEqual(['burn', 'claim', 'mints', 'prices', 'reconcile']);
     expect(beats.every((b) => b.lastError === null)).toBe(true);
   });
 

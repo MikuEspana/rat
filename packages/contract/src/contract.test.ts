@@ -65,7 +65,7 @@ describe('mock files', () => {
 const baseRat: RatFacts = {
   id: 1,
   name: 'Rat #0001',
-  wallet: '7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT',
+  wallet: '7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyW5n',
   stock: 'TSLAx',
   stockMint: 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB',
   status: 'active',

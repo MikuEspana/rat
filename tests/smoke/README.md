@@ -24,7 +24,7 @@
    RPC_URL=...  JUPITER_API_KEY=...  KEY_ENCRYPTION_KEY=...  DATABASE_URL=...
    ```
    Approve at least 3 stocks in `config/stocks.json` (the mint check needs a majority of 3).
-5. Import the test keys: `rat keys import --role creator` and `--role fund` (stdin), and `rat keys grind --count 2`.
+5. Import the test keys: `rat keys import --role creator` and `--role fund` (stdin). Rat wallets are created at hire time.
 6. Run: `pnpm --filter @rat/tests smoke -- --topup-hire 0.06 --topup-burn 0.012`
    (the top-ups only credit the ledger for SOL you already sent to the test wallets; the test coin's own fees are tiny).
 7. Read `tests/smoke/REPORT.md` and check the rats and the burn on Solscan.

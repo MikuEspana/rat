@@ -5,9 +5,8 @@ import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { grindVanityKeys } from './grinder';
-import { DbKeyStore, encryptRoleKey, storeRatKeys } from './keystore';
-import { KeyPoolRefiller } from './refiller';
+import type { KeyPoolRecord, KeyPoolStore } from '@rat/core';
+import { DbKeyStore, encryptRoleKey } from './keystore';
 import { parseSecretKey } from './secret-input';
 import { MasterKeyRing, decryptSecret, encryptSecret, parseMasterKey } from './vault';
 
@@ -43,39 +42,6 @@ describe('vault', () => {
   });
 });
 
-describe('grinder', () => {
-  it('finds keys ending with the suffix whose secret matches', async () => {
-    const res = await grindVanityKeys({ suffix: 'Ra', count: 4, threads: 2, timeoutMs: 60_000 });
-    expect(res.keys.length).toBe(4);
-    for (const kp of res.keys) {
-      expect(kp.publicKey.toBase58().endsWith('Ra')).toBe(true);
-      expect(Keypair.fromSecretKey(kp.secretKey).publicKey.equals(kp.publicKey)).toBe(true);
-    }
-  });
-
-  it('is case-sensitive: every suffix variant is matched exactly (verified with full base58)', async () => {
-    for (const suffix of ['AT', 'aT', 'At', 'TR']) {
-      const res = await grindVanityKeys({ suffix, count: 2, threads: 2, timeoutMs: 120_000 });
-      expect(res.keys.length).toBe(2);
-      for (const kp of res.keys) expect(kp.publicKey.toBase58().endsWith(suffix)).toBe(true);
-    }
-  });
-
-  // ~195k tries on average (about 20s on 2 threads, longer under CPU load): opt-in so CI never flakes on timing.
-  it.runIf(process.env.RUN_SLOW_GRIND === '1')('finds a real RAT key and reports speed (RUN_SLOW_GRIND=1)', { timeout: 600_000 }, async () => {
-    const res = await grindVanityKeys({ suffix: 'RAT', count: 1, threads: 2, timeoutMs: 600_000 });
-    expect(res.keys.length).toBe(1);
-    const addr = res.keys[0]!.publicKey.toBase58();
-    expect(addr.endsWith('RAT')).toBe(true);
-    console.log(`ground ${addr} in ${res.elapsedMs}ms (${res.tries} tries, ${Math.round(res.tries / (res.elapsedMs / 1000))}/s on 2 threads)`);
-  });
-
-  it('rejects invalid suffixes', async () => {
-    await expect(grindVanityKeys({ suffix: 'R0T', count: 1 })).rejects.toThrow(/invalid/);
-    await expect(grindVanityKeys({ suffix: 'lIO', count: 1 })).rejects.toThrow(/invalid/);
-  });
-});
-
 describe('parseSecretKey', () => {
   it('accepts base58 and JSON array exports', () => {
     const kp = Keypair.generate();
@@ -97,27 +63,44 @@ describe('DbKeyStore', () => {
   });
   afterEach(async () => handle.close());
 
-  it('refills the pool, hands out rat keys, and signs with them', async () => {
-    const refiller = new KeyPoolRefiller(
-      { pool: store.keys, ring },
-      { suffix: 'R', refillBelow: 3, target: 5, batch: 100, grinder: 'js', threads: 2, timeoutMs: 60_000, keygenPath: 'solana-keygen' },
-    );
-    expect(refiller.maybeStart(0)).toMatchObject({ started: true, count: 5, grinder: 'js' });
-    const r = await refiller.wait();
-    expect(r?.added).toBe(5);
+  it('makes a fresh rat key per hire: stored encrypted and decryptable BEFORE it is returned, never reused', async () => {
     const ks = new DbKeyStore(store.keys, ring);
-    expect(await ks.availableRatKeys()).toBe(5);
-    const pub = await ks.takeRatKey();
-    expect(pub).toMatch(/R$/);
-    const signer = await ks.ratSigner(pub!);
-    expect(signer.publicKey.toBase58()).toBe(pub);
-    expect(await ks.availableRatKeys()).toBe(4);
-    expect(refiller.maybeStart(await ks.availableRatKeys())).toMatchObject({ started: false, reason: 'pool above refill threshold' });
+    const a = await ks.newRatKey();
+    const b = await ks.newRatKey();
+    expect(a).not.toBe(b);
+    // already in the database when newRatKey returns: a crash right after sending cannot lose the key
+    const rec = await store.keys.get(a);
+    expect(rec?.role).toBe('rat');
+    const fresh = new DbKeyStore(store.keys, ring); // a restarted worker, empty cache
+    expect((await fresh.ratSigner(a)).publicKey.toBase58()).toBe(a);
+    // an abandoned hire (nothing sent) retires the key; the next hire gets a new one
+    await ks.discardRatKey(b);
+    expect(await store.keys.counts()).toEqual({ assigned: 1, unused: 1 });
+    expect(await ks.newRatKey()).not.toBe(b);
+  });
+
+  it('refuses to hand out a key it cannot read back (a broken store never gets a funded wallet)', async () => {
+    const lossy: KeyPoolStore = {
+      insertRatKey: async () => {},
+      markUnused: async () => {},
+      get: async () => null,
+      getRole: async () => null,
+    };
+    await expect(new DbKeyStore(lossy, ring).newRatKey()).rejects.toThrow(/no stored key/);
+    const corrupt: KeyPoolStore = {
+      ...lossy,
+      insertRatKey: async (r: KeyPoolRecord) => {
+        saved = { ...r, secretEnc: Buffer.from('garbage-garbage-garbage-garbage-garbage').toString('base64') };
+      },
+      get: async () => saved,
+    };
+    let saved: KeyPoolRecord | null = null;
+    await expect(new DbKeyStore(corrupt, ring).newRatKey()).rejects.toThrow();
   });
 
   it('never stores or logs plaintext secrets', async () => {
-    const keys = [Keypair.generate(), Keypair.generate()];
-    await storeRatKeys(store.keys, ring, keys);
+    const ks = new DbKeyStore(store.keys, ring);
+    const keys = [await ks.ratSigner(await ks.newRatKey()), await ks.ratSigner(await ks.newRatKey())];
     const rows = await store.keys.all();
     const lines: string[] = [];
     const log = createLogger({
@@ -157,37 +140,10 @@ describe('DbKeyStore', () => {
 
   it('reads keys encrypted under an older master key version', async () => {
     const old = new MasterKeyRing({ version: 1, base64: master() });
-    const kp = Keypair.generate();
-    await storeRatKeys(store.keys, old, [kp]);
+    const oldStore = new DbKeyStore(store.keys, old);
+    const kp = await oldStore.ratSigner(await oldStore.newRatKey());
     const newer = new MasterKeyRing({ version: 2, base64: master() }, [{ version: 1, base64: old.current().toString('base64') }]);
     const ks = new DbKeyStore(store.keys, newer);
     expect((await ks.ratSigner(kp.publicKey.toBase58())).publicKey.equals(kp.publicKey)).toBe(true);
-  });
-});
-
-describe('importKeypairFiles', () => {
-  it('imports solana-keygen style files, skips wrong suffixes, and shreds imported files', async () => {
-    const { mkdtempSync, writeFileSync, readdirSync } = await import('node:fs');
-    const { tmpdir } = await import('node:os');
-    const { join } = await import('node:path');
-    const { importKeypairFiles } = await import('./import-files');
-    const handle = await openMemoryDatabase();
-    try {
-      const store = new Store(handle.db, 'live');
-      const ring = new MasterKeyRing({ version: 1, base64: master() });
-      const dir = mkdtempSync(join(tmpdir(), 'grind-'));
-      const good = (await grindVanityKeys({ suffix: 'Q', count: 2, threads: 1 })).keys;
-      for (const kp of good) writeFileSync(join(dir, `${kp.publicKey.toBase58()}.json`), JSON.stringify(Array.from(kp.secretKey)));
-      let other = Keypair.generate();
-      while (other.publicKey.toBase58().endsWith('Q')) other = Keypair.generate();
-      writeFileSync(join(dir, 'other.json'), JSON.stringify(Array.from(other.secretKey)));
-      const res = await importKeypairFiles(dir, store.keys, ring, { suffix: 'Q' });
-      expect(res.imported).toBe(2);
-      expect(res.skipped.map((s) => s.file)).toEqual(['other.json']);
-      expect(readdirSync(dir)).toEqual(['other.json']);
-      expect(await store.keys.countAvailableRats()).toBe(2);
-    } finally {
-      await handle.close();
-    }
   });
 });

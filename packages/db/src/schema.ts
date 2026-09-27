@@ -96,7 +96,8 @@ export const keyPool = pgTable(
     keyVersion: integer('key_version').notNull(),
     /** rat | creator | fund */
     role: text('role').notNull(),
-    /** available | assigned */
+    /** rat keys: assigned (a rat's wallet) | unused (hire abandoned before any tx, never reused). creator/fund: assigned.
+     *  Every insert sets it explicitly; the column default is a leftover of the removed pre-ground pool. */
     status: text('status').notNull().default('available'),
     assignedAt: ts('assigned_at'),
     createdAt: ts('created_at').notNull().default(sql`now()`),

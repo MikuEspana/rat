@@ -38,7 +38,7 @@ describe('live mock API', () => {
     expect(clock.now().getTime() - Date.parse(state.events[0]!.at)).toBeLessThan(120_000);
   });
 
-  it('hires a rat every few seconds, with the next ids and wallets ending in RAT', async () => {
+  it('hires a rat every few seconds, with the next ids and a fresh wallet each', async () => {
     const { clock, get } = setup();
     const before = RatsResponseSchema.parse(await get('/api/rats'));
     clock.advanceSeconds(60);
@@ -49,7 +49,7 @@ describe('live mock API', () => {
     const fresh = RatsResponseSchema.parse(await get(`/api/rats?afterId=${before.total}`)).rats;
     expect(fresh.map((r) => r.id)).toEqual(Array.from({ length: added }, (_, i) => before.total + 1 + i));
     for (const r of fresh) {
-      expect(r.wallet.endsWith('RAT')).toBe(true);
+      expect(r.wallet).toMatch(/^[1-9A-HJ-NP-Za-km-z]{44}$/);
       expect(r.costUsd).toBeCloseTo(4.91, 2); // 0.0265 SOL swapped at 185.4 USD
     }
     const hires = (await allEvents(get)).filter((e) => e.type === 'hire' && e.id > 5061);

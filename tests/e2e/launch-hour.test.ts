@@ -30,7 +30,7 @@ async function ledgerTotals(world: SimWorld) {
 
 describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
   it('claims every lamport once, splits 50/50, hires and burns within caps, sends nothing', async () => {
-    w = await createSimWorld({ dryRun: true, ratKeys: 1100 });
+    w = await createSimWorld({ dryRun: true });
     const creatorStart = w.chain.sol(w.creator.publicKey.toBase58());
     const fundStart = w.chain.sol(w.fund.publicKey.toBase58());
     const t0 = performance.now();
@@ -109,7 +109,7 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
 
 describe('B. DRY RUN double volume: 100 SOL in one hour hits the caps', () => {
   it('stops each bucket at 30 SOL/h, alerts, and spends the carried budget in the next hour', async () => {
-    w = await createSimWorld({ dryRun: true, ratKeys: 3500 });
+    w = await createSimWorld({ dryRun: true });
     await runLaunch(w, { seconds: HOUR, totalFees: 100n * SOL });
     const hourAgo = () => new Date(w.clock.now().getTime() - HOUR * 1000);
     const hireOut = await w.store.ledger.netOutflowSince('hire', hourAgo());
@@ -136,7 +136,7 @@ describe('B. DRY RUN double volume: 100 SOL in one hour hits the caps', () => {
 
 describe('C. LIVE on SimChain (in-memory): 50 SOL hour with exact conservation', () => {
   it('real balances match the ledger to the lamport; rats hold exactly what the database says', async () => {
-    w = await createSimWorld({ dryRun: false, ratKeys: 1100 });
+    w = await createSimWorld({ dryRun: false });
     const creator = w.creator.publicKey.toBase58();
     const fund = w.fund.publicKey.toBase58();
     const creatorStart = w.chain.sol(creator);

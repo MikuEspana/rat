@@ -62,7 +62,7 @@ try {
   report.push(
     '## What to check',
     '',
-    '- Each rat address ends in RAT and holds its stock on Solscan (single-tx hire worked with an unfunded taker + `payer`: owner decision #3).',
+    '- Each rat is a fresh wallet that holds its stock on Solscan (single-tx hire worked with an unfunded taker + `payer`: owner decision #3).',
     '- Real cost per rat vs the 0.03 SOL salary (token account rent for xStocks, fees).',
     '- The coin token program (runtime detection, owner decision #5) and that the burn reduced supply.',
     '- Run `pnpm --filter @rat/jupiter check:scaled-ui` for owner decision #6.',

@@ -5,7 +5,7 @@
 | [deploy.md](deploy.md) | first setup: Supabase, Railway, Vercel, env vars (config only, done by the owner) |
 | [go-live.md](go-live.md) | launch day, step by step |
 | [kill-switch.md](kill-switch.md) | stop everything now |
-| [keys.md](keys.md) | import, grind, rotate, back up keys |
+| [keys.md](keys.md) | import, rotate, back up keys; how rat wallets are created |
 | [backup-restore.md](backup-restore.md) | database backups and restore |
 | [incident.md](incident.md) | something looks wrong |
 

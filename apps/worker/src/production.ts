@@ -3,7 +3,7 @@ import { JitoTipAccounts, RpcChainReader, RpcTxSender, createConnection } from '
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, openDatabase } from '@rat/db';
 import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimiter } from '@rat/jupiter';
-import { DbKeyStore, KeyPoolRefiller, MasterKeyRing } from '@rat/keys';
+import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { PumpDirectBuyBuilder, PumpFunClient, sdkBuyApi } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
@@ -53,33 +53,6 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
   await keys.creator();
   await keys.fund();
 
-  const kp = cfg.keypool;
-  const keyRefiller = new KeyPoolRefiller(
-    {
-      pool: store.keys,
-      ring,
-      log,
-      onResult: async (r) => {
-        if (r.error) await alerts.send('warn', 'keypool_grinder_error', `Key grinder (${r.grinder}) failed: ${r.error}`);
-      },
-    },
-    {
-      suffix: cfg.vanitySuffix,
-      refillBelow: kp.refillBelow,
-      target: kp.target,
-      batch: kp.refillBatch,
-      grinder: kp.grinder,
-      threads: kp.grindThreads,
-      timeoutMs: kp.grindTimeoutSec * 1000,
-      keygenPath: kp.keygenPath,
-    },
-  );
-  const grinder = keyRefiller.grinderKind();
-  log.info({ grinder, threads: kp.grindThreads || 'auto', solanaKeygen: kp.grinder === 'solana-keygen' ? keyRefiller.keygenInfo() : 'not used' }, 'key pool grinder');
-  if (kp.grinder === 'solana-keygen' && grinder === 'js') {
-    await alerts.send('warn', 'keypool_keygen_missing', `KEYPOOL_GRINDER=solana-keygen but "${kp.keygenPath}" does not work: the worker refills with the built-in grinder.`);
-  }
-
   const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm) });
   const deps: WorkerDeps = {
     config: cfg,
@@ -100,7 +73,6 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
     stocks,
     creator: cfg.creatorPubkey!,
     fund: cfg.fundPubkey!,
-    keyRefiller,
     jitoTipAccounts: cfg.burn.sendVia === 'jito' ? ((tips) => () => tips.get())(new JitoTipAccounts(cfg.burn.jitoUrl)) : undefined,
   };
   return { deps, handle };

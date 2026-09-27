@@ -21,7 +21,7 @@ async function conservation(world: SimWorld, creatorStart: bigint, fundStart: bi
 
 describe('D. random transaction failures (drop, fail, land-but-timeout, reject)', () => {
   it('never double funds a rat, resolves every hire, keeps the ledger exact', async () => {
-    w = await createSimWorld({ dryRun: false, ratKeys: 400, seed: 7 });
+    w = await createSimWorld({ dryRun: false, seed: 7 });
     const creatorStart = w.chain.sol(w.creator.publicKey.toBase58());
     const fundStart = w.chain.sol(w.fund.publicKey.toBase58());
     // 12% of claim, hire and burn transactions fail in a random way
@@ -61,7 +61,7 @@ describe('D. random transaction failures (drop, fail, land-but-timeout, reject)'
 
 describe('E. kill switch and stock pause during a live run', () => {
   it('kill switch stops every transaction; a paused stock gets no hires and its rats freeze', async () => {
-    w = await createSimWorld({ dryRun: false, ratKeys: 400 });
+    w = await createSimWorld({ dryRun: false });
     const coin = w.stockMints.get('COINx')!;
     let submittedAtKill = -1;
     let hiresIntoCoinWhilePaused = 0;
@@ -102,7 +102,7 @@ describe('E. kill switch and stock pause during a live run', () => {
 
 describe('F. outside actors during a live run', () => {
   it('external claims are split 50/50, random SOL is left unspent, the ledger stays exact', async () => {
-    w = await createSimWorld({ dryRun: false, ratKeys: 400 });
+    w = await createSimWorld({ dryRun: false });
     const creatorStart = w.chain.sol(w.creator.publicKey.toBase58());
     const fundStart = w.chain.sol(w.fund.publicKey.toBase58());
     const stranger = Keypair.generate();

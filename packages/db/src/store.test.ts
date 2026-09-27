@@ -55,17 +55,16 @@ describe('ledger', () => {
 });
 
 describe('keys', () => {
-  it('hands out each rat key exactly once, even when taken concurrently', async () => {
-    const recs = Array.from({ length: 50 }, (_, i) => ({ pubkey: `k${i}RAT`, secretEnc: `enc${i}`, keyVersion: 1, role: 'rat' as const }));
-    expect(await live.keys.insertMany(recs)).toBe(50);
-    expect(await live.keys.insertMany(recs.slice(0, 5))).toBe(0);
-    const taken = await Promise.all(Array.from({ length: 60 }, () => live.keys.takeAvailableRat()));
-    const got = taken.filter(Boolean);
-    expect(got.length).toBe(50);
-    expect(new Set(got).size).toBe(50);
-    expect(await live.keys.countAvailableRats()).toBe(0);
-    await live.keys.release(got[0]!);
-    expect(await live.keys.countAvailableRats()).toBe(1);
+  it('stores each rat key once (a duplicate public key is refused), marks unused keys, never re-hands them', async () => {
+    await live.keys.insertRatKey({ pubkey: 'k1', secretEnc: 'enc1', keyVersion: 1, role: 'rat' });
+    await expect(live.keys.insertRatKey({ pubkey: 'k1', secretEnc: 'other', keyVersion: 1, role: 'rat' })).rejects.toThrow();
+    expect((await live.keys.get('k1'))?.secretEnc).toBe('enc1');
+    await expect(live.keys.insertRatKey({ pubkey: 'c1', secretEnc: 'e', keyVersion: 1, role: 'creator' })).rejects.toThrow(/rat keys/);
+    await live.keys.insertRatKey({ pubkey: 'k2', secretEnc: 'enc2', keyVersion: 1, role: 'rat' });
+    await live.keys.markUnused('k2');
+    expect(await live.keys.counts()).toEqual({ assigned: 1, unused: 1 });
+    // an unused key is kept (never deleted) but there is no API that hands it out again
+    expect((await live.keys.get('k2'))?.secretEnc).toBe('enc2');
   });
 
   it('stores creator/fund keys and refuses silent overwrite', async () => {
@@ -75,7 +74,9 @@ describe('keys', () => {
     );
     await live.keys.setRoleKey({ pubkey: 'creator2', secretEnc: 'e', keyVersion: 1, role: 'creator' }, { replace: true });
     expect((await live.keys.getRole('creator'))?.pubkey).toBe('creator2');
-    expect(await live.keys.takeAvailableRat()).toBeNull();
+    // markUnused never touches a creator or fund key
+    await live.keys.markUnused('creator2');
+    expect((await live.keys.getRole('creator'))?.pubkey).toBe('creator2');
   });
 });
 
@@ -184,18 +185,17 @@ describe('locks and paper reset', () => {
     expect((await live.locks.holder('worker'))?.holder).toBe('B');
   });
 
-  it('resetPaper deletes only paper rows, returns keys, restarts numbering', async () => {
+  it('resetPaper deletes only paper rows, retires paper wallets, restarts numbering', async () => {
     await live.stocks.syncConfig(STOCKS);
-    await live.keys.insertMany([{ pubkey: 'p1RAT', secretEnc: 'e', keyVersion: 1, role: 'rat' }]);
-    const key = await paper.keys.takeAvailableRat();
-    await paper.rats.create({ wallet: key!, stockMint: STOCKS[0]!.mint, salaryLamports: 1n, avatarSeed: 'aaaaaaaa' });
+    await paper.keys.insertRatKey({ pubkey: 'p1', secretEnc: 'e', keyVersion: 1, role: 'rat' });
+    await paper.rats.create({ wallet: 'p1', stockMint: STOCKS[0]!.mint, salaryLamports: 1n, avatarSeed: 'aaaaaaaa' });
     await paper.ledger.append({ bucket: 'hire', deltaLamports: 5n, reason: 'claim_credit' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: 7n, reason: 'claim_credit' });
     const r = await paper.resetPaper();
-    expect(r).toEqual({ rats: 1, keysReleased: 1 });
+    expect(r).toEqual({ rats: 1, keysRetired: 1 });
     expect(await paper.ledger.balance('hire')).toBe(0n);
     expect(await live.ledger.balance('hire')).toBe(7n);
-    expect(await live.keys.countAvailableRats()).toBe(1);
+    expect(await live.keys.counts()).toEqual({ assigned: 0, unused: 1 });
     const again = await live.rats.create({ wallet: 'x1RAT', stockMint: STOCKS[0]!.mint, salaryLamports: 1n, avatarSeed: 'aaaaaaaa' });
     expect(again.id).toBe(1);
   });

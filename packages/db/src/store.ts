@@ -78,34 +78,15 @@ export class SettingsRepo implements SettingsStore {
 export class KeyPoolRepo implements KeyPoolStore {
   constructor(private readonly db: Database) {}
 
-  async insertMany(records: KeyPoolRecord[]): Promise<number> {
-    if (records.length === 0) return 0;
-    const r = await this.db
-      .insert(keyPool)
-      .values(records.map((k) => ({ pubkey: k.pubkey, secretEnc: k.secretEnc, keyVersion: k.keyVersion, role: k.role })))
-      .onConflictDoNothing()
-      .returning({ pubkey: keyPool.pubkey });
-    return r.length;
+  async insertRatKey(record: KeyPoolRecord): Promise<void> {
+    if (record.role !== 'rat') throw new Error('insertRatKey only stores rat keys');
+    await this.db.insert(keyPool).values({ ...record, status: 'assigned', assignedAt: sql`now()` });
   }
 
-  async takeAvailableRat(): Promise<Pubkey | null> {
-    const result = await this.db.execute(sql`
-      UPDATE key_pool SET status = 'assigned', assigned_at = now()
-      WHERE pubkey = (
-        SELECT pubkey FROM key_pool
-        WHERE role = 'rat' AND status = 'available'
-        ORDER BY created_at, pubkey
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-      )
-      RETURNING pubkey`);
-    return rowsOf<{ pubkey: string }>(result)[0]?.pubkey ?? null;
-  }
-
-  async release(pubkey: Pubkey): Promise<void> {
+  async markUnused(pubkey: Pubkey): Promise<void> {
     await this.db
       .update(keyPool)
-      .set({ status: 'available', assignedAt: null })
+      .set({ status: 'unused' })
       .where(and(eq(keyPool.pubkey, pubkey), eq(keyPool.role, 'rat')));
   }
 
@@ -131,22 +112,15 @@ export class KeyPoolRepo implements KeyPoolStore {
     });
   }
 
-  async countAvailableRats(): Promise<number> {
-    const r = await this.db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(keyPool)
-      .where(and(eq(keyPool.role, 'rat'), eq(keyPool.status, 'available')));
-    return Number(r[0]?.n ?? 0);
-  }
-
-  async counts(): Promise<{ available: number; assigned: number }> {
+  /** Rat keys by status: assigned (a rat's wallet) and unused (hire abandoned before any transaction). */
+  async counts(): Promise<{ assigned: number; unused: number }> {
     const r = await this.db
       .select({ status: keyPool.status, n: sql<number>`count(*)::int` })
       .from(keyPool)
       .where(eq(keyPool.role, 'rat'))
       .groupBy(keyPool.status);
-    const get = (s: string) => Number(r.find((x) => x.status === s)?.n ?? 0);
-    return { available: get('available'), assigned: get('assigned') };
+    const get = (st: string) => Number(r.find((x) => x.status === st)?.n ?? 0);
+    return { assigned: get('assigned'), unused: get('unused') };
   }
 
   /** Re-encryption support: every stored key. */
@@ -494,15 +468,6 @@ export class RatRepo {
     return Object.fromEntries(r.map((x) => [x.status, Number(x.n)]));
   }
 
-  /** Rats created (vanity keys taken) since `since`. Drives the key pool runway alert. */
-  async countCreatedSince(since: Date): Promise<number> {
-    const r = await this.db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(rats)
-      .where(and(eq(rats.mode, this.mode), gte(rats.createdAt, since)));
-    return Number(r[0]?.n ?? 0);
-  }
-
   /** Active and frozen rats after `afterId`, for the rotating reconcile check. */
   async batchAfter(afterId: number, limit: number): Promise<RatRow[]> {
     return this.db
@@ -802,18 +767,19 @@ export class Store {
    * Deletes every DRY RUN (paper) row and returns the rat keys used by paper rats to the pool.
    * Live rows are never touched. Restarts rat numbering at 1 if there are no live rats yet.
    */
-  async resetPaper(): Promise<{ rats: number; keysReleased: number }> {
+  async resetPaper(): Promise<{ rats: number; keysRetired: number }> {
     return this.db.transaction(async (tx) => {
       const paperRats = await tx.select({ wallet: rats.wallet }).from(rats).where(eq(rats.mode, 'paper'));
       const wallets = paperRats.map((r) => r.wallet);
-      let keysReleased = 0;
+      let keysRetired = 0;
       if (wallets.length > 0) {
+        // paper wallets never held anything; they are retired, never handed out again
         const r = await tx
           .update(keyPool)
-          .set({ status: 'available', assignedAt: null })
+          .set({ status: 'unused' })
           .where(and(eq(keyPool.role, 'rat'), inArray(keyPool.pubkey, wallets)))
           .returning({ p: keyPool.pubkey });
-        keysReleased = r.length;
+        keysRetired = r.length;
       }
       for (const table of [rats, ledgerEntries, claims, burns, txAttempts, events]) {
         await tx.delete(table).where(eq(table.mode, 'paper'));
@@ -823,7 +789,7 @@ export class Store {
       if (Number(live[0]?.n ?? 0) === 0) {
         await tx.execute(sql`SELECT setval(pg_get_serial_sequence('rats', 'id'), 1, false)`);
       }
-      return { rats: wallets.length, keysReleased };
+      return { rats: wallets.length, keysRetired };
     });
   }
 

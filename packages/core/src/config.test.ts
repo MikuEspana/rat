@@ -58,22 +58,42 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
 
-  it('key pool: sized for launch day, every threshold configurable', () => {
-    const d = loadConfig({}).keypool;
-    expect(d).toMatchObject({ refillBelow: 9000, target: 10000, lowAlert: 500, runwayAlertHours: 2, refillBatch: 200, grinder: 'auto', grindThreads: 0, keygenPath: 'solana-keygen' });
-    const c = loadConfig({
-      KEYPOOL_REFILL_BELOW: '4000',
-      KEYPOOL_TARGET: '6000',
-      KEYPOOL_LOW_ALERT: '100',
-      KEYPOOL_RUNWAY_ALERT_HOURS: '3.5',
-      KEYPOOL_REFILL_BATCH: '1000',
-      KEYPOOL_GRINDER: 'js',
-      KEYPOOL_GRIND_THREADS: '6',
-      SOLANA_KEYGEN_PATH: '/opt/solana/bin/solana-keygen',
-    }).keypool;
-    expect(c).toMatchObject({ refillBelow: 4000, target: 6000, lowAlert: 100, runwayAlertHours: 3.5, refillBatch: 1000, grinder: 'js', grindThreads: 6, keygenPath: '/opt/solana/bin/solana-keygen' });
-    expect(() => loadConfig({ KEYPOOL_REFILL_BELOW: '5000', KEYPOOL_TARGET: '4000' })).toThrow(/KEYPOOL_TARGET/);
-    expect(() => loadConfig({ KEYPOOL_GRINDER: 'gpu' })).toThrow();
+  it('idle hire budget alert: 30 min, 0.1 SOL, configurable', () => {
+    expect(loadConfig({}).hireIdleAlert).toEqual({ minutes: 30, lamports: 100_000_000n });
+    expect(loadConfig({ HIRE_IDLE_ALERT_MIN: '45', HIRE_IDLE_ALERT_SOL: '0.25' }).hireIdleAlert).toEqual({ minutes: 45, lamports: 250_000_000n });
+  });
+
+  it('wallet watch: WATCH_FROM_SLOT and KNOWN_OWNER_TX_SIGS', () => {
+    const d = loadConfig({});
+    expect(d.watchFromSlot).toBe(0);
+    expect(d.knownOwnerTxSigs).toEqual([]);
+    const sig = '5'.repeat(88);
+    const c = loadConfig({ WATCH_FROM_SLOT: '312345678', KNOWN_OWNER_TX_SIGS: ` ${sig}, ${'4'.repeat(87)} ` });
+    expect(c.watchFromSlot).toBe(312_345_678);
+    expect(c.knownOwnerTxSigs).toEqual([sig, '4'.repeat(87)]);
+    expect(() => loadConfig({ KNOWN_OWNER_TX_SIGS: 'not-a-signature' })).toThrow(/signature/);
+    expect(() => loadConfig({ WATCH_FROM_SLOT: '-5' })).toThrow();
+  });
+
+  it('burns: random 8 to 12 minute rounds, 1 SOL chunks, 1.5% slippage, Jito off by default', () => {
+    const cfg = loadConfig({});
+    expect(cfg.slippageBpsCoin).toBe(150);
+    expect(cfg.burn).toEqual({
+      chunkMaxLamports: 1_000_000_000n,
+      chunkGapMinSec: 3,
+      chunkGapMaxSec: 8,
+      sendVia: 'rpc',
+      jitoUrl: 'https://mainnet.block-engine.jito.wtf/api/v1',
+      jitoTipLamports: 0n,
+    });
+    const jito = loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.0002', BURN_CHUNK_MAX_SOL: '0.5', SLIPPAGE_BPS_COIN: '100' });
+    expect(jito.burn).toMatchObject({ sendVia: 'jito', jitoTipLamports: 200_000n, chunkMaxLamports: 500_000_000n });
+    expect(jito.slippageBpsCoin).toBe(100);
+    expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
+    expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
+    expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
+    expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
+    expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
 
   it('refuses DRY_RUN=false without the exact confirmation phrase', () => {

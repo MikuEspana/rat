@@ -1,5 +1,6 @@
 // Hire (right after each claim). Budget = hire bucket of the ledger. Each new rat:
-//   vanity key from the pool -> spend reservation (SpendGuard) -> Jupiter /build (taker = rat, payer = creator)
+//   fresh keypair (encrypted + stored before anything is sent) -> spend reservation (SpendGuard)
+//   -> Jupiter /build (taker = rat, payer = creator)
 //   -> price deviation check vs the Price API -> rat row -> ONE tx: creator sends salary, rat buys its stock.
 // Safety rules of the state machine:
 //   - an attempt is recorded before sending; a rat is never retried while an attempt can still land
@@ -368,7 +369,7 @@ async function checkIdle(d: WorkerDeps, res: HireResult): Promise<void> {
     await d.alerts.send(
       'warn',
       'hire_idle',
-      `No rat hired for ${Math.round(minutes)} min while ${formatSol(budget)} SOL waits in the hire budget. Reason: ${why}. Check stock prices (weekend?), approvals, the key pool and rat status.`,
+      `No rat hired for ${Math.round(minutes)} min while ${formatSol(budget)} SOL waits in the hire budget. Reason: ${why}. Check stock prices (weekend?), approvals and rat status.`,
     );
   }
 }
@@ -416,22 +417,18 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
     const mint = pickWeighted(weights, d.rng);
     if (!mint) break;
     const stock = bySymbol.get(mint)!;
-    const wallet = await d.keys.takeRatKey();
-    if (!wallet) {
-      await d.alerts.send('critical', 'keypool_empty', 'The rat key pool is empty: hires are paused until keys are ground or imported.');
-      res.blocked = 'keypool_empty';
-      break;
-    }
+    // the key is stored encrypted (and read back) before this returns: a crash after sending never loses it
+    const wallet = await d.keys.newRatKey();
     const auth = await d.guard.authorize({ bucket: 'hire', lamports: d.config.salaryLamports, refType: 'rat_wallet', refId: wallet });
     if (!auth.ok) {
-      await d.keys.releaseRatKey(wallet);
+      await d.keys.discardRatKey(wallet);
       res.blocked = auth.reason;
       break;
     }
     const b = await buildSwap(d, s, wallet, stock, a);
     if (!b.ok) {
       await d.guard.release(auth.reservation, b.reason);
-      await d.keys.releaseRatKey(wallet);
+      await d.keys.discardRatKey(wallet);
       weights.set(mint, 0);
       d.log.warn({ stock: stock.symbol, reason: b.reason }, 'skipping stock this loop');
       if ([...weights.values()].every((w) => w === 0)) {

@@ -15,7 +15,7 @@ import {
 import { SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { MockPriceSource, MockSwapBuilder, registerMockSwapProgram } from '@rat/jupiter/mock';
-import { DbKeyStore, MasterKeyRing, encryptRoleKey, storeRatKeys } from '@rat/keys';
+import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { accrueCreatorFees, registerPumpSimPrograms } from '@rat/pump/sim';
 import { DbKillSwitch, GuardedSender, RecordingAlerts, SpendGuard } from '@rat/safety';
@@ -56,7 +56,6 @@ export interface SimWorldOptions {
   stocks?: SimStockSpec[];
   solUsd?: number;
   coinUsd?: number;
-  ratKeys?: number;
   seed?: number;
   /** starting SOL of the creator and fund wallets (their own money, never spent by the bot) */
   creatorSol?: bigint;
@@ -79,6 +78,8 @@ export interface SimWorld {
   swap: MockSwapBuilder;
   creator: Keypair;
   fund: Keypair;
+  /** the master key ring (a restarted process builds a new DbKeyStore from it) */
+  ring: MasterKeyRing;
   xstocksAuthority: Keypair;
   stockMints: Map<string, string>;
   coinMint: string;
@@ -113,11 +114,6 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     CREATOR_PUBKEY: creator.publicKey.toBase58(),
     FUND_PUBKEY: fund.publicKey.toBase58(),
     KEY_ENCRYPTION_KEY: masterKey,
-    VANITY_SUFFIX: '',
-    KEYPOOL_REFILL_BELOW: '0',
-    KEYPOOL_TARGET: '0',
-    KEYPOOL_LOW_ALERT: '0',
-    KEYPOOL_RUNWAY_ALERT_HOURS: '0',
     ...opts.env,
   });
 
@@ -125,7 +121,6 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
   const ring = new MasterKeyRing({ version: 1, base64: masterKey });
   await store.keys.setRoleKey(encryptRoleKey(creator, ring, 'creator'));
   await store.keys.setRoleKey(encryptRoleKey(fund, ring, 'fund'));
-  await storeRatKeys(store.keys, ring, Array.from({ length: opts.ratKeys ?? 200 }, () => Keypair.generate()));
   chain.fundAccount(creator.publicKey.toBase58(), opts.creatorSol ?? SOL / 10n);
   chain.fundAccount(fund.publicKey.toBase58(), opts.fundSol ?? SOL / 50n);
 
@@ -207,6 +202,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     swap,
     creator,
     fund,
+    ring,
     xstocksAuthority,
     stockMints,
     coinMint,

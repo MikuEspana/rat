@@ -21,7 +21,6 @@ async function main(): Promise<void> {
     const why = pre.issues.filter((i) => i.blocking).map((i) => i.message);
     log.fatal({ reasons: why }, 'refusing to start LIVE: preflight failed');
     await deps.alerts.send('critical', 'preflight_failed', `Worker refused to start LIVE:\n- ${why.join('\n- ')}`);
-    await deps.keyRefiller?.stop();
     await handle.close();
     process.exit(1);
   }
@@ -52,7 +51,6 @@ async function main(): Promise<void> {
     if (ran) waitingLogged = false;
     await sleep(1_000);
   }
-  await deps.keyRefiller?.stop();
   await runner.release();
   await handle.close();
 }

@@ -28,6 +28,7 @@ All responses: `Content-Type: application/json`, gzip, CORS open, cached 3s (`Ca
 - Every response has `schemaVersion: 1` and `generatedAt`.
 - SOL and USD values are JSON **numbers** (display only). Token amounts are **strings** (decimal, UI units).
 - Times are ISO 8601 UTC strings.
+- `wallet` is a normal Solana address: every rat gets a fresh keypair at hire time. There is no vanity suffix; do not rely on any pattern in it.
 - Rats never disappear. Frozen rats stay in the list with `status: "frozen"`, valued at the last known price.
 - Dry run: `bot.mode === "dry_run"` and every event has `dryRun: true`. Show a banner.
 
@@ -137,8 +138,8 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 {
   "id": 1042,
   "name": "Rat #1042",
-  "wallet": "7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT",
-  "solscanUrl": "https://solscan.io/account/7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT",
+  "wallet": "7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyW5n",
+  "solscanUrl": "https://solscan.io/account/7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyW5n",
   "stock": "TSLAx",
   "stockMint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
   "status": "active",
@@ -179,7 +180,7 @@ Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
   { "id": 90210, "type": "claim", "at": "2026-10-01T17:59:50Z", "txSig": "3cL...", "txUrl": "https://solscan.io/tx/3cL...", "dryRun": false,
     "data": { "amountSol": 1.284, "toHiresSol": 0.642, "toFundSol": 0.642, "source": "bot" } },
   { "id": 90211, "type": "hire", "at": "2026-10-01T17:59:58Z", "txSig": "5hT...", "txUrl": "https://solscan.io/tx/5hT...", "dryRun": false,
-    "data": { "ratId": 1042, "ratName": "Rat #1042", "wallet": "7xKp...RAT", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
+    "data": { "ratId": 1042, "ratName": "Rat #1042", "wallet": "7xKp...yW5n", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
   { "id": 90212, "type": "burn", "at": "2026-10-01T18:00:01Z", "txSig": "4bR...", "txUrl": "https://solscan.io/tx/4bR...", "dryRun": false,
     "data": { "solSpent": 2.4, "tokensBurned": "7123456.12" } },
   { "id": 90213, "type": "freeze", "at": "2026-10-01T18:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
