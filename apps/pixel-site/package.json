@@ -1,0 +1,19 @@
+{
+  "name": "@rat/pixel-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "RAT RACE pixel site: isometric PixiJS office floor fed by the public API (CONTRACT.md).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@rat/contract": "workspace:*",
+    "pixi.js": "^8.21.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

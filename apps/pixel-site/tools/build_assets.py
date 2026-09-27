@@ -325,6 +325,20 @@ for y in range(lc.height):
 props["lamp"], props["cables"] = lamp.crop(lamp.getbbox()), cables.crop(cables.getbbox())
 chair = L(os.path.join(RAW, "props", "chair.png"))
 props["chair"] = chair.crop(chair.getbbox())
+# dark chair for empty seats: same black chair the seated rat sprites sit on, same 1px outline
+RAMP = ["#131025", "#171618", "#262325", "#322e33", "#4e4b5c"]
+ch = props["chair"]
+pad = Image.new("RGBA", (ch.width + 2, ch.height + 2), (0, 0, 0, 0))
+pad.alpha_composite(ch, (1, 1))
+cols = {pad.getpixel((x, y))[:3] for y in range(pad.height) for x in range(pad.width) if pad.getpixel((x, y))[3]}
+lums = sorted(0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2] for c in cols)
+lo, hi = lums[0], lums[-1]
+dark_map = {hx(c): RAMP[min(len(RAMP) - 1, int((0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2] - lo) / max(1, hi - lo) * len(RAMP)))] for c in cols}
+props["chair_dark"] = workbench("chair_dark", pad, [
+    {"operation": "map_colors", "layer": "image", "frames": [1], "region": [0, 0, pad.width - 1, pad.height - 1],
+     "colors": dark_map, "reason": "empty-seat chair in the seated rats' black chair palette"},
+    {"operation": "outline", "mode": "outside", "layer": "image", "frames": [1], "width": 1, "connectivity": 8,
+     "color": OUTLINE, "reason": "same 1px outline as the rats"}], "Dark chair for empty seats.")
 tk = L(os.path.join(RAW, "props", "ticker.png"))
 tk = tk.crop(tk.getbbox())
 tp = tk.load()

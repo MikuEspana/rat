@@ -1,6 +1,6 @@
 {
  "navy": {
-  "workbenchImageId": "e3ff250d-aa83-4274-a349-1e7f77c2dca0",
+  "workbenchImageId": "4daed495-1884-40bf-bdc8-97449b6417ac",
   "ops": [
    "1. map_colors: 169 px changed",
    "2. map_colors: 154 px changed",
@@ -40,32 +40,32 @@
   ]
  },
  "generated_clean": {
-  "workbenchImageId": "8b67ec8d-1d31-4aa8-a2d3-ffc5a8be29e2",
+  "workbenchImageId": "3c1dd575-9836-4674-9fb9-20378db1f985",
   "ops": [
    "1. patch_pixels: 175 px changed",
    "2. map_colors: 1133 px changed"
   ]
  },
  "tier_intern": {
-  "workbenchImageId": "2a54e959-4c15-499a-b72c-4409c43a3c4e",
+  "workbenchImageId": "e1986d2e-ebdd-4a25-a59a-94141d0b162a",
   "ops": [
    "1. map_colors: 9545 px changed, 9940 matched"
   ]
  },
  "tier_associate": {
-  "workbenchImageId": "466bac62-01ee-46b9-a4be-1f0a2ce2c78d",
+  "workbenchImageId": "dd1c3c81-da16-4346-85f7-97bec96c36e7",
   "ops": [
    "1. map_colors: 9940 px changed"
   ]
  },
  "tier_vp": {
-  "workbenchImageId": "c6f994a1-be31-402b-b197-91369e49318b",
+  "workbenchImageId": "f7dd89bc-191d-4f6b-80cc-d472238ba3e8",
   "ops": [
    "1. map_colors: 9940 px changed"
   ]
  },
  "tier_partner": {
-  "workbenchImageId": "d85c8d9d-0e32-4ae1-a01c-7caea9545721",
+  "workbenchImageId": "2d2aa5c3-761e-47c5-bc40-06d43259e058",
   "ops": [
    "1. map_colors: 9940 px changed",
    "2. patch_pixels: 426 px changed",
@@ -75,13 +75,13 @@
   ]
  },
  "tier_frozen": {
-  "workbenchImageId": "6f1d0c7e-c477-4742-8362-eade59a4ec5e",
+  "workbenchImageId": "74115d09-db19-4c80-b13e-a3bc41a51743",
   "ops": [
    "1. map_colors: 30664 px changed"
   ]
  },
  "desk_oak": {
-  "workbenchImageId": "d2625ac4-ae6f-4f5e-a4b0-61e7c6ca95f4",
+  "workbenchImageId": "a51bd06e-e7d6-40b8-984b-f37fbc2583aa",
   "ops": [
    "1. map_colors: 140 px changed",
    "2. patch_pixels: 13 px changed",
@@ -90,13 +90,20 @@
   ]
  },
  "desk_oak_clutter": {
-  "workbenchImageId": "177699fd-1e78-4e18-9512-93d610fa2079",
+  "workbenchImageId": "0d2176ff-df78-40a3-b109-93904e5a2da1",
   "ops": [
    "1. patch_pixels: 60 px changed"
   ]
  },
+ "chair_dark": {
+  "workbenchImageId": "6cbba0d8-8605-49cb-be45-ededbd7e0fd5",
+  "ops": [
+   "1. map_colors: 446 px changed, 448 matched",
+   "2. outline: 176 px changed"
+  ]
+ },
  "ticker_blank": {
-  "workbenchImageId": "1dd03ac4-f337-4106-bda2-524d784952fd",
+  "workbenchImageId": "05d84d63-6177-4eab-8a1c-fa94afcfff32",
   "ops": [
    "1. patch_pixels: 350 px changed"
   ]

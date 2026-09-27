@@ -3,7 +3,7 @@
   "howToRegenerate": "PIXELLAB_API_KEY=... python3 tools/regenerate.py <id> writes a fresh raw file for one generation entry; then python3 tools/build_assets.py rebuilds the atlases (free).",
   "atlases": {
     "rats.png / rats.json": "6 tiers (intern, analyst, associate, vp, partner, frozen) x 55 frames of 68x68: rot_{s,se,e,ne,n,nw,w,sw}, idle_se, idle_ne, walk_se, walk_ne, cheer, type, slump. Animations keyed '<tier>/<anim>'.",
-    "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag"
+    "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag"
   },
   "generations": [
     {
@@ -425,6 +425,14 @@
       "changes": "build/edit_ticker_blank.json",
       "workbenchImageId": "1dd03ac4-f337-4106-bda2-524d784952fd",
       "summary": "demo numbers blanked for live text"
+    },
+    {
+      "id": "chair_dark",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/props/chair.png",
+      "changes": "build/edit_chair_dark.json",
+      "workbenchImageId": "6cbba0d8-8605-49cb-be45-ededbd7e0fd5",
+      "summary": "empty-seat chair mapped by brightness onto the seated rats' black chair palette, 1px outline"
     }
   ],
   "layoutOnly": [
