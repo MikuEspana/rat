@@ -1,0 +1,447 @@
+{
+ "frames": {
+  "ticker_wall": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 101,
+    "h": 83
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 101,
+    "h": 83
+   },
+   "sourceSize": {
+    "w": 101,
+    "h": 83
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "ticker_wall_busy": {
+   "frame": {
+    "x": 103,
+    "y": 0,
+    "w": 101,
+    "h": 83
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 101,
+    "h": 83
+   },
+   "sourceSize": {
+    "w": 101,
+    "h": 83
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "furnace": {
+   "frame": {
+    "x": 206,
+    "y": 0,
+    "w": 63,
+    "h": 77
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 63,
+    "h": 77
+   },
+   "sourceSize": {
+    "w": 63,
+    "h": 77
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "stairs": {
+   "frame": {
+    "x": 271,
+    "y": 0,
+    "w": 90,
+    "h": 66
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 90,
+    "h": 66
+   },
+   "sourceSize": {
+    "w": 90,
+    "h": 66
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "desk_oak": {
+   "frame": {
+    "x": 363,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "desk_oak_clutter": {
+   "frame": {
+    "x": 429,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "lamp": {
+   "frame": {
+    "x": 0,
+    "y": 85,
+    "w": 29,
+    "h": 45
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 29,
+    "h": 45
+   },
+   "sourceSize": {
+    "w": 29,
+    "h": 45
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "plant": {
+   "frame": {
+    "x": 31,
+    "y": 85,
+    "w": 35,
+    "h": 44
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 35,
+    "h": 44
+   },
+   "sourceSize": {
+    "w": 35,
+    "h": 44
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "chair": {
+   "frame": {
+    "x": 68,
+    "y": 85,
+    "w": 21,
+    "h": 38
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 21,
+    "h": 38
+   },
+   "sourceSize": {
+    "w": 21,
+    "h": 38
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "papers": {
+   "frame": {
+    "x": 91,
+    "y": 85,
+    "w": 43,
+    "h": 36
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 43,
+    "h": 36
+   },
+   "sourceSize": {
+    "w": 43,
+    "h": 36
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "bin": {
+   "frame": {
+    "x": 136,
+    "y": 85,
+    "w": 25,
+    "h": 35
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 25,
+    "h": 35
+   },
+   "sourceSize": {
+    "w": 25,
+    "h": 35
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "floor_office": {
+   "frame": {
+    "x": 163,
+    "y": 85,
+    "w": 32,
+    "h": 32
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 32,
+    "h": 32
+   },
+   "sourceSize": {
+    "w": 32,
+    "h": 32
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 0.3438
+   }
+  },
+  "floor_subway": {
+   "frame": {
+    "x": 197,
+    "y": 85,
+    "w": 32,
+    "h": 32
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 32,
+    "h": 32
+   },
+   "sourceSize": {
+    "w": 32,
+    "h": 32
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 0.3438
+   }
+  },
+  "floor_hq": {
+   "frame": {
+    "x": 231,
+    "y": 85,
+    "w": 32,
+    "h": 32
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 32,
+    "h": 32
+   },
+   "sourceSize": {
+    "w": 32,
+    "h": 32
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 0.3438
+   }
+  },
+  "wall": {
+   "frame": {
+    "x": 265,
+    "y": 85,
+    "w": 32,
+    "h": 32
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 32,
+    "h": 32
+   },
+   "sourceSize": {
+    "w": 32,
+    "h": 32
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 0.5
+   }
+  },
+  "mug": {
+   "frame": {
+    "x": 299,
+    "y": 85,
+    "w": 33,
+    "h": 32
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 33,
+    "h": 32
+   },
+   "sourceSize": {
+    "w": 33,
+    "h": 32
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "cashbag": {
+   "frame": {
+    "x": 334,
+    "y": 85,
+    "w": 30,
+    "h": 30
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 30,
+    "h": 30
+   },
+   "sourceSize": {
+    "w": 30,
+    "h": 30
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  },
+  "cables": {
+   "frame": {
+    "x": 366,
+    "y": 85,
+    "w": 20,
+    "h": 14
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 14
+   },
+   "sourceSize": {
+    "w": 20,
+    "h": 14
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   }
+  }
+ },
+ "meta": {
+  "app": "rat-race pixel-site tools/build_assets.py",
+  "image": "world.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 512,
+   "h": 130
+  },
+  "scale": "1",
+  "notes": "Isometric cell = 32x16. Tiles anchor at the top apex of their top face; props anchor at the bottom centre (stand on the cell centre). ticker_wall is pre-skewed for a wall running down-right; mirror it for a wall running down-left."
+ }
+}

@@ -1,0 +1,447 @@
+{
+  "about": "Every asset in the pixel site. 'generations' were made by PixelLab MCP tools (https://api.pixellab.ai/mcp); re-run the tool with the same args to regenerate (create_character, create_map_object, edit_image_pixen and animate_image take no seed over MCP, so a regeneration is a new variation). 'freeEdits' are pixelart_workbench edits (0 generations), replayable by tools/build_assets.py from raw/. Style: A Blueprint, mixed A3 density + A2 oak/plants/glow, picked by the owner 2026-09-27.",
+  "howToRegenerate": "PIXELLAB_API_KEY=... python3 tools/regenerate.py <id> writes a fresh raw file for one generation entry; then python3 tools/build_assets.py rebuilds the atlases (free).",
+  "atlases": {
+    "rats.png / rats.json": "6 tiers (intern, analyst, associate, vp, partner, frozen) x 55 frames of 68x68: rot_{s,se,e,ne,n,nw,w,sw}, idle_se, idle_ne, walk_se, walk_ne, cheer, type, slump. Animations keyed '<tier>/<anim>'.",
+    "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag"
+  },
+  "generations": [
+    {
+      "id": "rat_character",
+      "raw": "raw/character/",
+      "tool": "create_character",
+      "pixellabId": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "name": "Rat A Blueprint",
+        "description": "anthropomorphic grey rat office worker standing upright, crisp light grey business suit, white shirt, thin blue tie, pink ears and long pink tail, clean corporate look",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"stylized\"}"
+      },
+      "note": "8 rotations. The ZIP from https://api.pixellab.ai/mcp/characters/{id}/download also carries every animation below."
+    },
+    {
+      "id": "rat_idle_se",
+      "raw": "raw/character/Idle/animations/idle/south-east/",
+      "tool": "animate_character",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "breathing-idle",
+        "animation_name": "idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "group 9a2e6da8-7f9b-48dc-81c9-33ad2bc45490"
+    },
+    {
+      "id": "rat_walk_se",
+      "raw": "raw/character/Idle/animations/walk/south-east/",
+      "tool": "animate_character",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "walking-8-frames",
+        "animation_name": "walk",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "group 23723beb-1b88-4b40-9ff8-aa5c77a8a7af"
+    },
+    {
+      "id": "floor_office",
+      "raw": "raw/tiles/floor_office.png",
+      "tool": "create_isometric_tile",
+      "pixellabId": "65e1f28f-1f38-4fb0-947a-1aa27979fe28",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "description": "clean pale grey office floor tiles with thin light blue seams, modern corporate lobby",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1001
+      }
+    },
+    {
+      "id": "wall",
+      "raw": "raw/tiles/wall.png",
+      "tool": "create_isometric_tile",
+      "pixellabId": "6fb88361-79b4-4cf4-9458-3123a5990701",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "description": "white modern office partition wall block with a light blue frosted glass strip and grey baseboard",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1002
+      }
+    },
+    {
+      "id": "desk",
+      "raw": "raw/props/desk.png",
+      "tool": "create_map_object",
+      "pixellabId": "c69a4af7-cbe0-4c94-9906-8b24bbec5102",
+      "costGenerations": 1,
+      "phase": 1,
+      "args": {
+        "description": "modern white office desk with a slim computer monitor, keyboard and a coffee mug, isometric three-quarter view, clean corporate",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "props_sheet",
+      "raw": "raw/props/props_sheet.png",
+      "tool": "create_map_object",
+      "pixellabId": "d861c699-7d0e-4cb4-83ec-5aa5726bcd75",
+      "costGenerations": 1,
+      "phase": "variations",
+      "args": {
+        "description": "sprite sheet of six separate small office props in one row with empty space between them, not touching: potted green leafy plant, white coffee mug, neat stack of white papers, coiled black computer cables, desk lamp with warm yellow glow, small grey trash bin. Clean bright corporate office, isometric three-quarter view",
+        "width": 320,
+        "height": 80,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "cut into plant, mug, papers, lamp, cables, bin by empty columns (tools/build_assets.py)"
+    },
+    {
+      "id": "ticker",
+      "raw": "raw/props/ticker.png",
+      "tool": "create_map_object",
+      "pixellabId": "1c98567d-1ad4-4efc-9ec9-7e86bafc731e",
+      "costGenerations": 1,
+      "phase": "variations",
+      "args": {
+        "description": "wide wall-mounted digital stock ticker screen, dark glass panel showing glowing green and red numbers and small up and down arrows, thin silver frame, front view, flat, clean corporate office",
+        "width": 128,
+        "height": 48,
+        "view": "side",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "chair",
+      "raw": "raw/props/chair.png",
+      "tool": "create_map_object",
+      "pixellabId": "4794a88f-5425-4537-bcb3-7ec072d8f736",
+      "costGenerations": 1,
+      "phase": "variations",
+      "args": {
+        "description": "modern light grey office swivel chair with black wheels, empty, isometric three-quarter view, clean corporate office",
+        "width": 48,
+        "height": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "rat_walk_ne",
+      "raw": "raw/character/Idle/animations/walk/north-east/",
+      "tool": "animate_character",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "walking-8-frames",
+        "animation_group_id": "23723beb-1b88-4b40-9ff8-aa5c77a8a7af",
+        "animation_name": "walk",
+        "directions": [
+          "north-east"
+        ]
+      }
+    },
+    {
+      "id": "rat_idle_ne",
+      "raw": "raw/character/Idle/animations/idle/north-east/",
+      "tool": "animate_character",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "breathing-idle",
+        "animation_group_id": "9a2e6da8-7f9b-48dc-81c9-33ad2bc45490",
+        "animation_name": "idle",
+        "directions": [
+          "north-east"
+        ]
+      }
+    },
+    {
+      "id": "rat_seated_pose",
+      "raw": "raw/anim/seat_pixen.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "1cf361b3-215e-45b4-a777-992e4d4d2899",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "image": "raw/anim/seat_input_rot_ne_navy.png",
+        "description": "same rat character now sitting down on an office chair seen from behind, knees bent, both hands forward on a keyboard, same navy suit, same dark outline",
+        "no_background": true
+      },
+      "note": "came back in profile facing right with its own chair and monitor; the monitor is erased and colors snapped (tools/edits/seat_clean.json -> raw/anim/seat_clean.png)"
+    },
+    {
+      "id": "rat_type",
+      "raw": "raw/anim/type/",
+      "tool": "animate_image",
+      "pixellabId": "52acbb14-c876-4169-b9f7-dd378a6248b7",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "first_frame": "raw/anim/seat_clean.png",
+        "action": "typing quickly on a keyboard, hands alternating up and down, head bobbing slightly, seated",
+        "frame_count": 6,
+        "no_background": true
+      }
+    },
+    {
+      "id": "rat_slump",
+      "raw": "raw/anim/slump/",
+      "tool": "animate_image",
+      "pixellabId": "7caee583-c751-43e9-a3b7-8c3a8f1a92f0",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "first_frame": "raw/anim/seat_clean.png",
+        "action": "slumps forward in defeat, head drops down, shoulders sag, arms go limp, stays slumped",
+        "frame_count": 6,
+        "no_background": true
+      }
+    },
+    {
+      "id": "rat_cheer",
+      "raw": "raw/anim/cheer/",
+      "tool": "animate_image",
+      "pixellabId": "f9220b9d-775f-4886-8471-c7b854a5ae6b",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "first_frame": "raw/anim/cheer_input_rot_se_navy.png",
+        "action": "jumps up cheering with both fists raised high above the head, then lands",
+        "frame_count": 8,
+        "no_background": true
+      }
+    },
+    {
+      "id": "subway_stairs",
+      "raw": "raw/props/stairs.png",
+      "tool": "create_map_object",
+      "pixellabId": "05ae0247-8fe9-4220-8441-cbd55535f256",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "description": "isometric subway station entrance: a rectangular stairwell opening in the floor with grey stone steps going down into darkness, chrome handrails on both sides and a small green subway sign post, clean bright city style",
+        "width": 96,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "hq_furnace",
+      "raw": "raw/props/furnace.png",
+      "tool": "create_map_object",
+      "pixellabId": "db9b538f-98f4-485c-be59-7797c030059a",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "description": "large industrial furnace with roaring orange fire behind an open round iron door, riveted steel body with brass trim and a tall chimney pipe, isometric three-quarter view, clean corporate style",
+        "width": 96,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "cash_bag",
+      "raw": "raw/props/cashbag.png",
+      "tool": "create_map_object",
+      "pixellabId": "f066fa38-08e9-49c2-8db8-c9cc72aa5a77",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "description": "small white canvas money bag tied at the top with string, big green dollar sign printed on it",
+        "width": 32,
+        "height": 32,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "floor_subway",
+      "raw": "raw/tiles/floor_subway.png",
+      "tool": "create_isometric_tile",
+      "pixellabId": "1d06e35c-f10a-4709-bf7d-23f24ee7a027",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "description": "grey subway station floor tiles with a yellow tactile safety strip along one edge, clean",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1101
+      }
+    },
+    {
+      "id": "floor_hq",
+      "raw": "raw/tiles/floor_hq.png",
+      "tool": "create_isometric_tile",
+      "pixellabId": "2c1ebb76-a333-4e97-aa6e-97b58facf94a",
+      "costGenerations": 1,
+      "phase": 2,
+      "args": {
+        "description": "polished dark navy marble executive floor tile with thin gold inlay lines",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1102
+      }
+    }
+  ],
+  "freeEdits": [
+    {
+      "id": "seat_clean",
+      "output": "raw/anim/seat_clean.png",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/anim/seat_pixen.png",
+      "changes": "tools/edits/seat_clean.json",
+      "summary": "erase the generated monitor, snap colors to the rat palette"
+    },
+    {
+      "id": "rats_navy",
+      "output": "build/tier_analyst.png",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/character/ (32 frames)",
+      "changes": "build/edit_navy.json",
+      "workbenchImageId": "e3ff250d-aa83-4274-a349-1e7f77c2dca0",
+      "summary": "analyst look: navy suit below each collar row, red tie, grey tail edge, 1px outer outline #16182c"
+    },
+    {
+      "id": "rats_generated_clean",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/anim/cheer, type, slump",
+      "changes": "build/edit_generated_clean.json",
+      "workbenchImageId": "8b67ec8d-1d31-4aa8-a2d3-ffc5a8be29e2",
+      "summary": "erase a typing glitch, snap drift colors to the palette, slump gloom scribble to 2 blues"
+    },
+    {
+      "id": "rats_intern",
+      "output": "build/tier_intern.png",
+      "tool": "pixelart_workbench edit",
+      "source": "build/tier_analyst.png",
+      "changes": "build/edit_tier_intern.json",
+      "workbenchImageId": "2a54e959-4c15-499a-b72c-4409c43a3c4e"
+    },
+    {
+      "id": "rats_associate",
+      "output": "build/tier_associate.png",
+      "tool": "pixelart_workbench edit",
+      "source": "build/tier_analyst.png",
+      "changes": "build/edit_tier_associate.json",
+      "workbenchImageId": "466bac62-01ee-46b9-a4be-1f0a2ce2c78d"
+    },
+    {
+      "id": "rats_vp",
+      "output": "build/tier_vp.png",
+      "tool": "pixelart_workbench edit",
+      "source": "build/tier_analyst.png",
+      "changes": "build/edit_tier_vp.json",
+      "workbenchImageId": "c6f994a1-be31-402b-b197-91369e49318b"
+    },
+    {
+      "id": "rats_partner",
+      "output": "build/tier_partner.png",
+      "tool": "pixelart_workbench edit",
+      "source": "build/tier_analyst.png",
+      "changes": "build/edit_tier_partner.json",
+      "workbenchImageId": "d85c8d9d-0e32-4ae1-a01c-7caea9545721"
+    },
+    {
+      "id": "rats_frozen",
+      "output": "build/tier_frozen.png",
+      "tool": "pixelart_workbench edit",
+      "source": "build/tier_analyst.png",
+      "changes": "build/edit_tier_frozen.json",
+      "workbenchImageId": "6f1d0c7e-c477-4742-8362-eade59a4ec5e"
+    },
+    {
+      "id": "desk_oak",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/props/desk.png",
+      "changes": "tools/edits/desk_oak.json",
+      "workbenchImageId": "d2625ac4-ae6f-4f5e-a4b0-61e7c6ca95f4",
+      "summary": "lit green screen, oak top with grain"
+    },
+    {
+      "id": "desk_oak_clutter",
+      "tool": "pixelart_workbench edit",
+      "source": "desk_oak",
+      "changes": "tools/edits/desk_oak_clutter.json",
+      "workbenchImageId": "177699fd-1e78-4e18-9512-93d610fa2079",
+      "summary": "folder, paper, sticky note, red mug, cable"
+    },
+    {
+      "id": "ticker_blank",
+      "tool": "pixelart_workbench edit",
+      "source": "raw/props/ticker.png",
+      "changes": "build/edit_ticker_blank.json",
+      "workbenchImageId": "1dd03ac4-f337-4106-bda2-524d784952fd",
+      "summary": "demo numbers blanked for live text"
+    }
+  ],
+  "layoutOnly": [
+    "props cut from props_sheet",
+    "lamp and cables split",
+    "ticker_wall skewed 2:1 per column for an isometric wall",
+    "crops to bounding box"
+  ],
+  "totals": {
+    "generationsInFinalAssets": 20,
+    "phase1StyleSamplesNotUsed": 12,
+    "accountUsed": 32,
+    "accountLeft": 8,
+    "byPhase": {
+      "phase1": 6,
+      "variations": 3,
+      "phase2": 11
+    }
+  }
+}

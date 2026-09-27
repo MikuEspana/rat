@@ -1,0 +1,104 @@
+{
+ "navy": {
+  "workbenchImageId": "e3ff250d-aa83-4274-a349-1e7f77c2dca0",
+  "ops": [
+   "1. map_colors: 169 px changed",
+   "2. map_colors: 154 px changed",
+   "3. map_colors: 143 px changed",
+   "4. map_colors: 221 px changed",
+   "5. map_colors: 277 px changed",
+   "6. map_colors: 243 px changed",
+   "7. map_colors: 136 px changed",
+   "8. map_colors: 168 px changed",
+   "9. map_colors: 145 px changed",
+   "10. map_colors: 162 px changed",
+   "11. map_colors: 162 px changed",
+   "12. map_colors: 150 px changed",
+   "13. map_colors: 228 px changed",
+   "14. map_colors: 220 px changed",
+   "15. map_colors: 215 px changed",
+   "16. map_colors: 222 px changed",
+   "17. map_colors: 155 px changed",
+   "18. map_colors: 133 px changed",
+   "19. map_colors: 122 px changed",
+   "20. map_colors: 133 px changed",
+   "21. map_colors: 152 px changed",
+   "22. map_colors: 175 px changed",
+   "23. map_colors: 175 px changed",
+   "24. map_colors: 170 px changed",
+   "25. map_colors: 202 px changed",
+   "26. map_colors: 231 px changed",
+   "27. map_colors: 214 px changed",
+   "28. map_colors: 185 px changed",
+   "29. map_colors: 204 px changed",
+   "30. map_colors: 179 px changed",
+   "31. map_colors: 183 px changed",
+   "32. map_colors: 193 px changed",
+   "33. map_colors: 195 px changed",
+   "34. patch_pixels: 300 px changed",
+   "35. outline: 5813 px changed"
+  ]
+ },
+ "generated_clean": {
+  "workbenchImageId": "8b67ec8d-1d31-4aa8-a2d3-ffc5a8be29e2",
+  "ops": [
+   "1. patch_pixels: 175 px changed",
+   "2. map_colors: 1133 px changed"
+  ]
+ },
+ "tier_intern": {
+  "workbenchImageId": "2a54e959-4c15-499a-b72c-4409c43a3c4e",
+  "ops": [
+   "1. map_colors: 9545 px changed, 9940 matched"
+  ]
+ },
+ "tier_associate": {
+  "workbenchImageId": "466bac62-01ee-46b9-a4be-1f0a2ce2c78d",
+  "ops": [
+   "1. map_colors: 9940 px changed"
+  ]
+ },
+ "tier_vp": {
+  "workbenchImageId": "c6f994a1-be31-402b-b197-91369e49318b",
+  "ops": [
+   "1. map_colors: 9940 px changed"
+  ]
+ },
+ "tier_partner": {
+  "workbenchImageId": "d85c8d9d-0e32-4ae1-a01c-7caea9545721",
+  "ops": [
+   "1. map_colors: 9940 px changed",
+   "2. patch_pixels: 426 px changed",
+   "3. patch_pixels: 416 px changed",
+   "4. patch_pixels: 183 px changed",
+   "5. patch_pixels: 154 px changed"
+  ]
+ },
+ "tier_frozen": {
+  "workbenchImageId": "6f1d0c7e-c477-4742-8362-eade59a4ec5e",
+  "ops": [
+   "1. map_colors: 30664 px changed"
+  ]
+ },
+ "desk_oak": {
+  "workbenchImageId": "d2625ac4-ae6f-4f5e-a4b0-61e7c6ca95f4",
+  "ops": [
+   "1. map_colors: 140 px changed",
+   "2. patch_pixels: 13 px changed",
+   "3. patch_pixels: 459 px changed",
+   "4. patch_pixels: 23 px changed"
+  ]
+ },
+ "desk_oak_clutter": {
+  "workbenchImageId": "177699fd-1e78-4e18-9512-93d610fa2079",
+  "ops": [
+   "1. patch_pixels: 60 px changed"
+  ]
+ },
+ "ticker_blank": {
+  "workbenchImageId": "1dd03ac4-f337-4106-bda2-524d784952fd",
+  "ops": [
+   "1. patch_pixels: 350 px changed"
+  ]
+ }
+}
