@@ -24,7 +24,6 @@
     "commander": "^14.0.0"
   },
   "devDependencies": {
-    "@rat/jupiter": "workspace:*",
     "bs58": "^6.0.0"
   }
 }

@@ -61,47 +61,6 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
   });
 
-  it('idle hire budget alert: 30 min, 0.1 SOL, configurable', () => {
-    expect(loadConfig({}).hireIdleAlert).toEqual({ minutes: 30, lamports: 100_000_000n });
-    expect(loadConfig({ HIRE_IDLE_ALERT_MIN: '45', HIRE_IDLE_ALERT_SOL: '0.25' }).hireIdleAlert).toEqual({ minutes: 45, lamports: 250_000_000n });
-  });
-
-  it('wallet watch: WATCH_FROM_SLOT and KNOWN_OWNER_TX_SIGS', () => {
-    const d = loadConfig({});
-    expect(d.watchFromSlot).toBe(0);
-    expect(d.knownOwnerTxSigs).toEqual([]);
-    const sig = '5'.repeat(88);
-    const c = loadConfig({ WATCH_FROM_SLOT: '312345678', KNOWN_OWNER_TX_SIGS: ` ${sig}, ${'4'.repeat(87)} ` });
-    expect(c.watchFromSlot).toBe(312_345_678);
-    expect(c.knownOwnerTxSigs).toEqual([sig, '4'.repeat(87)]);
-    expect(() => loadConfig({ KNOWN_OWNER_TX_SIGS: 'not-a-signature' })).toThrow(/signature/);
-    expect(() => loadConfig({ WATCH_FROM_SLOT: '-5' })).toThrow();
-  });
-
-  it('burns: random 8 to 12 minute rounds, 1 SOL chunks, 1.5% slippage, Jito off by default', () => {
-    const cfg = loadConfig({});
-    expect(cfg.slippageBpsCoin).toBe(150);
-    expect(cfg.burn).toEqual({
-      chunkMaxLamports: 1_000_000_000n,
-      roundMaxLamports: 0n,
-      chunkGapMinSec: 3,
-      chunkGapMaxSec: 8,
-      sendVia: 'rpc',
-      jitoUrl: 'https://mainnet.block-engine.jito.wtf/api/v1',
-      jitoTipLamports: 0n,
-    });
-    const jito = loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.0002', BURN_CHUNK_MAX_SOL: '0.5', SLIPPAGE_BPS_COIN: '100' });
-    expect(jito.burn).toMatchObject({ sendVia: 'jito', jitoTipLamports: 200_000n, chunkMaxLamports: 500_000_000n });
-    expect(jito.slippageBpsCoin).toBe(100);
-    expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
-    expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
-    expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
-    expect(loadConfig({ BURN_ROUND_MAX_SOL: '5' }).burn.roundMaxLamports).toBe(5_000_000_000n);
-    expect(() => loadConfig({ BURN_ROUND_MAX_SOL: '0.001' })).toThrow(/BURN_ROUND_MAX_SOL/);
-    expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
-    expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
-  });
-
   it('refuses DRY_RUN=false without the exact confirmation phrase', () => {
     expect(() => loadConfig({ DRY_RUN: 'false' })).toThrow(/LIVE_CONFIRM/);
     expect(() => loadConfig({ DRY_RUN: 'false', LIVE_CONFIRM: 'yes' })).toThrow(/LIVE_CONFIRM/);

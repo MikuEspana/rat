@@ -2,7 +2,7 @@
 import { type AppConfig, solToLamports } from '@rat/core';
 import type { Store } from '@rat/db';
 
-export const SMOKE_MAX_CAP = solToLamports('0.1');
+const SMOKE_MAX_CAP = solToLamports('0.1');
 
 export async function smokePreflight(cfg: AppConfig, store: Store | null): Promise<string[]> {
   const problems: string[] = [];

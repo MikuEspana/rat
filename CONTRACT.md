@@ -17,7 +17,7 @@ This is the exact JSON the website reads. Animate against the mock files now, th
 | Endpoint | Poll | Size | Purpose |
 |---|---|---|---|
 | `GET /api/state` | every 5s | small (~30-50KB) | bot status, coin, treasury, portfolio, stocks, leaderboard, last 50 events |
-| `GET /api/rats` | every 30s | large (6,000 rats ~ 300-400KB gzipped) | full roster with live PnL. `?afterId=N` returns only rats with id > N |
+| `GET /api/rats` | every 30s | large (3,000 rats: about 1.7 MB, about 410 KB gzipped, measured in `SIMULATION.md`) | full roster with live PnL. `?afterId=N` returns only rats with id > N. Fetch the full list once, then add new rats from `hire` events / `afterId` |
 | `GET /api/events?afterId=N&limit=100` | every 5s | small | event feed, oldest first after `afterId` (limit max 500) |
 | `GET /health` | n/a | tiny | `{ ok, mode, heartbeatAgeSec }` |
 

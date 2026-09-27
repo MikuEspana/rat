@@ -261,9 +261,6 @@ importers:
       '@rat/api':
         specifier: workspace:*
         version: link:../apps/api
-      '@rat/chain':
-        specifier: workspace:*
-        version: link:../packages/chain
       '@rat/contract':
         specifier: workspace:*
         version: link:../packages/contract
@@ -276,9 +273,6 @@ importers:
       '@rat/jupiter':
         specifier: workspace:*
         version: link:../packages/jupiter
-      '@rat/keys':
-        specifier: workspace:*
-        version: link:../packages/keys
       '@rat/pump':
         specifier: workspace:*
         version: link:../packages/pump
@@ -288,9 +282,6 @@ importers:
       '@rat/worker':
         specifier: workspace:*
         version: link:../apps/worker
-      '@solana/spl-token':
-        specifier: ^0.4.13
-        version: 0.4.15(@solana/web3.js@1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@solana/web3.js':
         specifier: ^1.98.2
         version: 1.99.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)

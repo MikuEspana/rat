@@ -12,7 +12,7 @@ import type { Store } from '@rat/db';
 import { type Context, Hono } from 'hono';
 import { loadDashboard, renderDashboard } from './dashboard';
 
-export const MIN_PASSWORD_LENGTH = 16;
+const MIN_PASSWORD_LENGTH = 16;
 const LOCKOUT_FAILURES = 10;
 const LOCKOUT_MS = 15 * 60_000;
 const HOUR_MS = 3_600_000;

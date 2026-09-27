@@ -1,6 +1,5 @@
 // Well-known Solana addresses (base58). Program ids are public constants.
 export const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
-export const WSOL_MINT = NATIVE_SOL_MINT;
 export const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 export const TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 export const ASSOCIATED_TOKEN_PROGRAM = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';

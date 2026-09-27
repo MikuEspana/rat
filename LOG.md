@@ -15,7 +15,10 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q5 | 3-hour launch simulation | [#38](https://github.com/MikuEspana/rat/pull/38) | done, 2 settings recommended |
 | Q6 | `rat preflight` | [#39](https://github.com/MikuEspana/rat/pull/39) | done |
 | Q7 | LAUNCH-DAY.md | [#40](https://github.com/MikuEspana/rat/pull/40) | done |
-| Q8 | Private admin page | (this PR) | done |
+| Q8 | Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | done |
+| Q9 | Site shell (Vite + React + Three.js) | none | **skipped by Miguel**: built in a separate session in `apps/pixel-site` (not touched here) |
+| Q10 | Site deploy docs (Vercel) | none | **skipped by Miguel** (part of Tier 3) |
+| Q11 | Cleanup | (this PR) | done |
 
 ## Q1. Remove vanity keys
 
@@ -150,5 +153,21 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 - `attempts.latest(n)` in the store.
 
 **Tests added**: 8 (`apps/admin/src/admin.test.ts`): short password refused, auth + health + headers, lockout, dashboard numbers after a claim and hires, kill / resume through the page, env kill cannot be resumed, CSRF and cross-site POSTs refused, HTML escaping (an error message with a script tag, a notice with an image tag). Docs test covers the new Railway file and Dockerfile line.
+
+**Bugs found**: none.
+
+## Q9 and Q10. Skipped
+
+Miguel's instruction during the run: skip Tier 3 (the website shell and its deploy docs). The site is built in a separate session in `apps/pixel-site`; this run never touches that folder. Input for that session from Q5: `/api/rats` is about 1.7 MB (410 KB gzipped) at 3,000 rats, so fetch it once and then follow events (now noted in `CONTRACT.md`).
+
+## Q11. Cleanup
+
+**What changed** (found with an unused-code scan, `knip`, plus a grep for leftovers)
+- Removed: a duplicate `@rat/jupiter` dev dependency in the CLI, 3 unused dependencies of the tests package (`@rat/chain`, `@rat/keys`, `@solana/spl-token`), the unused `WSOL_MINT` alias, exports nothing imports (`SMOKE_MAX_CAP`, `sol`/`SOL` re-export in the e2e helpers, `MIN_PASSWORD_LENGTH`).
+- Removed 3 config tests that were exact copies of the tests above them.
+- Stale numbers: the reconcile comment (3,000 rats) and the `/api/rats` size in `CONTRACT.md` (measured, 3,000 rats).
+- Kept on purpose: the 6,000 rat scale tests (2x headroom over the 3,000 plan), exported types (public package API), `ROADMAP.md` (marked as the original plan).
+
+**Tests**: 243 (3 duplicates removed), all green; guards pass.
 
 **Bugs found**: none.
