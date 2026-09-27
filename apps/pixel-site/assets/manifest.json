@@ -3,7 +3,8 @@
   "howToRegenerate": "PIXELLAB_API_KEY=... python3 tools/regenerate.py <id> writes a fresh raw file for one generation entry; then python3 tools/build_assets.py rebuilds the atlases (free).",
   "atlases": {
     "rats.png / rats.json": "6 tiers (intern, analyst, associate, vp, partner, frozen) x 55 frames of 68x68: rot_{s,se,e,ne,n,nw,w,sw}, idle_se, idle_ne, walk_se, walk_ne, cheer, type, slump. Animations keyed '<tier>/<anim>'.",
-    "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag"
+    "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag",
+    "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which."
   },
   "generations": [
     {
@@ -334,6 +335,78 @@
         "detail": "highly detailed",
         "seed": 1102
       }
+    },
+    {
+      "id": "sheet_break_bath",
+      "raw": "raw/props2/sheet_break_bath.png",
+      "tool": "create_map_object",
+      "pixellabId": "a61f4c2e-6869-4769-8b5c-0936203fbaf9",
+      "costGenerations": 1,
+      "phase": "dense-floor",
+      "props": "water_cooler, coffee_counter, fridge, sink, vending, toilet",
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: office water cooler with a big blue water bottle on top, espresso coffee machine on a small wooden counter with cups, tall red snack vending machine with a glass front, white porcelain toilet, white bathroom sink with a small mirror above it. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "sheet_work",
+      "raw": "raw/props2/sheet_work.png",
+      "tool": "create_map_object",
+      "pixellabId": "8d23c812-6702-461c-8563-eec69ef9ff13",
+      "costGenerations": 1,
+      "phase": "dense-floor",
+      "props": "server_rack, copier, whiteboard, filing, box",
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: tall black server rack cabinet with rows of tiny green and blue status lights, big grey office photocopier machine, whiteboard on wheels with blue charts drawn on it, grey metal filing cabinet with drawers, closed brown cardboard box with tape. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "sheet_exec",
+      "raw": "raw/props2/sheet_exec.png",
+      "tool": "create_map_object",
+      "pixellabId": "9b171274-a5df-4f16-b45e-824ad947ff5e",
+      "costGenerations": 1,
+      "phase": "dense-floor",
+      "props": "sofa, bookshelf, exec_desk, round_table, street_lamp",
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: brown leather two-seat sofa, large dark mahogany executive desk with a green banker lamp, tall wooden bookshelf full of colorful books, round white meeting table, black iron street lamp post with a warm light. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "coffee_machine",
+      "raw": "raw/props2/coffee_machine.png",
+      "tool": "create_map_object",
+      "pixellabId": "25410dbe-532f-4dae-a108-0a52ceca8fa5",
+      "costGenerations": 1,
+      "phase": "dense-floor",
+      "props": "coffee_machine (hero prop)",
+      "args": {
+        "description": "big shiny chrome espresso coffee machine with two brass portafilters, steam wand, glowing red power light and a stack of white cups on top, standing on a small dark wooden cabinet, office break room, isometric three-quarter view, clean corporate style",
+        "width": 64,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
     }
   ],
   "freeEdits": [
@@ -433,6 +506,13 @@
       "changes": "build/edit_chair_dark.json",
       "workbenchImageId": "6cbba0d8-8605-49cb-be45-ededbd7e0fd5",
       "summary": "empty-seat chair mapped by brightness onto the seated rats' black chair palette, 1px outline"
+    },
+    {
+      "id": "props2",
+      "output": "props2.png",
+      "tool": "tools/build_props2.py (local, no PixelLab call)",
+      "source": "raw/props2/*.png, world.png",
+      "summary": "crops, recolors snapped to the existing palette, stacks, TV cut from the blank ticker, clutter drawn in code"
     }
   ],
   "layoutOnly": [
@@ -442,14 +522,16 @@
     "crops to bounding box"
   ],
   "totals": {
-    "generationsInFinalAssets": 20,
+    "generationsInFinalAssets": 24,
     "phase1StyleSamplesNotUsed": 12,
-    "accountUsed": 32,
-    "accountLeft": 8,
+    "accountUsed": 36,
+    "accountLeft": 4,
     "byPhase": {
       "phase1": 6,
       "variations": 3,
-      "phase2": 11
+      "phase2": 11,
+      "denseFloor": 4
     }
-  }
+  },
+  "cc0Assets": "none: itch.io, kenney.nl and opengameart.org are blocked by the environment network policy"
 }

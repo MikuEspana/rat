@@ -1,6 +1,6 @@
 # RAT RACE pixel site
 
-An isometric pixel-art office floor you pan around and click into. Creator fees hire rats; each rat walks in from the subway, sits at a desk in its stock's room and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers. Burns send cash bags flying into the HQ furnace.
+An isometric pixel-art office building at night that you pan around and click into. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Burns send cash bags flying into the HQ furnace.
 
 ## Run it
 
@@ -49,9 +49,13 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 
 | File | What |
 |---|---|
-| `src/layout.ts` | The floor plan from the stock list: a grid of equal slots, HQ in the middle, subway in the front corner, one room per stock sized for its rats plus headroom, corridors between. Seats, decor and the walking route (stairs, subway junction, two corridor legs, the room's aisle, the seat). Pure and tested. |
-| `src/world/build.ts` | Tiles, walls, desks, chairs, decor, stairs, furnace, lamp glows, wall tickers (5x7 pixel font, pre-skewed onto the wall). |
-| `src/world/rats.ts` | One particle per rat: walk, type, slump, cheer, frozen; 4 walk directions from 2 drawn ones by mirroring; size by tier. |
+| `src/floor/plan.ts` | The building from the stock list: the room list (several stock rooms per big stock, break rooms, bathrooms, meeting, copy, server and storage rooms, the CEO corner office, HQ, the lobby), doors until every room is reachable, the street with the subway stairs and lamps. Pure, deterministic and tested. |
+| `src/floor/pack.ts` | Packs the rooms into one square with no gaps (a slicing floor plan): 2-cell corridors at the top splits, shared walls below, splits chosen for near-square rooms, HQ pinned to the centre. |
+| `src/floor/furnish.ts` | Fills each room: desk clusters in six layouts with jitter and mirrored orientations, props along walls, activity spots, clutter that never cuts off a chair, things hung on walls. |
+| `src/floor/path.ts` | Walking routes: breadth-first distance fields (cached per target, windowed for short errands), walked with as few turns as possible. |
+| `src/world/build.ts` | Tiles, walls, desks, chairs, props, wall pieces, stairs, furnace, lamp glows, blinking server lights, wall tickers (5x7 pixel font, pre-skewed onto either back wall). |
+| `src/world/rats.ts` | One particle per rat: walk, type, slump, cheer, nap, stand, sit, frozen; errands to activity spots; box carrying; desk pools (CEO office for partners); chairs reappear when a rat gets up. |
+| `src/gfx/sky.ts` | The night sky behind the building. |
 | `src/world/effects.ts` | Burn: cash bags arc from desks into the furnace, furnace flares. |
 | `src/gfx/layer.ts` | Depth-sorted, culled `ParticleContainer`. |
 | `src/data/` | API client, store (roster once, state and events after), stress padding. |
@@ -62,15 +66,15 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 - Rats, desks, chairs, walls and props share **one texture** (rats.png and world.png joined at load) and **one `ParticleContainer`**, so they depth-sort together and draw in one batch.
 - Painter's order is kept with an insertion sort (only walkers move, so the list is nearly sorted); off-screen items are **culled** by 256 px screen buckets before upload.
 - The floor (tens of thousands of tiles) is a separate static `ParticleContainer`, uploaded once and never touched again.
-- Measured here (headless Chromium, `?perf=1&stress=3000&walkers=20`, 1600x1000):
+- Measured here (headless Chromium with its software rasterizer, 1600x1000, `?perf=1`, `?perf=1&stress=3000`):
 
 | View | Simulation | Whole frame on the CPU | Particles uploaded |
 |---|---|---|---|
-| 350 rats (mock), default zoom | 0.3 ms | 0.65 ms | 1.8k of 2.9k |
-| 3,020 rats, 20 walking, zoomed in | 0.9 ms | 1.6 ms | 2.6k of 12.2k |
-| 3,020 rats, 20 walking, whole floor | 1.0 ms | 3.7 ms (max 5.4) | 11.5k of 12.2k |
+| mock (~560 rats, ~40 away), default zoom | 0.4 ms | 2.4 ms | 3.7k of 4.3k |
+| 3,000 rats, ~90 away, zoom 1 | 1.1 ms | 7.2 ms | 4.7k of 21.5k |
+| 3,000 rats, ~80 away, whole building | 1.6 ms | 5.9 ms (max 17) | 21.9k of 22.8k |
 
-  The CPU side fits the 16.7 ms frame with room to spare. The fps shown in this container (8 to 14) is its software rasterizer (no GPU); it could not be measured on a real GPU here, see `NOTES.md`.
+  The software renderer is most of that time (it shows 1 to 15 fps whatever the scene); a real GPU could not be measured here, see `NOTES.md`.
 
 ### Sources
 
@@ -80,4 +84,4 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 - `CanvasSource` with `scaleMode: 'nearest'`; the app renders at `UPDATE_PRIORITY.LOW`, so a `UTILITY` ticker callback runs after the render: VERIFIED in the installed pixi.js 8.21.0 (`lib/rendering/renderers/shared/texture/sources/`, `lib/app/TickerPlugin.mjs`, `lib/ticker/const.mjs`)
 - pixijs.com docs are blocked by this environment's network policy, so the source was used instead.
 
-Assets: see [assets/README.md](assets/README.md).
+Assets: see [assets/README.md](assets/README.md). The dense-floor props are in `assets/props2.png`, built by `tools/build_props2.py` (PixelLab prop sheets, kitbashes and clutter drawn in code); before/after shots in `assets/preview/dense_*.png`.

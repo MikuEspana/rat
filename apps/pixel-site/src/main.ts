@@ -1,5 +1,6 @@
-// RAT RACE pixel site: an isometric office floor. Rats are hired by creator fees, walk in from the subway, sit at
-// their stock's desks and type. The data comes from the public API (CONTRACT.md).
+// RAT RACE pixel site: an isometric office building at night. Rats are hired by creator fees, walk in from the
+// subway, sit at their stock's desks and type, and wander off for coffee. The data comes from the public API
+// (CONTRACT.md).
 import './style.css';
 import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
@@ -9,8 +10,10 @@ import { Store } from './data/store';
 import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
 import { Camera } from './gfx/camera';
+import { Sky } from './gfx/sky';
 import { cellCentre } from './iso';
-import { buildLayout, type FloorLayout } from './layout';
+import { buildLayout } from './floor/plan';
+import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers } from './world/build';
 import { Effects } from './world/effects';
@@ -56,7 +59,7 @@ async function boot(): Promise<Site> {
   const app = new Application();
   await app.init({
     resizeTo: window,
-    background: '#dfe6ee',
+    background: '#070a14',
     antialias: false,
     autoDensity: true,
     resolution: Math.min(2, window.devicePixelRatio || 1),
@@ -71,17 +74,18 @@ async function boot(): Promise<Site> {
   store.loadRoster(STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
   const counts = new Map<string, number>();
-  for (const r of store.rats.values()) counts.set(r.facts.stock, (counts.get(r.facts.stock) ?? 0) + 1);
-  const layout = buildLayout(state.stocks.map((s) => ({ symbol: s.symbol, ratCount: counts.get(s.symbol) ?? 0 })));
+  let partners = 0;
+  for (const r of store.rats.values()) {
+    counts.set(r.facts.stock, (counts.get(r.facts.stock) ?? 0) + 1);
+    if (r.view.tier === 'partner') partners++;
+  }
+  const layout = buildLayout(
+    state.stocks.map((s) => ({ symbol: s.symbol, ratCount: counts.get(s.symbol) ?? 0 })),
+    { partners },
+  );
   const world = buildWorld(layout, atlas, store.stocks);
   const rats = new RatSystem(atlas, layout, world.main);
-  rats.onSeatTaken = (symbol, index) => {
-    const chair = world.chairs.get(`${symbol}:${index}`);
-    if (chair) {
-      world.main.remove(chair);
-      world.chairs.delete(`${symbol}:${index}`);
-    }
-  };
+  rats.onChair = (seatId, visible) => world.setChair(seatId, visible);
   const applyMoods = (s: StateResponse): void => {
     for (const st of s.stocks) rats.setMood(st.symbol, moodOf(st.change24hPct, st.status === 'paused'));
   };
@@ -89,10 +93,13 @@ async function boot(): Promise<Site> {
   rats.load([...store.rats.values()]);
   const effects = new Effects(atlas, world);
 
+  const sky = new Sky();
+  sky.resize(window.innerWidth, window.innerHeight);
+  window.addEventListener('resize', () => sky.resize(window.innerWidth, window.innerHeight));
   const scene = new Container();
   const markers = new Container();
   scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, markers);
-  app.stage.addChild(scene);
+  app.stage.addChild(sky.sprite, scene);
 
   const camera = new Camera(scene, app.canvas);
   camera.onChange = () => {
@@ -118,6 +125,7 @@ async function boot(): Promise<Site> {
     const t0 = performance.now();
     const dt = Math.min(0.1, t.deltaMS / 1000);
     rats.update(dt);
+    world.update(dt);
     effects.update(dt);
     world.main.sync();
     frameStart = t0;
@@ -127,7 +135,7 @@ async function boot(): Promise<Site> {
   let frameStart = 0;
   let jsMs = 0;
   app.ticker.add(
-    () => perf.frame(jsMs, performance.now() - frameStart, `${rats.count} rats, ${rats.walking} walking | particles ${world.main.visibleCount}/${world.main.size}`),
+    () => perf.frame(jsMs, performance.now() - frameStart, `${rats.count} rats, ${rats.walking} walking, ${rats.awayCount} away | particles ${world.main.visibleCount}/${world.main.size}`),
     undefined,
     UPDATE_PRIORITY.UTILITY,
   );

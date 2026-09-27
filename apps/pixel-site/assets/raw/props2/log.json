@@ -1,0 +1,61 @@
+{
+ "sheet_break_bath": {
+  "tool": "create_map_object",
+  "id": "a61f4c2e-6869-4769-8b5c-0936203fbaf9",
+  "args": {
+   "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: office water cooler with a big blue water bottle on top, espresso coffee machine on a small wooden counter with cups, tall red snack vending machine with a glass front, white porcelain toilet, white bathroom sink with a small mirror above it. Clean bright corporate office, isometric three-quarter view",
+   "width": 400,
+   "height": 96,
+   "view": "high top-down",
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "high detail"
+  },
+  "submit_text": "id: a61f4c2e-6869-4769-8b5c-0936203fbaf9\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: office water cooler with a big blue water bottle on top, espresso coffee machine on a small wooden counter with cups, tall red snack vending machine with a glass front, white porcelain toilet, white bathroom sink with a small mirror above it. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nvie",
+  "result_text": "status: completed\nid: a61f4c2e-6869-4769-8b5c-0936203fbaf9\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: office water cooler with a big blue water bottle on top, espresso coffee machine on a small wooden counter with cups, tall red snack vending machine with a glass front, white porcelain toilet, white bathroom sink with a small mirror above it. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-27 21:39\ndownload: https://api.pixellab.ai/mcp/map-objects/a61f4c2e-6869-4769-8b5c-0936203fbaf9/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"a61f4c2e-6869-4769-8b5c-0936203fbaf9\")"
+ },
+ "sheet_work": {
+  "tool": "create_map_object",
+  "id": "8d23c812-6702-461c-8563-eec69ef9ff13",
+  "args": {
+   "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: tall black server rack cabinet with rows of tiny green and blue status lights, big grey office photocopier machine, whiteboard on wheels with blue charts drawn on it, grey metal filing cabinet with drawers, closed brown cardboard box with tape. Clean bright corporate office, isometric three-quarter view",
+   "width": 400,
+   "height": 96,
+   "view": "high top-down",
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "high detail"
+  },
+  "submit_text": "id: 8d23c812-6702-461c-8563-eec69ef9ff13\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: tall black server rack cabinet with rows of tiny green and blue status lights, big grey office photocopier machine, whiteboard on wheels with blue charts drawn on it, grey metal filing cabinet with drawers, closed brown cardboard box with tape. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nv",
+  "result_text": "status: completed\nid: 8d23c812-6702-461c-8563-eec69ef9ff13\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: tall black server rack cabinet with rows of tiny green and blue status lights, big grey office photocopier machine, whiteboard on wheels with blue charts drawn on it, grey metal filing cabinet with drawers, closed brown cardboard box with tape. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-27 21:39\ndownload: https://api.pixellab.ai/mcp/map-objects/8d23c812-6702-461c-8563-eec69ef9ff13/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"8d23c812-6702-461c-8563-eec69ef9ff13\")"
+ },
+ "sheet_exec": {
+  "tool": "create_map_object",
+  "id": "9b171274-a5df-4f16-b45e-824ad947ff5e",
+  "args": {
+   "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: brown leather two-seat sofa, large dark mahogany executive desk with a green banker lamp, tall wooden bookshelf full of colorful books, round white meeting table, black iron street lamp post with a warm light. Clean bright corporate office, isometric three-quarter view",
+   "width": 400,
+   "height": 96,
+   "view": "high top-down",
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "high detail"
+  },
+  "submit_text": "id: 9b171274-a5df-4f16-b45e-824ad947ff5e\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: brown leather two-seat sofa, large dark mahogany executive desk with a green banker lamp, tall wooden bookshelf full of colorful books, round white meeting table, black iron street lamp post with a warm light. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstat",
+  "result_text": "status: completed\nid: 9b171274-a5df-4f16-b45e-824ad947ff5e\ndescription: sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: brown leather two-seat sofa, large dark mahogany executive desk with a green banker lamp, tall wooden bookshelf full of colorful books, round white meeting table, black iron street lamp post with a warm light. Clean bright corporate office, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-27 21:39\ndownload: https://api.pixellab.ai/mcp/map-objects/9b171274-a5df-4f16-b45e-824ad947ff5e/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9b171274-a5df-4f16-b45e-824ad947ff5e\")"
+ },
+ "coffee_machine": {
+  "tool": "create_map_object",
+  "id": "25410dbe-532f-4dae-a108-0a52ceca8fa5",
+  "args": {
+   "description": "big shiny chrome espresso coffee machine with two brass portafilters, steam wand, glowing red power light and a stack of white cups on top, standing on a small dark wooden cabinet, office break room, isometric three-quarter view, clean corporate style",
+   "width": 64,
+   "height": 96,
+   "view": "high top-down",
+   "outline": "selective outline",
+   "shading": "basic shading",
+   "detail": "high detail"
+  },
+  "result_text": "status: completed\nid: 25410dbe-532f-4dae-a108-0a52ceca8fa5\ndescription: big shiny chrome espresso coffee machine with two brass portafilters, steam wand, glowing red power light and a stack of white cups on top, standing on a small dark wooden cabinet, office break room, isometric three-quarter view, clean corporate style\nsize: 64x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-27 21:50\ndownload: https://api.pixellab.ai/mcp/map-objects/25410dbe-532f-4dae-a108-0a52ceca8fa5/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"25410dbe-532f-4dae-a108-0a52ceca8fa5\")"
+ }
+}

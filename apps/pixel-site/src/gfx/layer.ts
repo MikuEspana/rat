@@ -13,6 +13,8 @@ export interface LayerItem {
   x: number;
   y: number;
   bucket: number;
+  /** false once removed */
+  live: boolean;
 }
 
 const BUCKET = 256;
@@ -50,16 +52,31 @@ export class SortedLayer {
   }
 
   add(p: Particle, depth: number): LayerItem {
-    const item: LayerItem = { p, depth, x: p.x, y: p.y, bucket: this.bucketOf(p.x, p.y) };
+    const item: LayerItem = { p, depth, x: p.x, y: p.y, bucket: this.bucketOf(p.x, p.y), live: true };
     this.items.push(item);
     this.orderDirty = true;
     return item;
   }
 
   remove(item: LayerItem): void {
+    if (!item.live) return;
+    item.live = false;
     const k = this.items.indexOf(item);
     if (k >= 0) this.items.splice(k, 1);
     this.listDirty = true;
+  }
+
+  has(item: LayerItem): boolean {
+    return item.live;
+  }
+
+  /** Put a removed item back. */
+  readd(item: LayerItem, depth: number): void {
+    if (item.live) return;
+    item.live = true;
+    item.depth = depth;
+    this.items.push(item);
+    this.orderDirty = true;
   }
 
   /** Call after changing an item's particle position or depth. */
