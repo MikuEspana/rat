@@ -2,7 +2,8 @@
 //
 // A spend is authorized only if ALL of these hold:
 //   1. the kill switch is off
-//   2. the ledger bucket (money the bot actually claimed) covers it; the wallet's own balance never counts
+//   2. the ledger bucket (money the bot actually claimed) covers it; the wallet's own balance never counts.
+//      For burns, a fund share not yet forwarded to the fund wallet does not count either.
 //   3. the rolling 60-minute net outflow of that bucket stays under its cap (30 SOL/h per bucket by default)
 //   4. in smoke mode, the lifetime outflow stays under the smoke cap (0.1 SOL)
 //   5. (live) the wallet still holds the amount + its reserve (+ for the creator: the fund's pending share)
@@ -76,9 +77,11 @@ export class SpendGuard {
     const kill = await killSwitch.status();
     if (kill.on) return { ok: false, reason: 'kill_switch', detail: kill.reason ?? 'kill switch on' };
 
-    const balance = await ledger.balance(bucket);
+    // burn: a fund share that is booked but not yet forwarded to the fund wallet cannot be burned yet
+    const pending = this.deps.pendingFundTransfer ? await this.deps.pendingFundTransfer() : 0n;
+    const balance = (await ledger.balance(bucket)) - (bucket === 'burn' ? pending : 0n);
     if (balance < lamports) {
-      return { ok: false, reason: 'insufficient_budget', detail: `${bucket} bucket has ${formatSol(balance)} SOL, needs ${formatSol(lamports)}` };
+      return { ok: false, reason: 'insufficient_budget', detail: `${bucket} bucket has ${formatSol(balance)} SOL available, needs ${formatSol(lamports)}` };
     }
 
     const cap = this.cfg.capPerHour[bucket];
@@ -100,10 +103,10 @@ export class SpendGuard {
       const wallet = this.cfg.wallets[bucket];
       if (!wallet || !this.deps.chain) return { ok: false, reason: 'wallet_unknown', detail: `no wallet configured for ${bucket}` };
       const sol = (await this.deps.chain.getSolBalances([wallet])).get(wallet) ?? 0n;
-      const pending = bucket === 'hire' && this.deps.pendingFundTransfer ? await this.deps.pendingFundTransfer() : 0n;
-      const needed = lamports + this.cfg.reserves[bucket] + pending;
+      const owedOut = bucket === 'hire' ? pending : 0n;
+      const needed = lamports + this.cfg.reserves[bucket] + owedOut;
       if (sol < needed) {
-        await alerts.send('warn', `wallet_low_${bucket}`, `${bucket} wallet ${wallet} holds ${formatSol(sol)} SOL, needs ${formatSol(needed)} (amount + reserve${pending > 0n ? ' + fund share owed' : ''}).`);
+        await alerts.send('warn', `wallet_low_${bucket}`, `${bucket} wallet ${wallet} holds ${formatSol(sol)} SOL, needs ${formatSol(needed)} (amount + reserve${owedOut > 0n ? ' + fund share owed' : ''}).`);
         return { ok: false, reason: 'wallet_low', detail: `wallet has ${formatSol(sol)} SOL, needs ${formatSol(needed)}` };
       }
     }

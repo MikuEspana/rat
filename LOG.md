@@ -9,7 +9,8 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | # | Item | PR | Result |
 |---|---|---|---|
 | Q1 | Remove vanity keys | [#34](https://github.com/MikuEspana/rat/pull/34) | merged |
-| Q2 | Red-team every money path | (this PR) | done, 14 bugs fixed |
+| Q2 | Red-team every money path | [#35](https://github.com/MikuEspana/rat/pull/35) | merged, 14 bugs fixed |
+| Q3 | Property tests (fast-check) | (this PR) | done, 1 bug fixed |
 
 ## Q1. Remove vanity keys
 
@@ -46,3 +47,25 @@ Full write-up with severities: `SECURITY-REVIEW.md`.
 **Tests added** (30): `apps/worker/src/redteam.test.ts` (12: compromised Jupiter x3, crash windows x3, claim race, watcher x3, lease takeover, two-step cost), `packages/safety/src/safety.test.ts` (12: effects check, fence, throw-after-broadcast, parallel authorize, overspend, limit checker), `packages/jupiter` (1), `packages/chain` (3), `apps/cli` (2). Four of them were run against the old logic first and failed, as expected (race: 5 of 5 authorizations passed with budget for 1).
 
 **Bugs found**: 14, all fixed (3 High, 7 Medium, 4 Low). Accepted risks listed in `SECURITY-REVIEW.md`.
+
+## Q3. Property-based tests (fast-check)
+
+**What changed**
+- `fast-check` added (dev dependency).
+- `packages/safety/src/spend-guard.property.test.ts`: random sequences of claims, claim fees, spends (1 to 4 at once), settles, releases, time jumps of up to 90 minutes and kill switch flips, against the real SpendGuard and the real database ledger, compared step by step with a small independent model. 650 random scenarios per run, at SOL scale and at a tiny lamport scale (so the cap and budget boundaries are hit exactly).
+- `tests/e2e/money.property.test.ts`: 12 random launches per run (fee bursts on the bonding curve and PumpSwap, strangers claiming our vault, 0 to 40% of transactions failing in random ways, both hire modes) run by the real worker, live on SimChain. After it settles, every lamport is checked against the chain.
+- Fix (RT-15, Low): the burn budget no longer counts a fund share that is booked but not yet forwarded to the fund wallet (burn step and spend guard).
+
+**Invariants proven on every run**
+- SOL spent by hires and burns never exceeds SOL claimed, to the lamport. A spend is only granted when the claimed SOL left in its bucket covers it.
+- The only cost that can come from the creator's reserve is the network fee of a claim that failed on-chain; while the hire bucket is below zero nothing is spent.
+- Rolling-hour caps and the smoke cap are never exceeded (exact boundaries tested).
+- Parallel spend requests are granted exactly as if they came one by one.
+- The ledger balance always equals the exact sum of what was booked.
+- End to end: every lamport that left our vaults is credited exactly once; the ledger's hire and burn spend equals what left the creator and fund wallets on-chain (plus reservations still in flight); claim fees match; creator and fund balances equal the ledger to the lamport; the owner's own SOL is never spent; the fund never burns SOL that has not arrived (checked after every loop).
+
+**Mutation check**: the property was run against 5 deliberately broken guards (budget off by 1 lamport, cap removed, cap off by 1, smoke cap off by 1, no serialization). Every one was caught with a minimal counterexample.
+
+**Tests added**: 5 (3 guard properties, 1 end-to-end property, 1 regression test for the counterexample it found).
+
+**Bugs found**: 1 (RT-15, Low), fixed.
