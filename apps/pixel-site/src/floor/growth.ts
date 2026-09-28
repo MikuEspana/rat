@@ -1,7 +1,8 @@
 // The idle game: which rooms of the master plan stand, and which desk each rat has. Deterministic: rats are
 // replayed in id order, so a page load and a live session that grew hire by hire end in the same building.
 //
-// - The stage follows the rat count (plan.ts STAGES). A new stage builds its ring corridor and lobby.
+// - The stage follows the rats hired plus the applicants in the job-fair line (plan.ts STAGES), so the building keeps
+//   up with a pump. A new stage builds its ring corridor and lobby. A stage never closes when the line drains.
 // - Amenities open at their set rat count.
 // - Desks on demand: a rat takes a free desk in its stock's rooms; when there is none, the next desk-room slot is
 //   built and handed to that stock. Before the full-floor stage everyone shares the garage and open offices.
@@ -20,7 +21,10 @@ export class Growth {
   readonly owner: Int32Array;
   readonly seatOfRat = new Map<number, number>();
   stage = -1;
+  /** rats hired */
   count = 0;
+  /** applicants in the job-fair line (claimed salaries not hired yet): they count toward the stage */
+  private applicants = 0;
   private readonly roomsOf = new Map<string, Room[]>();
   private readonly order: number[][]; // per room: seat ids in fill order
   private readonly next: Int32Array; // per room: fill pointer
@@ -48,6 +52,25 @@ export class Growth {
   /** rats with no desk yet (they stand in the job-fair line outside) */
   get waitingCount(): number {
     return this.waiting.length;
+  }
+
+  /** what the stage goes by: rats hired plus applicants in line */
+  get stageCount(): number {
+    return this.count + this.applicants;
+  }
+
+  /** The job-fair line changed: open any stage that hires plus the line have reached. Returns what got built. */
+  setApplicants(n: number): GrowthEvent[] {
+    this.applicants = Math.max(0, Math.floor(n));
+    this.events = [];
+    this.openStages();
+    const events = this.events;
+    this.events = [];
+    return events;
+  }
+
+  private openStages(): void {
+    while (this.stage + 1 < STAGES.length && this.stageCount >= STAGES[this.stage + 1]!.min) this.startStage(this.stage + 1);
   }
 
   get stageName(): string {
@@ -139,7 +162,7 @@ export class Growth {
   add(ratId: number, stock: string): { seat: Seat | null; events: GrowthEvent[] } {
     this.events = [];
     this.count++;
-    while (this.stage + 1 < STAGES.length && this.count >= STAGES[this.stage + 1]!.min) this.startStage(this.stage + 1);
+    this.openStages();
     while (this.amenityAt < this.amenities.length) {
       const r = this.amenities[this.amenityAt]!;
       if (r.unlockAt! > this.count || r.ring > this.stage) break;

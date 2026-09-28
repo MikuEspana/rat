@@ -70,6 +70,20 @@ describe('growth (the idle game)', () => {
     expect(stageOf(3000)).toBe(5);
   });
 
+  it('counts the job-fair line toward the stage, and never closes a stage when the line drains', () => {
+    const g = grow(plan, 80);
+    expect(g.stage).toBe(1);
+    const events = g.setApplicants(30);
+    expect(g.stageCount).toBe(110);
+    expect(g.stage).toBe(2);
+    expect(events.some((e) => e.kind === 'stage' && e.stage === 2)).toBe(true);
+    expect(g.count).toBe(80);
+    expect(g.setApplicants(0)).toEqual([]);
+    expect(g.stage).toBe(2);
+    g.setApplicants(3000);
+    expect(g.stage).toBe(STAGES.length - 1);
+  });
+
   it('only ever grows: a room built at N is still built at every larger N', () => {
     for (let k = 1; k < sizes.length; k++) {
       const a = states.get(sizes[k - 1]!)!;

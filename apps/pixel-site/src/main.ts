@@ -209,7 +209,7 @@ async function boot(): Promise<Site> {
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
   ui.vaultHit = (x, y) => vault.hit(x, y);
   ui.vaultStage = (v) => VAULT_STAGES[vaultStageOf(v)]!.name;
-  ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
+  ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
 
   /** Simulator: glide out to show the whole building when it grows into a new stage. */
   /**
@@ -349,7 +349,7 @@ async function boot(): Promise<Site> {
   /** Within 10% of the next stage the site gets ready for it. */
   const updatePrep = (): void => {
     const next = STAGES[growth.stage + 1];
-    world.setPrep(!!next && ratCount >= next.min * 0.9);
+    world.setPrep(!!next && growth.stageCount >= next.min * 0.9);
   };
   updatePrep();
   /** Something got built: rebuild the world, new rooms pop in, tell the feed (and the banner on a new stage). */
@@ -405,10 +405,10 @@ async function boot(): Promise<Site> {
     ui.pushLocal(lines.slice(-12));
     const stage = events.filter((e) => e.kind === 'stage').pop();
     if (stage && stage.kind === 'stage') {
-      ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats and growing`);
+      ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats hired, ${rats.applicantCount.toLocaleString('en-US')} in line`);
       if (sim) frameBuilding();
     }
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
   };
 
   /**
@@ -417,7 +417,13 @@ async function boot(): Promise<Site> {
    * empties out.
    */
   let seatlessWas = rats.seatlessCount;
-  const updateLine = (): void => {
+  const updateLine = (announce = true): void => {
+    // the stage counts the applicants too: a pump opens the next floor before the hires land
+    const opened = growth.setApplicants(rats.applicantCount);
+    if (opened.length) {
+      grew(opened, announce);
+      ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
+    }
     world.setJobFair(rats.lineLength, rats.lineHead());
     ui.setLine(rats.lineLength);
     const n = rats.seatlessCount;
@@ -466,7 +472,7 @@ async function boot(): Promise<Site> {
     if (!applicantsSynced) {
       applicantsSynced = true;
       rats.setApplicants(target, false);
-      updateLine();
+      updateLine(false);
       return;
     }
     // Claims and hires already move the line. waitingSol leaves out the salaries of a hire loop in flight (their
@@ -510,7 +516,7 @@ async function boot(): Promise<Site> {
     sound.hire();
     updatePrep();
     checkLandmarks(true);
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
   };
   // every hire sends its money flying from where the rat came in into the Vault; a burst rains bills from above
   const recentHires: number[] = [];
@@ -661,7 +667,7 @@ async function boot(): Promise<Site> {
     site.growth = growth;
     mount();
     old.destroy();
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
     updatePrep();
     if (!announce) return;
     if (growth.stage > beforeStage) {
