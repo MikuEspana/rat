@@ -11,13 +11,12 @@ describe('loadConfig', () => {
     expect(cfg.liveConfirmed).toBe(false);
     expect(cfg.killSwitch).toBe(false);
     expect(cfg.salaryLamports).toBe(30_000_000n);
-    expect(cfg.hireSplitBps).toBe(10_000);
-    expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 30_000_000_000n, burn: 30_000_000_000n });
+    expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 60_000_000_000n });
     expect(cfg.spendAlertPct).toBe(50);
-    expect(cfg.maxHiresPerLoop).toBe(10);
-    expect(cfg.jupiter.maxRpm).toBe(55);
+    expect(cfg.maxHiresPerLoop).toBe(20);
+    expect(cfg.jupiter.maxRpm).toBe(40);
     expect(cfg.hireMode).toBe('single');
-    expect(cfg.intervals).toEqual({ claimSec: 35, burnMinSec: 480, burnMaxSec: 720, priceSec: 15, freezeSec: 35 });
+    expect(cfg.intervals).toEqual({ claimSec: 35, priceSec: 45, freezeSec: 35 });
   });
 
   it('idle hire budget alert: 30 min, 0.1 SOL, configurable', () => {
@@ -37,31 +36,6 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ WATCH_FROM_SLOT: '-5' })).toThrow();
   });
 
-  it('burns: random 8 to 12 minute rounds, 1 SOL chunks, 1.5% slippage, Jito off by default', () => {
-    const cfg = loadConfig({});
-    expect(cfg.slippageBpsCoin).toBe(150);
-    expect(cfg.burn).toEqual({
-      chunkMaxLamports: 1_000_000_000n,
-      roundMaxLamports: 5_000_000_000n,
-      chunkGapMinSec: 3,
-      chunkGapMaxSec: 8,
-      sendVia: 'rpc',
-      jitoUrl: 'https://mainnet.block-engine.jito.wtf/api/v1',
-      jitoTipLamports: 0n,
-    });
-    const jito = loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.0002', BURN_CHUNK_MAX_SOL: '0.5', SLIPPAGE_BPS_COIN: '100' });
-    expect(jito.burn).toMatchObject({ sendVia: 'jito', jitoTipLamports: 200_000n, chunkMaxLamports: 500_000_000n });
-    expect(jito.slippageBpsCoin).toBe(100);
-    expect(() => loadConfig({ BURN_INTERVAL_MIN_SEC: '900', BURN_INTERVAL_MAX_SEC: '600' })).toThrow(/BURN_INTERVAL/);
-    expect(() => loadConfig({ BURN_CHUNK_GAP_MIN_SEC: '9', BURN_CHUNK_GAP_MAX_SEC: '3' })).toThrow(/BURN_CHUNK_GAP/);
-    expect(() => loadConfig({ BURN_CHUNK_MAX_SOL: '0.001' })).toThrow(/BURN_CHUNK_MAX_SOL/);
-    expect(loadConfig({ BURN_ROUND_MAX_SOL: '0' }).burn.roundMaxLamports).toBe(0n);
-    expect(loadConfig({ BURN_ROUND_MAX_SOL: '2.5' }).burn.roundMaxLamports).toBe(2_500_000_000n);
-    expect(() => loadConfig({ BURN_ROUND_MAX_SOL: '0.001' })).toThrow(/BURN_ROUND_MAX_SOL/);
-    expect(() => loadConfig({ BURN_SEND_VIA: 'jito', JITO_TIP_SOL: '0.5' })).toThrow(/JITO_TIP_SOL/);
-    expect(() => loadConfig({ BURN_SEND_VIA: 'smoke-signals' })).toThrow();
-  });
-
   it('refuses DRY_RUN=false without the exact confirmation phrase', () => {
     expect(() => loadConfig({ DRY_RUN: 'false' })).toThrow(/LIVE_CONFIRM/);
     expect(() => loadConfig({ DRY_RUN: 'false', LIVE_CONFIRM: 'yes' })).toThrow(/LIVE_CONFIRM/);
@@ -79,26 +53,32 @@ describe('loadConfig', () => {
   it('rejects invalid values', () => {
     expect(() => loadConfig({ DRY_RUN: 'maybe' })).toThrow();
     expect(() => loadConfig({ SALARY_SOL: 'abc' })).toThrow();
-    expect(() => loadConfig({ HIRE_SPLIT_BPS: '10001' })).toThrow();
+    expect(() => loadConfig({ MAX_HIRES_PER_LOOP: '201' })).toThrow();
+    expect(() => loadConfig({ SPEND_CAP_SOL_PER_HOUR_HIRE: 'lots' })).toThrow(/SPEND_CAP_SOL_PER_HOUR_HIRE/);
     expect(() => loadConfig({ KEY_ENCRYPTION_KEY: 'short' })).toThrow(/32 bytes/);
     expect(() => loadConfig({ CREATOR_PUBKEY: 'not a key!' })).toThrow();
     expect(() => loadConfig({ SALARY_SOL: '0.005' })).toThrow(/SALARY_SOL/);
     expect(() => loadConfig({ HIRE_MODE: 'three' })).toThrow();
   });
 
-  it('parses per-bucket caps and optional values', () => {
+  it('parses the hire cap and optional values', () => {
     const cfg = loadConfig({
       SPEND_CAP_SOL_PER_HOUR_HIRE: '12.5',
-      SPEND_CAP_SOL_PER_HOUR_BURN: '7',
       KEY_ENCRYPTION_KEY: KEY,
-      JUPITER_MAX_RPM: '600',
+      JUPITER_MAX_RPM: '30',
       COIN_MINT: '',
     });
-    expect(cfg.spendCapLamportsPerHour.hire).toBe(12_500_000_000n);
-    expect(cfg.spendCapLamportsPerHour.burn).toBe(7_000_000_000n);
+    expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 12_500_000_000n });
     expect(cfg.keyEncryptionKey).toBe(KEY);
-    expect(cfg.jupiter.maxRpm).toBe(600);
+    expect(cfg.jupiter.maxRpm).toBe(30);
     expect(cfg.coinMint).toBeUndefined();
+  });
+
+  it('the Jupiter budget is capped at 40 calls a minute (Free tier is 60): a higher value is refused', () => {
+    expect(loadConfig({ JUPITER_MAX_RPM: '40' }).jupiter.maxRpm).toBe(40);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '41' })).toThrow(/JUPITER_MAX_RPM/);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '600' })).toThrow(/JUPITER_MAX_RPM/);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '0' })).toThrow(/JUPITER_MAX_RPM/);
   });
 
   it('fake claims only exist in dry run', () => {

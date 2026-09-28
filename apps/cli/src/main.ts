@@ -50,12 +50,12 @@ program.command('resume').description('release the database kill switch').action
 const keys = program.command('keys').description('key management');
 keys
   .command('import')
-  .description('import the creator or fund private key from stdin (encrypted at rest)')
-  .requiredOption('--role <role>', 'creator | fund')
+  .description('import the creator private key from stdin (encrypted at rest)')
+  .option('--role <role>', 'creator (the only key the bot holds besides rat wallets)', 'creator')
   .option('--replace', 'replace an existing key')
   .action((o) =>
     withContext(async (ctx, cfg) => {
-      if (o.role !== 'creator' && o.role !== 'fund') throw new Error('--role must be creator or fund');
+      if (o.role !== 'creator') throw new Error('--role must be creator (there is no fund wallet: buy and burn was removed)');
       await keysImportRoleCommand(ctx, ring(cfg), o.role, await readStdin(), { replace: Boolean(o.replace) });
     }),
   );
@@ -76,7 +76,7 @@ keys
 
 keys
   .command('backup')
-  .description('write every stored key (rat wallets, creator, fund) to a file, still encrypted; every key is checked first')
+  .description('write every stored key (rat wallets, creator) to a file, still encrypted; every key is checked first')
   .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force)')
   .option('--force', 'overwrite an existing file')
   .action((o) => withContext(async (ctx, cfg) => void (await keysBackupCommand(ctx, ring(cfg), o.out, { force: Boolean(o.force) }))));
@@ -123,7 +123,7 @@ program
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       const inner = new RpcTxSender(conn, { dryRun: cfg.dryRun, liveConfirmed: cfg.liveConfirmed, priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax });
       const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, cfg.killSwitch), dryRun: cfg.dryRun });
-      const keyStore = new DbKeyStore(ctx.store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey, expectedFund: cfg.fundPubkey });
+      const keyStore = new DbKeyStore(ctx.store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey });
       await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to: o.to, confirm: o.confirm, limit: o.limit });
     }),
   );
@@ -160,7 +160,7 @@ program
       // each endpoint on its own (no failover), so a dead primary shows up
       const chain = cfg.rpcUrl ? new RpcChainReader(createConnection(cfg.rpcUrl)) : null;
       const backupChain = cfg.rpcUrlBackup ? new RpcChainReader(createConnection(cfg.rpcUrlBackup)) : null;
-      const keys = store && cfg.keyEncryptionKey ? new DbKeyStore(store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey, expectedFund: cfg.fundPubkey }) : null;
+      const keys = store && cfg.keyEncryptionKey ? new DbKeyStore(store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey }) : null;
       const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm), maxRetries: 1 });
       const lines = await runPreflightChecks(
         {

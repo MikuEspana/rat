@@ -6,7 +6,7 @@ import './style.css';
 import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
-  API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
+  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
   STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
@@ -29,7 +29,7 @@ import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
 import type { NewsStats } from './ui/news';
-import { pct, tokens, usd } from './ui/format';
+import { pct, usd } from './ui/format';
 import { setNowSource } from './now';
 import { LaunchSim } from './sim/engine';
 import { SimPanel } from './sim/panel';
@@ -119,7 +119,7 @@ async function boot(): Promise<Site> {
   const store = new Store();
   const [atlas, state, roster] = await Promise.all([loadAtlas(), retry('state', () => api.state()), retry('rats', () => api.rats())]);
   store.initState(state);
-  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, 5000) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
+  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, DEBUG_MAX_RATS) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
   // the master plan never changes; the growth state replays the roster in hire (id) order
   const plan = buildMaster();
@@ -157,6 +157,7 @@ async function boot(): Promise<Site> {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
     scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, world.signs, markers);
+    world.setJobFair(rats.lineLength, rats.lineHead());
     camera.apply();
   };
   const wireRats = (): void => {
@@ -369,6 +370,71 @@ async function boot(): Promise<Site> {
     ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
 
+  /**
+   * The job-fair line outside: applicants (claimed salaries whose buy has not confirmed yet) and, once the building
+   * is full, hired rats waiting for a desk. Its sign, the HUD stat, and a feed line when the building fills or
+   * empties out.
+   */
+  let seatlessWas = rats.seatlessCount;
+  const updateLine = (): void => {
+    world.setJobFair(rats.lineLength, rats.lineHead());
+    ui.setLine(rats.lineLength);
+    const n = rats.seatlessCount;
+    if (n > 0 && seatlessWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires wait in the line outside the lobby, job-fair style, for the next desk.' }]);
+    else if (n === 0 && seatlessWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'Every hire in line has a desk again.' }]);
+    seatlessWas = n;
+  };
+
+  // Money you can see: every claim sends applicants into the line and bills into the Vault; every confirmed hire
+  // pulls an applicant in and sends its stock's value into the Vault. Display only, from the same API data.
+  let salarySol = 0.03;
+  /** stock value one SOL of salary buys (what lands in the Vault), from the latest hire */
+  let usdPerSol = 0;
+  const knownCosts = [...store.rats.values()].map((r) => r.facts.costUsd).filter((c) => c > 0).sort((a, b) => a - b);
+  if (knownCosts.length) usdPerSol = knownCosts[knownCosts.length >> 1]! / salarySol;
+  let claimCarry = 0;
+  const subway = (): { x: number; y: number } => {
+    const sp = plan.rings[growth.stage]!.spawn;
+    return cellCentre(sp.i, sp.j);
+  };
+  const onClaim = (amountSol: number): void => {
+    if (DEBUG_RATS) return;
+    const sol = amountSol + claimCarry;
+    const n = Math.floor(sol / salarySol + 1e-9);
+    claimCarry = sol - n * salarySol;
+    rats.addApplicants(n, rats.walking < MAX_WALKERS);
+    const from = subway();
+    vault.claim(from, amountSol * (usdPerSol || 150), Math.max(4, Math.min(30, Math.round(amountSol * 8))));
+    updateLine();
+  };
+  let applicantsSynced = false;
+  let driftSince: number | null = null;
+  /** The line follows the API: claimed SOL not hired yet (waitingSol), one applicant per salary. */
+  const syncApplicants = (s: StateResponse): void => {
+    if (DEBUG_RATS) return;
+    const target = Math.floor(s.treasury.waitingSol / salarySol + 1e-9);
+    if (!applicantsSynced) {
+      applicantsSynced = true;
+      rats.setApplicants(target, false);
+      updateLine();
+      return;
+    }
+    // Claims and hires already move the line. waitingSol leaves out the salaries of a hire loop in flight (their
+    // hire events are still coming), so only a gap bigger than a loop that lasts over 10 seconds is corrected.
+    if (Math.abs(target - rats.applicantCount) <= 25 + target * 0.05) {
+      driftSince = null;
+      return;
+    }
+    const now = performance.now();
+    driftSince ??= now;
+    if (now - driftSince < 10_000) return;
+    driftSince = null;
+    rats.setApplicants(target, rats.walking < MAX_WALKERS);
+    updateLine();
+  };
+  // on page load the line already holds everyone the API says is waiting
+  syncApplicants(state);
+
   // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
   let batchGrowth: GrowthEvent[] = [];
   let batchHires: RatRecord[] = [];
@@ -382,10 +448,11 @@ async function boot(): Promise<Site> {
     for (const r of hires) {
       // a desk in a pod still under construction: the site clears, the desks pop in with a puff of dust
       const sid = growth.seatOfRat.get(r.facts.id);
-      const at = sid === undefined ? null : world.activatePod(sid);
-      if (at) effects.dust(at.x, at.y);
+      const pod = sid === undefined ? null : world.activatePod(sid);
+      if (pod) effects.dust(pod.x, pod.y);
       rats.hire(r, rats.walking < MAX_WALKERS);
     }
+    updateLine();
     sound.hire();
     updatePrep();
     checkLandmarks(true);
@@ -417,7 +484,12 @@ async function boot(): Promise<Site> {
       ratCount++;
       batchGrowth.push(...growth.add(e.rat.facts.id, e.rat.facts.stock).events);
       batchHires.push(e.rat);
-    } else if (e.kind === 'feed') flushHires();
+      if (e.event.data.salarySol > 0) {
+        salarySol = e.event.data.salarySol;
+        if (e.event.data.costUsd > 0) usdPerSol = e.event.data.costUsd / salarySol;
+      }
+    } else if (e.kind === 'claim') onClaim(e.event.data.amountSol);
+    else if (e.kind === 'feed') flushHires();
     else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
@@ -430,6 +502,7 @@ async function boot(): Promise<Site> {
         reveals.push(vaultReveal(up.to));
         if (!revealing) revealNext();
       }
+      syncApplicants(e.state);
     }
   });
 
@@ -505,6 +578,7 @@ async function boot(): Promise<Site> {
       speed: SIM_SPEED,
       autostart: SIM_AUTOSTART,
       stage: () => STAGES[growth.stage]!.name,
+      line: () => rats.lineLength,
       onLaunch: frameBuilding,
     });
   }
@@ -658,7 +732,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, true);
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };
-    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000));
+    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000, DEBUG_MAX_RATS));
   }
   (window as unknown as { __site?: Site }).__site = site;
   return site;

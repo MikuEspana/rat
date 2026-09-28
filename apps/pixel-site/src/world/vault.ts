@@ -27,6 +27,8 @@ interface Bill {
   dur: number;
   delay: number;
   label: string | null;
+  /** the label's colour: green for stock bought, gold for fees claimed */
+  gold: boolean;
 }
 
 interface Float {
@@ -41,8 +43,9 @@ interface Spark {
 }
 
 const labelCache = new Map<string, Texture>();
-function labelTexture(text: string): Texture {
-  const hit = labelCache.get(text);
+function labelTexture(text: string, gold = false): Texture {
+  const key = `${gold ? 'g' : 'm'}${text}`;
+  const hit = labelCache.get(key);
   if (hit) return hit;
   const sc = 2;
   const w = textWidth(text, sc) + 6;
@@ -51,12 +54,12 @@ function labelTexture(text: string): Texture {
   c.width = w;
   c.height = h;
   const ctx = c.getContext('2d')!;
-  // a dark outline all round, then the green figure
+  // a dark outline all round, then the figure: green for stock bought, gold for fees claimed
   for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]] as const) drawText(ctx, text, 3 + dx * 2, 3 + dy * 2, '#16182c', sc);
-  drawText(ctx, text, 3, 3, '#7dff9a', sc);
+  drawText(ctx, text, 3, 3, gold ? '#ffd23f' : '#7dff9a', sc);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  labelCache.set(text, tex);
+  labelCache.set(key, tex);
   return tex;
 }
 
@@ -181,6 +184,21 @@ export class VaultView {
     }
   }
 
+  /** A claim: the fees fly in from the street as a stack of bills, with a gold "+$X" (every lamport hires rats). */
+  claim(from: { x: number; y: number }, usd: number, n = 8): void {
+    const to = this.top();
+    const dist = Math.hypot(to.x - from.x, to.y - from.y);
+    const dur = Math.min(2.8, 0.9 + dist / 800);
+    for (let k = 0; k < n; k++) {
+      const sx = from.x + (Math.random() - 0.5) * 40;
+      const x1 = to.x + (Math.random() - 0.5) * 30;
+      const y1 = to.y + (Math.random() - 0.5) * 16;
+      const b = this.bill(sx, from.y, (sx + x1) / 2, Math.min(from.y, y1) - 80 - dist * 0.25, x1, y1, dur, k * 0.06, k === 0 && usd > 0 ? `+${shortUsd(usd)}` : null);
+      b.gold = true;
+      this.bills.push(b);
+    }
+  }
+
   /** A burst of hires: bills rain from the ceiling onto the pile. */
   rain(n: number): void {
     const b = this.box();
@@ -199,7 +217,7 @@ export class VaultView {
     s.position.set(x0, y0);
     s.visible = false;
     this.fx.addChild(s);
-    return { s, x0, y0, cx, cy, x1, y1, t: 0, dur, delay, label };
+    return { s, x0, y0, cx, cy, x1, y1, t: 0, dur, delay, label, gold: false };
   }
 
   update(dt: number): void {
@@ -262,7 +280,7 @@ export class VaultView {
       if (u >= 1) {
         this.bounce = Math.min(1, this.bounce + 0.35);
         if (b.label) {
-          const s = new Sprite(labelTexture(b.label));
+          const s = new Sprite(labelTexture(b.label, b.gold));
           s.anchor.set(0.5, 1);
           s.position.set(b.x1, b.y1 - 6);
           this.fx.addChild(s);

@@ -1,7 +1,7 @@
 // GuardedSender: the path every transaction takes.
 //   - kill switch on: nothing is prepared or sent (the emergency `sweep` kind is the only exception)
-//   - hire / burn need a spend reservation from the SpendGuard
-//   - live claim / hire / burn: the signed tx is simulated first and refused if it would break its spend limits
+//   - hires need a spend reservation from the SpendGuard
+//   - live claim / hire: the signed tx is simulated first and refused if it would break its spend limits
 //     (TxRequest.limits), so instructions from an outside API can never drain a wallet
 //   - lease fence: a worker that lost the single-worker lease sends nothing
 //   - every attempt is written to the database BEFORE it is sent (signature + last valid block height)

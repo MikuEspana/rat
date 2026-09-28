@@ -1,9 +1,8 @@
-// Wallet watch (live only). Looks at every new signature on the creator and fund wallets that the bot did
-// not send itself (owner decision #7):
-//  - a pump.fun claim of OUR creator vault (anyone can trigger one): credited and split 50/50 like our own;
-//    the fund's share is owed and rides in our next claim tx
+// Wallet watch (live only). Looks at every new signature on the creator wallet that the bot did not send itself
+// (owner decision #7):
+//  - a pump.fun claim of OUR creator vault (anyone can trigger one): credited to hires like our own
 //  - any other SOL that arrives: alert, left unspent (never credited to the ledger)
-//  - a transaction SIGNED by our creator or fund that we did not send: critical alert + kill switch
+//  - a transaction SIGNED by our creator that we did not send: critical alert + kill switch
 // Owner transactions are not attacks:
 //  - nothing before the watch floor is ever looked at: WATCH_FROM_SLOT (set it right after the coin launch), else
 //    the slot of the worker's first live run (stored once). This also covers a launch tx that the RPC indexes late.
@@ -38,9 +37,9 @@ export async function watchFloor(d: WorkerDeps): Promise<number> {
   return slot;
 }
 
-async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchResult, floor: number): Promise<void> {
-  const wallet = role === 'creator' ? d.creator : d.fund;
-  const cursorKey = role === 'creator' ? SETTINGS.creatorWatchCursor : SETTINGS.fundWatchCursor;
+async function watchWallet(d: WorkerDeps, role: 'creator', res: WatchResult, floor: number): Promise<void> {
+  const wallet = d.creator;
+  const cursorKey = SETTINGS.creatorWatchCursor;
   // null = never ran. '' = ran while the wallet had no history (process everything that comes).
   const cursor = await d.store.settings.get(cursorKey);
   const sigs = await d.chain.getSignaturesSince(wallet, cursor || null, WATCH_SIG_LIMIT);
@@ -118,15 +117,13 @@ async function watchWallet(d: WorkerDeps, role: 'creator' | 'fund', res: WatchRe
       await d.store.seen.add(sig, wallet, 'failed_other', now);
       continue;
     }
-    if (role === 'creator') {
-      const claim = d.pump.parseClaim(record, d.creator);
-      if (claim && claim.totalLamports > 0n) {
-        res.externalClaims++;
-        await creditClaim(d, { claimed: claim.totalLamports, fee: 0n, toFund: 0n, source: 'external', sig });
-        await d.store.seen.add(sig, wallet, 'external_claim', now);
-        await d.alerts.send('info', `external_claim_${sig}`, `External claim of our creator fees (${formatSol(claim.totalLamports)} SOL) booked and split 50/50: ${sig}`);
-        continue;
-      }
+    const claim = d.pump.parseClaim(record, d.creator);
+    if (claim && claim.totalLamports > 0n) {
+      res.externalClaims++;
+      await creditClaim(d, { claimed: claim.totalLamports, fee: 0n, source: 'external', sig });
+      await d.store.seen.add(sig, wallet, 'external_claim', now);
+      await d.alerts.send('info', `external_claim_${sig}`, `External claim of our creator fees (${formatSol(claim.totalLamports)} SOL) booked for hires: ${sig}`);
+      continue;
     }
     const delta = solDelta(record, wallet);
     if (delta > 0n) {
@@ -153,6 +150,5 @@ export async function runWatchStep(d: WorkerDeps): Promise<WatchResult> {
   if (d.store.mode === 'paper') return res;
   const floor = await watchFloor(d);
   await watchWallet(d, 'creator', res, floor);
-  await watchWallet(d, 'fund', res, floor);
   return res;
 }

@@ -26,10 +26,6 @@ describe('format', () => {
     expect(types.size).toBeGreaterThanOrEqual(3);
     for (const e of events) {
       const d = line(e);
-      if (e.type === 'burn') {
-        expect(d).toBeNull();
-        continue;
-      }
       if (!d) throw new Error(`no line for ${e.type}`);
       expect(d.tag.length).toBeGreaterThan(0);
       expect(`${d.tag} ${d.text}`.toLowerCase()).not.toContain('burn');

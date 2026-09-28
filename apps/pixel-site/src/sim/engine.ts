@@ -1,7 +1,8 @@
 // The launch simulator: a whole launch in the browser, no server. A market cap curve (scenarios.ts) makes
 // trading volume, volume makes creator fees, and the backend's rules (rules.ts) turn fees into claims and hires:
-// a claim every 35 s loop, every lamport to hires (the rats' stocks are the portfolio; nothing is ever burned),
-// 0.03 SOL per rat, at most 10 hires per loop, 30 SOL per hour.
+// a claim every 35 s loop, every lamport to hires (the rats hold their stocks, nothing is bought back or burned),
+// 0.03 SOL per rat, at most 20 hires per loop, 60 SOL per hour, and at most 40 Jupiter calls in any minute (one per
+// hire plus a price call every 45 s). What the limits hold back waits and is spent later.
 // Stock picks use the worker's own picker. Responses are built with the contract's display math, in the exact
 // shapes of /api/state, /api/rats and /api/events, so the site renders them with its real code.
 //
@@ -26,12 +27,11 @@ import mockState from '@rat/contract/mock/state.json';
 import { hireWeights, pickWeighted } from '../../../../packages/core/src/picker';
 import { Rng } from '../floor/rng';
 import { RULES, SWAP_SOL } from './rules';
-import { COIN_SUPPLY, creatorFeeRate, curveAt, SOL_USD, volumeUsdPerHour, type Scenario } from './scenarios';
+import { COIN_SUPPLY, creatorFeeRate, curveAt, phaseFeePerMin, SOL_USD, volumeUsdPerHour, type Scenario } from './scenarios';
 
 const STEP_MS = 5_000; // fee accrual resolution
 const HIRE_GAP_MS = 1_500; // the hires of one loop go out one after another (each is its own transaction)
 const HOUR_MS = 3_600_000;
-const FUND_RESERVE_SOL = 0.01;
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 export const SIM_COIN_MINT = 'SiMuLaTioNRaTMint1111111111111111111111pump';
 
@@ -62,10 +62,14 @@ export interface SimStats {
   rats: number;
   feesSol: number;
   claimedSol: number;
-  /** claimed SOL waiting for the hourly cap */
+  /** SOL spent on hires */
+  hiredSol: number;
+  /** claimed SOL waiting for the hourly hire cap */
   hireWaitingSol: number;
-  /** what all the rats' stocks are worth now */
-  fundValueUsd: number;
+  /** most Jupiter calls in any 60 s so far */
+  jupiterMaxPerMin: number;
+  /** what all the rats' stocks are worth now (the rats' portfolio, not holders' money) */
+  portfolioValueUsd: number;
 }
 
 export class LaunchSim {
@@ -81,6 +85,9 @@ export class LaunchSim {
   private hireBucket = 0;
   private fees = 0;
   private hireSpends: Array<{ at: number; sol: number }> = [];
+  /** times of Jupiter calls (prices + builds) in the last minute, and the most seen in any minute */
+  private jupiterCalls: number[] = [];
+  private jupiterMax = 0;
   private pending: Pending[] = [];
   private nextStepAt = 0;
   private nextPriceAt = 0;
@@ -90,15 +97,7 @@ export class LaunchSim {
   private readonly rats: RatFacts[] = [];
   private events: RatEvent[] = [];
   private nextEventId = 1;
-  private readonly treasury: StateResponse['treasury'] = {
-    totalClaimedSol: 0,
-    totalToHiresSol: 0,
-    totalToFundSol: 0,
-    fundWalletSol: FUND_RESERVE_SOL,
-    totalBurnSpentSol: 0,
-    burnCount: 0,
-    lastBurnAt: null,
-  };
+  private readonly treasury: StateResponse['treasury'] = { totalClaimedSol: 0, totalHiredSol: 0, waitingSol: 0 };
 
   constructor(
     readonly scenario: Scenario,
@@ -187,13 +186,28 @@ export class LaunchSim {
     const c = curveAt(this.scenario, this.t / 60_000);
     this.mcap = c.mcap * Math.exp(this.noise);
     const volumeUsd = volumeUsdPerHour(this.mcap, c.slopePerHour) * (STEP_MS / HOUR_MS);
-    const feeSol = (volumeUsd * creatorFeeRate(this.mcap)) / SOL_USD;
+    const phases = this.scenario.feePhases;
+    const feeSol = phases ? phaseFeePerMin(phases, this.t / 60_000) * (STEP_MS / 60_000) : (volumeUsd * creatorFeeRate(this.mcap)) / SOL_USD;
     this.claimable += feeSol;
     this.fees += feeSol;
   }
 
+  /** Jupiter calls left in the rolling minute. */
+  private jupiterRoom(): number {
+    while (this.jupiterCalls.length && this.jupiterCalls[0]! <= this.t - 60_000) this.jupiterCalls.shift();
+    return RULES.jupiterPerMin - this.jupiterCalls.length;
+  }
+
+  private jupiterCall(): void {
+    this.jupiterCalls.push(this.t);
+    this.jupiterMax = Math.max(this.jupiterMax, this.jupiterCalls.length);
+  }
+
   /** Stock prices drift in trends that flip (exaggerated, so rats visibly change tier within one launch). */
   private stepPrices(): void {
+    // one batched Jupiter call for every price; with no call left this round is skipped, like the worker
+    if (this.jupiterRoom() < 1) return;
+    this.jupiterCall();
     const dtH = RULES.priceSec / 3600;
     for (const s of this.stocks) {
       if (this.t >= s.nextTrendAt) {
@@ -209,22 +223,24 @@ export class LaunchSim {
     this.noise += -this.noise * k + 0.06 * Math.sqrt(2 * k) * this.gauss();
   }
 
-  /** The bot's loop: claim (every lamport hires rats), then hire as far as the budget, the per-loop limit and the cap allow. */
+  /** The bot's loop: claim (all of it to hires), then hire as far as the budget, the per-loop limit and the cap allow. */
   private loop(): void {
     if (this.claimable >= RULES.minClaimSol) {
       const amount = round6(this.claimable);
       this.claimable = 0;
       this.hireBucket += amount;
       this.treasury.totalClaimedSol = round6(this.treasury.totalClaimedSol + amount);
-      this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + amount);
       this.lastClaimAt = this.t;
-      this.push({ type: 'claim', data: { amountSol: amount, toHiresSol: amount, toFundSol: 0, source: 'bot' } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
+      this.push({ type: 'claim', data: { amountSol: amount, source: 'bot' } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
     }
     const capLeft = RULES.capHireSolPerHour - this.spentLastHour(this.hireSpends);
-    const n = Math.max(0, Math.min(RULES.maxHiresPerLoop, Math.floor((this.hireBucket + 1e-9) / RULES.salarySol), Math.floor((capLeft + 1e-9) / RULES.salarySol)));
+    const jupiterLeft = this.jupiterRoom() - RULES.tokensKeptForPrices;
+    const n = Math.max(0, Math.min(RULES.maxHiresPerLoop, jupiterLeft, Math.floor((this.hireBucket + 1e-9) / RULES.salarySol), Math.floor((capLeft + 1e-9) / RULES.salarySol)));
     for (let k = 0; k < n; k++) {
+      this.jupiterCall(); // one /build per hire
       // reserve before sending, like the spend guard
       this.hireBucket -= RULES.salarySol;
+      this.treasury.totalHiredSol = round6(this.treasury.totalHiredSol + RULES.salarySol);
       this.hireSpends.push({ at: this.t, sol: RULES.salarySol });
       this.schedule({ at: this.t + (k + 1) * HIRE_GAP_MS, kind: 'hire' });
     }
@@ -291,12 +307,14 @@ export class LaunchSim {
       rats: this.rats.length,
       feesSol: this.fees,
       claimedSol: this.treasury.totalClaimedSol,
+      hiredSol: this.treasury.totalHiredSol,
       hireWaitingSol: Math.max(0, this.hireBucket),
-      fundValueUsd: this.fundValue(),
+      jupiterMaxPerMin: this.jupiterMax,
+      portfolioValueUsd: this.portfolioValue(),
     };
   }
 
-  private fundValue(): number {
+  private portfolioValue(): number {
     const prices = new Map(this.stocks.map((s) => [s.mint, s.price]));
     let v = 0;
     for (const r of this.rats) v += Number(r.tokenAmount) * (prices.get(r.stockMint) ?? 0);
@@ -331,7 +349,6 @@ export class LaunchSim {
         mode: 'live',
         lastClaimAt: this.lastClaimAt === null ? null : this.iso(this.lastClaimAt),
         nextClaimAt: live && !this.finished ? this.iso(this.nextLoopAt) : null,
-        nextBurnAt: null,
       },
       coin: {
         mint: live ? SIM_COIN_MINT : null,
@@ -339,10 +356,9 @@ export class LaunchSim {
         priceUsd: live ? Number(price.toPrecision(4)) : null,
         supply: live ? this.supply.toFixed(2) : null,
         marketCapUsd: live ? Math.round(this.mcap) : null,
-        burnedTokens: '0.00',
       },
-      wallets: { creator: null, fund: null },
-      treasury: { ...this.treasury },
+      wallets: { creator: null },
+      treasury: { ...this.treasury, waitingSol: round6(Math.max(0, this.hireBucket)) },
       portfolio: summarizePortfolio(all),
       stocks: summarizeStocks(facts, all),
       leaderboard: leaderboard(all),

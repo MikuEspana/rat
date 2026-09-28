@@ -1,7 +1,7 @@
 // Launch simulator controls: the SIMULATION banner, the "Simulate launch" start screen and the control panel
-// (start / pause / reset, speed, scenario, and a readout of sim time, market cap, rats, stage and fund value).
+// (start / pause / reset, speed, scenario, and a readout of sim time, market cap, rats, stage and portfolio value).
 // It also drives the simulator's clock. Plain DOM, textContent only.
-import { compact, usd } from '../ui/format';
+import { usd } from '../ui/format';
 import type { Ui } from '../ui/ui';
 import type { LaunchSim } from './engine';
 import { SCENARIOS, type ScenarioId } from './scenarios';
@@ -31,6 +31,8 @@ export interface PanelDeps {
   autostart: boolean;
   /** current stage name of the building */
   stage: () => string;
+  /** rats in the job-fair line outside (no desk yet) */
+  line: () => number;
   /** the coin went live: the site frames the building */
   onLaunch: () => void;
 }
@@ -116,7 +118,7 @@ export class SimPanel {
     const speedLabel = el('div', 'sim-label', 'Speed');
     box.append(
       el('div', 'sim-kicker', 'RAT RACE LAUNCH SIMULATOR'),
-      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a rat that buys and holds a stock, and the fund and the company grow.'),
+      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a rat that buys and holds a stock, and the portfolio and the company grow.'),
       el('div', 'sim-label', 'Scenario'),
       pick,
       speedLabel,
@@ -194,7 +196,7 @@ export class SimPanel {
       this.announcedEnd = true;
       const s = sim.stats();
       const waiting = s.hireWaitingSol >= 1 ? ` ${s.hireWaitingSol.toFixed(1)} SOL still waiting under the hourly cap.` : '';
-      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, fund worth ${usd(s.fundValueUsd)}.${waiting} Reset to run it again.` }]);
+      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, portfolio worth ${usd(s.portfolioValueUsd)}.${waiting} Reset to run it again.` }]);
     }
     this.render();
   }
@@ -211,7 +213,8 @@ export class SimPanel {
       ['Market cap', s.mcap === null ? 'pre-launch' : usd(s.mcap)],
       ['Rats', s.rats.toLocaleString('en-US')],
       ['Stage', this.d.stage()],
-      ['Portfolio', usd(s.fundValueUsd)],
+      ...(this.d.line() > 0 ? [['In line outside', this.d.line().toLocaleString('en-US')] as [string, string]] : []),
+      ['Portfolio value', usd(s.portfolioValueUsd)],
       ['Fees', `${s.feesSol.toFixed(2)} SOL`],
     ];
     this.readout.replaceChildren(

@@ -5,7 +5,6 @@ import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WorkerState } from './deps';
 import { SOL, type SimWorld, createSimWorld } from './sim-world';
-import { runBurnStep } from './steps/burn';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
 import { runMintStep } from './steps/mints';
@@ -91,43 +90,36 @@ describe('red team: compromised Jupiter API (live, SimChain)', () => {
       expect(w.chain.tokenBalance(rat.wallet, rat.stockMint, TOKEN_2022_PROGRAM)).toBe(0n);
     }
   });
-
-  it('a burn build that also drains the fund is refused; the burn budget is intact', async () => {
-    await liveWorld();
-    const thief = Keypair.generate().publicKey;
-    const budget = await w.store.ledger.balance('burn');
-    const fundBefore = sol(w, w.fund);
-    compromiseJupiter(w, (b) => ({
-      ...b,
-      instructions: [...b.instructions, SystemProgram.transfer({ fromPubkey: w.fund.publicKey, toPubkey: thief, lamports: 5_000_000 })],
-    }));
-    const r = await runBurnStep(w.deps, w.worker.state);
-    expect(r.status).toBe('failed');
-    expect(w.chain.sol(thief.toBase58())).toBe(0n);
-    expect(sol(w, w.fund)).toBe(fundBefore);
-    expect(await w.store.ledger.balance('burn')).toBe(budget);
-    expect(w.alerts.sent.some((a) => a.key === 'effects_burn')).toBe(true);
-  });
 });
 
 describe('red team: crash and RPC failure windows', () => {
-  it('burn: worker killed after the tx landed but before the burn row got its signature; the restart books it, never re-credits', async () => {
-    await liveWorld();
-    const fundBefore = sol(w, w.fund);
-    const budget = await w.store.ledger.balance('burn');
+  it('hire: worker killed after the tx landed but before it saw the result; the restart books it once, never funds twice', async () => {
+    await liveWorld({ MAX_HIRES_PER_LOOP: '1' });
+    const creatorBefore = sol(w, w.creator);
+    const budget = await w.store.ledger.balance('hire');
     const landed = killDuringNextSubmit(w);
-    void runBurnStep(w.deps, w.worker.state); // never finishes: the process "died" mid-send
+    void runHireStep(w.deps, w.worker.state); // never finishes: the process "died" mid-send
     await landed;
-    const spent = fundBefore - sol(w, w.fund);
+    const spent = creatorBefore - sol(w, w.creator);
     expect(spent).toBeGreaterThan(0n);
+    expect(spent).toBeLessThanOrEqual(w.deps.config.salaryLamports);
+    const [rat] = await w.store.rats.listByStatus(['hiring']);
+    expect(rat).toBeDefined();
+    const tokens = w.chain.tokenBalance(rat!.wallet, rat!.stockMint, TOKEN_2022_PROGRAM);
+    expect(tokens).toBeGreaterThan(0n);
 
     // restart: fresh in-memory state, same database
-    const r = await runBurnStep(w.deps, new WorkerState());
-    expect(r.status).toBe('skipped'); // the budget was spent by the landed burn: nothing left to burn
-    expect((await w.store.burns.listByStatus(['confirmed'])).length).toBe(1);
-    expect(await w.store.ledger.balance('burn')).toBe(budget - spent);
-    // the fund's own SOL (its reserve and starting balance) was never touched
-    expect(sol(w, w.fund)).toBe(fundBefore - spent);
+    const r = await runHireStep(w.deps, new WorkerState());
+    expect(r.retried).toBe(1);
+    expect((await w.store.rats.get(rat!.id))?.status).toBe('active');
+    // the landed hire is booked, never sent again: same tokens, one attempt, one salary
+    expect(w.chain.tokenBalance(rat!.wallet, rat!.stockMint, TOKEN_2022_PROGRAM)).toBe(tokens);
+    expect((await w.store.attempts.forRef('rat', String(rat!.id))).length).toBe(1);
+    expect(w.chain.sol(rat!.wallet)).toBe(w.deps.config.ratBufferLamports);
+    // the ledger moved by exactly what left the creator wallet: the creator's own SOL was never touched
+    const creatorSpent = creatorBefore - sol(w, w.creator);
+    expect(await w.store.ledger.balance('hire')).toBe(budget - creatorSpent);
+    expect(w.alerts.keys().some((k) => k.startsWith('overspend_'))).toBe(false);
   });
 
   it('claim: worker killed mid-send; the restart credits the claim exactly once', async () => {
@@ -136,11 +128,14 @@ describe('red team: crash and RPC failure windows', () => {
     const landed = killDuringNextSubmit(w);
     void runClaimStep(w.deps, w.worker.state);
     await landed;
-    expect(await w.store.ledger.balance('burn')).toBe(0n);
+    expect(await w.store.ledger.balance('hire')).toBe(0n);
     await runClaimStep(w.deps, new WorkerState());
-    expect(await w.store.ledger.balance('burn')).toBe(SOL / 2n);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: SOL, hireShare: SOL, count: 1 });
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
     await runClaimStep(w.deps, new WorkerState());
-    expect((await w.store.claims.totals()).claimed).toBe(SOL);
+    expect(await w.store.claims.totals()).toEqual(t);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
   });
 
   it('hire: the RPC fails while waiting for confirmation of a landed hire; the budget is not re-credited', async () => {
@@ -170,10 +165,10 @@ describe('red team: crash and RPC failure windows', () => {
 });
 
 describe('red team: claims', () => {
-  it('a claim that may still land blocks the next one (the fund share is never forwarded twice)', async () => {
+  it('a claim that may still land blocks the next one (a claim is never credited twice)', async () => {
     await liveWorld({}, 0n);
     w.accrue({ bondingLamports: SOL });
-    const fundBefore = sol(w, w.fund);
+    const creatorBefore = sol(w, w.creator);
     const sim = w.simSender;
     const honest = sim.submit.bind(sim);
     sim.submit = async () => {
@@ -187,8 +182,11 @@ describe('red team: claims', () => {
     // once its blockhash expired, the open claim is closed and the next claim goes out
     w.chain.advanceBlocks(500);
     expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('claimed');
-    expect(sol(w, w.fund) - fundBefore).toBe(SOL / 2n);
-    expect(await w.store.claims.pendingFundTransfer()).toBe(0n);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: SOL, hireShare: SOL, count: 1 });
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
+    // the whole claim stayed with the creator (minus the network fee): nothing was forwarded anywhere
+    expect(sol(w, w.creator) - creatorBefore).toBe(SOL - t.fee);
   });
 });
 
