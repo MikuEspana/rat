@@ -3,6 +3,7 @@
 // through the zoning (zones.ts); what does not fit is skipped. The world draws exactly this, and the tests check it.
 import type { City } from './city';
 import { LANDMARKS } from './landmarks';
+import { type SewerPart, sewerParts, spawnStageOf } from './sewer';
 import { idx, T, type FloorLayout, type Room } from './types';
 import { type Openness, rectCells, Zoning } from './zones';
 
@@ -38,6 +39,8 @@ export interface Scene {
   pylon: { i: number; j: number } | null;
   /** landmarks standing in their slots (or lots) */
   standing: Set<string>;
+  /** the sewer parts that fit in front of the lobby (floor/sewer.ts) */
+  sewer: SewerPart[];
 }
 
 const hash = (n: number): number => (((n * 2654435761) >>> 0) % 10007) / 10007;
@@ -62,6 +65,11 @@ export function layoutScene(plan: FloorLayout, open: Openness, city: City, count
     if (!up) continue;
     if (z.claim({ what: id, cat: 'landmark', cells: rectCells(sp.i0, sp.j0, sp.w, sp.h) }, ['slot'], id)) standing.add(id);
   }
+
+  // the sewer rats come out of, in front of the lobby: before the city's street furniture takes the sidewalk
+  const sewer = sewerParts(spawnStageOf(count), ring.spawn).filter((p) =>
+    z.claim({ what: `sewer ${p.kind}`, cat: 'spawn', cells: rectCells(p.i0, p.j0, p.w, p.h) }, ['spawn', 'apron', 'sidewalk']),
+  );
 
   // landmarks in lots of their own: the rocket, the annex (and the annex's pylon on the office apron)
   let pylon: Scene['pylon'] = null;
@@ -145,7 +153,7 @@ export function layoutScene(plan: FloorLayout, open: Openness, city: City, count
       if (walkable(plan, i, j) && z.claim({ what: 'kneeler', cat: 'extra', cells: [[i, j]] }, ['office'])) kneelers.push({ look: looks[kneelers.length % looks.length]!, anim: 'kneel', i, j, mirror: m });
     }
   }
-  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing };
+  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing, sewer };
 }
 
 function walkable(plan: FloorLayout, i: number, j: number): boolean {

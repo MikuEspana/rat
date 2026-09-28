@@ -57,6 +57,7 @@ describe('zoning', () => {
             expect(plan.tile[idx(plan.W, i, j)]).not.toBe(T.WALL);
           } else if (c.cat === 'prop') expect(['sidewalk', 'lot']).toContain(zone);
           else if (c.cat === 'extra') expect(['sidewalk', 'lot', 'office', 'site']).toContain(zone);
+          else if (c.cat === 'spawn') expect(['spawn', 'apron', 'sidewalk']).toContain(zone);
         }
       }
 
@@ -78,6 +79,8 @@ describe('zoning', () => {
         const id = slotOf[l.id] ?? l.id;
         expect(scene.standing.has(id), `${l.name} at ${n} rats`).toBe(true);
       }
+      // the sewer's way out always fits in front of the lobby
+      expect(scene.sewer.some((p) => p.main)).toBe(true);
       // shut wings exist only in the current ring
       for (const r of open.closedRects) expect(r.i0 >= ring.i0 - 1 && r.i0 + r.w <= ring.i1 + 2).toBe(true);
     });

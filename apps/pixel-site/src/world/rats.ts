@@ -76,6 +76,13 @@ function lookOf(rec: RatRecord): Look {
   return rec.facts.status === 'frozen' ? 'frozen' : rec.view.tier;
 }
 
+/** The atlas key of a rat's look (tier and fur), as its animations are named: `<key>/<anim>`. */
+export function lookKey(rec: RatRecord): string {
+  const look = lookOf(rec);
+  const fur = styleOf(rec).fur;
+  return look === 'frozen' || fur === 'grey' ? look : `${look}.${fur}`;
+}
+
 /** Fur and accessory from the rat's avatar seed: the same rat always looks the same. */
 function styleOf(rec: RatRecord): { fur: string; acc: Accessory | null; mug: boolean } {
   const h = hash32(`look:${rec.facts.avatarSeed ?? rec.facts.id}`);

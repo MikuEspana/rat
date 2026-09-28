@@ -67,4 +67,19 @@ export const sound = {
     if (!a) return;
     note(a, 1760, 0, 0.06, 'sine', 0.04);
   },
+  /** a manhole lid pops up */
+  pop(): void {
+    const a = audio();
+    if (!a) return;
+    note(a, 220, 0, 0.08, 'square', 0.05);
+    note(a, 440, 0.03, 0.08, 'triangle', 0.05);
+  },
+  /** the lid drops back: a heavy iron clank */
+  clank(): void {
+    const a = audio();
+    if (!a) return;
+    note(a, 140, 0, 0.18, 'square', 0.07);
+    note(a, 610, 0, 0.12, 'triangle', 0.05);
+    note(a, 1230, 0.01, 0.08, 'sine', 0.03);
+  },
 };

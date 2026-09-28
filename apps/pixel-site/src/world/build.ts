@@ -12,6 +12,7 @@ import { cellCentre, cellToScreen } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
 import { layoutScene, type Scene } from '../floor/scene';
+import type { SewerPart } from '../floor/sewer';
 import { openness } from '../floor/zones';
 import { layoutLabels } from '../floor/labels';
 import { type Focus, renderLandmarks } from './landmarks';
@@ -47,6 +48,9 @@ export interface World {
   tickers: Ticker[];
   /** the Vault's money pile in the middle of the building (VaultView drives it) */
   vault: VaultAnchor;
+  /** the sewer parts in front of the lobby (SewerView draws them) and the row of the lobby door */
+  sewer: SewerPart[];
+  sewerDoor: number;
   /** the walk mask this world was built for */
   blocked: Uint8Array;
   /** call every frame: server lights blink, new rooms pop in */
@@ -695,8 +699,6 @@ export function buildWorld(
   const vc = cellToScreen(plan.vault.i, plan.vault.j);
   const vaultItem = main.add(makeParticle(atlas.frame('world:vault_0'), vc.x, vc.y), plan.vault.i + plan.vault.j + 1);
   const vaultGlow = addGlow(glowTexture(110, 255, 150), vc.x, vc.y - 24, 3.2, 0);
-  const sp = cellCentre(ring.spawn.i, ring.spawn.j);
-  addGlow(glowTexture(140, 255, 170), sp.x, sp.y + 10, 1.4, 0.5);
 
   // wall tickers on built stock rooms
   const tickerFrame = atlas.frame('world:ticker_wall');
@@ -787,6 +789,8 @@ export function buildWorld(
     signs,
     tickers,
     vault: { item: vaultItem, x: vc.x, y: vc.y, glow: vaultGlow },
+    sewer: scene.sewer,
+    sewerDoor: ring.j1,
     blocked,
     update(dt: number): void {
       clock += dt;

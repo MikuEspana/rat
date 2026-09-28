@@ -24,8 +24,10 @@ import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { VaultView } from './world/vault';
+import { SewerView } from './world/sewer';
+import { SPAWN_STAGES, spawnStageOf } from './floor/sewer';
 import { VAULT_STAGES, vaultStageOf } from './floor/vault';
-import { RatSystem, type Mood } from './world/rats';
+import { lookKey, RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
 import type { NewsStats } from './ui/news';
@@ -85,6 +87,8 @@ export interface Site {
   sim?: LaunchSim;
   /** the Vault's money pile (screenshots and debugging) */
   vault?: VaultView;
+  /** the sewer rats come out of */
+  sewer?: SewerView;
   simPanel?: SimPanel;
 }
 
@@ -152,11 +156,15 @@ async function boot(): Promise<Site> {
   const vaultValue = (s: StateResponse): number => (VAULT_PIN !== null ? Number(VAULT_PIN) || 0 : s.portfolio.valueUsd);
   const vaultPnl = (s: StateResponse): number => (PNL_PIN !== null ? Number(PNL_PIN) || 0 : s.portfolio.pnlPct);
   vault.set(vaultValue(state), vaultPnl(state), false);
+  // the sewer new rats come out of, in front of the lobby: it grows with the hires
+  const sewer = new SewerView(atlas);
+  let spawnStage = spawnStageOf(ratCount);
+  sewer.attach(world.main, world.sewer, world.sewerDoor);
   const camera = new Camera(scene, app.canvas);
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, world.signs, markers);
+    scene.addChild(world.backdrop, world.floor, sewer.flat, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, sewer.fx, world.signs, markers);
     camera.apply();
   };
   const wireRats = (): void => {
@@ -239,6 +247,12 @@ async function boot(): Promise<Site> {
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
+  const sewerReveal = (stage: number): Reveal => ({
+    title: `THE SEWER: ${SPAWN_STAGES[stage]!.name}`,
+    sub: `${SPAWN_STAGES[stage]!.min.toLocaleString('en-US')} rats hired`,
+    kicker: 'SPAWN UPGRADE',
+    focus: () => sewer.focus(),
+  });
   const reveals: Reveal[] = [];
   let revealing = false;
   let skipReveal: (() => void) | null = null;
@@ -293,18 +307,22 @@ async function boot(): Promise<Site> {
     const now = unlocked(ratCount);
     const fresh = new Set([...now].filter((id) => !landmarksOn.has(id)));
     landmarksOn = now;
-    if (!fresh.size) return false;
+    const sewerUp = spawnStageOf(ratCount) > spawnStage;
+    if (!fresh.size && !sewerUp) return false;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
     rats.rebind(world.main, world.blocked);
     wireRats();
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
     updatePrep();
+    if (sewerUp) spawnStage = spawnStageOf(ratCount);
     if (announce) {
       reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => landmarkReveal(l.id)));
+      if (sewerUp) reveals.push(sewerReveal(spawnStage));
       if (!revealing) revealNext();
     }
     return true;
@@ -345,6 +363,7 @@ async function boot(): Promise<Site> {
     rats.rebind(world.main, world.blocked);
     wireRats();
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
@@ -389,7 +408,9 @@ async function boot(): Promise<Site> {
       const sid = growth.seatOfRat.get(r.facts.id);
       const at = sid === undefined ? null : world.activatePod(sid);
       if (at) effects.dust(at.x, at.y);
-      rats.hire(r, rats.walking < MAX_WALKERS);
+      // out of the sewer (a line of them in a burst), then to its desk; a long queue skips the show
+      if (rats.walking < MAX_WALKERS && sewer.waiting < 12) sewer.enqueue(lookKey(r), () => rats.hire(r, true));
+      else rats.hire(r, false);
     }
     sound.hire();
     updatePrep();
@@ -400,8 +421,7 @@ async function boot(): Promise<Site> {
   const recentHires: number[] = [];
   let lastRain = -1e9;
   const moneyIn = (usdIn: number): void => {
-    const sp = plan.rings[growth.stage]!.spawn;
-    const c = cellCentre(sp.i, sp.j);
+    const c = sewer.exit();
     vault.hire({ x: c.x, y: c.y - 16 }, usdIn);
     const now = performance.now();
     recentHires.push(now);
@@ -453,6 +473,7 @@ async function boot(): Promise<Site> {
     world.update(dt);
     effects.update(dt);
     vault.update(dt);
+    sewer.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -495,9 +516,9 @@ async function boot(): Promise<Site> {
   }
 
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView, vault };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView, vault, sewer };
   site.reveal = (id: string): void => {
-    reveals.push(id === 'vault' ? vaultReveal(Math.max(0, vault.stage)) : landmarkReveal(id));
+    reveals.push(id === 'vault' ? vaultReveal(Math.max(0, vault.stage)) : id === 'sewer' ? sewerReveal(spawnStage) : landmarkReveal(id));
     if (!revealing) revealNext();
   };
   site.skipReveal = (): void => skipReveal?.();
@@ -525,12 +546,14 @@ async function boot(): Promise<Site> {
     const nowOn = unlocked(ratCount);
     const freshOn = new Set([...nowOn].filter((id) => !landmarksOn.has(id)));
     landmarksOn = nowOn;
+    spawnStage = spawnStageOf(n);
     world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set(), announce ? freshOn : new Set());
     rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
     wireRats();
     applyMoods(store.state ?? state);
     rats.load(recs);
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     ui.setRats(rats);
     site.rats = rats;
     site.growth = growth;
