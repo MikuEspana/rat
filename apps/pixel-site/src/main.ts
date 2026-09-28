@@ -143,7 +143,7 @@ async function boot(): Promise<Site> {
 
   let world: World = buildWorld(plan, growth, atlas, store.stocks);
   // (mount() also picks the sky for the stage)
-  let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+  let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
   const effects = new Effects();
   // the Vault: the money pile in the middle of the building shows the Wall Street Rats portfolio (?vault=USD pins a value)
   const vault = new VaultView(atlas, world.vault);
@@ -297,7 +297,7 @@ async function boot(): Promise<Site> {
     if (!fresh.size) return false;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
-    rats.rebind(world.main, world.blocked);
+    rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
     mount();
@@ -343,7 +343,7 @@ async function boot(): Promise<Site> {
         effects.dust(c.x, c.y, 20);
       }
     }
-    rats.rebind(world.main, world.blocked);
+    rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
     mount();
@@ -600,7 +600,7 @@ async function boot(): Promise<Site> {
     const freshOn = new Set([...nowOn].filter((id) => !landmarksOn.has(id)));
     landmarksOn = nowOn;
     world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set(), announce ? freshOn : new Set());
-    rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+    rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
     wireRats();
     applyMoods(store.state ?? state);
     rats.load(recs);

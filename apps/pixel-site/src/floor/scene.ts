@@ -1,6 +1,7 @@
 // What stands where, decided before anything is drawn: the office claims its walls and furniture, then the Vault and
 // the landmarks their slots, the city its lots and sidewalks, the building sites their dirt. Every placement goes
 // through the zoning (zones.ts); what does not fit is skipped. The world draws exactly this, and the tests check it.
+import type { Cell } from '../iso';
 import type { City } from './city';
 import { LANDMARKS } from './landmarks';
 import { idx, T, type FloorLayout, type Room } from './types';
@@ -38,6 +39,8 @@ export interface Scene {
   pylon: { i: number; j: number } | null;
   /** landmarks standing in their slots (or lots) */
   standing: Set<string>;
+  /** the job-fair line, head first: outdoor, free tiles only (the apron round the office, then sidewalks) */
+  line: Cell[];
 }
 
 const hash = (n: number): number => (((n * 2654435761) >>> 0) % 10007) / 10007;
@@ -145,7 +148,60 @@ export function layoutScene(plan: FloorLayout, open: Openness, city: City, count
       if (walkable(plan, i, j) && z.claim({ what: 'kneeler', cat: 'extra', cells: [[i, j]] }, ['office'])) kneelers.push({ look: looks[kneelers.length % looks.length]!, anim: 'kneel', i, j, mirror: m });
     }
   }
-  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing };
+  const line = jobFairLine(plan, stage, z);
+  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing, line };
+}
+
+/** Enough places for every applicant the page draws (rats.ts APPLICANT_CAP) and the hires waiting for a desk. */
+const LINE_WANT = 2200;
+const LINE_LANES = 10;
+
+/**
+ * The job-fair line: rats with no desk yet wait outside, never inside the office and never on the road. It starts by
+ * the lobby door and runs round the office lane by lane (lane d is d tiles out from the outer wall), each lane back
+ * the other way, like a queue folded round the block. Only apron and sidewalk tiles nothing else stands on; the
+ * walkway from the sewer to the door stays clear. Claimed like everything else, so nothing overlaps it.
+ */
+function jobFairLine(plan: FloorLayout, stage: number, z: Zoning): Cell[] {
+  const ring = plan.rings[stage]!;
+  const [e0, e1] = [ring.entrance[0]!, ring.entrance[1]!];
+  // the door is on the +i face or the +j face; u runs along that face, the walkway goes straight out of it
+  const onI = e0.i === ring.i1 && e1.i === ring.i1;
+  const uLo = Math.min(onI ? e0.j : e0.i, onI ? e1.j : e1.i);
+  const uHi = Math.max(onI ? e0.j : e0.i, onI ? e1.j : e1.i);
+  const out = onI ? ring.spawn.i - ring.i1 : ring.spawn.j - ring.j1;
+  const walkway = (c: Cell, d: number): boolean => {
+    const u = onI ? c.j : c.i;
+    return d <= out + 1 && u >= uLo - 1 && u <= uHi + 1 && (onI ? c.i > ring.i1 : c.j > ring.j1);
+  };
+  for (let d = 1; d <= out; d++) {
+    for (let u = uLo; u <= uHi; u++) {
+      const c: [number, number] = onI ? [ring.i1 + d, u] : [u, ring.j1 + d];
+      if (!z.takenBy(c[0], c[1])) z.claim({ what: 'walkway', cat: 'spawn', cells: [c] }, ['apron', 'sidewalk', 'spawn', 'street']);
+    }
+  }
+  const eu = (uLo + uHi) / 2;
+  const line: Cell[] = [];
+  for (let d = 1; d <= LINE_LANES && line.length < LINE_WANT; d++) {
+    // the loop d tiles out, clockwise in i/j, from just beside the door
+    const a0 = ring.i0 - d;
+    const a1 = ring.i1 + d;
+    const b0 = ring.j0 - d;
+    const b1 = ring.j1 + d;
+    const loop: Cell[] = [];
+    for (let i = a0; i < a1; i++) loop.push({ i, j: b0 });
+    for (let j = b0; j < b1; j++) loop.push({ i: a1, j });
+    for (let i = a1; i > a0; i--) loop.push({ i, j: b1 });
+    for (let j = b1; j > b0; j--) loop.push({ i: a0, j });
+    const start = loop.findIndex((c) => (onI ? c.i === a1 && c.j === Math.round(eu) : c.j === b1 && c.i === Math.round(eu)));
+    let lane = [...loop.slice(start), ...loop.slice(0, start)];
+    if (d % 2 === 0) lane = [lane[0]!, ...lane.slice(1).reverse()];
+    for (const c of lane) {
+      if (walkway(c, d)) continue;
+      if (z.claim({ what: 'line', cat: 'line', cells: [[c.i, c.j]] }, ['apron', 'sidewalk'])) line.push(c);
+    }
+  }
+  return line;
 }
 
 function walkable(plan: FloorLayout, i: number, j: number): boolean {
