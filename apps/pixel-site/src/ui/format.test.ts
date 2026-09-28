@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RatEvent } from '@rat/contract';
 import eventsJson from '@rat/contract/mock/events.json';
@@ -39,5 +41,23 @@ describe('format', () => {
     expect(claimProgress('2026-10-01T18:00:00Z', '2026-10-01T18:00:20Z', now)).toBeCloseTo(0.5);
     expect(claimProgress(null, '2026-10-01T18:00:20Z', now)).toBeNull();
     expect(claimProgress('2026-10-01T18:00:00Z', '2026-10-01T17:00:00Z', now)).toBeNull();
+  });
+
+  it('is WALL STREET RATS everywhere a viewer can read it (no RAT RACE left in the site)', () => {
+    const root = join(__dirname, '..', '..');
+    const files: string[] = [join(root, 'index.html')];
+    const walk = (dir: string): void => {
+      for (const f of readdirSync(dir)) {
+        const p = join(dir, f);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.(ts|css)$/.test(f) && !f.endsWith('.test.ts')) files.push(p);
+      }
+    };
+    walk(join(root, 'src'));
+    const hits = files.filter((f) => /rat race/i.test(readFileSync(f, 'utf8')));
+    expect(hits).toEqual([]);
+    const html = readFileSync(join(root, 'index.html'), 'utf8');
+    expect(html).toContain('<title>WALL STREET RATS</title>');
+    expect(html).toContain('<meta property="og:title" content="WALL STREET RATS" />');
   });
 });
