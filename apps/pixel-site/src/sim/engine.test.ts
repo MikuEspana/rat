@@ -89,7 +89,7 @@ describe('launch simulator', () => {
     });
   }
 
-  it('normal: pumps to about $1.8M in about 3 hours, then cools off; every fee hires, so it reaches the evil empire', () => {
+  it('normal: pumps to about $1.8M in about 3 hours, then cools off; every fee hires, so it makes it to Wall Street', () => {
     const { sim, peak, mcapAt } = get('normal');
     expect(peak).toBeGreaterThan(1_500_000);
     expect(peak).toBeLessThan(2_300_000);
