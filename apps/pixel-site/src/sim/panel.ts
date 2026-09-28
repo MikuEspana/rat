@@ -115,7 +115,7 @@ export class SimPanel {
     });
     const speedLabel = el('div', 'sim-label', 'Speed');
     box.append(
-      el('div', 'sim-kicker', 'RAT RACE LAUNCH SIMULATOR'),
+      el('div', 'sim-kicker', 'WALL STREET RATS LAUNCH SIMULATOR'),
       el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a rat that buys and holds a stock, and the fund and the company grow.'),
       el('div', 'sim-label', 'Scenario'),
       pick,

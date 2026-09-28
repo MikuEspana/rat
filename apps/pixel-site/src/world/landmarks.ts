@@ -280,7 +280,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
       piece('pylon_roof', bi + 1, pj + 2, 34 - 1, bi + pj + 2.2);
       for (let j = pj + 2; j < fj; j++) piece('bridge_j', bi, j, bh, bi + j + 0.9);
     }
-    const s = new Sprite(o.sign('RAT RACE ANNEX', 0x9fd3ff));
+    const s = new Sprite(o.sign('WALL STREET RATS ANNEX', 0x9fd3ff));
     s.anchor.set(0.5, 1);
     s.position.set(t.x, t.top - 100 * as);
     o.signs.addChild(s);

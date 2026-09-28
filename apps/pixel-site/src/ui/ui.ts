@@ -141,7 +141,7 @@ export class Ui {
       note.textContent = id === null ? 'no rat found' : '';
       if (id !== null) this.spotlight(id);
     };
-    title.append(el('div', 'brand', 'RAT RACE'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
@@ -459,7 +459,7 @@ export class Ui {
   }
 
   // ------------------------------------------------------------------ the Vault
-  /** The Vault's panel: the Rat Race portfolio in total and by stock, and the wallets of the rats that hold it. */
+  /** The Vault's panel: the Wall Street Rats portfolio in total and by stock, and the wallets of the rats that hold it. */
   openVault(): void {
     this.vaultCard.hidden = false;
     this.renderVault();
@@ -478,7 +478,7 @@ export class Ui {
     close.onclick = () => this.closeVault();
     const head = el('div', 'card-head');
     const who = el('div', 'card-who');
-    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Rat Race portfolio'));
+    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Wall Street Rats portfolio'));
     head.append(who, close);
     const total = el('div', 'vault-total', usd(p.valueUsd));
     const line = el('div', `vault-pnl ${signClass(p.pnlPct)}`, `${pct(p.pnlPct)}  ${usd(p.pnlUsd)} on ${usd(p.costUsd)} paid`);

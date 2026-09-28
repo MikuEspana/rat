@@ -1,4 +1,4 @@
-// RAT RACE pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
+// WALL STREET RATS pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
 // evil empire (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
@@ -149,7 +149,7 @@ async function boot(): Promise<Site> {
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
   const effects = new Effects();
-  // the Vault: the money pile in the middle of the building shows the Rat Race portfolio (?vault=USD pins a value)
+  // the Vault: the money pile in the middle of the building shows the Wall Street Rats portfolio (?vault=USD pins a value)
   const vault = new VaultView(atlas, world.vault);
   const VAULT_PIN = new URLSearchParams(location.search).get('vault');
   const PNL_PIN = new URLSearchParams(location.search).get('vaultpnl');
@@ -243,7 +243,7 @@ async function boot(): Promise<Site> {
   };
   const vaultReveal = (stage: number): Reveal => ({
     title: `THE VAULT: ${VAULT_STAGES[stage]!.name}`,
-    sub: `${usd(vault.value)} in the Rat Race portfolio`,
+    sub: `${usd(vault.value)} in the Wall Street Rats portfolio`,
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
@@ -652,7 +652,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, false);
       const v = composeView();
       camera.centerOn(v.x, v.y, v.zoom);
-      caption.text = `RAT RACE  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
+      caption.text = `WALL STREET RATS  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
       await wait(k === steps - 1 ? 1800 : 260);
     }
     rec.stop();
@@ -665,7 +665,7 @@ async function boot(): Promise<Site> {
     const blob = new Blob(chunks, { type: mime || 'video/webm' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `rat-race-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    a.download = `wall-street-rats-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };

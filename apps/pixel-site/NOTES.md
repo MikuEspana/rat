@@ -4,6 +4,20 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Round 5: weak spots, THE VAULT, zoning, the sewer, WALL STREET RATS (owner, 2026-09-28).**
+  - **Weak spots:**
+    - Rats at pod desks really type. Facing the camera: the seated pose edited with `edit_image_pixen`, then a 7 frame `animate_image` typing loop, recoloured for every tier and fur with maps learned from the tier sheets (`tools/build_rats2.py`). Back to the camera: forearms forward, elbows and head moving (drawn in code; the generated back view failed twice).
+    - Accessories redrawn about twice as big with bold outlines; walking rats carry a briefcase.
+    - Rear views of all 8 cars, so traffic drives both ways.
+    - Unbuilt rooms and shut wings are building sites (dirt, tape, material, cones, cranes, hard-hat crews).
+    - 4 layer skyline with parallax; room signs hide below zoom 0.62.
+  - **THE VAULT:** the money pile at the centre of the building replaces the furnace. It shows the Wall Street Rats portfolio (the sum of all the rats' stock holdings, USD) in 6 stages: $0 loose change, $50 cash on a desk, $500 a cash pallet, $5K a money mountain, $50K an overflowing glass vault, $500K a money bin with rats swimming. Hires fly bills in from the sewer with "+$X"; a burst rains bills; a new stage rises with a bounce and a VAULT UPGRADE reveal; it shimmers green while the portfolio is up and dims while down; clicking it opens the total, the breakdown by stock and the rat wallets. `?vault=USD` and `?vaultpnl=%` pin it for screenshots.
+  - **Burn is gone:** no furnace, no burn visuals, feed lines, HUD fields or news. The simulator never burns (its burn rules and tests are gone; `rules.test.ts` still checks every number it uses against the worker). The dev mock API (`apps/api`) still emits burn events; the site ignores them.
+  - **The espresso shrine** is a giant espresso machine in the garage's back corner, with steam and rats kneeling round it.
+  - **Zoning** (`floor/zones.ts`, `floor/scene.ts`): every tile has a zone and every placement claims its tiles; what does not fit is skipped. Landmarks have fixed slots inside the building (towers in the first ring's corners, the gym in the full floor's lobby, the Vault's plaza, the espresso corner); the rocket and the annex have lots of their own. Shut wings are building sites inside the office, never city. A new stage demolishes what stood where the office expands. Signs never overlap (landmarks first). `zones.test.ts` checks 1, 25, 100, 500, 1,500, 3,000 and 5,000 rats.
+  - **The sewer:** new rats come out of it instead of the subway stairs: one rusty manhole, then manholes and steam vents (50), a glowing grate (250), a hiring tunnel with a WALL ST RATS HIRING sign and a marching line (1,000), a giant portal pouring rats out (3,000). The lid wobbles, pops, lets a line of rats climb out, and drops back with a clank. Each upgrade gets the SPAWN UPGRADE reveal.
+  - **Name:** WALL STREET RATS everywhere a viewer reads it (a test fails if "RAT RACE" comes back).
+
 - **Round 4: landmarks and layout variety (owner, 2026-09-28).** Every stage only added a ring of rooms.
   - **Landmark unlocks** (`src/floor/landmarks.ts`, drawn by `src/world/landmarks.ts`), one set piece per milestone:
     - 10 espresso shrine on the garage furnace plaza
@@ -104,6 +118,15 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | `create_map_object` (basic, any size up to 400x400) | 1 |
 | `create_building_kit`, `create_tiles_pro`, `create_character_state`, objects | 20 to 40 (out of budget) |
 | `pixelart_workbench` (recolor, edit, draw) | free |
+
+### Round 5 (caps about 25 + 15 + 15): 29 used
+
+- 6 for the rats: 2 seated pose edits, 2 back view edits (rejected), 1 typing animation (used), 1 back typing animation (rejected: glowing eyes, arms down).
+- 8 rear views of the cars (`edit_image_pixen` on each front sprite, all first try).
+- 9 for the Vault: 6 pile stages, the flying bill, the giant espresso machine, the kneeling rat. The money bin had a solid background (cut out) and a person in a suit (painted over with coins).
+- 6 for the sewer, all first try.
+
+Log in `assets/raw/props6/log.json`, previews in `assets/preview/round5_weakspots.png`, `vault_stages.png`, `vault_live.png`, `zoning_stages.png`, `sewer_stages.png`.
 
 ### Round 4 (cap 40): 21 used
 
