@@ -1,5 +1,5 @@
 {
- "_gens_used": 23,
+ "_gens_used": 29,
  "seat_front": {
   "tool": "edit_image_pixen",
   "attempts": [
@@ -489,6 +489,150 @@
     "result_text": "status: completed\nid: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\njob_id: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\nframes: 1\ntransparent: yes\nasset_id: 666d7a37-6c90-5f36-9e4d-47f4b3dc2fc0\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f/download",
     "files": [
      "kneel_4cbe29_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "manhole_lid": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "8464ae22-9f5e-4506-bf10-9ed98f282c4c",
+    "args": {
+     "description": "a round rusty cast iron manhole cover lid with a raised grid pattern and orange rust stains, lying flat, seen from above at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 48,
+     "height": 48,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 8464ae22-9f5e-4506-bf10-9ed98f282c4c\ndescription: a round rusty cast iron manhole cover lid with a raised grid pattern and orange rust stains, lying flat, seen from above at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once re",
+    "result_text": "status: completed\nid: 8464ae22-9f5e-4506-bf10-9ed98f282c4c\ndescription: a round rusty cast iron manhole cover lid with a raised grid pattern and orange rust stains, lying flat, seen from above at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/8464ae22-9f5e-4506-bf10-9ed98f282c4c/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"8464ae22-9f5e-4506-bf10-9ed98f282c4c\")",
+    "files": [
+     "manhole_lid_8464ae_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "manhole_hole": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "e65f8463-9af0-428e-af2d-1e2ea41e5139",
+    "args": {
+     "description": "an open round manhole in the street: a dark round hole with a rusty iron rim and the top of a ladder going down, lying flat, seen at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 48,
+     "height": 48,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: e65f8463-9af0-428e-af2d-1e2ea41e5139\ndescription: an open round manhole in the street: a dark round hole with a rusty iron rim and the top of a ladder going down, lying flat, seen at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_objec",
+    "result_text": "status: completed\nid: e65f8463-9af0-428e-af2d-1e2ea41e5139\ndescription: an open round manhole in the street: a dark round hole with a rusty iron rim and the top of a ladder going down, lying flat, seen at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/e65f8463-9af0-428e-af2d-1e2ea41e5139/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"e65f8463-9af0-428e-af2d-1e2ea41e5139\")",
+    "files": [
+     "manhole_hole_e65f84_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "steam_vent": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98",
+    "args": {
+     "description": "a small rectangular iron street grate lying flat in the pavement with thin white steam rising from it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 48,
+     "height": 48,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98\ndescription: a small rectangular iron street grate lying flat in the pavement with thin white steam rising from it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"4ea7c",
+    "result_text": "status: completed\nid: 4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98\ndescription: a small rectangular iron street grate lying flat in the pavement with thin white steam rising from it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 48x48px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98\")",
+    "files": [
+     "steam_vent_4ea7c7_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "sewer_grate": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "884d378d-108e-4c08-b1d3-d37e8e50ebea",
+    "args": {
+     "description": "a large square iron sewer grate set flat in the street, glowing bright toxic green from below with green mist rising, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 96,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 884d378d-108e-4c08-b1d3-d37e8e50ebea\ndescription: a large square iron sewer grate set flat in the street, glowing bright toxic green from below with green mist rising, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(o",
+    "result_text": "status: completed\nid: 884d378d-108e-4c08-b1d3-d37e8e50ebea\ndescription: a large square iron sewer grate set flat in the street, glowing bright toxic green from below with green mist rising, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/884d378d-108e-4c08-b1d3-d37e8e50ebea/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"884d378d-108e-4c08-b1d3-d37e8e50ebea\")",
+    "files": [
+     "sewer_grate_884d37_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "sewer_tunnel": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "555b2c5e-8226-4d89-9a41-6e9b6b30942a",
+    "args": {
+     "description": "an arched brick sewer tunnel entrance built into a low brick wall, a dark tunnel with a green glow deep inside, an open rusty iron gate, green puddles in front, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 128,
+     "height": 128,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 555b2c5e-8226-4d89-9a41-6e9b6b30942a\ndescription: an arched brick sewer tunnel entrance built into a low brick wall, a dark tunnel with a green glow deep inside, an open rusty iron gate, green puddles in front, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 128x128px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place",
+    "result_text": "status: completed\nid: 555b2c5e-8226-4d89-9a41-6e9b6b30942a\ndescription: an arched brick sewer tunnel entrance built into a low brick wall, a dark tunnel with a green glow deep inside, an open rusty iron gate, green puddles in front, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 128x128px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/555b2c5e-8226-4d89-9a41-6e9b6b30942a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"555b2c5e-8226-4d89-9a41-6e9b6b30942a\")",
+    "files": [
+     "sewer_tunnel_555b2c_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "sewer_portal": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "73af7489-ea72-4772-a755-6942e8bfdabc",
+    "args": {
+     "description": "a giant round sewer portal ringed with riveted iron pipes and valves, swirling glowing green water inside, green slime dripping, huge and ominous, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+     "width": 192,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 73af7489-ea72-4772-a755-6942e8bfdabc\ndescription: a giant round sewer portal ringed with riveted iron pipes and valves, swirling glowing green water inside, green slime dripping, huge and ominous, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 192x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object on",
+    "result_text": "status: completed\nid: 73af7489-ea72-4772-a755-6942e8bfdabc\ndescription: a giant round sewer portal ringed with riveted iron pipes and valves, swirling glowing green water inside, green slime dripping, huge and ominous, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view\nsize: 192x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:52\ndownload: https://api.pixellab.ai/mcp/map-objects/73af7489-ea72-4772-a755-6942e8bfdabc/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"73af7489-ea72-4772-a755-6942e8bfdabc\")",
+    "files": [
+     "sewer_portal_73af74_0.png"
     ]
    }
   ],

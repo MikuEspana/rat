@@ -15,17 +15,19 @@ import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
 import { Camera } from './gfx/camera';
 import { Sky } from './gfx/sky';
-import { cellCentre } from './iso';
+import { cellCentre, screenToCell } from './iso';
 import { Growth, type GrowthEvent } from './floor/growth';
 import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import { LANDMARKS, unlocked } from './floor/landmarks';
-import type { FloorLayout } from './floor/types';
+import { idx, type FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { VaultView } from './world/vault';
+import { SewerView } from './world/sewer';
+import { SPAWN_STAGES, spawnStageOf } from './floor/sewer';
 import { VAULT_STAGES, vaultStageOf } from './floor/vault';
-import { RatSystem, type Mood } from './world/rats';
+import { lookKey, RatSystem, type Mood } from './world/rats';
 import { stageLine } from './ui/format';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
@@ -86,6 +88,8 @@ export interface Site {
   sim?: LaunchSim;
   /** the Vault's money pile (screenshots and debugging) */
   vault?: VaultView;
+  /** the sewer rats come out of */
+  sewer?: SewerView;
   simPanel?: SimPanel;
 }
 
@@ -152,11 +156,32 @@ async function boot(): Promise<Site> {
   const vaultValue = (s: StateResponse): number => (VAULT_PIN !== null ? Number(VAULT_PIN) || 0 : s.portfolio.valueUsd);
   const vaultPnl = (s: StateResponse): number => (PNL_PIN !== null ? Number(PNL_PIN) || 0 : s.portfolio.pnlPct);
   vault.set(vaultValue(state), vaultPnl(state), false);
+  // the sewer new rats come out of, in front of the lobby: it grows with the hires
+  const sewer = new SewerView(atlas);
+  let spawnStage = spawnStageOf(ratCount);
+  sewer.attach(world.main, world.sewer, world.sewerDoor);
   const camera = new Camera(scene, app.canvas);
+  // the room under the mouse shows its name whatever the zoom (zoomed out only landmarks and key rooms are named)
+  let hoverId: number | null = null;
+  let hoverWorld: World | null = null;
+  app.canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    const box = app.canvas.getBoundingClientRect();
+    const w = camera.toWorld(e.clientX - box.left, e.clientY - box.top);
+    const c = screenToCell(w.x, w.y);
+    const i = Math.floor(c.i);
+    const j = Math.floor(c.j);
+    const rid = i >= 0 && j >= 0 && i < plan.W && j < plan.H ? plan.roomOf[idx(plan.W, i, j)]! : -1;
+    const id = rid >= 0 && growth.isBuilt(plan.rooms[rid]!) ? rid : null;
+    if (id === hoverId && hoverWorld === world) return;
+    hoverId = id;
+    hoverWorld = world;
+    world.hoverRoom(id);
+  });
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, world.signs, markers);
+    scene.addChild(world.backdrop, world.floor, sewer.flat, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, sewer.fx, world.signs, markers);
     world.setJobFair(rats.lineLength, rats.lineHead());
     camera.apply();
   };
@@ -240,6 +265,12 @@ async function boot(): Promise<Site> {
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
+  const sewerReveal = (stage: number): Reveal => ({
+    title: `THE SEWER: ${SPAWN_STAGES[stage]!.name}`,
+    sub: `${SPAWN_STAGES[stage]!.min.toLocaleString('en-US')} rats hired`,
+    kicker: 'SPAWN UPGRADE',
+    focus: () => sewer.focus(),
+  });
   const reveals: Reveal[] = [];
   let revealing = false;
   let skipReveal: (() => void) | null = null;
@@ -294,18 +325,22 @@ async function boot(): Promise<Site> {
     const now = unlocked(ratCount);
     const fresh = new Set([...now].filter((id) => !landmarksOn.has(id)));
     landmarksOn = now;
-    if (!fresh.size) return false;
+    const sewerUp = spawnStageOf(ratCount) > spawnStage;
+    if (!fresh.size && !sewerUp) return false;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
     rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
     updatePrep();
+    if (sewerUp) spawnStage = spawnStageOf(ratCount);
     if (announce) {
       reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => landmarkReveal(l.id)));
+      if (sewerUp) reveals.push(sewerReveal(spawnStage));
       if (!revealing) revealNext();
     }
     return true;
@@ -346,6 +381,7 @@ async function boot(): Promise<Site> {
     rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
@@ -407,7 +443,16 @@ async function boot(): Promise<Site> {
     const sol = amountSol + claimCarry;
     const n = Math.floor(sol / salarySol + 1e-9);
     claimCarry = sol - n * salarySol;
-    rats.addApplicants(n, rats.walking < MAX_WALKERS);
+    // the applicants come up out of the sewer: a few per claim climb out on screen and walk round to the back of the
+    // line; in a rush the rest are already standing in it
+    const shown = rats.walking < MAX_WALKERS && sewer.waiting < 12 ? Math.min(n, 6) : 0;
+    for (let k = 0; k < shown; k++) {
+      sewer.enqueue('intern', () => {
+        rats.addApplicants(1, true);
+        updateLine();
+      });
+    }
+    if (n > shown) rats.addApplicants(n - shown, false);
     const from = subway();
     vault.claim(from, amountSol * (usdPerSol || 150), Math.max(4, Math.min(30, Math.round(amountSol * 8))));
     updateLine();
@@ -455,7 +500,11 @@ async function boot(): Promise<Site> {
       const sid = growth.seatOfRat.get(r.facts.id);
       const pod = sid === undefined ? null : world.activatePod(sid);
       if (pod) effects.dust(pod.x, pod.y);
-      rats.hire(r, rats.walking < MAX_WALKERS);
+      // the applicant at the front of the job-fair line walks in; with nobody waiting, the new rat comes up out of
+      // the sewer (a line of them in a burst) and walks to its desk; a long queue skips the show
+      if (rats.applicantAhead) rats.hire(r, rats.walking < MAX_WALKERS);
+      else if (rats.walking < MAX_WALKERS && sewer.waiting < 12) sewer.enqueue(lookKey(r), () => rats.hire(r, true));
+      else rats.hire(r, false);
     }
     updateLine();
     sound.hire();
@@ -467,8 +516,7 @@ async function boot(): Promise<Site> {
   const recentHires: number[] = [];
   let lastRain = -1e9;
   const moneyIn = (usdIn: number): void => {
-    const sp = plan.rings[growth.stage]!.spawn;
-    const c = cellCentre(sp.i, sp.j);
+    const c = sewer.exit();
     vault.hire({ x: c.x, y: c.y - 16 }, usdIn);
     const now = performance.now();
     recentHires.push(now);
@@ -526,6 +574,7 @@ async function boot(): Promise<Site> {
     world.update(dt);
     effects.update(dt);
     vault.update(dt);
+    sewer.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -568,9 +617,9 @@ async function boot(): Promise<Site> {
   }
 
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView, vault };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView, vault, sewer };
   site.reveal = (id: string): void => {
-    reveals.push(id === 'vault' ? vaultReveal(Math.max(0, vault.stage)) : landmarkReveal(id));
+    reveals.push(id === 'vault' ? vaultReveal(Math.max(0, vault.stage)) : id === 'sewer' ? sewerReveal(spawnStage) : landmarkReveal(id));
     if (!revealing) revealNext();
   };
   site.skipReveal = (): void => skipReveal?.();
@@ -599,12 +648,14 @@ async function boot(): Promise<Site> {
     const nowOn = unlocked(ratCount);
     const freshOn = new Set([...nowOn].filter((id) => !landmarksOn.has(id)));
     landmarksOn = nowOn;
+    spawnStage = spawnStageOf(n);
     world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set(), announce ? freshOn : new Set());
     rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
     wireRats();
     applyMoods(store.state ?? state);
     rats.load(recs);
     vault.setAnchor(world.vault);
+    sewer.attach(world.main, world.sewer, world.sewerDoor);
     ui.setRats(rats);
     site.rats = rats;
     site.growth = growth;

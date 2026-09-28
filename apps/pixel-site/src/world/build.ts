@@ -3,7 +3,7 @@
 // walls, the subway stairs, the Vault's money pile (vault.ts sets it from the portfolio value), lamp glows, blinking
 // server lights, wall tickers and big room signs for reading the building from far away.
 // Rebuilt from scratch whenever a room is built (rare); new rooms pop in.
-import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture, type TextureSource } from 'pixi.js';
 import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
@@ -12,9 +12,10 @@ import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
 import { layoutScene, type Scene } from '../floor/scene';
+import type { SewerPart } from '../floor/sewer';
 import { openness } from '../floor/zones';
 import { layoutLabels } from '../floor/labels';
-import { planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, type SignKind } from '../floor/signs';
+import { planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, TOP_SIGN, vaultKeepOut, type SignKind } from '../floor/signs';
 import { type Focus, renderLandmarks } from './landmarks';
 import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
@@ -48,6 +49,9 @@ export interface World {
   tickers: Ticker[];
   /** the Vault's money pile in the middle of the building (VaultView drives it) */
   vault: VaultAnchor;
+  /** the sewer parts in front of the lobby (SewerView draws them) and the row of the lobby door */
+  sewer: SewerPart[];
+  sewerDoor: number;
   /** the job-fair line, head first (outdoor tiles the scene kept free for it) */
   line: Cell[];
   /** the walk mask this world was built for */
@@ -68,6 +72,8 @@ export interface World {
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
+  /** the room under the pointer shows its name whatever the zoom (null: none) */
+  hoverRoom(roomId: number | null): void;
   /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
   setJobFair(count: number, head: Cell | null): void;
   destroy(): void;
@@ -121,6 +127,16 @@ export function tickerText(stock: StockView | undefined, symbol: string): string
   return `${symbol}\n${c >= 0 ? '^+' : '_'}${c.toFixed(2)}%`;
 }
 
+/**
+ * Textures drawn fresh for one build (signs, tickers, the skyline). The world frees them with their GPU copy when it
+ * goes: `destroy({ texture: true })` alone keeps the GPU copy, and the world rebuilds on every growth step.
+ */
+const fresh = new WeakSet<TextureSource>();
+function own(tex: Texture): Texture {
+  fresh.add(tex.source);
+  return tex;
+}
+
 function renderTickerText(text: string, width: number, height: number, axis: 'i' | 'j'): Texture {
   const [line1 = '', line2 = ''] = text.split('\n');
   const c = document.createElement('canvas');
@@ -132,7 +148,7 @@ function renderTickerText(text: string, width: number, height: number, axis: 'i'
   drawText(ctx, line2, Math.max(6, Math.floor((width - textWidth(line2)) / 2)), 18, color);
   const tex = Texture.from(axis === 'i' ? shearRightWall(c) : shearLeftWall(c));
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 function hex(n: number): string {
@@ -158,7 +174,7 @@ function signTexture(text: string, color: number, scale: number): Texture {
   drawText(ctx, text, pad + 2, pad + 2, '#f4f6ff', scale);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 /** The top of the wall face at a wall cell: left end for a back-right wall, right end for a back-left wall. */
@@ -701,8 +717,6 @@ export function buildWorld(
   const vc = cellToScreen(plan.vault.i, plan.vault.j);
   const vaultItem = main.add(makeParticle(atlas.frame('world:vault_0'), vc.x, vc.y), plan.vault.i + plan.vault.j + 1);
   const vaultGlow = addGlow(glowTexture(110, 255, 150), vc.x, vc.y - 24, 3.2, 0);
-  const sp = cellCentre(ring.spawn.i, ring.spawn.j);
-  addGlow(glowTexture(140, 255, 170), sp.x, sp.y + 10, 1.4, 0.5);
 
   // wall tickers on built stock rooms
   const tickerFrame = atlas.frame('world:ticker_wall');
@@ -732,6 +746,9 @@ export function buildWorld(
   const landmarkSigns: Sprite[] = [];
   const signBase = new Map<Sprite, number>();
   let lastLayoutZoom = -1;
+  const keySigns: Sprite[] = [];
+  /** room signs by room id, for the one under the pointer */
+  const signOfRoom = new Map<number, Sprite>();
   for (const r of plan.rooms) {
     const sp = spotAt.get(`room:${r.id}`);
     if (!sp) continue;
@@ -739,8 +756,21 @@ export function buildWorld(
     s.anchor.set(0.5, 1);
     s.position.set(sp.x, sp.y);
     signs.addChild(s);
-    roomSigns.push(s);
+    (sp.kind === 'key' ? keySigns : roomSigns).push(s);
+    signOfRoom.set(r.id, s);
   }
+  // THE VAULT: its name in front of the plaza, under the pile
+  const vaultAt = spotAt.get('vault');
+  if (vaultAt) {
+    const s = new Sprite(signTexture(vaultAt.text, 0xf0c040, 2));
+    s.anchor.set(0.5, vaultAt.top ? 0 : 1);
+    s.position.set(vaultAt.x, vaultAt.y);
+    signs.addChild(s);
+    landmarkSigns.push(s);
+  }
+  // no sign over the Vault's pile or the "+$X" rising off it
+  const keepOut = vaultKeepOut(plan, (k) => (atlas.has(`world:${k}`) ? atlas.frame(`world:${k}`) : null));
+  let hovered: Sprite | null = null;
   // the company name: over the building, or on tower A's roof once it stands
   const nameAt = spotAt.get('name')!;
   const name = new Sprite(signTexture(nameAt.text, STAGE_COLOR[stage] ?? 0xffd36b, 3));
@@ -754,6 +784,15 @@ export function buildWorld(
     addPop, posed, sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
+  // WALL ST RATS HIRING over the big sewer entrance, laid out with the landmark names
+  const hiringAt = spotAt.get('hiring');
+  if (hiringAt) {
+    const s = new Sprite(signTexture(hiringAt.text, 0x43d17a, 2));
+    s.anchor.set(0.5, 1);
+    s.position.set(hiringAt.x, hiringAt.y);
+    signs.addChild(s);
+    landmarkSigns.push(s);
+  }
 
   // a new room goes up: scaffolding over it and a crane beside it, for a moment
   const builders: Array<{ s: Sprite; t: number; life: number; base: number }> = [];
@@ -783,6 +822,7 @@ export function buildWorld(
   let zoom = 1;
   const signGroups = (): Array<[Sprite[], SignKind]> => [
     [landmarkSigns, 'landmark'],
+    [keySigns, 'key'],
     [[name], 'name'],
     [fair ? [fair] : [], 'fair'],
     [lockSigns, 'lock'],
@@ -793,8 +833,13 @@ export function buildWorld(
     lastLayoutZoom = zoom;
     const shown = signGroups().flatMap(([list, kind]) => list.filter((x) => x.visible && x.alpha > 0.01).map((x) => ({ s: x, ...SIGN_PRIO[kind] })));
     for (const x of shown) if (!signBase.has(x.s)) signBase.set(x.s, x.s.y);
-    const boxes = shown.map((x) => ({ x: x.s.x, y: signBase.get(x.s)!, w: x.s.texture.width * Math.abs(x.s.scale.x), h: x.s.texture.height * Math.abs(x.s.scale.y), prio: x.prio, steps: x.steps }));
-    const spots = layoutLabels(boxes);
+    const boxes = shown.map((x) => {
+      const h = x.s.texture.height * Math.abs(x.s.scale.y);
+      // a sign hung by its top edge (THE VAULT, under its pile) grows downwards and never moves up
+      const top = x.s.anchor.y === 0;
+      return { x: x.s.x, y: signBase.get(x.s)! + (top ? h : 0), w: x.s.texture.width * Math.abs(x.s.scale.x), h, ...(top ? TOP_SIGN : { prio: x.prio, steps: x.steps }) };
+    });
+    const spots = layoutLabels([keepOut, ...boxes]).slice(1);
     shown.forEach((x, n) => {
       const sp = spots[n]!;
       x.s.y = signBase.get(x.s)! - sp.dy;
@@ -816,6 +861,8 @@ export function buildWorld(
     signs,
     tickers,
     vault: { item: vaultItem, x: vc.x, y: vc.y, glow: vaultGlow },
+    sewer: scene.sewer,
+    sewerDoor: ring.j1,
     line: scene.line,
     blocked,
     update(dt: number): void {
@@ -925,13 +972,26 @@ export function buildWorld(
         const a = signAlpha(kind, z);
         const k = scaleFor(kind, z);
         for (const sg of list) {
-          sg.alpha = a;
+          sg.alpha = sg === hovered ? 1 : a;
           sg.scale.set(k);
-          sg.visible = a > 0.01 && (sg !== fair || fairOn);
+          sg.visible = (a > 0.01 || sg === hovered) && (sg !== fair || fairOn);
         }
       }
       // no two signs overlap: landmarks first, then the company name and the job fair, padlocks, room names
       if (Math.abs(z - lastLayoutZoom) < 0.005) return;
+      relayout();
+    },
+    hoverRoom(roomId: number | null): void {
+      const s = roomId === null ? null : signOfRoom.get(roomId) ?? null;
+      if (s === hovered) return;
+      const was = hovered;
+      hovered = s;
+      for (const sg of [was, s]) {
+        if (!sg) continue;
+        const a = signAlpha(keySigns.includes(sg) ? 'key' : 'room', zoom);
+        sg.alpha = sg === hovered ? 1 : a;
+        sg.visible = sg === hovered || a > 0.01;
+      }
       relayout();
     },
     setJobFair(count: number, head: Cell | null): void {
@@ -960,6 +1020,13 @@ export function buildWorld(
       if (moved) relayout();
     },
     destroy(): void {
+      const free = (c: Container): void => {
+        for (const ch of c.children) {
+          if (ch instanceof Sprite && fresh.has(ch.texture.source)) ch.texture.source.destroy();
+          free(ch);
+        }
+      };
+      for (const c of [backdrop, overlay, signs]) free(c);
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {
         c.parent?.removeChild(c);
       }
@@ -1025,7 +1092,7 @@ function lockTexture(what: string, when: string): Texture {
   drawText(ctx, when, 17, 14, '#ffd23f', scale);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 
@@ -1072,7 +1139,7 @@ function skylineLayer(width: number, evil: boolean, seed: number, depth: number)
   ctx.putImageData(img, 0, 0);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 /** A city sprite as it stands (for the demolition effect). */

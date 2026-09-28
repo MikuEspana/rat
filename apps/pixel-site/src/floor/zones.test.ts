@@ -14,7 +14,7 @@ import { layoutLabels, overlaps, type LabelBox } from './labels';
 import { LANDMARKS } from './landmarks';
 import { buildMaster } from './plan';
 import { layoutScene } from './scene';
-import { planSigns, signBoxes, type FrameSize } from './signs';
+import { planSigns, ROOMS_FROM_ZOOM, signBoxes, vaultKeepOut, type FrameSize } from './signs';
 import { idx, T } from './types';
 import { LANDMARK_AREA, openness } from './zones';
 
@@ -104,6 +104,8 @@ describe('zoning', () => {
         const id = slotOf[l.id] ?? l.id;
         expect(scene.standing.has(id), `${l.name} at ${n} rats`).toBe(true);
       }
+      // the sewer's way out always fits in front of the lobby
+      expect(scene.sewer.some((p) => p.main)).toBe(true);
       // shut wings exist only in the current ring
       for (const r of open.closedRects) expect(r.i0 >= ring.i0 - 1 && r.i0 + r.w <= ring.i1 + 2).toBe(true);
 
@@ -133,16 +135,30 @@ describe('signs', () => {
         plan, stage: g.stage, count: n, built, symbolOf: g.symbolOf, city, scene, frames: FRAMES,
         fair: scene.line.length ? { head: scene.line[0]!, count: 1234 } : null,
       });
-      const landmarks = spots.filter((s) => s.kind === 'landmark');
-      expect(landmarks.length).toBe(LANDMARKS.filter((l) => n >= l.at).length + (scene.standing.has('annex') ? 1 : 0));
+      const landmarks = spots.filter((s) => s.kind === 'landmark' && s.key !== 'vault');
+      const hiring = scene.sewer.some((p) => p.main && p.kind === 'tunnel') ? 1 : 0;
+      expect(landmarks.length).toBe(LANDMARKS.filter((l) => n >= l.at).length + (scene.standing.has('annex') ? 1 : 0) + hiring);
+      expect(spots.some((s) => s.key === 'vault')).toBe(true);
+      const keepOut = [vaultKeepOut(plan, FRAMES)];
       for (const z of ZOOMS) {
-        const { boxes, index } = signBoxes(spots, z);
+        const { boxes, index } = signBoxes(spots, z, keepOut);
         const laid = layoutLabels(boxes);
+        // nothing overlaps: no two signs, and no sign over the Vault's pile or its "+$X" (the keep-out box)
         expect(overlaps(boxes, laid), `zoom ${z}`).toBe(0);
         index.forEach((si, k) => {
+          if (si < 0) return;
           const s = spots[si]!;
-          if (s.kind === 'landmark' || s.kind === 'name') expect(laid[k]!.visible, `${s.text} at zoom ${z}`).toBe(true);
+          // the landmarks (THE VAULT among them), the key rooms and the company keep their names at every zoom
+          if (s.kind === 'landmark' || s.kind === 'key' || s.kind === 'name') expect(laid[k]!.visible, `${s.text} at zoom ${z}`).toBe(true);
+          // zoomed out, no desk room, break room, open office, WC or lobby is named
+          if (z < ROOMS_FROM_ZOOM - 0.1) expect(s.kind, `${s.text} at zoom ${z}`).not.toBe('room');
         });
+      }
+      // under the pointer a room is named whatever the zoom
+      const room = spots.find((s) => s.kind === 'room');
+      if (room) {
+        const { index } = signBoxes(spots, 0.45, keepOut, new Set([room.key]));
+        expect(index.map((k) => spots[k]?.key)).toContain(room.key);
       }
     });
   }

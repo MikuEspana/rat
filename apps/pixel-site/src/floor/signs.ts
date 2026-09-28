@@ -9,10 +9,18 @@ import type { City } from './city';
 import type { LabelBox } from './labels';
 import { LANDMARKS, TOWER_SLOT, towerFloors } from './landmarks';
 import { ROOM_LOOK, STAGES } from './plan';
+import { VAULT_STAGES } from './vault';
 import type { Scene } from './scene';
 import type { FloorLayout, Room } from './types';
 
-export type SignKind = 'landmark' | 'name' | 'fair' | 'lock' | 'room';
+/**
+ * landmark: set pieces and THE VAULT; key: the rooms worth finding from afar (CEO, SERVERS); name: the company;
+ * fair: the job-fair line; lock: what comes next; room: every other room (desks, break rooms, WCs, lobbies)
+ */
+export type SignKind = 'landmark' | 'key' | 'name' | 'fair' | 'lock' | 'room';
+
+/** Rooms named at every zoom, like the landmarks (the rest only when zoomed in, or under the pointer). */
+export const KEY_ROOMS: ReadonlySet<string> = new Set(['ceo', 'server']);
 
 export interface SignSpot {
   /** what it names: a landmark id, 'name', 'fair', 'lock:<room>', 'shell:<lot>', 'room:<room>' */
@@ -27,6 +35,8 @@ export interface SignSpot {
   /** texture size at scale 1 */
   w: number;
   h: number;
+  /** anchored by its top edge (it grows downwards as it scales, and never moves up); placed before every other sign */
+  top?: boolean;
 }
 
 /** A sign's texture size: pixel text on a plate with a 2 px frame (build.ts draws it). */
@@ -64,6 +74,8 @@ export function towerTop(fi: number, fj: number, floors: number, scale: number):
 }
 
 export const TOWER_SCALE = (TOWER_SLOT - 0.5) / 6;
+/** how big the sewer entrance is drawn (world/sewer.ts) */
+export const SEWER_TUNNEL_SCALE = 1.25;
 
 /** The annex's size and footprint in its lot (landmarks.ts draws it from the same numbers). */
 export function annexGeometry(lot: { i0: number; j0: number; w: number; h: number }, stage: number): { scale: number; fp: number; fi: number; fj: number; floors: number } {
@@ -77,6 +89,36 @@ const fitScale = (frames: FrameSize, kind: string, cells: number): number => {
   const f = frames(kind);
   return f ? (cells * 32) / f.w : 1;
 };
+
+/** How far "+$X" labels rise above the pile before they fade (world/vault.ts floats them about 45 px). */
+const POPUP_RISE = 60;
+
+/**
+ * The space over the Vault: its tallest pile and the "+$X" labels rising off it. No sign may sit there (the label
+ * layout places this box first and never draws it).
+ */
+export function vaultKeepOut(plan: FloorLayout, frames: FrameSize): LabelBox {
+  const c = cellToScreen(plan.vault.i, plan.vault.j);
+  let w = 96;
+  let h = 96;
+  let base = c.y;
+  for (const st of VAULT_STAGES) {
+    const f = frames(st.kind);
+    if (!f) continue;
+    w = Math.max(w, f.w * st.scale);
+    h = Math.max(h, f.h * st.scale);
+    base = Math.max(base, c.y + f.w * st.scale * 0.22);
+  }
+  return { x: c.x, y: base, w: w + 24, h: h + POPUP_RISE, prio: -1, steps: 0 };
+}
+
+/** THE VAULT's name: just in front of its plaza, under the pile, so the money and its "+$X" stay in the clear. */
+export function vaultSign(plan: FloorLayout): SignSpot {
+  const text = 'THE VAULT';
+  const size = signSize(text, 2);
+  const front = cellToScreen(plan.vault.i + 3, plan.vault.j + 3);
+  return { key: 'vault', kind: 'landmark', text, x: front.x, y: front.y + 6, ...size, top: true };
+}
 
 /** The landmarks' name signs, at fixed spots over their set pieces (landmarks.ts puts them exactly here). */
 export function landmarkSigns(o: SignInput): SignSpot[] {
@@ -137,6 +179,17 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
     add('gym', named('gym'), c.x, c.y - 50);
   }
 
+  // the big sewer entrance: WALL ST RATS HIRING over its arch (world/sewer.ts draws it at this size)
+  const way = scene.sewer.find((p) => p.main && p.kind === 'tunnel');
+  if (way) {
+    const c = cellCentre(way.i0 + way.w / 2 - 0.5, way.j0 + way.h / 2 - 0.5);
+    const front = cellToScreen(way.i0 + way.w, way.j0 + way.h);
+    const base = Math.min(front.y, c.y + (way.w * 16) / 2);
+    const f = frames('sewer_tunnel');
+    const text = 'WALL ST RATS HIRING';
+    out.push({ key: 'hiring', kind: 'landmark', text, x: c.x, y: base - (f ? f.h * SEWER_TUNNEL_SCALE : 60) - 4, ...signSize(text, 2) });
+  }
+
   // the rocket on its launchpad
   for (const l of o.city.lots) {
     if (l.use !== 'rocket' || !scene.standing.has('rocket') || !on('rocket')) continue;
@@ -176,7 +229,7 @@ function openSites(plan: FloorLayout, stage: number, built: (id: number) => bool
 /** Every sign of the world. */
 export function planSigns(o: SignInput): SignSpot[] {
   const { plan, stage, city } = o;
-  const out: SignSpot[] = [...landmarkSigns(o), nameSign(o)];
+  const out: SignSpot[] = [vaultSign(plan), ...landmarkSigns(o), nameSign(o)];
   if (o.fair && o.fair.count > 0) {
     const text = `JOB FAIR: ${o.fair.count.toLocaleString('en-US')} IN LINE`;
     const c = cellCentre(o.fair.head.i, o.fair.head.j);
@@ -210,43 +263,56 @@ export function planSigns(o: SignInput): SignSpot[] {
     const text = r.kind === 'stock' ? o.symbolOf[r.id] ?? '' : r.kind === 'garage' ? '' : ROOM_LOOK[r.kind].label;
     if (!text) continue;
     const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
-    out.push({ key: `room:${r.id}`, kind: 'room', text, x: c.x, y: c.y - 24, ...signSize(text, 2) });
+    out.push({ key: `room:${r.id}`, kind: KEY_ROOMS.has(r.kind) ? 'key' : 'room', text, x: c.x, y: c.y - 24, ...signSize(text, 2) });
   }
   return out;
 }
 
 /** How big each kind of sign is drawn at zoom z: names you read from afar grow as you zoom out. */
 export function signScale(kind: SignKind, z: number): number {
-  if (kind === 'landmark') return Math.max(0.45, Math.min(6, 0.9 / z));
+  if (kind === 'landmark' || kind === 'key') return Math.max(0.45, Math.min(6, 0.9 / z));
   if (kind === 'name') return Math.max(0.4, Math.min(4, 0.6 / z));
   if (kind === 'fair') return Math.max(1, Math.min(4, 0.6 / z));
   return 1;
 }
 
-/** How visible each kind is at zoom z (0 to 1): room names only at mid zoom, padlock signs from mid zoom in. */
+/** Zoomed in from here: every room's name shows (below it, only under the pointer). */
+export const ROOMS_FROM_ZOOM = 1.05;
+
+/**
+ * How visible each kind is at zoom z (0 to 1). Zoomed out only the landmarks, the key rooms, the company and the job
+ * fair; padlock signs from the default view in; every other room's name only zoomed in (or on hover, build.ts).
+ */
 export function signAlpha(kind: SignKind, z: number): number {
-  if (kind === 'room') return z >= 1.2 ? 0 : z >= 0.95 ? (1.2 - z) / 0.25 : z >= 0.72 ? 1 : z <= 0.62 ? 0 : (z - 0.62) / 0.1;
-  if (kind === 'lock') return z >= 0.6 ? 1 : 0;
+  if (kind === 'room') return z >= ROOMS_FROM_ZOOM ? 1 : z >= ROOMS_FROM_ZOOM - 0.1 ? (z - (ROOMS_FROM_ZOOM - 0.1)) / 0.1 : 0;
+  if (kind === 'lock') return z >= 0.8 ? 1 : 0;
   return 1;
 }
 
-/** Landmarks first (may stack 3 steps up), then the company name and the job fair, padlocks, room names. */
+/** Landmarks and key rooms first (they may stack 5 steps up), then the company name and the job fair, padlocks, room names. */
 export const SIGN_PRIO: Record<SignKind, { prio: number; steps: number }> = {
-  landmark: { prio: 0, steps: 3 },
-  name: { prio: 1, steps: 2 },
+  landmark: { prio: 0, steps: 5 },
+  key: { prio: 0, steps: 5 },
+  name: { prio: 1, steps: 4 },
   fair: { prio: 1, steps: 2 },
   lock: { prio: 2, steps: 1 },
   room: { prio: 3, steps: 0 },
 };
 
-/** The label boxes the layout sees at zoom z (only the signs showing at that zoom), with their sign indexes. */
-export function signBoxes(spots: readonly SignSpot[], z: number): { boxes: LabelBox[]; index: number[] } {
-  const boxes: LabelBox[] = [];
-  const index: number[] = [];
+/** THE VAULT's name goes first of all (right after the keep-out box) and stays put. */
+export const TOP_SIGN = { prio: -0.5, steps: 0 };
+
+/**
+ * The label boxes the layout sees at zoom z (only the signs showing at that zoom, plus rooms under the pointer), with
+ * their sign indexes; the keep-out boxes go first, as index -1.
+ */
+export function signBoxes(spots: readonly SignSpot[], z: number, keepOut: readonly LabelBox[] = [], hover: ReadonlySet<string> = new Set()): { boxes: LabelBox[]; index: number[] } {
+  const boxes: LabelBox[] = [...keepOut];
+  const index: number[] = keepOut.map(() => -1);
   spots.forEach((s, n) => {
-    if (signAlpha(s.kind, z) <= 0.01) return;
+    if (signAlpha(s.kind, z) <= 0.01 && !hover.has(s.key)) return;
     const k = signScale(s.kind, z);
-    boxes.push({ x: s.x, y: s.y, w: s.w * k, h: s.h * k, ...SIGN_PRIO[s.kind] });
+    boxes.push({ x: s.x, y: s.top ? s.y + s.h * k : s.y, w: s.w * k, h: s.h * k, ...SIGN_PRIO[s.kind], ...(s.top ? TOP_SIGN : {}) });
     index.push(n);
   });
   return { boxes, index };

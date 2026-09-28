@@ -5,7 +5,7 @@
 // corridor hugging the old outer wall, then a band of rooms and a new outer wall. The band is four strips (back,
 // right, front, left), each packed with shared walls (pack.ts). Ring 1 is open-plan offices; from ring 2 on, desk
 // rooms are slots handed to whichever stock needs desks next. Amenities sit next to the ring corridor and open at
-// set rat counts. Each ring has a lobby on its front side with the subway outside it.
+// set rat counts. Each ring has a lobby on its front side with the sewer (where new rats come up) outside it.
 import type { Cell } from '../iso';
 import {
   bathRoom, breakRoom, ceoRoom, copyRoom, Fit, garageRoom, lobbyRoom, meetingRoom, openRoom, serverRoom, stockRoom,
@@ -349,10 +349,10 @@ export function buildMaster(): FloorLayout {
     // amenities open at even steps through their stage; desk rooms get a build order wing by wing
     const [lo, hi] = stageRange(k);
     assigned.forEach((r, n) => (r.unlockAt = Math.round(lo + ((n + 1) * (hi - lo)) / (assigned.length + 1))));
-    // the evil throne room is a landmark: it opens the moment the evil empire does
+    // the evil throne room is a landmark: it opens the moment the company makes it to Wall Street
     for (const r of assigned) if (r.kind === 'war') r.unlockAt = lo;
     rs.filter((r) => r.kind === desk).sort((x, y) => rank(x) - rank(y) || angle(x) - angle(y)).forEach((r, n) => (r.order = n));
-    // the entrance: a double door in the lobby's front wall, the subway 4 cells out
+    // the entrance: a double door in the lobby's front wall, the sewer 4 cells out
     let entrance: Cell[];
     let spawn: Cell;
     if (lobby.i0 + lobby.w === q.i1) {
@@ -497,7 +497,8 @@ export function buildMaster(): FloorLayout {
     }
   }
 
-  // street furniture per stage (only the outermost ring's shows): lamps, smokers by the door, the subway stairs
+  // street furniture per stage (only the outermost ring's shows): lamps and smokers by the door (the sewer rats
+  // come out of is drawn by the world, world/sewer.ts)
   const streetSpots: Spot[] = [];
   for (const ring of rings) {
     const lo = ring.i0;
@@ -515,7 +516,6 @@ export function buildMaster(): FloorLayout {
     for (const [i, j, face] of [[base.i, base.j, 'se'], [base.i + 1, base.j, 'nw'], [base.i, base.j + 1, 'ne']] as const) {
       streetSpots.push({ id: -1, kind: 'smoke', room: -1, cell: { i, j }, pos: { i, j }, face, pose: 'stand', ring: ring.index });
     }
-    B.props.push({ kind: 'stairs', i: ring.spawn.i, j: ring.spawn.j, mirror: false, flat: true, dx: 0, dy: 24, ring: ring.index });
   }
 
   // walls and the void block walking (growth.ts adds what is not built yet)

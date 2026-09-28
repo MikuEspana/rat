@@ -74,6 +74,9 @@ NAMES6 = {
     "vault_0_4d91e2_0": "vault_0", "vault_1_8e3aed_0": "vault_1", "vault_2_18c2af_0": "vault_2",
     "vault_3_fdfa5f_0": "vault_3", "vault_4_058919_0": "vault_4", "vault_5_990492_clean": "vault_5",
     "bill_ea1844_0": "bill", "espresso_giant_9e92ff_0": "espresso_giant",
+    # the sewer new rats come out of: manholes, a steam vent, the glowing grate, the hiring tunnel, the portal
+    "manhole_lid_8464ae_0": "manhole_lid", "manhole_hole_e65f84_0": "manhole_hole", "steam_vent_4ea7c7_0": "steam_vent",
+    "sewer_grate_884d37_0": "sewer_grate", "sewer_tunnel_555b2c_0": "sewer_tunnel", "sewer_portal_73af74_0": "sewer_portal",
 }
 DIR6 = os.path.join(OUT, "raw", "props6")
 
