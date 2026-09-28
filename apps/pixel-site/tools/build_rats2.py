@@ -169,6 +169,20 @@ def recolor(im, t):
 
 
 FRONT_TYPE = [snap(Image.open(f).convert("RGBA")) for f in TYPE_FRONT]
+KNEEL = snap(Image.open(os.path.join(RAW6, "kneel_4cbe29_0.png")).convert("RGBA"))
+
+
+def bow(src):
+    """The same kneeling rat bowing: everything above its waist two pixels lower."""
+    bb = src.getbbox()
+    if not bb:
+        return src.copy()
+    waist = bb[1] + (bb[3] - bb[1]) * 3 // 5
+    top = src.crop((0, 0, CELL, waist))
+    out = src.copy()
+    out.paste(Image.new("RGBA", (CELL, waist), (0, 0, 0, 0)), (0, 0))
+    out.alpha_composite(top, (0, 2))
+    return out
 
 
 def type_back(src, k):
@@ -238,12 +252,17 @@ for t in TIERS:
     back0 = seat_frame(base[t]["idle_ne_0"], False, False)
     for k in range(6):
         SEATED[t][f"sit_back_{k}"] = type_back(back0, k)
+    # kneeling in worship round the espresso machine: the PixelLab pose, then a bow (upper body a pixel lower)
+    SEATED[t]["kneel_0"] = recolor(KNEEL, t)
+    SEATED[t]["kneel_1"] = bow(SEATED[t]["kneel_0"])
 for t in TIERS:
     base[t].update(SEATED[t])
 all_names = names + list(SEATED["analyst"].keys())
 FOOT = dict(BASE_FOOT)
 for n in SEATED["analyst"]:
     FOOT[n] = 60.0  # the chair stands where the feet stood
+for n in ("kneel_0", "kneel_1"):
+    FOOT[n] = float(KNEEL.getbbox()[3] - 1)  # knees on the floor
 
 # ------------------------------------------------------------------ fur
 

@@ -5,9 +5,9 @@
     "rats.png / rats.json": "6 tiers (intern, analyst, associate, vp, partner, frozen) x 55 frames of 68x68: rot_{s,se,e,ne,n,nw,w,sw}, idle_se, idle_ne, walk_se, walk_ne, cheer, type, slump. Animations keyed '<tier>/<anim>'.",
     "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag",
     "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which.",
-    "rats2.png / rats2.json": "built by tools/build_rats2.py from the tier sheets: 5 tiers x 4 furs (grey, brown, white, black) + frozen, the 55 base frames plus sit_front, sit_back, sulk_front, sulk_back (pod desks), trimmed; accessory overlays acc/<glasses|phones_red|phones_white|hat_bowler|hat_cap|hat_beanie>/<frame>. No generations.",
+    "rats2.png / rats2.json": "built by tools/build_rats2.py from the tier sheets: 5 tiers x 4 furs (grey, brown, white, black) + frozen, the 55 base frames plus sit_front, sit_back, sulk_front, sulk_back (pod desks), trimmed; accessory overlays acc/<glasses|phones_red|phones_white|hat_bowler|hat_cap|hat_beanie>/<frame>. No generations. Round 5: sit_front is a 7 frame PixelLab typing loop (raw/props6), recoloured per tier and fur; sit_back a 6 frame typing loop drawn here; kneel_0/1 (PixelLab pose + a bow); accessories redrawn bigger and acc/briefcase on walk frames.",
     "gen.png / gen.json": "drawn in code by tools/build_gen.py: floor tiles (carpet, vinyl, wood both ways, bath tile, checker, raised floor, concrete, marble, asphalt, sidewalk, driveway, lot, blueprint, grass), thin wall faces (low, tall, window, panel, garage door header), desk_back, rugs, worn spots, hazard tape. No generations. Round 4 adds the office tower storeys (base, 3 floor variants, roof), the 2x2 sky bridge pylon and the sky bridge segments.",
-    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs. Round 3 adds (assets/raw/props4): townhouses, cottage, diner, corner store, office blocks, apartment tower, parking garage, warehouse, gas station, evil office, fountain, food truck, fences, alley and street props, and the cat and pigeon walk cycles. Round 4 adds (assets/raw/props5): the landmark set pieces (espresso shrine, trading pit, glass elevator, helipad and helicopter, rooftop pool and its party, rocket and launchpad, laser cannon, giant golden rat statue, vault door) and the gym and nap pod props."
+    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs. Round 3 adds (assets/raw/props4): townhouses, cottage, diner, corner store, office blocks, apartment tower, parking garage, warehouse, gas station, evil office, fountain, food truck, fences, alley and street props, and the cat and pigeon walk cycles. Round 4 adds (assets/raw/props5): the landmark set pieces (espresso shrine, trading pit, glass elevator, helipad and helicopter, rooftop pool and its party, rocket and launchpad, laser cannon, giant golden rat statue, vault door) and the gym and nap pod props. Round 5 adds (assets/raw/props6): rear views of the 8 cars, the Vault's 6 pile stages and the flying bill, the giant espresso machine, and the sewer (manhole lid and hole, steam vent, glowing grate, hiring tunnel, portal)."
   },
   "generations": [
     {
@@ -1803,6 +1803,470 @@
         "detail": "high detail"
       },
       "note": "attempt 1 (reject1) looked like a blue drum or wheel; attempt 2 (reject2) was a tiny 50px open round door with gold, no wall; attempt 3 is a steel vault block with a round door and an open arch with gold (door not visibly half open)"
+    },
+    {
+      "id": "r5_seat_front_reject1",
+      "raw": "raw/props6/seat_front_7e6983_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "7e698361-a28a-4942-aea6-5900c1dbd171",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": false,
+      "args": {
+        "input": "raw/anim/cheer_input_rot_se_navy.png",
+        "description": "sitting on a black swivel office chair, three-quarters toward the viewer facing down-right, forearms forward, paws on a keyboard at lap height",
+        "seed": 5101
+      }
+    },
+    {
+      "id": "r5_seat_front",
+      "raw": "raw/props6/seat_front_127393_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "127393ec-24b7-48ed-b595-5dc6a39b51dc",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_sit_front_0.png (the composited sit_front)",
+        "description": "same view and chair, only the arms move forward, paws on a small keyboard in front of the belly",
+        "seed": 5103
+      }
+    },
+    {
+      "id": "r5_seat_back_reject1",
+      "raw": "raw/props6/seat_back_f05c93_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "f05c9327-04f1-4b6b-a951-9b423e6c2961",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": false,
+      "args": {
+        "input": "raw/anim/seat_input_rot_ne_navy.png",
+        "description": "seen from behind on a black office chair facing up-right, chair back covering the lower back, forearms forward to a keyboard",
+        "seed": 5102
+      }
+    },
+    {
+      "id": "r5_seat_back_reject2",
+      "raw": "raw/props6/seat_back_886710_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "886710f4-5442-4469-943e-fe3cee944573",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": false,
+      "args": {
+        "input": "raw/props6/in_sit_back_0.png (the composited sit_back)",
+        "description": "same back view and chair, only the arms move forward as if typing",
+        "seed": 5104
+      }
+    },
+    {
+      "id": "r5_type_front",
+      "raw": "raw/props6/type_front_27a8a5_0.png",
+      "tool": "animate_image",
+      "pixellabId": "27a8a5d8-ab49-4be4-b67a-08f86a794625",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/seat_front_127393_0.png",
+        "action": "typing quickly, paws tapping alternately, slight head bob, body and chair still",
+        "frame_count": 6,
+        "seed": 5105
+      }
+    },
+    {
+      "id": "r5_type_back_reject1",
+      "raw": "raw/props6/type_back_a9e648_0.png",
+      "tool": "animate_image",
+      "pixellabId": "a9e648f8-deeb-4aa4-adfe-7e5740144540",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": false,
+      "args": {
+        "input": "raw/props6/in_sit_back_0.png",
+        "action": "seen from behind, typing: shoulders and elbows move slightly in turn, slight head bob, chair still",
+        "frame_count": 6,
+        "seed": 5106
+      }
+    },
+    {
+      "id": "r5_car_red_rear",
+      "raw": "raw/props6/car_red_rear_0201a8_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "0201a8d1-ee46-4d63-b30d-a869c3df9591",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_car_red.png",
+        "description": "same red car seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5201
+      }
+    },
+    {
+      "id": "r5_car_blue_rear",
+      "raw": "raw/props6/car_blue_rear_cd224a_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "cd224ad6-b131-454e-86e3-777710dd2394",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_car_blue.png",
+        "description": "same blue car seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5202
+      }
+    },
+    {
+      "id": "r5_taxi_rear",
+      "raw": "raw/props6/taxi_rear_8922ab_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "8922ab1f-fef8-4433-9f4e-aa9054e65248",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_taxi.png",
+        "description": "same yellow taxi seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5203
+      }
+    },
+    {
+      "id": "r5_van_rear",
+      "raw": "raw/props6/van_rear_08363a_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "08363a0d-9852-4006-8650-b8b00f7422c5",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_van.png",
+        "description": "same white delivery van seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5204
+      }
+    },
+    {
+      "id": "r5_police_rear",
+      "raw": "raw/props6/police_rear_248c69_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "248c696e-4ab2-4bf7-b936-fddc57e5c4f5",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_police.png",
+        "description": "same black and white police car seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5205
+      }
+    },
+    {
+      "id": "r5_car_white_rear",
+      "raw": "raw/props6/car_white_rear_850cd6_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "850cd622-6f23-407a-a481-a406cbbb96b0",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_car_white.png",
+        "description": "same white sedan seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5206
+      }
+    },
+    {
+      "id": "r5_car_gold_rear",
+      "raw": "raw/props6/car_gold_rear_0b50cb_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "0b50cb7b-f083-482b-a829-aa4edc1faa26",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_car_gold.png",
+        "description": "same gold luxury SUV seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5207
+      }
+    },
+    {
+      "id": "r5_limo_rear",
+      "raw": "raw/props6/limo_rear_4303fa_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "4303facc-3392-4c92-b079-f6f36245bbd9",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/props6/in_limo.png",
+        "description": "same black and white stretch limousine seen from behind, rear three-quarter view, driving away toward the upper left",
+        "seed": 5208
+      }
+    },
+    {
+      "id": "r5_vault_0",
+      "raw": "raw/props6/vault_0_4d91e2_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "4d91e25b-4307-487c-87d3-1643850b9879",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a few loose green dollar bills lying on the floor next to a small stack of gold coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_vault_1",
+      "raw": "raw/props6/vault_1_8e3aed_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "8e3aed57-42eb-4803-a593-fd146902b7f2",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a small wooden desk with neat stacks of green cash bundles piled on top of it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 96,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_vault_2",
+      "raw": "raw/props6/vault_2_18c2af_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "18c2af1e-5524-487b-803f-552306e38da4",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a wooden shipping pallet stacked high with bundled green cash wrapped in paper bands, a few loose bills sliding off the sides, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 128,
+        "height": 128,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_vault_3",
+      "raw": "raw/props6/vault_3_fdfa5f_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a huge heap of green cash bundles and gold coins piled up high like a mountain, a pyramid of money, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 160,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_vault_4",
+      "raw": "raw/props6/vault_4_058919_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "0589196f-c532-46b3-9244-23dd362c0e91",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a large glass vault box with a steel frame and a round steel vault door hanging open, packed and overflowing with green cash bundles and gold coins spilling out onto the floor, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_vault_5",
+      "raw": "raw/props6/vault_5_990492_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "990492ff-7da7-4eef-a13b-c373de2c909c",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, small grey rats in business suits swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 256,
+        "height": 256,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_bill",
+      "raw": "raw/props6/bill_ea1844_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "ea1844ed-39cf-4681-86ee-ef643a927877",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "one single green paper dollar bill, slightly curled, flying through the air, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 32,
+        "height": 32,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_espresso_giant",
+      "raw": "raw/props6/espresso_giant_9e92ff_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "9e92fffb-63d9-487b-b4aa-aa573d89bce1",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a giant chrome and brass espresso machine as big as a car, big pressure gauges, curly steam pipes, a row of tiny cups on top, warm glowing lights, standing on a small marble platform like a shrine, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 160,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_kneel",
+      "raw": "raw/props6/kneel_4cbe29_0.png",
+      "tool": "edit_image_pixen",
+      "pixellabId": "4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "input": "raw/anim/cheer_input_rot_se_navy.png",
+        "description": "kneeling on both knees, bowing in worship, arms raised",
+        "seed": 5301
+      }
+    },
+    {
+      "id": "r5_manhole_lid",
+      "raw": "raw/props6/manhole_lid_8464ae_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "8464ae22-9f5e-4506-bf10-9ed98f282c4c",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a round rusty cast iron manhole cover lid with a raised grid pattern and orange rust stains, lying flat, seen from above at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 48,
+        "height": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_manhole_hole",
+      "raw": "raw/props6/manhole_hole_e65f84_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "e65f8463-9af0-428e-af2d-1e2ea41e5139",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "an open round manhole in the street: a dark round hole with a rusty iron rim and the top of a ladder going down, lying flat, seen at an isometric angle, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 48,
+        "height": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_steam_vent",
+      "raw": "raw/props6/steam_vent_4ea7c7_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "4ea7c71f-cbc0-4d04-9ac1-c5eecca44a98",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a small rectangular iron street grate lying flat in the pavement with thin white steam rising from it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 48,
+        "height": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_sewer_grate",
+      "raw": "raw/props6/sewer_grate_884d37_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "884d378d-108e-4c08-b1d3-d37e8e50ebea",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a large square iron sewer grate set flat in the street, glowing bright toxic green from below with green mist rising, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 96,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_sewer_tunnel",
+      "raw": "raw/props6/sewer_tunnel_555b2c_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "555b2c5e-8226-4d89-9a41-6e9b6b30942a",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "an arched brick sewer tunnel entrance built into a low brick wall, a dark tunnel with a green glow deep inside, an open rusty iron gate, green puddles in front, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 128,
+        "height": 128,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r5_sewer_portal",
+      "raw": "raw/props6/sewer_portal_73af74_0.png",
+      "tool": "create_map_object",
+      "pixellabId": "73af7489-ea72-4772-a755-6942e8bfdabc",
+      "costGenerations": 1,
+      "phase": "round5",
+      "used": true,
+      "args": {
+        "description": "a giant round sewer portal ringed with riveted iron pipes and valves, swirling glowing green water inside, green slime dripping, huge and ominous, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city street, clean bright style, isometric three-quarter view",
+        "width": 192,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
     }
   ],
   "freeEdits": [
@@ -1918,9 +2382,9 @@
     "crops to bounding box"
   ],
   "totals": {
-    "generationsInFinalAssets": 60,
+    "generationsInFinalAssets": 85,
     "phase1StyleSamplesNotUsed": 12,
-    "accountUsed": 114,
+    "accountUsed": 143,
     "accountLeft": "paid plan since round 2 (2000 a month); the round 2 cap is 150",
     "byPhase": {
       "phase1": 6,
@@ -1929,7 +2393,8 @@
       "denseFloor": 4,
       "round2WorldVignettes": 31,
       "round3CityVisitors": 26,
-      "round4Landmarks": 21
+      "round4Landmarks": 21,
+      "round5": 29
     },
     "round2": {
       "budget": 150,
@@ -1937,7 +2402,7 @@
       "used": 31,
       "note": "paid plan (2000/month on the account); round 2 counts against the owner's 150 cap for this round"
     },
-    "allTime": 114,
+    "allTime": 143,
     "round3": {
       "budget": 100,
       "used": 26
@@ -1946,6 +2411,11 @@
       "budget": 40,
       "used": 21,
       "note": "landmark set pieces (props5): 14 used first or second try, 7 rejects logged; rejects never retried more than twice"
+    },
+    "round5": {
+      "budget": 55,
+      "used": 29,
+      "note": "typing rats, car rear views, the Vault, the espresso machine, the kneeling rat, the sewer; rejects logged, never more than 2 tries per idea"
     }
   },
   "cc0Assets": "none: itch.io, kenney.nl and opengameart.org are blocked by the environment network policy"

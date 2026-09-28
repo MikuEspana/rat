@@ -1,7 +1,7 @@
 // The master plan: every room the company will ever build, in fixed slots, from the founders' garage outwards.
 // Pure and deterministic (seeded), and independent of the roster: growth.ts decides which rooms stand.
 //
-// The garage sits in the middle with the furnace. Each later stage adds a ring around the building: a 2-cell ring
+// The garage sits in the middle with the Vault (the money pile). Each later stage adds a ring around the building: a 2-cell ring
 // corridor hugging the old outer wall, then a band of rooms and a new outer wall. The band is four strips (back,
 // right, front, left), each packed with shared walls (pack.ts). Ring 1 is open-plan offices; from ring 2 on, desk
 // rooms are slots handed to whichever stock needs desks next. Amenities sit next to the ring corridor and open at
@@ -403,8 +403,9 @@ export function buildMaster(): FloorLayout {
       }
     }
   }
-  const furnace = { i: garage.i0 + GARAGE / 2, j: garage.j0 + GARAGE / 2 };
-  for (let i = furnace.i - 3; i <= furnace.i + 2; i++) for (let j = furnace.j - 3; j <= furnace.j + 2; j++) floorOf[at(i, j)] = FLOOR_STYLES.indexOf('marble');
+  // the Vault: the money pile in the middle of the garage, on a 6x6 marble plaza
+  const vault = { i: garage.i0 + GARAGE / 2, j: garage.j0 + GARAGE / 2 };
+  for (let i = vault.i - 3; i <= vault.i + 2; i++) for (let j = vault.j - 3; j <= vault.j + 2; j++) floorOf[at(i, j)] = FLOOR_STYLES.indexOf('marble');
   const ceo = rooms.find((r) => r.kind === 'ceo') ?? garage;
   for (let i = ceo.i0 + 2; i < ceo.i0 + ceo.w - 2; i++) {
     for (let j = ceo.j0 + 2; j < ceo.j0 + ceo.h - 2; j++) {
@@ -424,8 +425,8 @@ export function buildMaster(): FloorLayout {
   const lobbyOf = (k: number): Room | undefined => rooms[rings[k]?.lobby ?? -1];
   const spotFor = (r: Room): Array<[string, number, number, number, number]> => {
     const out: Array<[string, number, number, number, number]> = [];
-    // the shrine goes on the marble round the furnace (kept clear anyway), so the garage keeps all its desks
-    if (r.kind === 'garage') out.push(['espresso', furnace.i - 3, furnace.j - 3, 2, 2]);
+    // the giant espresso machine has the garage's back corner to itself, clear of the Vault as it grows
+    if (r.kind === 'garage') out.push(['espresso', r.i0, r.j0, 3, 3]);
     if (r === lobbyOf(1)) out.push(['pingpong', r.i0 + r.w - 5, r.j0 + r.h - 4, 3, 2]);
     if (r === lobbyOf(3)) out.push(['statue', r.i0 + Math.floor(r.w / 2) - 1, r.j0 + Math.floor(r.h / 2) - 1, 3, 3]);
     if (r === firstOpen) out.push(['pit', r.i0 + Math.floor(r.w / 2) - 2, r.j0 + Math.floor(r.h / 2) - 2, 5, 5]);
@@ -445,7 +446,7 @@ export function buildMaster(): FloorLayout {
       usedByRing.set(r.ring, used);
       placeVignette(f, used, actors);
     }
-    if (r.kind === 'garage') garageRoom(f, furnace, GARAGE_SEATS);
+    if (r.kind === 'garage') garageRoom(f, vault, GARAGE_SEATS);
     else if (r.kind === 'stock') stockRoom(f, deskSeats(r));
     else if (r.kind === 'open') openRoom(f, deskSeats(r));
     else if (r.kind === 'break') breakRoom(f);
@@ -460,6 +461,9 @@ export function buildMaster(): FloorLayout {
     else lobbyRoom(f);
   }
 
+  const keptClear = (i: number, j: number): boolean =>
+    (i >= vault.i - 5 && i <= vault.i + 4 && j >= vault.j - 5 && j <= vault.j + 4) ||
+    Object.values(landmarkSpots).some((sp) => i >= sp.i0 && i < sp.i0 + sp.w && j >= sp.j0 && j < sp.j0 + sp.h);
   // the rare props: one easter egg per ring, in a random room of it with space; the golden rat in the CEO office
   for (let k = 0; k <= RINGS.length; k++) {
     const rng = new Rng(`egg:${k}`);
@@ -472,6 +476,7 @@ export function buildMaster(): FloorLayout {
         const j = r.j0 + 1 + rng.int(r.h - 2);
         const f = new Fit(B, r, rng);
         if (!f.free(i, j) || !f.free(i + 1, j) || !f.free(i, j + 1)) continue;
+        if (keptClear(i, j) || keptClear(i + 1, j) || keptClear(i, j + 1)) continue; // the Vault's plaza, landmark slots
         const p = f.put(egg, i, j, rng.chance(0.5));
         if (p && !f.allReachable()) {
           B.props.splice(B.props.lastIndexOf(p), 1);
@@ -518,7 +523,7 @@ export function buildMaster(): FloorLayout {
     bySymbol: new Map(),
     hq: garage, ceo, lobby: rooms[rings[rings.length - 1]!.lobby]!, garage,
     spawn: rings[0]!.spawn,
-    furnace,
+    vault,
     building: { i0: Q[0]!.i0, j0: Q[0]!.i0, i1: Q[0]!.i1 + 1, j1: Q[0]!.i1 + 1 },
     corridor,
     rings, ringOf, doorSides,

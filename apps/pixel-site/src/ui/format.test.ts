@@ -23,13 +23,15 @@ describe('format', () => {
     expect(ago('2026-10-01T17:57:00Z', now)).toBe('3m ago');
   });
 
-  it('describes every event type in the mock feed without an em dash', () => {
+  it('describes every event type in the mock feed without an em dash, and never shows a burn', () => {
     const events = (eventsJson as { events: RatEvent[] }).events;
     const types = new Set(events.map((e) => e.type));
     expect(types.size).toBeGreaterThanOrEqual(3);
     for (const e of events) {
       const d = line(e);
+      if (!d) throw new Error(`no line for ${e.type}`);
       expect(d.tag.length).toBeGreaterThan(0);
+      expect(`${d.tag} ${d.text}`.toLowerCase()).not.toContain('burn');
       expect(d.text.length).toBeGreaterThan(5);
       expect(d.text).not.toContain(String.fromCharCode(0x2014)); // no em dashes in owner-facing text
     }

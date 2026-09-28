@@ -69,6 +69,11 @@ NAMES6 = {
     "car_red_rear_0201a8_0": "car_red_rear", "car_blue_rear_cd224a_0": "car_blue_rear", "taxi_rear_8922ab_0": "taxi_rear",
     "van_rear_08363a_0": "van_rear", "police_rear_248c69_0": "police_rear", "car_white_rear_850cd6_0": "car_white_rear",
     "car_gold_rear_0b50cb_0": "car_gold_rear", "limo_rear_4303fa_0": "limo_rear",
+    # the Vault: the money pile at the centre of the building, one sprite per stage (the money bin had a solid
+    # background, cut out, and a person in a suit painted over with coins: rats only)
+    "vault_0_4d91e2_0": "vault_0", "vault_1_8e3aed_0": "vault_1", "vault_2_18c2af_0": "vault_2",
+    "vault_3_fdfa5f_0": "vault_3", "vault_4_058919_0": "vault_4", "vault_5_990492_clean": "vault_5",
+    "bill_ea1844_0": "bill", "espresso_giant_9e92ff_0": "espresso_giant",
 }
 DIR6 = os.path.join(OUT, "raw", "props6")
 

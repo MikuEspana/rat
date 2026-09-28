@@ -1,6 +1,6 @@
 // Builds what stands of the office from the master plan and the growth state: floor tiles (a colour per room type),
 // empty lots for rooms not built yet, the street around the current building, walls, desks, props, things hung on
-// walls, the subway stairs, the Vault in HQ (it grows with the company) and its light beam, lamp glows, blinking
+// walls, the subway stairs, the Vault's money pile (vault.ts sets it from the portfolio value), lamp glows, blinking
 // server lights, wall tickers and big room signs for reading the building from far away.
 // Rebuilt from scratch whenever a room is built (rare); new rooms pop in.
 import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
@@ -12,6 +12,7 @@ import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
 import { type Focus, renderLandmarks } from './landmarks';
+import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
 import { CORRIDOR_TINT, ROOM_LOOK, STAGES } from '../floor/plan';
 import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room, type Seat } from '../floor/types';
@@ -41,15 +42,11 @@ export interface World {
   lights: Container; // additive glows and blinking lights
   signs: Container; // room signs, readable when zoomed out
   tickers: Ticker[];
-  /** where money lands: the top of the Vault in HQ */
-  vault: { x: number; y: number };
-  /** where "+$X" popups start: just above the Vault's sign */
-  vaultPop: { x: number; y: number };
-  /** the Vault glows up for a moment (money just landed) */
-  flare(): void;
+  /** the Vault's money pile in the middle of the building (VaultView drives it) */
+  vault: VaultAnchor;
   /** the walk mask this world was built for */
   blocked: Uint8Array;
-  /** call every frame: server lights blink, new rooms pop in, the beam pulses */
+  /** call every frame: server lights blink, new rooms pop in */
   update(dt: number): void;
   setChair(seatId: number, visible: boolean): void;
   /** where a landmark stands and how tall it is (world px), for the camera */
@@ -68,7 +65,6 @@ export interface World {
   destroy(): void;
 }
 
-export const FURNACE_SCALE = [1, 1, 2, 2, 2, 3];
 /** 4x4 ordered dither thresholds (0..1) for fading the city's edge */
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
 
@@ -108,26 +104,6 @@ function glowTexture(r: number, g: number, b: number): Texture {
   return Texture.from(c);
 }
 
-function beamTexture(): Texture {
-  const c = document.createElement('canvas');
-  c.width = 32;
-  c.height = 256;
-  const ctx = c.getContext('2d')!;
-  const img = ctx.createImageData(32, 256);
-  for (let y = 0; y < 256; y++) {
-    for (let x = 0; x < 32; x++) {
-      const across = Math.exp(-(((x - 15.5) / 7) ** 2));
-      const up = (y / 255) ** 1.4;
-      const k = (y * 32 + x) * 4;
-      img.data[k] = 255;
-      img.data[k + 1] = 150 + 60 * across;
-      img.data[k + 2] = 70;
-      img.data[k + 3] = Math.round(255 * across * up * 0.8);
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return Texture.from(c);
-}
 
 export function tickerText(stock: StockView | undefined, symbol: string): string {
   if (!stock) return `${symbol}\n--`;
@@ -541,13 +517,10 @@ export function buildWorld(
     lights.addChild(g);
     return g;
   };
-  const fscale = FURNACE_SCALE[stage] ?? 1;
-  const fp = cellCentre(plan.furnace.i, plan.furnace.j);
   for (const pr of plan.props) {
     if (pr.flat || !propVisible(pr)) continue;
     if (pr.kind === 'street_lamp' && pr.ring !== undefined) continue; // the city places its own lamps
-    // the HQ centrepiece is the Vault (the plan still calls its spot the furnace)
-    const f = atlas.frame(pr.kind === 'furnace' ? 'world:vault' : `world:${pr.kind}`);
+    const f = atlas.frame(`world:${pr.kind}`);
     const pop = popping(pr);
     if (pr.wall) {
       const item = placeOnWall(heights, W, main, f, pr);
@@ -561,7 +534,7 @@ export function buildWorld(
     const c = cellCentre(pr.i, pr.j);
     const x = c.x + (pr.dx ?? 0);
     const y = c.y + (pr.dy ?? 0);
-    const sc = pr.kind === 'furnace' ? fscale : pr.scale ?? 1;
+    const sc = pr.scale ?? 1;
     const p = makeParticle(f, x, y, pr.mirror, sc);
     if (pr.tint !== undefined) p.tint = pr.tint;
     const item = main.add(p, pr.i + pr.j + 1 + (pr.bias ?? 0));
@@ -668,7 +641,7 @@ export function buildWorld(
     if (stage === 0) {
       const g = plan.garage;
       posed('partner', 'idle_ne', g.i0 + 3, g.j0 + 2, false);
-      posed('vp.white', 'cheer', plan.furnace.i + 2, plan.furnace.j - 1, true);
+      posed('vp.white', 'cheer', plan.vault.i + 3, plan.vault.j - 2, true);
     }
   }
 
@@ -725,20 +698,11 @@ export function buildWorld(
   }
   lights.addChild(leds);
 
-  // the Vault: a gold glow, and a light beam that grows with the company (the landmark you see from anywhere)
-  const vaultGlow = addGlow(glowTexture(255, 200, 70), fp.x, fp.y - 26 * fscale, 2.2 * fscale, 0.7);
-  const vaultTop = { x: fp.x, y: fp.y - 50 * fscale };
-  let flareT = 0;
-  const vaultSign = new Sprite(signTexture('THE VAULT', 0xf0c040, 2));
-  vaultSign.anchor.set(0.5, 1);
-  vaultSign.position.set(fp.x, fp.y - 80 * fscale);
-  signs.addChild(vaultSign);
-  const beam = new Sprite(beamTexture());
-  beam.anchor.set(0.5, 1);
-  beam.position.set(fp.x + 4 * fscale, fp.y - 40 * fscale);
-  beam.scale.set(1.2 + stage * 0.5, 1.6 + stage * 0.45);
-  beam.blendMode = 'add';
-  lights.addChild(beam);
+  // the Vault: the money pile on the plaza in the middle of the garage, the centre of the building. Its sprite and
+  // size follow the portfolio value (VaultView); here it only gets its place in the depth order and its glow.
+  const vc = cellToScreen(plan.vault.i, plan.vault.j);
+  const vaultItem = main.add(makeParticle(atlas.frame('world:vault_0'), vc.x, vc.y), plan.vault.i + plan.vault.j + 1);
+  const vaultGlow = addGlow(glowTexture(110, 255, 150), vc.x, vc.y - 24, 3.2, 0);
   const sp = cellCentre(ring.spawn.i, ring.spawn.j);
   addGlow(glowTexture(140, 255, 170), sp.x, sp.y + 10, 1.4, 0.5);
 
@@ -834,15 +798,12 @@ export function buildWorld(
     lights,
     signs,
     tickers,
-    vault: vaultTop,
-    vaultPop: { x: fp.x, y: fp.y - 100 * fscale },
-    flare(): void {
-      flareT = 0.45;
-    },
+    vault: { item: vaultItem, x: vc.x, y: vc.y, glow: vaultGlow },
     blocked,
     update(dt: number): void {
       clock += dt;
       cityView.update(dt);
+      lm.update(dt);
       for (let k = builders.length - 1; k >= 0; k--) {
         const b = builders[k]!;
         b.t += dt;
@@ -874,10 +835,6 @@ export function buildWorld(
         t.s.y = t.y + t.t * 14;
         t.s.alpha = 1 - t.t / 0.8;
       }
-      beam.alpha = 0.75 + 0.25 * Math.sin(clock * 2.1);
-      flareT = Math.max(0, flareT - dt);
-      vaultGlow.alpha = 0.7 + flareT * 1.2;
-      vaultGlow.scale.set(2.2 * fscale * (1 + flareT * 0.8));
       if (pops.length) {
         for (let k = pops.length - 1; k >= 0; k--) {
           const p = pops[k]!;
@@ -951,7 +908,6 @@ export function buildWorld(
       // the building name and landmark names keep a readable size on screen: bigger zoomed out, smaller close up
       signScale = Math.max(0.4, Math.min(4, 0.6 / z));
       name.scale.set(signScale);
-      vaultSign.scale.set(Math.max(1, signScale));
       fair?.scale.set(Math.max(1, signScale));
       for (const l of lockSigns) {
         l.visible = z >= 0.6;

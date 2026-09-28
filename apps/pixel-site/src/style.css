@@ -935,6 +935,96 @@ body {
   }
 }
 
+/* the Vault's panel */
+.vault-card {
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  top: 120px;
+  transform: translateX(-50%);
+  width: 440px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.vault-sub {
+  color: var(--dim);
+  font-size: 12px;
+}
+.vault-total {
+  font-size: 30px;
+  color: #7dff9a;
+  margin: 6px 0 2px;
+}
+.vault-pnl,
+.vault-stage {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.vault-stage {
+  color: var(--dim);
+}
+.vault-stocks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 8px 0;
+}
+.ui .vault-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 88px 64px 64px;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  padding: 3px 6px;
+}
+.vault-sym {
+  color: #f4f6ff;
+}
+.vault-barbox {
+  height: 8px;
+  background: #0b0c18;
+}
+.vault-bar {
+  display: block;
+  height: 100%;
+  background: #7dff9a;
+}
+.vault-val,
+.vault-chg,
+.vault-n {
+  text-align: right;
+  font-size: 12px;
+}
+.vault-wallets {
+  padding: 4px 8px 6px 16px;
+  border-left: 2px solid var(--edge);
+}
+.vault-wallet {
+  display: grid;
+  grid-template-columns: 1fr 80px 100px;
+  gap: 6px;
+  font-size: 12px;
+  align-items: center;
+}
+.ui .vault-rat {
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: #f4f6ff;
+}
+.vault-v {
+  text-align: right;
+}
+.vault-addr {
+  color: var(--dim);
+}
+@media (max-width: 900px) {
+  .vault-card {
+    width: calc(100vw - 20px);
+    top: 80px;
+  }
+}
+
 /* the job-fair line: a hype number */
 .stat-value.hype {
   color: #6dff9a;

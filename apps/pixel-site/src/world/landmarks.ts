@@ -64,6 +64,25 @@ function redBeam(): Texture {
   return Texture.from(c);
 }
 
+let steamTex: Texture | null = null;
+function steamTexture(): Texture {
+  if (steamTex) return steamTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 12;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = 'rgba(240,244,255,0.9)';
+  ctx.beginPath();
+  ctx.arc(6, 6, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,1)';
+  ctx.beginPath();
+  ctx.arc(5, 4.5, 2, 0, Math.PI * 2);
+  ctx.fill();
+  steamTex = Texture.from(c);
+  steamTex.source.scaleMode = 'nearest';
+  return steamTex;
+}
+
 export function renderLandmarks(o: Opts): LandmarkView {
   const { plan, stage, count, atlas, main } = o;
   const has = (k: string): boolean => atlas.has(`world:${k}`);
@@ -72,6 +91,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
   const signs: Sprite[] = [];
   let delay = 0;
   let crown: { x: number; y: number } | null = null;
+  const steam: Array<{ x: number; y: number; t: number }> = [];
   const put = (kind: string, x: number, y: number, depth: number, scale = 1, mirror = false, tint = 0xffffff, id = ''): LayerItem | null => {
     if (!has(kind)) return null;
     const p = makeParticle(atlas.frame(`world:${kind}`), x, y, mirror, scale);
@@ -100,7 +120,21 @@ export function renderLandmarks(o: Opts): LandmarkView {
     const d = ci + cj + 1;
     let top = c.y - 70; // where the name sign goes
     if (id === 'espresso') {
-      if (!put('espresso_shrine', c.x, c.y + 8, d, fit('espresso_shrine', 2.2), false, 0xffffff, id)) put('coffee_machine', c.x, c.y + 6, d, 1.2, false, 0xffd878, id);
+      // a giant espresso machine with the garage's back corner to itself, steam puffing from its top, and rats
+      // kneeling round it in worship (only on free floor)
+      const kind = has('espresso_giant') ? 'espresso_giant' : 'espresso_shrine';
+      const em = put(kind, c.x, c.y + 14, d, fit(kind, 3.4), false, 0xffffff, id);
+      const eh = em ? em.p.scaleY * atlas.frame(`world:${kind}`).h : 90;
+      top = Math.min(top, c.y - eh);
+      focus.set(id, { x: c.x, y: c.y + 14 - eh / 2, h: eh + 130 });
+      for (let k = 0; k < 3; k++) steam.push({ x: c.x - 10 + k * 10, y: c.y + 14 - eh * 0.92, t: k * 0.6 });
+      const blocked = (i: number, j: number): boolean => plan.blocked[j * plan.W + i] !== 0;
+      const looks = ['intern.brown', 'analyst.white', 'associate', 'intern.black'];
+      let n = 0;
+      for (const [i, j, m] of [[sp.i0 + sp.w, sp.j0 + 1, true], [sp.i0 + 1, sp.j0 + sp.h, false], [sp.i0 + sp.w, sp.j0 + sp.h, false], [sp.i0 + sp.w + 1, sp.j0 + 2, true]] as const) {
+        if (blocked(i, j)) continue;
+        o.posed(looks[n++ % looks.length]!, 'kneel', i, j, m);
+      }
     } else if (id === 'pingpong') {
       put('ping_pong', c.x, c.y + 8, d, fit('ping_pong', 3), false, 0xffffff, id);
       o.posed('intern.brown', 'cheer', sp.i0 - 1, sp.j0 + 1, false);
@@ -292,7 +326,28 @@ export function renderLandmarks(o: Opts): LandmarkView {
       label('rocket', c.x, c.y - rh - 10);
     }
   }
-  return { focus, signs, crown, update(): void {} };
+  // steam from the espresso machine: soft puffs that rise, swell and fade
+  const puffs = steam.map((q) => {
+    const s = new Sprite(steamTexture());
+    s.anchor.set(0.5);
+    s.position.set(q.x, q.y);
+    o.lights.addChild(s);
+    return { s, ...q };
+  });
+  return {
+    focus,
+    signs,
+    crown,
+    update(dt: number): void {
+      for (const p of puffs) {
+        p.t = (p.t + dt) % 1.8;
+        const u = p.t / 1.8;
+        p.s.position.set(p.x + Math.sin(u * 6 + p.x) * 3, p.y - u * 34);
+        p.s.scale.set(0.6 + u * 1.2);
+        p.s.alpha = 0.75 * (1 - u);
+      }
+    },
+  };
 }
 
 export type { Frame };

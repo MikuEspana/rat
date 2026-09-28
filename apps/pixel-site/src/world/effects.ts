@@ -1,4 +1,4 @@
-// Dust: a puff where something just got built. (The money flying into the Vault lives in money.ts.)
+// Dust: a puff where something just got built. (The money flying into the Vault lives in vault.ts.)
 import { Container, Sprite, Texture } from 'pixi.js';
 
 interface Puff {
