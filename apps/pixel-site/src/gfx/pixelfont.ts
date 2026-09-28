@@ -55,3 +55,13 @@ export function shearRightWall(src: HTMLCanvasElement): HTMLCanvasElement {
   for (let x = 0; x < src.width; x++) ctx.drawImage(src, x, 0, 1, src.height, x, Math.floor(x / 2), 1, src.height);
   return out;
 }
+
+/** Shear a canvas 2:1 down-left (each column moves down (w - 1 - x)/2 px): for a wall running down-left. */
+export function shearLeftWall(src: HTMLCanvasElement): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = src.width;
+  out.height = src.height + Math.floor(src.width / 2) + 1;
+  const ctx = out.getContext('2d')!;
+  for (let x = 0; x < src.width; x++) ctx.drawImage(src, x, 0, 1, src.height, x, Math.floor((src.width - 1 - x) / 2), 1, src.height);
+  return out;
+}

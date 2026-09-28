@@ -4,6 +4,8 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Dense floor (owner, 2026-09-27):** the Phase 3 floor read as a spreadsheet. Rebuilt as one packed building (`src/floor/`): a slicing floor plan with 2-cell corridors only at the top splits and shared walls below, so rooms touch. HQ shrunk to about 10x10 in the centre. New room types: break room, bathroom, server room, copy room, meeting room, storage, lobby, the CEO corner office (partners sit there while it has desks). A big stock gets several stock rooms of different sizes, each laid out one of six ways (columns, rows, split, perimeter + island, pods, mixed) with jittered desks, mirrored clusters and clutter. About 7% of rats are away from their desks at any time: coffee, water cooler, vending, chats, bathroom queue, copier, filing, meetings, whiteboard, server checks, furnace watching, corridor strolls, box runs, smokers outside, naps at the desk. Night sky backdrop, street ring with lamps and the subway stairs outside the lobby.
+- **Dense floor art budget (owner, 2026-09-27):** stay free; kitbash and draw clutter in code; PixelLab only for hero props. Before that message arrived 3 generations had gone on 3 prop sheets (vending machine and server rack among them); after it, 1 hero generation (coffee machine). Gold CEO desk is a free recolor. Everything else is kitbashed or drawn in `tools/build_props2.py`.
 - **Data loading (owner, 2026-09-27):** `/api/rats` is about 1.7 MB at 3,000 rats. Load it once on page open, then follow `/api/events` (every 5 s) for new hires, freezes and burns. Never re-poll the full roster. Live PnL and tiers are recomputed in the browser from `/api/state` stock prices with the `@rat/contract` display math (`valueUsd = tokenAmount x priceUsd`). A rat hired after page load has no `tokenAmount` in its hire event, so its value is estimated as `costUsd x price_now / price_at_hire` (price at hire = the stock price in the latest `/api/state` when the hire event arrives). Small error from slippage; exact again after a reload.
 - **Style (owner, 2026-09-27):** style A Blueprint. Tiers read by SUIT color, all free recolors of one rat: intern brown/khaki + red tie, analyst navy + red tie, associate forest green + gold tie, vp burgundy + gold tie, partner black with gold lapel trim + gold tie, frozen whole rat grey. No pale suits. 1px dark outer outline (#16182c) on every tier. Files: `style-samples/a-variants/`.
 - **Final style (owner, 2026-09-27):** mix A3 + A2: A3 density (desk clutter, wall ticker, chairs, bin, paper pile) with A2 oak desk tops, plants and lamp glow. Tier tweaks: VP brighter crimson (was burgundy, read as intern brown), partner louder gold (wide gold tie, bright gold lapels, gold seams, gold collar from behind). Assets: `assets/` (see `assets/README.md`).
@@ -16,6 +18,8 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Blockers
 
+- **CC0 asset hosts are blocked by the network policy** (itch.io, img.itch.zone, kenney.nl, opengameart.org all refused at CONNECT). No third-party props were used, so there are no outside licenses to log. To try CC0 props later, add those hosts under the environment's Network access settings.
+- **Real-GPU frame rate for the dense floor is still unmeasured.** Measured here (headless Chromium, software rasterizer): whole frame on the CPU 2.4 ms with the mock's ~560 rats, 7.2 ms zoomed in and 5.9 ms (max 17) zoomed all the way out at 3,000 rats with about 80 walking. Our own per-frame code is 1 to 2 ms; the rest is the software renderer drawing about 22k sprites plus a 70k-tile floor. Confirm on a real machine with `?perf=1&stress=3000`.
 - **PixelLab `animate_character` v3 (custom action) fails instantly** on this account's character ("Generation failed, try a lower frame_count or smaller character size" at 8 and 4 frames; failures uncharged). Worked around with `edit_image_pixen` (seated pose) + `animate_image` (type, slump, cheer) at the same cost, 1 generation each. PixelLab's help bot confirms v3 is not trial-locked; cause unknown.
 - **60 fps on a real GPU is not measured here.** This container has no GPU; headless Chromium renders through its software rasterizer and shows 8 to 14 fps at 1600x1000 whatever the scene. What is measured: the whole frame costs the CPU 0.65 ms with the mock's 350 rats and 3.7 ms (max 5.4) with 3,020 rats, 20 walking, whole floor visible (`?perf=1&stress=3000&walkers=20`), inside the 16.7 ms budget. To confirm on a real machine: run the site and open `?perf=1&stress=3000&walkers=20`.
 - **`pixijs.com` is blocked by the network policy.** PixiJS behavior is checked against its source on GitHub (raw.githubusercontent.com works) instead.
@@ -56,6 +60,9 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | 2026-09-27 19:50 | Phase 2: walk NE, idle NE (templates), stairs, furnace, cash bag, subway floor, HQ floor | 7 | 28 |
 | 2026-09-27 19:55 | Phase 2: seated pose (pixen edit), cheer, type, slump (animate_image) | 4 | 32 |
 | 2026-09-27 20:02 | Phase 2: tier recolors, palette snaps, desks, blank ticker (`pixelart_workbench`, about 10 edits) | 0 | 32 |
+| 2026-09-27 21:39 | Dense floor: 3 prop sheets (break + bath, work rooms, exec + street; 16 props) | 3 | 35 |
+| 2026-09-27 21:50 | Dense floor: hero coffee machine | 1 | 36 |
+| 2026-09-27 21:55 | Dense floor: kitbashes and code-drawn clutter (`tools/build_props2.py`) | 0 | 36 |
 
 Left: 8.
 
