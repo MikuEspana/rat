@@ -42,6 +42,12 @@ interface Spark {
   life: number;
 }
 
+/**
+ * At most this many bills in the air (a rush sends a hire every few frames). The bill that carries a claim's or a
+ * hire's "+$X" always flies, so every one still gets its gold or green label; the extra bills wait for room.
+ */
+export const MAX_BILLS = 240;
+
 const labelCache = new Map<string, Texture>();
 function labelTexture(text: string, gold = false): Texture {
   const key = `${gold ? 'g' : 'm'}${text}`;
@@ -178,6 +184,7 @@ export class VaultView {
     const dist = Math.hypot(to.x - from.x, to.y - from.y);
     const dur = Math.min(2.8, 0.9 + dist / 800);
     for (let k = 0; k < n; k++) {
+      if (k > 0 && this.bills.length >= MAX_BILLS) break;
       const x1 = to.x + (Math.random() - 0.5) * 30;
       const y1 = to.y + (Math.random() - 0.5) * 16;
       this.bills.push(this.bill(from.x, from.y, (from.x + x1) / 2, Math.min(from.y, y1) - 60 - dist * 0.25, x1, y1, dur, k * 0.12, k === 0 ? `+${shortUsd(usd)}` : null));
@@ -190,6 +197,7 @@ export class VaultView {
     const dist = Math.hypot(to.x - from.x, to.y - from.y);
     const dur = Math.min(2.8, 0.9 + dist / 800);
     for (let k = 0; k < n; k++) {
+      if (k > 0 && this.bills.length >= MAX_BILLS) break;
       const sx = from.x + (Math.random() - 0.5) * 40;
       const x1 = to.x + (Math.random() - 0.5) * 30;
       const y1 = to.y + (Math.random() - 0.5) * 16;
@@ -202,7 +210,7 @@ export class VaultView {
   /** A burst of hires: bills rain from the ceiling onto the pile. */
   rain(n: number): void {
     const b = this.box();
-    for (let k = 0; k < n; k++) {
+    for (let k = 0; k < n && this.bills.length < MAX_BILLS; k++) {
       const x = b.x + (Math.random() - 0.5) * Math.max(80, b.w * 1.1);
       const y1 = b.y - b.h * (0.35 + Math.random() * 0.45);
       const y0 = y1 - 260 - Math.random() * 180;
