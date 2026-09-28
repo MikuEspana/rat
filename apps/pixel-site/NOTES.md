@@ -6,9 +6,13 @@ Running log of decisions and blockers. Newest first inside each section.
 
 - **Data loading (owner, 2026-09-27):** `/api/rats` is about 1.7 MB at 3,000 rats. Load it once on page open, then follow `/api/events` (every 5 s) for new hires, freezes and burns. Never re-poll the full roster. Live PnL and tiers are recomputed in the browser from `/api/state` stock prices with the `@rat/contract` display math (`valueUsd = tokenAmount x priceUsd`). A rat hired after page load has no `tokenAmount` in its hire event, so its value is estimated as `costUsd x price_now / price_at_hire` (price at hire = the stock price in the latest `/api/state` when the hire event arrives). Small error from slippage; exact again after a reload.
 - **Style (owner, 2026-09-27):** style A Blueprint. Tiers read by SUIT color, all free recolors of one rat: intern brown/khaki + red tie, analyst navy + red tie, associate forest green + gold tie, vp burgundy + gold tie, partner black with gold lapel trim + gold tie, frozen whole rat grey. No pale suits. 1px dark outer outline (#16182c) on every tier. Files: `style-samples/a-variants/`.
-- **Variations shown (A1 Contrast, A2 Warm, A3 Dense):** waiting on the owner's pick. A3 uses 3-block walls so the wall ticker fits.
+- **Final style (owner, 2026-09-27):** mix A3 + A2: A3 density (desk clutter, wall ticker, chairs, bin, paper pile) with A2 oak desk tops, plants and lamp glow. Tier tweaks: VP brighter crimson (was burgundy, read as intern brown), partner louder gold (wide gold tie, bright gold lapels, gold seams, gold collar from behind). Assets: `assets/` (see `assets/README.md`).
+- **Phase 2 facing plan:** walk and idle drawn for south-east and north-east; south-west and north-west are mirrors. Seated rats (type, slump) face screen right on their own chair; mirror to face left. Cheer is standing, facing south-east (arms read best toward the camera).
 
 ## Blockers
+
+- **PixelLab `animate_character` v3 (custom action) fails instantly** on this account's character ("Generation failed, try a lower frame_count or smaller character size" at 8 and 4 frames; failures uncharged). Worked around with `edit_image_pixen` (seated pose) + `animate_image` (type, slump, cheer) at the same cost, 1 generation each. PixelLab's help bot confirms v3 is not trial-locked; cause unknown.
+- **`pixijs.com` is blocked by the network policy.** PixiJS behavior is checked against its source on GitHub (raw.githubusercontent.com works) instead.
 
 - **Host `backblaze.pixellab.ai` is blocked by the environment network policy (403).** `get_character` lists rotation and frame URLs on that host. Not blocking: the character ZIP from `https://api.pixellab.ai/mcp/characters/{id}/download` carries the same PNGs, so all downloads go through that. Allow `backblaze.pixellab.ai` only if a future tool returns files with no `api.pixellab.ai` alternative. Note: the ZIP returns an error JSON while any animation on the character is still rendering.
 - **Resolved 19:10 UTC. 2026-09-27 18:57 UTC, PixelLab `create_character` failing.** Every character request (MCP and REST v2, standard mode, 4 or 8 directions, any size) failed within seconds with `Generation failed due to heavy load. Please try again in a moment.` for about 13 minutes while tiles and map objects worked. Failed jobs were not charged. A retry loop (every 90 s) got all 3 through on the 4th round.
@@ -43,7 +47,10 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | 2026-09-27 19:16 | Phase 1: 6 animations (idle + walk, south-east) | 6 | 18 |
 | 2026-09-27 19:41 | Style A variations: props sheet, wall ticker, office chair (map objects) | 3 | 21 |
 | 2026-09-27 19:41 | Style A variations: navy rat, 5 tier recolors, frozen, 3 desk edits (`pixelart_workbench`) | 0 | 21 |
+| 2026-09-27 19:50 | Phase 2: walk NE, idle NE (templates), stairs, furnace, cash bag, subway floor, HQ floor | 7 | 28 |
+| 2026-09-27 19:55 | Phase 2: seated pose (pixen edit), cheer, type, slump (animate_image) | 4 | 32 |
+| 2026-09-27 20:02 | Phase 2: tier recolors, palette snaps, desks, blank ticker (`pixelart_workbench`, about 10 edits) | 0 | 32 |
 
-Left: 19. Phase 2 plan with the recolor approach fits in about 13 to 16.
+Left: 8.
 
 Source: PixelLab MCP `agent_help` answers and tool descriptions (REPORTED), https://api.pixellab.ai/mcp/docs (VERIFIED for template and v3 animation pricing).

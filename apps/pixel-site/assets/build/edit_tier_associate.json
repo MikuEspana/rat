@@ -1,0 +1,1 @@
+[{"operation": "map_colors", "layer": "image", "frames": [1], "region": [0, 0, 679, 407], "colors": {"#2d3b6e": "#2f6a3e", "#1f2850": "#1f4a2a", "#d0283a": "#e0b12e"}, "reason": "associate: suit color carries the tier"}]
