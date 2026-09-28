@@ -4,6 +4,25 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Round 4: landmarks and layout variety (owner, 2026-09-28).** Every stage only added a ring of rooms.
+  - **Landmark unlocks** (`src/floor/landmarks.ts`, drawn by `src/world/landmarks.ts`), one set piece per milestone:
+    - 10 espresso shrine on the garage furnace plaza
+    - 25 ping pong table in the small office lobby
+    - 50 crypto trading pit in the first open-plan room
+    - 100 glass elevator: the office tower goes up behind the back corner and gains a floor every 30 rats
+    - 250 basement gym and nap pods, dug under a lot beside the office
+    - 500 rooftop helipad with the CEO's helicopter on the tower
+    - 1000 giant golden rat in the corporate lobby
+    - 1500 rooftop pool party on the second tower
+    - 2000 rat rocket on a launchpad across the cross street
+    - 3000 evil throne room with a laser beam into the sky
+  - Interior set pieces keep their space clear when the room is furnished (`plan.ts`), so desks never move for them. Before it unlocks, an outdoor landmark's lot is a fenced site with cones.
+  - **Cinematic reveal:** on unlock the camera flies to the landmark (framed by its size, clear of the banner), shows "UNLOCKED: ROOFTOP HELIPAD" for 3.6 s, then eases back. A click or a key skips it. It never starts while the viewer is dragging or has moved the camera in the last 4 s. It shows the banner only.
+  - **Growing up, not only out:** the tower rises every 30 rats and is drawn bigger every stage so it keeps towering over the office. The company name moves onto its roof. From megacorp a second tower joins it by a sky bridge. The basement gym sits below street level.
+  - **Wing shapes:** each ring opens one side (wing) at a time in an L or T order that alternates per ring. Wings not open yet are city lots, not blueprints. From the corporate floor an annex stands across the avenue, reached by a sky bridge from a pylon at the office's front.
+  - **Labels:** room names show only at mid zoom. Zoomed out, only landmark names and the company name show, sized to stay readable.
+  - **Claim copy:** every claim now hires rats ("0.35 SOL in creator fees, all of it hires rats"). Fixed at the source: the mock API's claims and the shared contract fixtures (`packages/contract/mock/events.json`, `state.json`) still had the old 50/50 split.
+
 - **Round 3: a real city and idle hooks (owner, 2026-09-28).** The ring of buildings read as a fence.
   - **Street hierarchy** (`src/floor/city.ts`, drawn fresh per stage): one avenue past the front with the subway on its near sidewalk, one cross street beside the office, one alley behind it. Big blocks get a footpath, so each side has 2 or 3 irregular blocks. Blocks split recursively into lots of mixed sizes; a quarter of the split decisions break the rules (a lot left big, or cut off-centre).
   - **Every lot has a purpose:** a building, park (trees, bench, fountain), parking lot (bay lines, parked cars), building site (fence, scaffold, crane, cement, portaloo, a hard-hat crew) or fenced vacant lot. No bare ground.
@@ -85,6 +104,10 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | `create_map_object` (basic, any size up to 400x400) | 1 |
 | `create_building_kit`, `create_tiles_pro`, `create_character_state`, objects | 20 to 40 (out of budget) |
 | `pixelart_workbench` (recolor, edit, draw) | free |
+
+### Round 4 (cap 40): 21 used
+
+14 map objects used, 7 retries (the elevator came out as a glass shaft, the rocket too small, the launchpad with a rocket on it, the laser cannon read as a spire, the statue's rat too small, the vault door twice as a drum). No idea was retried more than twice. Log in `assets/raw/props5/log.json`, contact sheet `assets/preview/props5_contact.png`, reveals `assets/preview/landmark_reveals.png`. The towers, pylon and sky bridges are drawn in code (free). Notes: the pool party sheet duplicated the flamingo and had no tiki bar; the nap pods sheet made 2 pods and 2 beds.
 
 ### Round 3 (cap 100): 26 used
 

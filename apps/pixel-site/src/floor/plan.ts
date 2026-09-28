@@ -13,6 +13,7 @@ import {
 } from './furnish';
 import { packRect, type Req } from './pack';
 import { EASTER_EGGS, placeVignette } from './vignettes';
+import type { LandmarkSpot } from './landmarks';
 import { Rng } from './rng';
 import { CORRIDOR_REGION, FLOOR_STYLES, T, idx, type Actor, type FloorLayout, type FloorStyle, type Ring, type Room, type RoomKind, type Spot } from './types';
 
@@ -155,7 +156,7 @@ export function buildMaster(): FloorLayout {
     const look = ROOM_LOOK[kind];
     const r: Room = {
       id: rooms.length, kind, symbol: null, i0, j0, w, h, floor: look.floor, tint: look.tint, doors: [], ticker: null, seats: [], spots: [],
-      ring, parent: -1, unlockAt: null, order: 0,
+      ring, parent: -1, unlockAt: null, order: 0, strip: -1,
     };
     rooms.push(r);
     return r;
@@ -182,6 +183,8 @@ export function buildMaster(): FloorLayout {
   const garage = carveRoom('garage', C + 1, C + 1, GARAGE, GARAGE, 0);
   const placed: Array<{ room: Room; req: Req | null }> = [{ room: garage, req: null }];
 
+  const stripsOf = new Map<number, Array<{ i0: number; j0: number; w: number; h: number }>>();
+  const wingOrders = new Map<number, number[]>();
   // rings: corridor annulus, then four strips of rooms
   for (let k = 1; k <= RINGS.length; k++) {
     const a0 = Q[k - 1]!.i0;
@@ -214,8 +217,13 @@ export function buildMaster(): FloorLayout {
       while (to < list.length && (n === strips.length - 1 || (acc + list[to]!.area) / total <= target + 0.02)) acc += list[to++]!.area;
       const part = list.slice(from, to);
       from = to;
-      for (const p of packRect(part, st)) placed.push({ room: carveRoom(p.req.kind, p.rect.i0, p.rect.j0, p.rect.w, p.rect.h, k), req: p.req });
+      for (const p of packRect(part, st)) {
+        const room = carveRoom(p.req.kind, p.rect.i0, p.rect.j0, p.rect.w, p.rect.h, k);
+        room.strip = n;
+        placed.push({ room, req: p.req });
+      }
     });
+    stripsOf.set(k, strips);
   }
 
   for (const r of rooms) {
@@ -329,10 +337,20 @@ export function buildMaster(): FloorLayout {
       assigned.push(r);
     }
     for (const r of rs) if (r !== lobby && !assigned.includes(r)) setKind(r, desk);
-    // amenities open at even steps through their stage; desk rooms get a build order clockwise from the lobby
+    // wings, not rings: the lobby's strip opens first, then the next strips in a ring-specific order (an L, then
+    // a T or U, then the full ring). Amenities and desk rooms are ordered wing by wing so the building grows
+    // one side at a time.
+    const L = lobby.strip;
+    const wingOrder = k % 2 === 1 ? [L, (L + 1) % 4, (L + 3) % 4, (L + 2) % 4] : [L, (L + 3) % 4, (L + 1) % 4, (L + 2) % 4];
+    const rank = (r: Room): number => wingOrder.indexOf(r.strip);
+    wingOrders.set(k, wingOrder);
+    assigned.sort((x, y) => rank(x) - rank(y));
+    // amenities open at even steps through their stage; desk rooms get a build order wing by wing
     const [lo, hi] = stageRange(k);
     assigned.forEach((r, n) => (r.unlockAt = Math.round(lo + ((n + 1) * (hi - lo)) / (assigned.length + 1))));
-    rs.filter((r) => r.kind === desk).sort((x, y) => angle(x) - angle(y)).forEach((r, n) => (r.order = n));
+    // the evil throne room is a landmark: it opens the moment the evil empire does
+    for (const r of assigned) if (r.kind === 'war') r.unlockAt = lo;
+    rs.filter((r) => r.kind === desk).sort((x, y) => rank(x) - rank(y) || angle(x) - angle(y)).forEach((r, n) => (r.order = n));
     // the entrance: a double door in the lobby's front wall, the subway 4 cells out
     let entrance: Cell[];
     let spawn: Cell;
@@ -346,12 +364,12 @@ export function buildMaster(): FloorLayout {
       spawn = { i, j: q.i1 + 4 };
     }
     open(entrance.map((c) => at(c.i, c.j)), lobby.id, -2);
-    rings.push({ index: k, i0: q.i0, j0: q.i0, i1: q.i1, j1: q.i1, lobby: lobby.id, spawn, entrance });
+    rings.push({ index: k, i0: q.i0, j0: q.i0, i1: q.i1, j1: q.i1, lobby: lobby.id, spawn, entrance, strips: stripsOf.get(k) ?? [], wingOrder: wingOrders.get(k) ?? [0, 1, 2, 3] });
   }
   // the garage's front door (onto the street at first, later onto the ring 1 corridor)
   const gd = [{ i: C + GARAGE / 2, j: C + GARAGE + 1 }, { i: C + GARAGE / 2 + 1, j: C + GARAGE + 1 }];
   open(gd.map((c) => at(c.i, c.j)), garage.id, -2);
-  rings.unshift({ index: 0, i0: C, j0: C, i1: C + GARAGE + 1, j1: C + GARAGE + 1, lobby: garage.id, spawn: { i: C + GARAGE / 2 + 1, j: C + GARAGE + 5 }, entrance: gd });
+  rings.unshift({ index: 0, i0: C, j0: C, i1: C + GARAGE + 1, j1: C + GARAGE + 1, lobby: garage.id, spawn: { i: C + GARAGE / 2 + 1, j: C + GARAGE + 5 }, entrance: gd, strips: [], wingOrder: [] });
 
   // tickers on desk-room slots, on plain wall runs (after the doors are cut)
   for (const r of rooms) {
@@ -399,10 +417,29 @@ export function buildMaster(): FloorLayout {
   const deskSeats = (r: Room): number => Math.max(8, Math.min(48, Math.round((r.w * r.h - 16) / 7)));
   const actors: Actor[] = [];
   const usedByRing = new Map<number, Set<string>>();
+  // interior landmarks: keep their space clear before the room is furnished (landmarks.ts)
+  const landmarkSpots: Record<string, LandmarkSpot & { room: number }> = {};
+  const firstOpen = rooms.filter((r) => r.ring === 1 && r.kind === 'open' && r.w >= 9 && r.h >= 9).sort((a, b) => a.order - b.order)[0];
+  const lobbyOf = (k: number): Room | undefined => rooms[rings[k]?.lobby ?? -1];
+  const spotFor = (r: Room): Array<[string, number, number, number, number]> => {
+    const out: Array<[string, number, number, number, number]> = [];
+    // the shrine goes on the marble round the furnace (kept clear anyway), so the garage keeps all its desks
+    if (r.kind === 'garage') out.push(['espresso', furnace.i - 3, furnace.j - 3, 2, 2]);
+    if (r === lobbyOf(1)) out.push(['pingpong', r.i0 + r.w - 5, r.j0 + r.h - 4, 3, 2]);
+    if (r === lobbyOf(3)) out.push(['statue', r.i0 + Math.floor(r.w / 2) - 1, r.j0 + Math.floor(r.h / 2) - 1, 3, 3]);
+    if (r === firstOpen) out.push(['pit', r.i0 + Math.floor(r.w / 2) - 2, r.j0 + Math.floor(r.h / 2) - 2, 5, 5]);
+    if (r.kind === 'war' && r.ring === 5) out.push(['throne', r.i0 + Math.floor(r.w / 2) - 2, r.j0 + Math.floor(r.h / 2) - 2, 5, 4]);
+    return out;
+  };
   for (const r of rooms) {
     const f = new Fit(B, r, new Rng(`room:${r.id}:${r.kind}:${r.w}x${r.h}`));
+    for (const [id, i0, j0, w, h] of spotFor(r)) {
+      if (landmarkSpots[id]) continue;
+      for (let i = i0; i < i0 + w; i++) for (let j = j0; j < j0 + h; j++) if (f.inside(i, j)) f.reserve(i, j);
+      landmarkSpots[id] = { i0, j0, w, h, room: r.id };
+    }
     // a vignette first (it needs the most room); most amenity rooms get one
-    if (r.kind !== 'stock' && r.kind !== 'open' && r.kind !== 'garage' && new Rng(`vig:${r.id}`).chance(0.8)) {
+    if (r.kind !== 'stock' && r.kind !== 'open' && r.kind !== 'garage' && r.kind !== 'war' && new Rng(`vig:${r.id}`).chance(0.8)) {
       const used = usedByRing.get(r.ring) ?? new Set<string>();
       usedByRing.set(r.ring, used);
       placeVignette(f, used, actors);
@@ -485,6 +522,7 @@ export function buildMaster(): FloorLayout {
     corridor,
     rings, ringOf, doorSides,
     actors,
+    landmarkSpots,
   };
 }
 

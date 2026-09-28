@@ -1,0 +1,416 @@
+{
+ "_gens_used": 21,
+ "espresso_shrine": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "5191ca60-6cd8-459b-a47f-5f62028fac7c",
+    "args": {
+     "description": "a gleaming golden espresso machine on a small stone altar with candles, coffee bean offerings and a soft glow, a shrine to coffee, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 128,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 5191ca60-6cd8-459b-a47f-5f62028fac7c\ndescription: a gleaming golden espresso machine on a small stone altar with candles, coffee bean offerings and a soft glow, a shrine to coffee, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x128px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"5191ca60-6cd8-459b-a47f-5f62028fac7c\")",
+    "result_text": "status: completed\nid: 5191ca60-6cd8-459b-a47f-5f62028fac7c\ndescription: a gleaming golden espresso machine on a small stone altar with candles, coffee bean offerings and a soft glow, a shrine to coffee, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x128px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:57\ndownload: https://api.pixellab.ai/mcp/map-objects/5191ca60-6cd8-459b-a47f-5f62028fac7c/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"5191ca60-6cd8-459b-a47f-5f62028fac7c\")",
+    "file": "espresso_shrine.png"
+   }
+  ],
+  "picked": "5191ca60-6cd8-459b-a47f-5f62028fac7c",
+  "note": "first try usable; no solid background; small shrine (97x89)"
+ },
+ "trading_pit": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457",
+    "args": {
+     "description": "a round sunken stock trading pit with stepped rings, tiny desks with glowing chart screens facing the centre, a big ticker screen above, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 176,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457\ndescription: a round sunken stock trading pit with stepped rings, tiny desks with glowing chart screens facing the centre, a big ticker screen above, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 224x176px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457\")",
+    "result_text": "status: completed\nid: 9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457\ndescription: a round sunken stock trading pit with stepped rings, tiny desks with glowing chart screens facing the centre, a big ticker screen above, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 224x176px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:57\ndownload: https://api.pixellab.ai/mcp/map-objects/9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457\")",
+    "file": "trading_pit.png"
+   }
+  ],
+  "picked": "9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457",
+  "note": "first try usable; desk screens show squiggle charts, no text"
+ },
+ "glass_elevator": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "39ff3d88-fa45-4c35-b2c5-158fe4303cdc",
+    "args": {
+     "description": "a tall glass elevator shaft with a lit cab inside and steel frame, standing on its own, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 80,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 39ff3d88-fa45-4c35-b2c5-158fe4303cdc\ndescription: a tall glass elevator shaft with a lit cab inside and steel frame, standing on its own, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 80x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"39ff3d88-fa45-4c35-b2c5-158fe4303cdc\")",
+    "result_text": "status: completed\nid: 39ff3d88-fa45-4c35-b2c5-158fe4303cdc\ndescription: a tall glass elevator shaft with a lit cab inside and steel frame, standing on its own, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 80x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:57\ndownload: https://api.pixellab.ai/mcp/map-objects/39ff3d88-fa45-4c35-b2c5-158fe4303cdc/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"39ff3d88-fa45-4c35-b2c5-158fe4303cdc\")",
+    "file": "glass_elevator_reject1.png"
+   },
+   {
+    "id": "b20a575f-ee61-4b90-9b39-a60e2beaac6a",
+    "args": {
+     "description": "a narrow see-through glass elevator shaft, a thin steel girder frame with glass panels, inside it a small lit elevator car cab with open doors glowing warm yellow, you can see through the glass, only as tall as three floors, not a building, no window grid, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 80,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: b20a575f-ee61-4b90-9b39-a60e2beaac6a\ndescription: a narrow see-through glass elevator shaft, a thin steel girder frame with glass panels, inside it a small lit elevator car cab with open doors glowing warm yellow, you can see through the glass, only as tall as three floors, not a building, no window grid, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 80x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place ...",
+    "result_text": "status: completed\nid: b20a575f-ee61-4b90-9b39-a60e2beaac6a\ndescription: a narrow see-through glass elevator shaft, a thin steel girder frame with glass panels, inside it a small lit elevator car cab with open doors glowing warm yellow, you can see through the glass, only as tall as three floors, not a building, no window grid, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 80x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:59\ndownload: https://api.pixellab.ai/mcp/map-objects/b20a575f-ee61-4b90-9b39-a60e2beaac6a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"b20a575f-ee61-4b90-9b39-a60e2beaac6a\")",
+    "file": "glass_elevator.png"
+   }
+  ],
+  "picked": "b20a575f-ee61-4b90-9b39-a60e2beaac6a",
+  "note": "attempt 1 (glass_elevator_reject1.png) came out as a glass skyscraper, not a shaft; retry said see-through shaft, lit cab, not a building. Pick is a narrow glass shaft with a lit cab, fairly thin (44x178)"
+ },
+ "gym": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "7aecff1e-c9fb-4c0e-910c-77130226497e",
+    "args": {
+     "description": "sprite sheet of five separate office gym props in one row with empty space between them, not touching, each standing on its own: treadmill, weight rack with dumbbells, bench press, red punching bag on a stand, rowing machine. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 7aecff1e-c9fb-4c0e-910c-77130226497e\ndescription: sprite sheet of five separate office gym props in one row with empty space between them, not touching, each standing on its own: treadmill, weight rack with dumbbells, bench press, red punching bag on a stand, rowing machine. Night office, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"7aecff1e-c9fb-4c0e-910c-77130226497e\")",
+    "result_text": "status: completed\nid: 7aecff1e-c9fb-4c0e-910c-77130226497e\ndescription: sprite sheet of five separate office gym props in one row with empty space between them, not touching, each standing on its own: treadmill, weight rack with dumbbells, bench press, red punching bag on a stand, rowing machine. Night office, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:57\ndownload: https://api.pixellab.ai/mcp/map-objects/7aecff1e-c9fb-4c0e-910c-77130226497e/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"7aecff1e-c9fb-4c0e-910c-77130226497e\")",
+    "file": "gym.png"
+   }
+  ],
+  "picked": "7aecff1e-c9fb-4c0e-910c-77130226497e",
+  "note": "5 props split cleanly; the weight rack came out as a squat rack welded to a treadmill base"
+ },
+ "nap_pods": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "bdab9295-8c9a-4e19-a564-7103c88d00a4",
+    "args": {
+     "description": "sprite sheet of four separate office nap room props in one row with empty space between them, not touching, each standing on its own: sleek white sleep pod capsule with a blue glow inside, another sleep pod closed, a hammock on a stand, a stack of pillows and a blanket. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: bdab9295-8c9a-4e19-a564-7103c88d00a4\ndescription: sprite sheet of four separate office nap room props in one row with empty space between them, not touching, each standing on its own: sleek white sleep pod capsule with a blue glow inside, another sleep pod closed, a hammock on a stand, a stack of pillows and a blanket. Night office, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"bdab9295-8c9a-4e19-a564-7 ...",
+    "result_text": "status: completed\nid: bdab9295-8c9a-4e19-a564-7103c88d00a4\ndescription: sprite sheet of four separate office nap room props in one row with empty space between them, not touching, each standing on its own: sleek white sleep pod capsule with a blue glow inside, another sleep pod closed, a hammock on a stand, a stack of pillows and a blanket. Night office, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:57\ndownload: https://api.pixellab.ai/mcp/map-objects/bdab9295-8c9a-4e19-a564-7103c88d00a4/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"bdab9295-8c9a-4e19-a564-7103c88d00a4\")",
+    "file": "nap_pods.png"
+   }
+  ],
+  "picked": "bdab9295-8c9a-4e19-a564-7103c88d00a4",
+  "note": "2 good pods, but the hammock and pillow stack came out as two beds; kept (usable), not retried"
+ },
+ "helipad": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "41e7060d-c6c8-4a44-ae40-4b6942a93160",
+    "args": {
+     "description": "a rooftop helipad, a big H in a circle with edge lights, flat square platform, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 128,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 41e7060d-c6c8-4a44-ae40-4b6942a93160\ndescription: a rooftop helipad, a big H in a circle with edge lights, flat square platform, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x128px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"41e7060d-c6c8-4a44-ae40-4b6942a93160\")",
+    "result_text": "status: completed\nid: 41e7060d-c6c8-4a44-ae40-4b6942a93160\ndescription: a rooftop helipad, a big H in a circle with edge lights, flat square platform, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x128px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:58\ndownload: https://api.pixellab.ai/mcp/map-objects/41e7060d-c6c8-4a44-ae40-4b6942a93160/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"41e7060d-c6c8-4a44-ae40-4b6942a93160\")",
+    "file": "helipad.png"
+   }
+  ],
+  "picked": "41e7060d-c6c8-4a44-ae40-4b6942a93160",
+  "note": "first try usable; H is clean"
+ },
+ "helicopter": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "1ca87309-5fe7-4519-9c83-4426da2dcc36",
+    "args": {
+     "description": "a sleek black corporate helicopter with gold stripes, rotor blades visible, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 176,
+     "height": 112,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 1ca87309-5fe7-4519-9c83-4426da2dcc36\ndescription: a sleek black corporate helicopter with gold stripes, rotor blades visible, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 176x112px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"1ca87309-5fe7-4519-9c83-4426da2dcc36\")",
+    "result_text": "status: completed\nid: 1ca87309-5fe7-4519-9c83-4426da2dcc36\ndescription: a sleek black corporate helicopter with gold stripes, rotor blades visible, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 176x112px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:58\ndownload: https://api.pixellab.ai/mcp/map-objects/1ca87309-5fe7-4519-9c83-4426da2dcc36/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"1ca87309-5fe7-4519-9c83-4426da2dcc36\")",
+    "file": "helicopter.png"
+   }
+  ],
+  "picked": "1ca87309-5fe7-4519-9c83-4426da2dcc36",
+  "note": "first try usable"
+ },
+ "rooftop_pool": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "15b7443e-8f9d-4291-8682-d3ce1777f215",
+    "args": {
+     "description": "a rooftop swimming pool with glowing blue water, ladder, tiled edge and underwater lights, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 256,
+     "height": 176,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 15b7443e-8f9d-4291-8682-d3ce1777f215\ndescription: a rooftop swimming pool with glowing blue water, ladder, tiled edge and underwater lights, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 256x176px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"15b7443e-8f9d-4291-8682-d3ce1777f215\")",
+    "result_text": "status: completed\nid: 15b7443e-8f9d-4291-8682-d3ce1777f215\ndescription: a rooftop swimming pool with glowing blue water, ladder, tiled edge and underwater lights, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 256x176px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:58\ndownload: https://api.pixellab.ai/mcp/map-objects/15b7443e-8f9d-4291-8682-d3ce1777f215/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"15b7443e-8f9d-4291-8682-d3ce1777f215\")",
+    "file": "rooftop_pool.png"
+   }
+  ],
+  "picked": "15b7443e-8f9d-4291-8682-d3ce1777f215",
+  "note": "first try usable; solid navy background removed in the crop"
+ },
+ "pool_party": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "9ac9e7b6-37cb-4bc1-88eb-859eee240db4",
+    "args": {
+     "description": "sprite sheet of five separate rooftop pool party props in one row with empty space between them, not touching, each standing on its own: pink inflatable flamingo float, DJ booth with big speakers, white lounge chair, striped beach umbrella, tiki bar. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9ac9e7b6-37cb-4bc1-88eb-859eee240db4\ndescription: sprite sheet of five separate rooftop pool party props in one row with empty space between them, not touching, each standing on its own: pink inflatable flamingo float, DJ booth with big speakers, white lounge chair, striped beach umbrella, tiki bar. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"9ac9e7b6-37cb-4bc1-88eb-859eee240db4\")",
+    "result_text": "status: completed\nid: 9ac9e7b6-37cb-4bc1-88eb-859eee240db4\ndescription: sprite sheet of five separate rooftop pool party props in one row with empty space between them, not touching, each standing on its own: pink inflatable flamingo float, DJ booth with big speakers, white lounge chair, striped beach umbrella, tiki bar. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:58\ndownload: https://api.pixellab.ai/mcp/map-objects/9ac9e7b6-37cb-4bc1-88eb-859eee240db4/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9ac9e7b6-37cb-4bc1-88eb-859eee240db4\")",
+    "file": "pool_party.png"
+   }
+  ],
+  "picked": "9ac9e7b6-37cb-4bc1-88eb-859eee240db4",
+  "note": "5 props but the flamingo is duplicated and the tiki bar is missing; umbrella is white, not striped; kept (usable), not retried"
+ },
+ "rocket": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "cfee42a1-3899-4426-9d2c-3cd0b55f7077",
+    "args": {
+     "description": "a tall white rocket with rat ears on the nose cone and a rat logo, standing upright, flame-free, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: cfee42a1-3899-4426-9d2c-3cd0b55f7077\ndescription: a tall white rocket with rat ears on the nose cone and a rat logo, standing upright, flame-free, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 112x256px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"cfee42a1-3899-4426-9d2c-3cd0b55f7077\")",
+    "result_text": "status: completed\nid: cfee42a1-3899-4426-9d2c-3cd0b55f7077\ndescription: a tall white rocket with rat ears on the nose cone and a rat logo, standing upright, flame-free, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 112x256px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:58\ndownload: https://api.pixellab.ai/mcp/map-objects/cfee42a1-3899-4426-9d2c-3cd0b55f7077/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"cfee42a1-3899-4426-9d2c-3cd0b55f7077\")",
+    "file": "rocket_reject1.png"
+   },
+   {
+    "id": "f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b",
+    "args": {
+     "description": "a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two round grey rat ears on top of the nose cone, a round rat face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b\ndescription: a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two round grey rat ears on top of the nose cone, a round rat face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 112x256px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_o ...",
+    "result_text": "status: completed\nid: f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b\ndescription: a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two round grey rat ears on top of the nose cone, a round rat face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 112x256px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:01\ndownload: https://api.pixellab.ai/mcp/map-objects/f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b\")",
+    "file": "rocket.png"
+   }
+  ],
+  "picked": "f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b",
+  "note": "attempt 1 (rocket_reject1.png) was a small red and grey rocket with an exhaust trail; retry is a big white rocket with no flame but still no rat ears or rat logo (two portholes instead); not retried again"
+ },
+ "launchpad": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "96065b4c-f491-4826-abe7-0dcf3cfba595",
+    "args": {
+     "description": "a rocket launch pad platform with a steel gantry tower and warning stripes, no rocket, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 96065b4c-f491-4826-abe7-0dcf3cfba595\ndescription: a rocket launch pad platform with a steel gantry tower and warning stripes, no rocket, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"96065b4c-f491-4826-abe7-0dcf3cfba595\")",
+    "result_text": "status: completed\nid: 96065b4c-f491-4826-abe7-0dcf3cfba595\ndescription: a rocket launch pad platform with a steel gantry tower and warning stripes, no rocket, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:59\ndownload: https://api.pixellab.ai/mcp/map-objects/96065b4c-f491-4826-abe7-0dcf3cfba595/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"96065b4c-f491-4826-abe7-0dcf3cfba595\")",
+    "file": "launchpad_reject1.png"
+   },
+   {
+    "id": "d3b8276c-1b0b-4633-856d-020a91429982",
+    "args": {
+     "description": "an empty rocket launch pad, a square concrete platform with yellow and black warning stripes along the edges, a round launch ring in the middle, a tall steel lattice gantry tower on one side, nothing standing on the pad, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: d3b8276c-1b0b-4633-856d-020a91429982\ndescription: an empty rocket launch pad, a square concrete platform with yellow and black warning stripes along the edges, a round launch ring in the middle, a tall steel lattice gantry tower on one side, nothing standing on the pad, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_ ...",
+    "result_text": "status: completed\nid: d3b8276c-1b0b-4633-856d-020a91429982\ndescription: an empty rocket launch pad, a square concrete platform with yellow and black warning stripes along the edges, a round launch ring in the middle, a tall steel lattice gantry tower on one side, nothing standing on the pad, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:01\ndownload: https://api.pixellab.ai/mcp/map-objects/d3b8276c-1b0b-4633-856d-020a91429982/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"d3b8276c-1b0b-4633-856d-020a91429982\")",
+    "file": "launchpad.png"
+   }
+  ],
+  "picked": "d3b8276c-1b0b-4633-856d-020a91429982",
+  "note": "attempt 1 (launchpad_reject1.png) put a white rocket on the pad despite no rocket (nice combined piece if wanted); retry is empty"
+ },
+ "laser_cannon": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "5482bac7-a8bb-4605-89bd-84058965cac8",
+    "args": {
+     "description": "a huge evil laser cannon on a round base pointing straight up, glowing red core, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 128,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 5482bac7-a8bb-4605-89bd-84058965cac8\ndescription: a huge evil laser cannon on a round base pointing straight up, glowing red core, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"5482bac7-a8bb-4605-89bd-84058965cac8\")",
+    "result_text": "status: completed\nid: 5482bac7-a8bb-4605-89bd-84058965cac8\ndescription: a huge evil laser cannon on a round base pointing straight up, glowing red core, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:59\ndownload: https://api.pixellab.ai/mcp/map-objects/5482bac7-a8bb-4605-89bd-84058965cac8/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"5482bac7-a8bb-4605-89bd-84058965cac8\")",
+    "file": "laser_cannon_reject1.png"
+   },
+   {
+    "id": "e46a967b-b388-403e-90b0-2fc0db205c81",
+    "args": {
+     "description": "a huge evil sci-fi laser cannon turret, a thick black metal gun barrel with cooling rings pointing straight up at the sky, a big glowing red energy core sphere in the middle, mounted on a heavy round steel base with red warning lights, supervillain weapon, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 128,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: e46a967b-b388-403e-90b0-2fc0db205c81\ndescription: a huge evil sci-fi laser cannon turret, a thick black metal gun barrel with cooling rings pointing straight up at the sky, a big glowing red energy core sphere in the middle, mounted on a heavy round steel base with red warning lights, supervillain weapon, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_ ...",
+    "result_text": "status: completed\nid: e46a967b-b388-403e-90b0-2fc0db205c81\ndescription: a huge evil sci-fi laser cannon turret, a thick black metal gun barrel with cooling rings pointing straight up at the sky, a big glowing red energy core sphere in the middle, mounted on a heavy round steel base with red warning lights, supervillain weapon, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:01\ndownload: https://api.pixellab.ai/mcp/map-objects/e46a967b-b388-403e-90b0-2fc0db205c81/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"e46a967b-b388-403e-90b0-2fc0db205c81\")",
+    "file": "laser_cannon.png"
+   }
+  ],
+  "picked": "e46a967b-b388-403e-90b0-2fc0db205c81",
+  "note": "attempt 1 (laser_cannon_reject1.png) read as a spire with a flame tip; retry is a clear black cannon barrel with a red core, square base rather than round"
+ },
+ "giant_rat_statue": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "761820a7-00f1-4f30-b00f-46e55e6d2ee0",
+    "args": {
+     "description": "a giant golden rat statue standing proudly on a tall marble plinth, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 761820a7-00f1-4f30-b00f-46e55e6d2ee0\ndescription: a giant golden rat statue standing proudly on a tall marble plinth, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"761820a7-00f1-4f30-b00f-46e55e6d2ee0\")",
+    "result_text": "status: completed\nid: 761820a7-00f1-4f30-b00f-46e55e6d2ee0\ndescription: a giant golden rat statue standing proudly on a tall marble plinth, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:59\ndownload: https://api.pixellab.ai/mcp/map-objects/761820a7-00f1-4f30-b00f-46e55e6d2ee0/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"761820a7-00f1-4f30-b00f-46e55e6d2ee0\")",
+    "file": "giant_rat_statue_reject1.png"
+   },
+   {
+    "id": "76910e26-4297-4b8c-8550-60caffec3984",
+    "args": {
+     "description": "a golden rat statue standing proudly on its hind legs on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 76910e26-4297-4b8c-8550-60caffec3984\ndescription: a golden rat statue standing proudly on its hind legs on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"76910e26- ...",
+    "result_text": "status: completed\nid: 76910e26-4297-4b8c-8550-60caffec3984\ndescription: a golden rat statue standing proudly on its hind legs on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:01\ndownload: https://api.pixellab.ai/mcp/map-objects/76910e26-4297-4b8c-8550-60caffec3984/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"76910e26-4297-4b8c-8550-60caffec3984\")",
+    "file": "giant_rat_statue.png"
+   }
+  ],
+  "picked": "76910e26-4297-4b8c-8550-60caffec3984",
+  "note": "attempt 1 (giant_rat_statue_reject1.png) had a bigger rat but the plinth ran off the bottom of the canvas; retry fits, rat is smaller relative to the plinth"
+ },
+ "vault_door": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "990cc253-1066-4cec-bc2b-b86f9cb6dafa",
+    "args": {
+     "description": "a huge round steel bank vault door, half open, in a wall section, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 112,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 990cc253-1066-4cec-bc2b-b86f9cb6dafa\ndescription: a huge round steel bank vault door, half open, in a wall section, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"990cc253-1066-4cec-bc2b-b86f9cb6dafa\")",
+    "result_text": "status: completed\nid: 990cc253-1066-4cec-bc2b-b86f9cb6dafa\ndescription: a huge round steel bank vault door, half open, in a wall section, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:59\ndownload: https://api.pixellab.ai/mcp/map-objects/990cc253-1066-4cec-bc2b-b86f9cb6dafa/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"990cc253-1066-4cec-bc2b-b86f9cb6dafa\")",
+    "file": "vault_door_reject1.png"
+   },
+   {
+    "id": "360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a",
+    "args": {
+     "description": "a thick grey steel wall section with a huge round steel bank vault door set into it, the heavy round door swung half open on its hinge showing gold inside, big bolts and a spoked handle wheel on the door, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 112,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a\ndescription: a thick grey steel wall section with a huge round steel bank vault door set into it, the heavy round door swung half open on its hinge showing gold inside, big bolts and a spoked handle wheel on the door, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_ ...",
+    "result_text": "status: completed\nid: 360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a\ndescription: a thick grey steel wall section with a huge round steel bank vault door set into it, the heavy round door swung half open on its hinge showing gold inside, big bolts and a spoked handle wheel on the door, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:01\ndownload: https://api.pixellab.ai/mcp/map-objects/360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a\")",
+    "file": "vault_door_reject2.png"
+   },
+   {
+    "id": "0a2c0cbf-d36b-4b24-898b-3f6704ca1141",
+    "args": {
+     "description": "a large square grey steel bank wall section filling the whole frame, a huge round vault door set into the middle of the wall, the thick round door swung half open to the side on a big hinge, gold bars glowing inside, bolts around the rim and a spoked handle wheel, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 112,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 0a2c0cbf-d36b-4b24-898b-3f6704ca1141\ndescription: a large square grey steel bank wall section filling the whole frame, a huge round vault door set into the middle of the wall, the thick round door swung half open to the side on a big hinge, gold bars glowing inside, bolts around the rim and a spoked handle wheel, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it w ...",
+    "result_text": "status: completed\nid: 0a2c0cbf-d36b-4b24-898b-3f6704ca1141\ndescription: a large square grey steel bank wall section filling the whole frame, a huge round vault door set into the middle of the wall, the thick round door swung half open to the side on a big hinge, gold bars glowing inside, bolts around the rim and a spoked handle wheel, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 112x112px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 09:02\ndownload: https://api.pixellab.ai/mcp/map-objects/0a2c0cbf-d36b-4b24-898b-3f6704ca1141/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"0a2c0cbf-d36b-4b24-898b-3f6704ca1141\")",
+    "file": "vault_door.png"
+   }
+  ],
+  "picked": "0a2c0cbf-d36b-4b24-898b-3f6704ca1141",
+  "note": "attempt 1 (reject1) looked like a blue drum or wheel; attempt 2 (reject2) was a tiny 50px open round door with gold, no wall; attempt 3 is a steel vault block with a round door and an open arch with gold (door not visibly half open)"
+ }
+}

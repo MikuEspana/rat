@@ -345,15 +345,17 @@ export class Ui {
     return ERAS[stageOf(before + 1)] ?? '';
   }
 
-  /** Big banner for a new stage; fades out on its own. */
-  milestone(title: string, sub: string): void {
-    this.milestoneEl.replaceChildren(el('div', 'ms-kicker', 'NEW STAGE UNLOCKED'), el('div', 'ms-title', title), el('div', 'ms-sub', sub));
+  /** Big banner for a new stage (or a landmark: kicker 'UNLOCKED'); fades out on its own. */
+  milestone(title: string, sub: string, kicker = 'NEW STAGE UNLOCKED', ms?: number): void {
+    this.milestoneEl.replaceChildren(el('div', 'ms-kicker', kicker), el('div', 'ms-title', title), el('div', 'ms-sub', sub));
+    if (ms) this.milestoneEl.style.animationDuration = `${ms / 1000}s`;
+    else this.milestoneEl.style.animationDuration = '';
     this.milestoneEl.hidden = false;
     this.milestoneEl.classList.remove('show');
     void this.milestoneEl.offsetWidth;
     this.milestoneEl.classList.add('show');
     clearTimeout(this.milestoneTimer);
-    this.milestoneTimer = window.setTimeout(() => (this.milestoneEl.hidden = true), 4200);
+    this.milestoneTimer = window.setTimeout(() => (this.milestoneEl.hidden = true), ms ?? 4200);
   }
 
   setRats(rats: RatSystem): void {

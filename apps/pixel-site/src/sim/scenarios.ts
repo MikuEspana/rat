@@ -1,5 +1,5 @@
 // Launch scenarios for the simulator: a market cap curve per scenario, trading volume from that curve, and
-// creator fees from the volume. Everything after the fees (claims, the 50/50 split, hires, burns, caps) is the
+// creator fees from the volume. Everything after the fees (claims, the hire split, hires, burns, caps) is the
 // backend's rules (rules.ts), run by engine.ts.
 
 export type ScenarioId = 'normal' | 'mega' | 'rug';

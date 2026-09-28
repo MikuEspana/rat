@@ -11,6 +11,7 @@ import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixel
 import { cellCentre, cellToScreen } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
+import { type Focus, renderLandmarks } from './landmarks';
 import { TIER_SCALE } from './rats';
 import { CORRIDOR_TINT, ROOM_LOOK, STAGES } from '../floor/plan';
 import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room, type Seat } from '../floor/types';
@@ -47,6 +48,10 @@ export interface World {
   /** call every frame: server lights blink, new rooms pop in, the beam pulses */
   update(dt: number): void;
   setChair(seatId: number, visible: boolean): void;
+  /** where a landmark stands and how tall it is (world px), for the camera */
+  landmarkFocus(id: string): Focus | null;
+  /** the top of the office tower (world px), null before it goes up */
+  crown: { x: number; y: number } | null;
   /** within 10% of the next stage: scaffolding, a crane and a crew on the lots the office takes next */
   setPrep(on: boolean): void;
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
@@ -215,6 +220,7 @@ export function buildWorld(
   atlas: Atlas,
   stocks: Map<string, StockView>,
   popIn: ReadonlySet<number> = new Set(),
+  freshLandmarks: ReadonlySet<string> = new Set(),
 ): World {
   const bounds = worldBounds(plan);
   const { W } = plan;
@@ -233,12 +239,23 @@ export function buildWorld(
   const built = (r: Room): boolean => growth.isBuilt(r);
   // the building and its 2-cell apron come from the plan; everything past it is the city of this stage
   const APRON = 2;
-  const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`));
+  // wings: a ring's strips open one at a time (plan.ts wingOrder); the ones still shut are city for now
+  const openStrip = new Set<string>();
+  for (const r of plan.rooms) if (r.ring >= 1 && r.ring <= stage && growth.built[r.id]) openStrip.add(`${r.ring}:${r.strip}`);
+  const closedRects: Array<{ i0: number; j0: number; w: number; h: number }> = [];
+  for (let k = 1; k <= stage; k++) plan.rings[k]!.strips.forEach((st, n) => !openStrip.has(`${k}:${n}`) && closedRects.push(st));
+  const inClosed = (i: number, j: number): boolean => closedRects.some((r) => i >= r.i0 && i < r.i0 + r.w && j >= r.j0 && j < r.j0 + r.h);
+  const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`), closedRects);
   const a0 = ring.i0 - APRON;
   const a1 = ring.i1 + APRON;
   const inApron = (i: number, j: number): boolean => i >= a0 && i <= a1 && j >= a0 && j <= a1;
   const i0 = Math.min(a0, city.i0, city.j0);
   const i1 = Math.max(a1, city.i1, city.j1);
+  /** a cell next to (or on) something built: walls here bound the building, even beside a shut wing */
+  function nearBuiltCell(i: number, j: number): boolean {
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (isBuiltCell(idx(W, i + di, j + dj))) return true;
+    return false;
+  }
   function isBuiltCell(k: number): boolean {
     const t = plan.tile[k];
     if (plan.ringOf[k]! > stage) return false;
@@ -292,7 +309,7 @@ export function buildWorld(
   for (const r of plan.rooms) if (r.ticker && r.kind === 'stock' && built(r) && growth.symbolOf[r.id]) for (let n = 0; n < 7; n++) mounted.add(r.ticker.axis === 'i' ? idx(W, r.ticker.i + n, r.ticker.j) : idx(W, r.ticker.i, r.ticker.j + n));
   for (let j = i0; j <= i1; j++) {
     for (let i = i0; i <= i1; i++) {
-      if (!inApron(i, j)) {
+      if (!inApron(i, j) || (inClosed(i, j) && !nearBuiltCell(i, j))) {
         // the city: dithered and darkened towards its edge, so it fades into the night instead of stopping
         const g = city.ground.get(CITY_KEY(i, j));
         if (!g || g.fade > BAYER[(i & 3) * 4 + (j & 3)]!) continue;
@@ -380,7 +397,7 @@ export function buildWorld(
   // lots of the current ring not built yet: blueprint floor, and a lock sign saying what comes and when
   const lockSigns: Sprite[] = [];
   // signs only on what comes next: the next few amenities by rat count and the next desk rooms in build order
-  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r));
+  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r) && openStrip.has(`${r.ring}:${r.strip}`));
   const nextAmenities = lots.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!).slice(0, 4);
   const nextDesks = lots.filter((r) => r.unlockAt === null).sort((a, b) => a.order - b.order).slice(0, 2);
   const signed = new Set([...nextAmenities, ...nextDesks].map((r) => r.id));
@@ -404,21 +421,10 @@ export function buildWorld(
     lockSigns.push(s);
   }
 
-  // our own tower rises behind the back corner from the corporate floor on, and towers over the town by megacorp
-  // [sprite, height as a share of the building's width on screen, tint]
-  const HQ_TOWER: Array<[string, number, number] | null> = [null, null, null, ['office_mid', 0.28, 0xffe6b0], ['deco_tower', 0.5, 0xffd878], ['evil_rat_tower', 0.62, 0xffffff]];
-  const hqt = HQ_TOWER[stage];
-  if (hqt && atlas.has(`world:${hqt[0]}`)) {
-    const f = atlas.frame(`world:${hqt[0]}`);
-    const c = cellCentre(ring.i0 - 3, ring.j0 - 3);
-    const p = makeParticle(f, c.x, c.y + 10, false, ((ring.i1 - ring.i0) * 32 * hqt[1]) / f.h);
-    p.tint = hqt[2];
-    main.add(p, ring.i0 + ring.j0 - 5);
-  }
-
   // the city round the building: lots, street furniture, street scenes, traffic, upcoming lots as grey shells
   const cityView = renderCity(city, stage, atlas, main, floorLayer, under, signs, backdrop, lights);
   lockSigns.push(...cityView.shells);
+
 
   const floor = floorLayer.container;
 
@@ -694,6 +700,7 @@ export function buildWorld(
 
   // signs: every built room gets one (stock rooms show their symbol), the building gets its stage name
   const roomSigns: Sprite[] = [];
+  const landmarkSigns: Sprite[] = [];
   for (const r of plan.rooms) {
     if (!built(r)) continue;
     const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : ROOM_LOOK[r.kind].label;
@@ -710,6 +717,15 @@ export function buildWorld(
   name.anchor.set(0.5, 1);
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
+
+  // landmark set pieces (one per milestone) and the towers that grow the office upwards
+  const lm = renderLandmarks({
+    plan, stage, count: growth.count, built: (id) => growth.built[id] === 1, city, atlas, main, lights, signs, fresh: freshLandmarks,
+    addPop, posed, sign: (t, c) => signTexture(t, c, 2),
+  });
+  landmarkSigns.push(...lm.signs);
+  // with a tower the company name goes up on its roof, where the whole town can read it
+  if (lm.crown) name.position.set(lm.crown.x, lm.crown.y);
 
   // a new room goes up: scaffolding over it and a crane beside it, for a moment
   const builders: Array<{ s: Sprite; t: number; life: number; base: number }> = [];
@@ -817,6 +833,10 @@ export function buildWorld(
     setPrep(on: boolean): void {
       cityView.setPrep(on);
     },
+    crown: lm.crown,
+    landmarkFocus(id: string): Focus | null {
+      return lm.focus.get(id) ?? null;
+    },
     activatePod(seatId: number): { x: number; y: number } | null {
       const s = plan.seats[seatId];
       if (!s) return null;
@@ -832,16 +852,21 @@ export function buildWorld(
       return { x: c.x, y: c.y };
     },
     setZoom(z: number): void {
-      // room signs fade in as you zoom out and grow so they stay readable; the stage sign always shows
-      const a = z <= 0.55 ? 1 : z >= 0.8 ? 0 : (0.8 - z) / 0.25;
-      const s = Math.max(1, Math.min(4, 0.9 / z));
+      // room labels only at mid zoom (hidden zoomed out, where only landmark names and the building name show;
+      // at close zoom the rooms speak for themselves)
+      const a = z >= 1.1 ? 0 : z >= 0.85 ? (1.1 - z) / 0.25 : z >= 0.55 ? 1 : z <= 0.42 ? 0 : (z - 0.42) / 0.13;
       for (const sg of roomSigns) {
         sg.alpha = a;
-        sg.scale.set(s);
+        sg.scale.set(1);
         sg.visible = a > 0.01;
       }
-      name.scale.set(Math.max(1, Math.min(4, 0.6 / z)));
-      for (const l of lockSigns) l.scale.set(Math.max(1, Math.min(5, 0.9 / z)));
+      // the building name and landmark names keep a readable size on screen: bigger zoomed out, smaller close up
+      name.scale.set(Math.max(0.4, Math.min(4, 0.6 / z)));
+      for (const l of lockSigns) {
+        l.visible = z >= 0.42;
+        l.scale.set(1);
+      }
+      for (const l of landmarkSigns) l.scale.set(Math.max(0.45, Math.min(6, 0.9 / z)));
     },
     destroy(): void {
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {

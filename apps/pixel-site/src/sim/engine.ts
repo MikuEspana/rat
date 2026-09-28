@@ -224,7 +224,7 @@ export class LaunchSim {
     this.noise += -this.noise * k + 0.06 * Math.sqrt(2 * k) * this.gauss();
   }
 
-  /** The bot's loop: claim, split 50/50, then hire as far as the budget, the per-loop limit and the cap allow. */
+  /** The bot's loop: claim, split by HIRE_SPLIT_BPS (all to hires by default), then hire as far as the budget, the per-loop limit and the cap allow. */
   private loop(): void {
     if (this.claimable >= RULES.minClaimSol) {
       const amount = round6(this.claimable);

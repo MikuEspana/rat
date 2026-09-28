@@ -126,6 +126,8 @@ export interface Room {
   unlockAt: number | null;
   /** growth: fixed build order among the ring's demand-built rooms */
   order: number;
+  /** which strip of its ring the room is in (0 back, 1 right, 2 front, 3 left; -1 the garage) */
+  strip: number;
 }
 
 export interface Ring {
@@ -136,6 +138,9 @@ export interface Ring {
   i1: number;
   j1: number;
   lobby: number;
+  /** the ring's four strips of rooms (back, right, front, left) and the order they open in: wings, not a ring */
+  strips: Array<{ i0: number; j0: number; w: number; h: number }>;
+  wingOrder: number[];
   /** the subway stairs while this is the outermost ring */
   spawn: Cell;
   entrance: Cell[];
@@ -179,6 +184,8 @@ export interface FloorLayout {
   garage: Room;
   /** vignette extras */
   actors: Actor[];
+  /** space kept clear for interior landmarks (landmarks.ts), by landmark id */
+  landmarkSpots: Record<string, { i0: number; j0: number; w: number; h: number; room: number }>;
 }
 
 export const CORRIDOR_REGION = 10000;

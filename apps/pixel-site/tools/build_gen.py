@@ -451,6 +451,94 @@ def tape(axis):
     return im
 
 
+# ------------------------------------------------------------------ the office tower (rises floor by floor)
+
+TF = 6  # footprint cells
+TWP, THP = 32 * TF, 16 * TF
+
+
+def tower_band(h, seed, base=False, tf=TF):
+    """The two visible faces of one tower storey, h px tall; anchor: the footprint's front vertex."""
+    TWP, THP = 32 * tf, 16 * tf
+    rnd = random.Random(seed)
+    im = Image.new("RGBA", (TWP, THP // 2 + h + 1), (0, 0, 0, 0))
+    p = im.load()
+    top = 0
+    for x in range(TWP):
+        left = x < TWP // 2
+        # bottom edge of the face at this column (front vertex at the bottom middle)
+        yb = THP // 2 + h - abs(x - TWP // 2) // 2 - (0 if left else 0)
+        for k in range(h):
+            y = yb - k
+            if y < 0:
+                continue
+            if k == 0 or k == h - 1:
+                c = hexc("#9aa6c0") if left else hexc("#7c86a0")  # the slab between floors
+            elif base:
+                c = hexc("#20314f") if (x // 6) % 3 else hexc("#dfe7f0")
+                if 2 <= k <= h - 4 and abs(x - TWP // 2) < 18:
+                    c = hexc("#ffe2a0")  # the lit entrance
+            else:
+                mull = (x % 8) in (0, 1)
+                if mull:
+                    c = hexc("#46506c") if left else hexc("#3a4260")
+                else:
+                    lit = rnd.random() < 0.22
+                    col = hexc("#ffd98a") if lit else (hexc("#2a3a62") if left else hexc("#22304f"))
+                    c = col if 2 <= k <= h - 3 else (hexc("#34446c") if left else hexc("#2c3a5c"))
+            p[x, y] = c
+        # outline on the outer edges
+        for y in range(im.height):
+            if p[x, y][3]:
+                if y > 0:
+                    pass
+                break
+    for y in range(im.height):
+        for x in (0, TWP - 1):
+            if p[x, y][3]:
+                p[x, y] = OUTLINE
+    # the vertical front edge
+    for y in range(im.height):
+        if p[TWP // 2, y][3]:
+            p[TWP // 2, y] = hexc("#c8d2e8")
+    return im
+
+
+def tower_roof(tf=TF):
+    TWP, THP = 32 * tf, 16 * tf
+    im = Image.new("RGBA", (TWP, THP + 4), (0, 0, 0, 0))
+    p = im.load()
+    for y in range(THP):
+        for x in range(TWP):
+            X, Y = x + 0.5 - TWP / 2, y + 0.5
+            i = (X / 16 + Y / 8) / 2
+            j = (Y / 8 - X / 16) / 2
+            if 0 <= i < tf and 0 <= j < tf:
+                edge = min(i, j, tf - i, tf - j) < 0.25
+                p[x, y] = hexc("#b8c0d4") if edge else add(hexc("#6c7488"), random.Random(x * 31 + y).gauss(0, 3))
+    return im
+
+
+def bridge_seg(axis):
+    """One cell of an elevated glass sky bridge, running along i (or j, mirrored)."""
+    im = Image.new("RGBA", (18, 30), (0, 0, 0, 0))
+    p = im.load()
+    for cx in range(16):
+        yb = 20 + cx // 2
+        for k in range(14):
+            c = hexc("#9fd3ff") if 3 <= k <= 10 else hexc("#dfe7f0")
+            if k in (0, 13):
+                c = hexc("#6a7390")
+            if 4 <= k <= 9 and (cx % 5 == 0):
+                c = hexc("#6fa8d8")
+            p[cx, yb - k] = c
+        p[cx, yb - 14] = OUTLINE
+        p[cx, yb + 1] = OUTLINE
+    if axis == "j":
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    return im
+
+
 # ------------------------------------------------------------------ pack
 
 frames = {}  # name -> (image, anchor x px, anchor y px)
@@ -495,6 +583,17 @@ def pack(items, width=512):
         row = max(row, im.height)
     return pos, y + row + 1
 
+
+for k in range(3):
+    frames[f"tower_floor_{k}"] = (tower_band(12, f"floor{k}"), TWP // 2, THP // 2 + 12 + 1)
+frames["tower_base"] = (tower_band(22, "base", base=True), TWP // 2, THP // 2 + 22 + 1)
+frames["tower_roof"] = (tower_roof(), TWP // 2, THP)
+# the pylon a sky bridge lands on (2x2 cells), same look as the tower
+frames["pylon_base"] = (tower_band(22, "pbase", base=True, tf=2), 32, 16 + 22 + 1)
+frames["pylon_floor"] = (tower_band(12, "pfloor", tf=2), 32, 16 + 12 + 1)
+frames["pylon_roof"] = (tower_roof(tf=2), 32, 32)
+for axis in ("i", "j"):
+    frames[f"bridge_{axis}"] = (bridge_seg(axis), 8 if axis == "i" else 10, 24)
 
 pos, height = pack(frames)
 sheet = Image.new("RGBA", (512, height), (0, 0, 0, 0))

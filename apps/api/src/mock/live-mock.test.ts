@@ -71,7 +71,7 @@ describe('live mock API', () => {
     expect(r1.filter((r) => rank0.has(r.id) && rank0.get(r.id) !== r.rank).length).toBeGreaterThan(100);
   });
 
-  it('burns every minute in chunks of at most 1 SOL a few seconds apart; claims split 50/50', async () => {
+  it('burns every minute in chunks of at most 1 SOL a few seconds apart; every claim goes to hires', async () => {
     const { clock, get } = setup();
     const t0 = StateResponseSchema.parse(await get('/api/state')).treasury;
     for (let i = 0; i < 18; i++) {
@@ -86,7 +86,10 @@ describe('live mock API', () => {
     for (const b of burns) expect(b.data.solSpent).toBeLessThanOrEqual(1);
     expect(t1.burnCount - t0.burnCount).toBe(burns.length);
     expect(claims.length).toBeGreaterThanOrEqual(4);
-    for (const c of claims) expect(c.data.toHiresSol).toBe(c.data.toFundSol);
+    for (const c of claims) {
+      expect(c.data.toHiresSol).toBe(c.data.amountSol);
+      expect(c.data.toFundSol).toBe(0);
+    }
     expect(t1.totalClaimedSol).toBeGreaterThan(t0.totalClaimedSol);
   });
 

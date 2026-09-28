@@ -51,7 +51,24 @@ NAMES4 = {
     "street2_0": "news_box", "street2_1": "planter", "street2_2": "parking_meter", "street2_4": "kiosk",
 }
 
+# round 4 (assets/raw/props5): the landmark set pieces
+CROPS5 = os.path.join(OUT, "raw", "props5", "crops")
+NAMES5 = {
+    "espresso_shrine_0": "espresso_shrine", "trading_pit_0": "trading_pit", "glass_elevator_0": "glass_elevator",
+    "helipad_0": "helipad", "helicopter_0": "helicopter", "rooftop_pool_0": "rooftop_pool", "rocket_0": "rocket",
+    "launchpad_0": "launchpad", "laser_cannon_0": "laser_cannon", "giant_rat_statue_0": "giant_rat_statue",
+    "vault_door_0": "vault_door",
+    "gym_0": "treadmill", "gym_1": "weight_rack", "gym_2": "bench_press", "gym_3": "punching_bag", "gym_4": "rowing",
+    "nap_pods_0": "nap_pod", "nap_pods_1": "nap_pod_closed", "nap_pods_2": "bed_a", "nap_pods_3": "bed_b",
+    "pool_party_0": "flamingo", "pool_party_1": "dj_booth", "pool_party_3": "lounge_chair", "pool_party_4": "umbrella",
+}
+
 items = []
+for src, name in NAMES5.items():
+    f = os.path.join(CROPS5, f"{src}.png")
+    if os.path.exists(f):
+        im = Image.open(f).convert("RGBA")
+        items.append((name, f"../props5/crops/{src}", im.crop(im.getbbox())))
 for src, name in NAMES.items():
     im = Image.open(os.path.join(CROPS, f"{src}.png")).convert("RGBA")
     im = im.crop(im.getbbox())
@@ -68,7 +85,7 @@ for who in ("cat", "pigeon"):
             if os.path.exists(f):
                 items.append((f"{who}_walk_{d}_{k}", f"../props4/{who}/walk_{d}_{k}", Image.open(f).convert("RGBA")))
 
-W = 1024
+W = 1280
 x = y = row = 0
 pos = {}
 for name, _, im in sorted(items, key=lambda t: -t[2].height):

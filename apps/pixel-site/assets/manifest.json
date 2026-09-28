@@ -6,8 +6,8 @@
     "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag",
     "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which.",
     "rats2.png / rats2.json": "built by tools/build_rats2.py from the tier sheets: 5 tiers x 4 furs (grey, brown, white, black) + frozen, the 55 base frames plus sit_front, sit_back, sulk_front, sulk_back (pod desks), trimmed; accessory overlays acc/<glasses|phones_red|phones_white|hat_bowler|hat_cap|hat_beanie>/<frame>. No generations.",
-    "gen.png / gen.json": "drawn in code by tools/build_gen.py: floor tiles (carpet, vinyl, wood both ways, bath tile, checker, raised floor, concrete, marble, asphalt, sidewalk, driveway, lot, blueprint, grass), thin wall faces (low, tall, window, panel, garage door header), desk_back, rugs, worn spots, hazard tape. No generations.",
-    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs. Round 3 adds (assets/raw/props4): townhouses, cottage, diner, corner store, office blocks, apartment tower, parking garage, warehouse, gas station, evil office, fountain, food truck, fences, alley and street props, and the cat and pigeon walk cycles."
+    "gen.png / gen.json": "drawn in code by tools/build_gen.py: floor tiles (carpet, vinyl, wood both ways, bath tile, checker, raised floor, concrete, marble, asphalt, sidewalk, driveway, lot, blueprint, grass), thin wall faces (low, tall, window, panel, garage door header), desk_back, rugs, worn spots, hazard tape. No generations. Round 4 adds the office tower storeys (base, 3 floor variants, roof), the 2x2 sky bridge pylon and the sky bridge segments.",
+    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs. Round 3 adds (assets/raw/props4): townhouses, cottage, diner, corner store, office blocks, apartment tower, parking garage, warehouse, gas station, evil office, fountain, food truck, fences, alley and street props, and the cat and pigeon walk cycles. Round 4 adds (assets/raw/props5): the landmark set pieces (espresso shrine, trading pit, glass elevator, helipad and helicopter, rooftop pool and its party, rocket and launchpad, laser cannon, giant golden rat statue, vault door) and the gym and nap pod props."
   },
   "generations": [
     {
@@ -1411,6 +1411,398 @@
           "north-east"
         ]
       }
+    },
+    {
+      "id": "r4_espresso_shrine",
+      "raw": "raw/props5/espresso_shrine.png",
+      "tool": "create_map_object",
+      "pixellabId": "5191ca60-6cd8-459b-a47f-5f62028fac7c",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a gleaming golden espresso machine on a small stone altar with candles, coffee bean offerings and a soft glow, a shrine to coffee, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 128,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "first try usable; no solid background; small shrine (97x89)"
+    },
+    {
+      "id": "r4_trading_pit",
+      "raw": "raw/props5/trading_pit.png",
+      "tool": "create_map_object",
+      "pixellabId": "9ca3b5a2-ccc6-4714-9c1f-bdd49c9ab457",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a round sunken stock trading pit with stepped rings, tiny desks with glowing chart screens facing the centre, a big ticker screen above, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 176,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "first try usable; desk screens show squiggle charts, no text"
+    },
+    {
+      "id": "r4_glass_elevator_reject1",
+      "raw": "raw/props5/glass_elevator_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "39ff3d88-fa45-4c35-b2c5-158fe4303cdc",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a tall glass elevator shaft with a lit cab inside and steel frame, standing on its own, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 80,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_glass_elevator",
+      "raw": "raw/props5/glass_elevator.png",
+      "tool": "create_map_object",
+      "pixellabId": "b20a575f-ee61-4b90-9b39-a60e2beaac6a",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a narrow see-through glass elevator shaft, a thin steel girder frame with glass panels, inside it a small lit elevator car cab with open doors glowing warm yellow, you can see through the glass, only as tall as three floors, not a building, no window grid, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 80,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (glass_elevator_reject1.png) came out as a glass skyscraper, not a shaft; retry said see-through shaft, lit cab, not a building. Pick is a narrow glass shaft with a lit cab, fairly thin (44x178)"
+    },
+    {
+      "id": "r4_gym",
+      "raw": "raw/props5/gym.png",
+      "tool": "create_map_object",
+      "pixellabId": "7aecff1e-c9fb-4c0e-910c-77130226497e",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office gym props in one row with empty space between them, not touching, each standing on its own: treadmill, weight rack with dumbbells, bench press, red punching bag on a stand, rowing machine. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "5 props split cleanly; the weight rack came out as a squat rack welded to a treadmill base"
+    },
+    {
+      "id": "r4_nap_pods",
+      "raw": "raw/props5/nap_pods.png",
+      "tool": "create_map_object",
+      "pixellabId": "bdab9295-8c9a-4e19-a564-7103c88d00a4",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of four separate office nap room props in one row with empty space between them, not touching, each standing on its own: sleek white sleep pod capsule with a blue glow inside, another sleep pod closed, a hammock on a stand, a stack of pillows and a blanket. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "2 good pods, but the hammock and pillow stack came out as two beds; kept (usable), not retried"
+    },
+    {
+      "id": "r4_helipad",
+      "raw": "raw/props5/helipad.png",
+      "tool": "create_map_object",
+      "pixellabId": "41e7060d-c6c8-4a44-ae40-4b6942a93160",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a rooftop helipad, a big H in a circle with edge lights, flat square platform, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 128,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "first try usable; H is clean"
+    },
+    {
+      "id": "r4_helicopter",
+      "raw": "raw/props5/helicopter.png",
+      "tool": "create_map_object",
+      "pixellabId": "1ca87309-5fe7-4519-9c83-4426da2dcc36",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a sleek black corporate helicopter with gold stripes, rotor blades visible, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 176,
+        "height": 112,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "first try usable"
+    },
+    {
+      "id": "r4_rooftop_pool",
+      "raw": "raw/props5/rooftop_pool.png",
+      "tool": "create_map_object",
+      "pixellabId": "15b7443e-8f9d-4291-8682-d3ce1777f215",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a rooftop swimming pool with glowing blue water, ladder, tiled edge and underwater lights, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 256,
+        "height": 176,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "first try usable; solid navy background removed in the crop"
+    },
+    {
+      "id": "r4_pool_party",
+      "raw": "raw/props5/pool_party.png",
+      "tool": "create_map_object",
+      "pixellabId": "9ac9e7b6-37cb-4bc1-88eb-859eee240db4",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate rooftop pool party props in one row with empty space between them, not touching, each standing on its own: pink inflatable flamingo float, DJ booth with big speakers, white lounge chair, striped beach umbrella, tiki bar. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "5 props but the flamingo is duplicated and the tiki bar is missing; umbrella is white, not striped; kept (usable), not retried"
+    },
+    {
+      "id": "r4_rocket_reject1",
+      "raw": "raw/props5/rocket_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "cfee42a1-3899-4426-9d2c-3cd0b55f7077",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a tall white rocket with rat ears on the nose cone and a rat logo, standing upright, flame-free, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 256,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_rocket",
+      "raw": "raw/props5/rocket.png",
+      "tool": "create_map_object",
+      "pixellabId": "f6cd1d3a-b284-4c08-8a6b-9c8a7a36d78b",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two round grey rat ears on top of the nose cone, a round rat face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 256,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (rocket_reject1.png) was a small red and grey rocket with an exhaust trail; retry is a big white rocket with no flame but still no rat ears or rat logo (two portholes instead); not retried again"
+    },
+    {
+      "id": "r4_launchpad_reject1",
+      "raw": "raw/props5/launchpad_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "96065b4c-f491-4826-abe7-0dcf3cfba595",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a rocket launch pad platform with a steel gantry tower and warning stripes, no rocket, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_launchpad",
+      "raw": "raw/props5/launchpad.png",
+      "tool": "create_map_object",
+      "pixellabId": "d3b8276c-1b0b-4633-856d-020a91429982",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "an empty rocket launch pad, a square concrete platform with yellow and black warning stripes along the edges, a round launch ring in the middle, a tall steel lattice gantry tower on one side, nothing standing on the pad, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (launchpad_reject1.png) put a white rocket on the pad despite no rocket (nice combined piece if wanted); retry is empty"
+    },
+    {
+      "id": "r4_laser_cannon_reject1",
+      "raw": "raw/props5/laser_cannon_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "5482bac7-a8bb-4605-89bd-84058965cac8",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a huge evil laser cannon on a round base pointing straight up, glowing red core, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 128,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_laser_cannon",
+      "raw": "raw/props5/laser_cannon.png",
+      "tool": "create_map_object",
+      "pixellabId": "e46a967b-b388-403e-90b0-2fc0db205c81",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a huge evil sci-fi laser cannon turret, a thick black metal gun barrel with cooling rings pointing straight up at the sky, a big glowing red energy core sphere in the middle, mounted on a heavy round steel base with red warning lights, supervillain weapon, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 128,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (laser_cannon_reject1.png) read as a spire with a flame tip; retry is a clear black cannon barrel with a red core, square base rather than round"
+    },
+    {
+      "id": "r4_giant_rat_statue_reject1",
+      "raw": "raw/props5/giant_rat_statue_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "761820a7-00f1-4f30-b00f-46e55e6d2ee0",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a giant golden rat statue standing proudly on a tall marble plinth, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 160,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_giant_rat_statue",
+      "raw": "raw/props5/giant_rat_statue.png",
+      "tool": "create_map_object",
+      "pixellabId": "76910e26-4297-4b8c-8550-60caffec3984",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a golden rat statue standing proudly on its hind legs on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 160,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (giant_rat_statue_reject1.png) had a bigger rat but the plinth ran off the bottom of the canvas; retry fits, rat is smaller relative to the plinth"
+    },
+    {
+      "id": "r4_vault_door_reject1",
+      "raw": "raw/props5/vault_door_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "990cc253-1066-4cec-bc2b-b86f9cb6dafa",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a huge round steel bank vault door, half open, in a wall section, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 112,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_vault_door_reject2",
+      "raw": "raw/props5/vault_door_reject2.png",
+      "tool": "create_map_object",
+      "pixellabId": "360e1f4b-1da0-4b0d-a15a-32cfdf43bf8a",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": false,
+      "args": {
+        "description": "a thick grey steel wall section with a huge round steel bank vault door set into it, the heavy round door swung half open on its hinge showing gold inside, big bolts and a spoked handle wheel on the door, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 112,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r4_vault_door",
+      "raw": "raw/props5/vault_door.png",
+      "tool": "create_map_object",
+      "pixellabId": "0a2c0cbf-d36b-4b24-898b-3f6704ca1141",
+      "costGenerations": 1,
+      "phase": "round4-landmarks",
+      "used": true,
+      "args": {
+        "description": "a large square grey steel bank wall section filling the whole frame, a huge round vault door set into the middle of the wall, the thick round door swung half open to the side on a big hinge, gold bars glowing inside, bolts around the rim and a spoked handle wheel, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+        "width": 112,
+        "height": 112,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "note": "attempt 1 (reject1) looked like a blue drum or wheel; attempt 2 (reject2) was a tiny 50px open round door with gold, no wall; attempt 3 is a steel vault block with a round door and an open arch with gold (door not visibly half open)"
     }
   ],
   "freeEdits": [
@@ -1526,9 +1918,9 @@
     "crops to bounding box"
   ],
   "totals": {
-    "generationsInFinalAssets": 46,
+    "generationsInFinalAssets": 60,
     "phase1StyleSamplesNotUsed": 12,
-    "accountUsed": 93,
+    "accountUsed": 114,
     "accountLeft": "paid plan since round 2 (2000 a month); the round 2 cap is 150",
     "byPhase": {
       "phase1": 6,
@@ -1536,7 +1928,8 @@
       "phase2": 11,
       "denseFloor": 4,
       "round2WorldVignettes": 31,
-      "round3CityVisitors": 26
+      "round3CityVisitors": 26,
+      "round4Landmarks": 21
     },
     "round2": {
       "budget": 150,
@@ -1544,10 +1937,15 @@
       "used": 31,
       "note": "paid plan (2000/month on the account); round 2 counts against the owner's 150 cap for this round"
     },
-    "allTime": 93,
+    "allTime": 114,
     "round3": {
       "budget": 100,
       "used": 26
+    },
+    "round4": {
+      "budget": 40,
+      "used": 21,
+      "note": "landmark set pieces (props5): 14 used first or second try, 7 rejects logged; rejects never retried more than twice"
     }
   },
   "cc0Assets": "none: itch.io, kenney.nl and opengameart.org are blocked by the environment network policy"

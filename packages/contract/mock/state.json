@@ -21,8 +21,8 @@
   },
   "treasury": {
     "totalClaimedSol": 15.0,
-    "totalToHiresSol": 7.5,
-    "totalToFundSol": 7.5,
+    "totalToHiresSol": 15.0,
+    "totalToFundSol": 0,
     "fundWalletSol": 0.62,
     "totalBurnSpentSol": 6.88,
     "burnCount": 36,

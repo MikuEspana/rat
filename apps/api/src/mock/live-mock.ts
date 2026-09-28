@@ -2,7 +2,7 @@
 // Starts from packages/contract/mock/*.json (timestamps shifted to "now") and keeps changing like the real bot:
 //   - a new rat every 2 to 6 seconds (fresh wallet; stock picked like the bot: better 24h change, more hires, 5% floor)
 //   - stock prices drift every second in trends that flip, exaggerated so rats visibly change tier
-//   - a claim every 35 seconds (50/50 split), a burn round every minute (chunks of <= 1 SOL, 3 to 8 s apart)
+//   - a claim every 35 seconds (all of it to hires), a burn round every minute (chunks of <= 1 SOL, 3 to 8 s apart)
 //   - one stock (COINx) pauses (its rats freeze) and resumes (they unfreeze) every couple of minutes
 // Same contract, schemaVersion 1. No database, no chain, nothing real.
 import { createRequire } from 'node:module';
@@ -226,14 +226,12 @@ export class LiveMock implements StateProvider {
   }
 
   private claim(): void {
+    // every fee hires rats (HIRE_SPLIT_BPS=10000, the production default): nothing goes to the fund wallet
     const amount = round6(0.05 + this.rng.next() * 0.55);
-    const half = round6(amount / 2);
     this.treasury.totalClaimedSol = round6(this.treasury.totalClaimedSol + amount);
-    this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + half);
-    this.treasury.totalToFundSol = round6(this.treasury.totalToFundSol + half);
-    this.treasury.fundWalletSol = round6(this.treasury.fundWalletSol + half);
+    this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + amount);
     this.bot.lastClaimAt = this.at();
-    this.push({ type: 'claim', at: this.at(), txSig: this.b58(88), data: { amountSol: amount, toHiresSol: half, toFundSol: half, source: this.rng.next() < 0.1 ? 'external' : 'bot' } });
+    this.push({ type: 'claim', at: this.at(), txSig: this.b58(88), data: { amountSol: amount, toHiresSol: amount, toFundSol: 0, source: this.rng.next() < 0.1 ? 'external' : 'bot' } });
   }
 
   private startBurnRound(): void {

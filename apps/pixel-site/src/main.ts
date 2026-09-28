@@ -18,6 +18,7 @@ import { Sky } from './gfx/sky';
 import { cellCentre } from './iso';
 import { Growth, type GrowthEvent } from './floor/growth';
 import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
+import { LANDMARKS, unlocked } from './floor/landmarks';
 import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
@@ -73,6 +74,11 @@ export interface Site {
   setRats?: (n: number) => void;
   /** the establishing shot for the current stage */
   compose?: () => { x: number; y: number; zoom: number };
+  /** play a landmark's reveal (debug and screenshots) */
+  reveal?: (id: string) => void;
+  /** where a landmark (or the annex) stands, for screenshots */
+  focus?: (id: string) => { x: number; y: number; h: number } | null;
+  skipReveal?: () => void;
   /** the launch simulator, when it replaces the API */
   sim?: LaunchSim;
   simPanel?: SimPanel;
@@ -186,10 +192,10 @@ async function boot(): Promise<Site> {
       const zoom = Math.min(1.4, W / w, H / h);
       return { x: bx, y: by + 40 / zoom, zoom };
     }
-    // our tower (corporate floor on) rises behind the back corner: leave room above for it
-    const tower = [0, 0, 0, 0.28, 0.5, 0.62][growth.stage]! * (r.i1 - r.i0) * 32;
-    const zoom = Math.min(1.4, (W * 0.66) / w, (H * 0.7) / (h + tower * 0.6));
-    return { x: bx + (W * 0.12) / zoom, y: by - (H * 0.12) / zoom - tower * 0.3 + 40 / zoom, zoom };
+    // our tower rises behind the back corner: leave room above the building for it and its name
+    const tower = world.crown ? Math.max(0, Math.min(...ys) - (world.crown.y - 60)) : 0;
+    const zoom = Math.min(1.4, (W * 0.66) / w, (H * 0.7) / (h + tower));
+    return { x: bx + (W * 0.12) / zoom, y: by - (H * 0.12) / zoom - tower * 0.5 + 40 / zoom, zoom };
   };
   const frameBuilding = (): void => {
     const v = composeView();
@@ -199,6 +205,82 @@ async function boot(): Promise<Site> {
   let hold = 0;
   let recording = false;
   let missed = 0;
+  // landmark unlocks: one set piece per milestone. When one unlocks the world is rebuilt with it (it drops in) and
+  // the camera flies to it, holds on it with a banner, then eases back. Skip it with a click or a key; it never
+  // grabs the camera from a viewer who is dragging (they just get the banner).
+  let landmarksOn = unlocked(ratCount);
+  const reveals: string[] = [];
+  let revealing = false;
+  let skipReveal: (() => void) | null = null;
+  const revealNext = (): void => {
+    const id = reveals.shift();
+    if (!id) {
+      revealing = false;
+      return;
+    }
+    revealing = true;
+    const def = LANDMARKS.find((l) => l.id === id)!;
+    const at = world.landmarkFocus(id);
+    const done = (): void => {
+      skipReveal = null;
+      setTimeout(revealNext, 400);
+    };
+    sound.stage();
+    if (!at || camera.userBusy) {
+      ui.milestone(def.name, `${def.at.toLocaleString('en-US')} rats`, 'UNLOCKED', 3600);
+      setTimeout(done, 3600);
+      return;
+    }
+    const back = camera.centre();
+    // frame the whole set piece a little below the middle, clear of the banner and the panels
+    const W = app.screen.width;
+    const H = app.screen.height;
+    const z = Math.max(0.3, Math.min(1.9, (H * 0.5) / at.h, (W * 0.45) / at.h));
+    camera.flyTo(at.x + (W * 0.04) / z, at.y - (H * 0.09) / z, z, 1300);
+    const timers: number[] = [];
+    const finish = (): void => {
+      timers.forEach((t) => clearTimeout(t));
+      window.removeEventListener('pointerdown', finish, true);
+      window.removeEventListener('keydown', finish, true);
+      if (!camera.userBusy) camera.flyTo(back.x, back.y, back.zoom, 1200);
+      done();
+    };
+    skipReveal = finish;
+    timers.push(
+      window.setTimeout(() => {
+        ui.milestone(def.name, `${def.at.toLocaleString('en-US')} rats`, 'UNLOCKED', 3600);
+        effects.dust(at.x, at.y + 30, 26);
+        camera.shake(2, 0.3);
+      }, 1300),
+      window.setTimeout(finish, 1300 + 3600),
+    );
+    setTimeout(() => {
+      window.addEventListener('pointerdown', finish, true);
+      window.addEventListener('keydown', finish, true);
+    }, 50);
+  };
+  /** Rebuild when a landmark unlocks and queue its reveal. Returns true when the world was rebuilt. */
+  const checkLandmarks = (announce: boolean): boolean => {
+    const now = unlocked(ratCount);
+    const fresh = new Set([...now].filter((id) => !landmarksOn.has(id)));
+    landmarksOn = now;
+    if (!fresh.size) return false;
+    const old = world;
+    world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
+    rats.rebind(world.main, world.blocked);
+    wireRats();
+    effects.setWorld(world);
+    mount();
+    old.destroy();
+    applyMoods(store.state ?? state);
+    updatePrep();
+    if (announce) {
+      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => l.id));
+      if (!revealing) revealNext();
+    }
+    return true;
+  };
+
   /** Within 10% of the next stage the site gets ready for it. */
   const updatePrep = (): void => {
     const next = STAGES[growth.stage + 1];
@@ -211,7 +293,14 @@ async function boot(): Promise<Site> {
     for (const e of events) if (e.kind === 'room') rooms.add(e.room.id);
     if (!rooms.size && !events.some((e) => e.kind === 'stage')) return;
     const old = world;
-    world = buildWorld(plan, growth, atlas, store.stocks, rooms);
+    const now = unlocked(ratCount);
+    const fresh = new Set([...now].filter((id) => !landmarksOn.has(id)));
+    landmarksOn = now;
+    world = buildWorld(plan, growth, atlas, store.stocks, rooms, announce ? fresh : new Set());
+    if (announce && fresh.size) {
+      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => l.id));
+      if (!revealing) setTimeout(revealNext, 900);
+    }
     if (announce) {
       for (const e of events) {
         if (e.kind !== 'room') continue;
@@ -227,6 +316,14 @@ async function boot(): Promise<Site> {
     applyMoods(store.state ?? state);
     updatePrep();
     if (!announce) return;
+    // a room that is the first of its strip opens a new wing
+    const WING = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
+    for (const e of events) {
+      if (e.kind !== 'room' || e.room.ring < 1) continue;
+      const r = e.room;
+      if (plan.rooms.some((x) => x.id !== r.id && x.ring === r.ring && x.strip === r.strip && growth.built[x.id])) continue;
+      ui.pushLocal([{ tag: 'BUILD', text: `The ${WING[r.strip] ?? ''} wing opens: the office takes the lots next door` }]);
+    }
     // unlock juice: a beat of stillness, a 2 px shake, a chime (a fanfare for a new stage)
     const newStage = events.some((e) => e.kind === 'stage');
     hold = newStage ? 0.12 : 0.05;
@@ -262,6 +359,7 @@ async function boot(): Promise<Site> {
     }
     sound.hire();
     updatePrep();
+    checkLandmarks(true);
     ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
   store.on((e) => {
@@ -340,6 +438,12 @@ async function boot(): Promise<Site> {
 
   setStatus(null);
   const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView };
+  site.reveal = (id: string): void => {
+    reveals.push(id);
+    if (!revealing) revealNext();
+  };
+  site.skipReveal = (): void => skipReveal?.();
+  site.focus = (id: string) => world.landmarkFocus(id);
   if (sim) {
     site.sim = sim;
     site.simPanel = new SimPanel({
@@ -360,7 +464,10 @@ async function boot(): Promise<Site> {
     recs = replay(ratCount);
     const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
     const old = world;
-    world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set());
+    const nowOn = unlocked(ratCount);
+    const freshOn = new Set([...nowOn].filter((id) => !landmarksOn.has(id)));
+    landmarksOn = nowOn;
+    world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set(), announce ? freshOn : new Set());
     rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
     wireRats();
     applyMoods(store.state ?? state);
@@ -387,6 +494,10 @@ async function boot(): Promise<Site> {
       }
     }
     if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
+    if (freshOn.size && freshOn.size <= 2) {
+      reveals.push(...LANDMARKS.filter((l) => freshOn.has(l.id)).map((l) => l.id));
+      if (!revealing) setTimeout(revealNext, 700);
+    }
   };
 
   // the news ticker: headlines from the live numbers, the voice darkens with the stage

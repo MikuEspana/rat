@@ -9,10 +9,11 @@
 // dithers out into the night. The office sits on a thirds point; the tallest neighbour stands on the opposite
 // diagonal. Street furniture is spread with Poisson-disk sampling, and a few small street scenes are set up.
 import type { Cell } from '../iso';
+import { type TowerSpot, towerSpots } from './landmarks';
 import { Rng } from './rng';
 import type { FloorLayout } from './types';
 
-export type LotUse = 'building' | 'park' | 'parking' | 'site' | 'vacant' | 'shell';
+export type LotUse = 'building' | 'park' | 'parking' | 'site' | 'vacant' | 'shell' | 'basement' | 'rocket' | 'annex';
 
 export interface Lot {
   i0: number;
@@ -97,7 +98,17 @@ const LEVELS: string[][] = [
 const STAGE_LEVEL = [0.35, 1.1, 1.8, 2.6, 3.3, 4.2];
 const TALLEST = ['brick_block', 'brick_block', 'glass_tower', 'deco_tower', 'deco_tower', 'evil_tower'];
 
-export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) => boolean, size: (kind: string) => { w: number; h: number }): City {
+/**
+ * closed: the office's wings that have not opened yet (world cells). They are still city: lots and sidewalk, until
+ * the office absorbs them.
+ */
+export function buildCity(
+  plan: FloorLayout,
+  stage: number,
+  has: (kind: string) => boolean,
+  size: (kind: string) => { w: number; h: number },
+  closed: ReadonlyArray<{ i0: number; j0: number; w: number; h: number }> = [],
+): City {
   const ring = plan.rings[stage]!;
   const rng = new Rng(`city:${stage}`);
   const s0 = ring.i0;
@@ -121,11 +132,14 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
   };
   const inside = (a: number, b: number): boolean => edge(a, b) <= 1.02;
   const ground = new Map<number, { style: string; tint: number; fade: number }>();
+  // closed wings in the canonical frame
+  const shut = closed.map((r) => (frontJ ? { a0: r.i0, b0: r.j0, a1: r.i0 + r.w - 1, b1: r.j0 + r.h - 1 } : { a0: r.j0, b0: r.i0, a1: r.j0 + r.h - 1, b1: r.i0 + r.w - 1 }));
+  const inShut = (a: number, b: number): boolean => shut.some((r) => a >= r.a0 && a <= r.a1 && b >= r.b0 && b <= r.b1);
   const setG = (a: number, b: number, style: string, tint = 0xffffff): void => {
     const e = edge(a, b);
     if (e > 1.02) return;
     const d = Math.max(s0 - 2 - a, a - s1 - 2, s0 - 2 - b, b - s1 - 2);
-    if (d <= 0) return; // the office and its apron
+    if (d <= 0 && !inShut(a, b)) return; // the office and its apron
     const p = M(a, b);
     ground.set(CITY_KEY(p.i, p.j), { style, tint, fade: Math.max(0, Math.min(1, (e - 0.8) / 0.22)) });
   };
@@ -170,7 +184,12 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
 
   // blocks, some cut again by a footpath so each side gets 2 or 3
   type Rect = { a0: number; a1: number; b0: number; b1: number };
+  // closed wings: a sidewalk round the edge, lots inside
+  for (const r of shut) {
+    fill(r.a0, r.a1, r.b0, r.b1, 'sidewalk');
+  }
   const blocks: Rect[] = [
+    ...shut.filter((r) => r.a1 - r.a0 >= 4 && r.b1 - r.b0 >= 4).map((r) => ({ a0: r.a0 + 1, a1: r.a1 - 1, b0: r.b0 + 1, b1: r.b1 - 1 })),
     { a0: E0, a1: s0 - 3, b0: al0 + 2, b1: s1 + 2 }, // left of the office
     { a0: s0 - 2, a1: x0 - 2, b0: al0 + 2, b1: s0 - 3 }, // behind the office, up to the alley
     { a0: s1 + 3, a1: x0 - 2, b0: s0 - 2, b1: s1 + 2 }, // between the office and the cross street
@@ -201,6 +220,17 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
 
   // lots: recursive splits, mixed sizes, a quarter of the decisions break the rules
   const lots: Lot[] = [];
+  const towers = towerSpots(ring, stage);
+  const plazas = (stage >= 2 ? [towers.a, towers.b] : [])
+    .filter((t): t is TowerSpot => t !== null)
+    .map((t) => {
+      // in (i, j) the footprint is fi-n..fi-1 by fj-n..fj-1; keep 2 cells round it
+      const i0 = t.fi - t.n - 2;
+      const i1 = t.fi + 1;
+      const j0 = t.fj - t.n - 2;
+      const j1 = t.fj + 1;
+      return frontJ ? { a0: i0, a1: i1, b0: j0, b1: j1 } : { a0: j0, a1: j1, b0: i0, b1: i1 };
+    });
   const split = (r: Rect, depth: number): void => {
     const w = r.a1 - r.a0 + 1;
     const h = r.b1 - r.b0 + 1;
@@ -208,8 +238,9 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
     const ca = (r.a0 + r.a1) / 2;
     const cb = (r.b0 + r.b1) / 2;
     if (edge(ca, cb) > 1.05) return;
-    if (stage >= 3 && r.a1 >= s0 - 8 && r.a0 <= s0 - 1 && r.b1 >= s0 - 8 && r.b0 <= s0 - 1 && w * h < 60) {
-      // our own tower stands behind the back corner: keep that corner as a plaza
+    // our towers stand behind the office (landmarks.ts): their ground and a margin round it is a plaza, so no
+    // building stands against a face it would be drawn behind
+    if (plazas.some((z) => r.a1 >= z.a0 && r.a0 <= z.a1 && r.b1 >= z.b0 && r.b0 <= z.b1) && w * h < 400) {
       for (let a = r.a0; a <= r.a1; a++) for (let b = r.b0; b <= r.b1; b++) setG(a, b, 'marble', 0xd8dce8);
       return;
     }
@@ -242,7 +273,7 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
   const nextDepth = nextRing ? s0 - nextRing.i0 : 0;
   const adjacent = (l: Lot): boolean => {
     const d = Math.max(s0 - 2 - (l.i0 + l.w - 1), l.i0 - s1 - 2, s0 - 2 - (l.j0 + l.h - 1), l.j0 - s1 - 2);
-    return d <= 1;
+    return d <= 1 && d >= 0; // outside the office (lots in its unopened wings are taken with the wing, not later)
   };
   let sites = 0;
   const shells = rng.shuffle(lots.filter((l) => nextRing && adjacent(l) && l.w >= 3 && l.h >= 3)).slice(0, 2 + rng.int(3));
@@ -265,6 +296,30 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
     if (l) l.use = 'site';
   }
   void nextDepth;
+
+  // landmark lots: the basement gym (from the full floor on) next to the office on the avenue side, the rocket
+  // launchpad (from megacorp on) on a big lot across the cross street
+  const near = (l: Lot, a: number, b: number): number => Math.hypot(l.i0 + l.w / 2 - a, l.j0 + l.h / 2 - b);
+  if (stage >= 2) {
+    // hugging the office's side, in its front half, well inside the town (never out in the fog)
+    const l = lots
+      .filter((x) => x.use !== 'shell' && Math.min(x.w, x.h) >= 5 && x.j0 + x.h > (s0 + s1) / 2 && x.i0 + x.w < s0 && x.far < 0.65)
+      .sort((x, y) => near(x, s0 - 5, s1 - 4) - near(y, s0 - 5, s1 - 4))[0];
+    if (l) l.use = 'basement';
+  }
+  if (stage >= 4) {
+    const l = lots.filter((x) => x.use !== 'shell' && x.use !== 'basement' && Math.min(x.w, x.h) >= 7 && x.i0 > x0).sort((x, y) => near(x, x0 + 8, s1) - near(y, x0 + 8, s1))[0];
+    if (l) l.use = 'rocket';
+  }
+  // the annex (from the corporate floor on): our second building across the avenue, a sky bridge over the traffic
+  if (stage >= 3) {
+    // right across the avenue (the first row of lots), left of the lobby so the bridge clears the subway
+    const cost = (x: Lot): number => Math.abs(x.i0 + x.w / 2 - (c - S * 0.18)) + 4 * (x.j0 - av0 - 4);
+    const l = lots
+      .filter((x) => (x.use === 'building' || x.use === 'park' || x.use === 'vacant' || x.use === 'parking') && Math.min(x.w, x.h) >= 7 && x.j0 >= av0 + 4 && x.i0 + x.w <= x0 - 1)
+      .sort((x, y) => cost(x) - cost(y))[0];
+    if (l) l.use = 'annex';
+  }
 
   // buildings: level by stage and distance, 2 to 4 near the office converted up a level this stage,
   // and a reroll when a neighbour has the same sprite or reads the same height
@@ -377,6 +432,10 @@ export function buildCity(plan: FloorLayout, stage: number, has: (kind: string) 
       fence(l, has('fence_chain') ? 'fence_chain' : 'barrier');
       if (rng.chance(0.5)) put(has('hoarding') ? 'hoarding' : 'sign_post', l.i0 + 1, b1, false, 0.6);
       if (rng.chance(0.5)) put(rng.pick(['tree_bushy', 'box_s', 'garbage']), l.i0 + 1 + rng.int(Math.max(1, l.w - 2)), l.j0 + 1 + rng.int(Math.max(1, l.h - 2)), rng.chance(0.5), 0.6);
+    } else if (l.use === 'basement' || l.use === 'rocket') {
+      fill(l.i0, a1, l.j0, b1, l.use === 'rocket' ? 'concrete' : 'dirt', l.use === 'rocket' ? 0xb8bcc8 : 0xffffff);
+    } else if (l.use === 'annex') {
+      fill(l.i0, a1, l.j0, b1, 'marble', 0xd8dce8);
     } else {
       fill(l.i0, a1, l.j0, b1, 'blueprint', 0xb4c0dc);
       const next = plan.rings[stage + 1] ? STAGE_NAMES[stage + 1] : '';
