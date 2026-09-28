@@ -2,7 +2,8 @@ import { NATIVE_SOL_MINT, SeededRng, TOKEN_2022_PROGRAM, type TxRequest } from '
 import { SimChain, SimTxSender, TOKEN_2022_ACCOUNT_RENT } from '@rat/chain/sim';
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { describe, expect, it } from 'vitest';
-import { JupiterHttp } from './http';
+import { BACKOFF_MAX_MS, BudgetedPriceSource, BudgetedSwapBuilder, JupiterBudget, JupiterBudgetError } from './budget';
+import { JupiterError, JupiterHttp } from './http';
 import { MockPriceSource, MockSwapBuilder, registerMockSwapProgram } from './mock';
 import { JupiterPriceSource } from './price';
 import { SlidingWindowLimiter } from './rate-limiter';
@@ -86,6 +87,123 @@ describe('JupiterHttp', () => {
       fetchImpl: (async () => response(400, 'bad request')) as unknown as typeof fetch,
     });
     await expect(bad.get('/swap/v2/build', {})).rejects.toThrow(/400/);
+  });
+});
+
+describe('JupiterBudget (Free tier: at most 40 calls in any 60 seconds)', () => {
+  it('never allows more than the cap in any rolling minute; each token comes back 60 s after it was spent', () => {
+    let t = 0;
+    const b = new JupiterBudget(40, () => t);
+    let took = 0;
+    // try to call every 100 ms for 5 minutes, and check every 60-second window
+    const stamps: number[] = [];
+    for (; t < 300_000; t += 100) {
+      if (b.tryTake()) {
+        took++;
+        stamps.push(t);
+      }
+    }
+    for (let i = 0; i < stamps.length; i++) {
+      let j = i;
+      while (j + 1 < stamps.length && stamps[j + 1]! - stamps[i]! < 60_000) j++;
+      expect(j - i + 1).toBeLessThanOrEqual(40);
+    }
+    expect(b.maxInWindow).toBe(40);
+    expect(took).toBe(200); // 40 a minute for 5 minutes, no more
+  });
+
+  it('taking never waits: an empty budget says no, and the call is not made', async () => {
+    let t = 0;
+    const b = new JupiterBudget(2, () => t);
+    let calls = 0;
+    const fn = async () => ++calls;
+    expect(await b.call(fn)).toBe(1);
+    expect(await b.call(fn)).toBe(2);
+    await expect(b.call(fn)).rejects.toThrow(JupiterBudgetError);
+    expect(calls).toBe(2);
+    t = 60_001;
+    expect(b.available()).toBe(2);
+  });
+
+  it('startEmpty: a restarted worker makes no call in its first minute', () => {
+    let t = 1_000;
+    const b = new JupiterBudget(40, () => t, { startEmpty: true });
+    expect(b.available()).toBe(0);
+    t += 60_001;
+    expect(b.available()).toBe(40);
+  });
+
+  it('429: everyone stops, 5 s then 10, 20, 40 ... capped at 5 minutes; Jupiter\'s reset wins if later; a success resets it', async () => {
+    let t = 0;
+    const seen: { streak: number; waitMs: number }[] = [];
+    const b = new JupiterBudget(40, () => t, { onRateLimited: (i) => seen.push(i) });
+    const limited = async () => {
+      throw new JupiterError('rate limited (429)', 429, '');
+    };
+    const waits: number[] = [];
+    for (let k = 0; k < 9; k++) {
+      await expect(b.call(limited)).rejects.toMatchObject({ reason: 'rate_limited' });
+      expect(b.available()).toBe(0);
+      // while backing off nothing is called at all
+      let called = false;
+      await expect(b.call(async () => (called = true))).rejects.toMatchObject({ reason: 'rate_limited' });
+      expect(called).toBe(false);
+      waits.push(seen[seen.length - 1]!.waitMs);
+      t += seen[seen.length - 1]!.waitMs;
+    }
+    expect(waits).toEqual([5_000, 10_000, 20_000, 40_000, 80_000, 160_000, BACKOFF_MAX_MS, BACKOFF_MAX_MS, BACKOFF_MAX_MS]);
+    expect(seen.map((s) => s.streak)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    // x-ratelimit-reset later than the backoff: wait for it
+    await expect(b.call(async () => { throw new JupiterError('rate limited (429)', 429, '', t + 900_000); })).rejects.toThrow(JupiterBudgetError);
+    expect(seen[seen.length - 1]!.waitMs).toBe(900_000);
+    t += 900_000;
+    // a success starts the backoff over
+    expect(await b.call(async () => 'ok')).toBe('ok');
+    await expect(b.call(limited)).rejects.toThrow(JupiterBudgetError);
+    expect(seen[seen.length - 1]!.waitMs).toBe(5_000);
+  });
+
+  it('other errors pass through and still used their token', async () => {
+    const b = new JupiterBudget(1, () => 0);
+    await expect(b.call(async () => { throw new Error('no route'); })).rejects.toThrow('no route');
+    expect(b.available()).toBe(0);
+  });
+
+  it('prices: every mint in ONE call and one token; more than 50 mints is refused', async () => {
+    let t = 0;
+    const b = new JupiterBudget(40, () => t);
+    const inner = new MockPriceSource();
+    inner.set('A', 1);
+    inner.set('B', 2);
+    const p = new BudgetedPriceSource(inner, b);
+    expect((await p.getPrices(['A', 'B'])).size).toBe(2);
+    expect(inner.calls).toBe(1);
+    expect(b.available()).toBe(39);
+    await expect(p.getPrices(Array.from({ length: 51 }, (_, i) => `M${i}`))).rejects.toThrow(/more than one/);
+    expect(inner.calls).toBe(1);
+  });
+
+  it('builds: one token each', async () => {
+    const b = new JupiterBudget(1, () => 0);
+    let builds = 0;
+    const s = new BudgetedSwapBuilder({ build: async () => { builds++; return {} as never; } }, b);
+    await s.build({} as never);
+    await expect(s.build({} as never)).rejects.toThrow(JupiterBudgetError);
+    expect(builds).toBe(1);
+  });
+
+  it('the worker\'s HTTP client (no limiter, no retries) reports a 429 once, with the reset time', async () => {
+    let fetches = 0;
+    const http = new JupiterHttp({
+      baseUrl: 'https://api.jup.ag',
+      maxRetries: 0,
+      fetchImpl: (async () => {
+        fetches++;
+        return response(429, 'slow down', { 'x-ratelimit-reset': '2000' });
+      }) as unknown as typeof fetch,
+    });
+    await expect(http.get('/swap/v2/build', {})).rejects.toMatchObject({ status: 429, resetAtMs: 2_000_000 });
+    expect(fetches).toBe(1);
   });
 });
 

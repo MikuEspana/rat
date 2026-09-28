@@ -104,6 +104,7 @@ export function summarizePortfolio(rats: RatView[]): Portfolio {
     ratCount: rats.length,
     activeCount: rats.length - frozen,
     frozenCount: frozen,
+    positionCount: new Set(rats.map((r) => r.stockMint)).size,
     costUsd: round2(cost),
     valueUsd: round2(value),
     pnlUsd: round2(value - cost),

@@ -123,17 +123,11 @@ describe('DbKeyStore', () => {
     expect(lines.join('')).toContain('[REDACTED]');
   });
 
-  it('checks creator/fund keys against the configured public keys', async () => {
+  it('checks the creator key against the configured public key', async () => {
     const creator = Keypair.generate();
-    const fund = Keypair.generate();
     await store.keys.setRoleKey(encryptRoleKey(creator, ring, 'creator'));
-    await store.keys.setRoleKey(encryptRoleKey(fund, ring, 'fund'));
-    const ok = new DbKeyStore(store.keys, ring, {
-      expectedCreator: creator.publicKey.toBase58(),
-      expectedFund: fund.publicKey.toBase58(),
-    });
+    const ok = new DbKeyStore(store.keys, ring, { expectedCreator: creator.publicKey.toBase58() });
     expect((await ok.creator()).publicKey.equals(creator.publicKey)).toBe(true);
-    expect((await ok.fund()).publicKey.equals(fund.publicKey)).toBe(true);
     const bad = new DbKeyStore(store.keys, ring, { expectedCreator: Keypair.generate().publicKey.toBase58() });
     await expect(bad.creator()).rejects.toThrow(/does not match/);
   });

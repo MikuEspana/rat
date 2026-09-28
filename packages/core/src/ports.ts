@@ -24,6 +24,12 @@ export interface PriceQuote {
   change24hPct: number | null;
 }
 
+/** The worker's shared budget of Jupiter calls: a hard cap per rolling minute (Free tier safe). */
+export interface CallBudget {
+  /** calls that can be made right now (0 while backing off after a 429) */
+  available(): number;
+}
+
 export interface PriceSource {
   /** Mints missing from the result have no reliable price right now (treat as stale, never zero). */
   getPrices(mints: Pubkey[]): Promise<Map<Pubkey, PriceQuote>>;
@@ -78,10 +84,9 @@ export interface CoinInfo {
 
 export interface PumpClient {
   getClaimable(creator: Pubkey): Promise<Claimable>;
-  /** Claim (+ WSOL unwrap) instructions for what is claimable. The fund transfer is added by the caller. */
+  /** Claim (+ WSOL unwrap) instructions for what is claimable. */
   buildClaimInstructions(args: { creator: Pubkey; claimable: Claimable }): TransactionInstruction[];
   getCoinInfo(mint: Pubkey): Promise<CoinInfo>;
-  buildBurnInstruction(args: { owner: Pubkey; mint: Pubkey; amount: bigint; decimals: number; tokenProgram: Pubkey }): TransactionInstruction;
 }
 
 // ---------- chain reads ----------
@@ -189,7 +194,7 @@ export interface TxRequest {
   computeUnitPriceMicroLamports?: number;
   /**
    * Spend limits. Live mode: the GuardedSender simulates the signed transaction first and refuses to send it
-   * if any limit is broken (required for claim, hire and burn). Instructions from an outside API (Jupiter)
+   * if any limit is broken (required for claim and hire). Instructions from an outside API (Jupiter)
    * can therefore never move more than the reserved amount out of our wallets.
    */
   limits?: TxLimits;
@@ -248,7 +253,6 @@ export interface TxSender {
 
 export interface KeyStore {
   creator(): Promise<Keypair>;
-  fund(): Promise<Keypair>;
   /**
    * A brand new rat wallet: a fresh keypair, encrypted and stored (and read back) BEFORE its public key is
    * returned, so the key always exists before any SOL can be sent to it. Keys are never reused.
@@ -330,7 +334,7 @@ export interface KeyPoolStore {
   /** Marks a rat key as never used (never funded); it is never handed out again. */
   markUnused(pubkey: Pubkey): Promise<void>;
   get(pubkey: Pubkey): Promise<KeyPoolRecord | null>;
-  getRole(role: 'creator' | 'fund'): Promise<KeyPoolRecord | null>;
+  getRole(role: 'creator'): Promise<KeyPoolRecord | null>;
 }
 
 // ---------- safety ----------

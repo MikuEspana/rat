@@ -136,8 +136,8 @@ describe('emergency sweep (SimChain, in-memory)', () => {
   });
 
   it('red team: refuses the bot\'s own wallets and program addresses as destination', async () => {
-    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE, FUND_PUBKEY: Keypair.generate().publicKey.toBase58() });
-    for (const to of [w.ctx.config.creatorPubkey!, w.ctx.config.fundPubkey!, w.ratWallets[0]!]) {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE });
+    for (const to of [w.ctx.config.creatorPubkey!, w.ratWallets[0]!]) {
       await expect(sweepCommand(w.ctx, w.deps, { to, confirm: sweepPhrase(to) })).rejects.toThrow(/own wallets/);
     }
     const pda = PublicKey.findProgramAddressSync([Buffer.from('vault')], SystemProgram.programId)[0].toBase58();

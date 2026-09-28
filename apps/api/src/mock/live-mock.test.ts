@@ -22,7 +22,7 @@ describe('live mock API', () => {
     const { clock, get } = setup();
     for (let round = 0; round < 2; round++) {
       const state = StateResponseSchema.parse(await get('/api/state'));
-      expect(state.schemaVersion).toBe(1);
+      expect(state.schemaVersion).toBe(2);
       RatsResponseSchema.parse(await get('/api/rats'));
       EventsResponseSchema.parse(await get('/api/events?afterId=0&limit=500'));
       HealthResponseSchema.parse(await get('/health'));
@@ -71,7 +71,7 @@ describe('live mock API', () => {
     expect(r1.filter((r) => rank0.has(r.id) && rank0.get(r.id) !== r.rank).length).toBeGreaterThan(100);
   });
 
-  it('burns every minute in chunks of at most 1 SOL a few seconds apart; claims split 50/50', async () => {
+  it('claims every 35 seconds, every claimed SOL goes to hires, nothing is burned', async () => {
     const { clock, get } = setup();
     const t0 = StateResponseSchema.parse(await get('/api/state')).treasury;
     for (let i = 0; i < 18; i++) {
@@ -80,14 +80,13 @@ describe('live mock API', () => {
     }
     const t1 = StateResponseSchema.parse(await get('/api/state')).treasury;
     const events = (await allEvents(get)).filter((e) => e.id > 5061);
-    const burns = events.filter((e): e is Extract<RatEvent, { type: 'burn' }> => e.type === 'burn');
     const claims = events.filter((e): e is Extract<RatEvent, { type: 'claim' }> => e.type === 'claim');
-    expect(burns.length).toBeGreaterThanOrEqual(3);
-    for (const b of burns) expect(b.data.solSpent).toBeLessThanOrEqual(1);
-    expect(t1.burnCount - t0.burnCount).toBe(burns.length);
+    const hires = events.filter((e) => e.type === 'hire');
+    expect(events.every((e) => ['claim', 'hire', 'freeze', 'unfreeze'].includes(e.type))).toBe(true);
     expect(claims.length).toBeGreaterThanOrEqual(4);
-    for (const c of claims) expect(c.data.toHiresSol).toBe(c.data.toFundSol);
-    expect(t1.totalClaimedSol).toBeGreaterThan(t0.totalClaimedSol);
+    const claimed = claims.reduce((a, c) => a + c.data.amountSol, 0);
+    expect(t1.totalClaimedSol - t0.totalClaimedSol).toBeCloseTo(claimed, 5);
+    expect(t1.totalHiredSol - t0.totalHiredSol).toBeCloseTo(hires.length * 0.03, 5);
   });
 
   it('one stock pauses (its rats freeze) and resumes (they unfreeze), with events', async () => {

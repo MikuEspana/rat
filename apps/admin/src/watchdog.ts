@@ -36,7 +36,7 @@ export class Watchdog {
       if (now - this.lastAlertAt >= REPEAT_MS) {
         this.lastAlertAt = now;
         await this.deps.alert(
-          `WORKER DOWN: no loop has run for ${Math.round(newest.ageSec / 60)} min (last: ${newest.loop}). Claims, hires and burns have stopped. Check the worker on Railway (restarts may be used up) and its logs.`,
+          `WORKER DOWN: no loop has run for ${Math.round(newest.ageSec / 60)} min (last: ${newest.loop}). Claims and hires have stopped. Check the worker on Railway (restarts may be used up) and its logs.`,
         );
       }
       return 'down';

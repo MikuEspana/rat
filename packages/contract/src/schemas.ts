@@ -2,7 +2,7 @@
 // so the schemas are the single source of truth (see CONTRACT.md).
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 2 as const;
 
 const isoTime = z.string().datetime({ offset: true });
 const finite = z.number().finite();
@@ -72,8 +72,6 @@ export const ClaimEventSchema = z
     data: z
       .object({
         amountSol: finite,
-        toHiresSol: finite,
-        toFundSol: finite,
         source: z.enum(['bot', 'external']),
       })
       .strict(),
@@ -97,14 +95,6 @@ export const HireEventSchema = z
   })
   .strict();
 
-export const BurnEventSchema = z
-  .object({
-    ...eventBase,
-    type: z.literal('burn'),
-    data: z.object({ solSpent: finite, tokensBurned: decimalString }).strict(),
-  })
-  .strict();
-
 const freezeData = z
   .object({
     scope: z.enum(['stock', 'rat']),
@@ -125,7 +115,6 @@ export const UnfreezeEventSchema = z
 export const EventSchema = z.discriminatedUnion('type', [
   ClaimEventSchema,
   HireEventSchema,
-  BurnEventSchema,
   FreezeEventSchema,
   UnfreezeEventSchema,
 ]);
@@ -135,6 +124,7 @@ export const PortfolioSchema = z
     ratCount: z.number().int().nonnegative(),
     activeCount: z.number().int().nonnegative(),
     frozenCount: z.number().int().nonnegative(),
+    positionCount: z.number().int().nonnegative(),
     costUsd: finite,
     valueUsd: finite,
     pnlUsd: finite,
@@ -151,7 +141,6 @@ export const StateResponseSchema = z
         mode: BotModeSchema,
         lastClaimAt: isoTime.nullable(),
         nextClaimAt: isoTime.nullable(),
-        nextBurnAt: isoTime.nullable(),
       })
       .strict(),
     coin: z
@@ -161,19 +150,14 @@ export const StateResponseSchema = z
         priceUsd: finite.nullable(),
         supply: decimalString.nullable(),
         marketCapUsd: finite.nullable(),
-        burnedTokens: decimalString,
       })
       .strict(),
-    wallets: z.object({ creator: z.string().nullable(), fund: z.string().nullable() }).strict(),
+    wallets: z.object({ creator: z.string().nullable() }).strict(),
     treasury: z
       .object({
         totalClaimedSol: finite,
-        totalToHiresSol: finite,
-        totalToFundSol: finite,
-        fundWalletSol: finite,
-        totalBurnSpentSol: finite,
-        burnCount: z.number().int().nonnegative(),
-        lastBurnAt: isoTime.nullable(),
+        totalHiredSol: finite,
+        waitingSol: finite,
       })
       .strict(),
     portfolio: PortfolioSchema,

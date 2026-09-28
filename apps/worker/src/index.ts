@@ -7,7 +7,6 @@ export * from './steps/mints';
 export * from './steps/claim';
 export * from './steps/watch';
 export * from './steps/hire';
-export * from './steps/burn';
 export * from './steps/reconcile';
 export * from './production';
 export * from './preflight';

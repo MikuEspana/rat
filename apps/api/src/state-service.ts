@@ -121,16 +121,16 @@ export class StateService {
     }));
 
     const claims = await this.store.claims.totals();
-    const burns = await this.store.burns.totals();
+    const byReason = await this.store.ledger.sumByReason();
+    // SOL spent on hires: salaries plus their fees, rent and tips (in-flight reservations included)
+    const hiredLamports = -(['hire_reserve', 'hire_settle', 'hire_release'] as const).reduce((a, r) => a + (byReason.get(`hire:${r}`) ?? 0n), 0n);
+    const waitingLamports = await this.store.ledger.balance('hire');
     const coinInfoRaw = await this.store.settings.get(SETTINGS.coinInfo);
     const coinInfo = coinInfoRaw ? (JSON.parse(coinInfoRaw) as { decimals: number; supplyRaw: string }) : null;
     const coinPriceRaw = await this.store.settings.get(SETTINGS.priceCoin);
     const coinPrice = coinPriceRaw ? (JSON.parse(coinPriceRaw) as { usd: number }).usd : null;
     const supplyUi = coinInfo ? Number(rawToDecimalString(BigInt(coinInfo.supplyRaw), coinInfo.decimals)) : null;
     const lastClaim = claims.lastAt;
-    const lastBurnRunRaw = await this.store.settings.get(SETTINGS.lastBurnRunAt);
-    const lastBurnRun = lastBurnRunRaw ? new Date(lastBurnRunRaw) : null;
-    const burnWindow = await this.store.settings.get(SETTINGS.burnWindowOpensAt);
     const claimBeat = (await this.store.heartbeats.all()).find((h) => h.loop === 'claim');
     const events = await this.store.events.latest(50);
 
@@ -141,8 +141,6 @@ export class StateService {
         mode: await this.mode(),
         lastClaimAt: iso(lastClaim),
         nextClaimAt: claimBeat ? new Date(claimBeat.lastRunAt.getTime() + this.cfg.intervals.claimSec * 1000).toISOString() : null,
-        // earliest possible start of the next burn round: the exact time is random and deliberately not published
-        nextBurnAt: burnWindow ?? (lastBurnRun ? new Date(lastBurnRun.getTime() + this.cfg.intervals.burnMinSec * 1000).toISOString() : null),
       },
       coin: {
         mint: this.cfg.coinMint ?? null,
@@ -150,17 +148,12 @@ export class StateService {
         priceUsd: this.cfg.coinMint ? coinPrice : null,
         supply: coinInfo ? rawToDecimalString(BigInt(coinInfo.supplyRaw), coinInfo.decimals) : null,
         marketCapUsd: coinPrice !== null && supplyUi !== null ? Math.round(coinPrice * supplyUi) : null,
-        burnedTokens: rawToDecimalString(burns.burnedRaw, burns.decimals ?? coinInfo?.decimals ?? 6),
       },
-      wallets: { creator: this.cfg.creatorPubkey ?? null, fund: this.cfg.fundPubkey ?? null },
+      wallets: { creator: this.cfg.creatorPubkey ?? null },
       treasury: {
         totalClaimedSol: lamportsToSol(claims.claimed),
-        totalToHiresSol: lamportsToSol(claims.hireShare),
-        totalToFundSol: lamportsToSol(claims.fundShare),
-        fundWalletSol: lamportsToSol(await this.store.ledger.balance('burn')),
-        totalBurnSpentSol: lamportsToSol(burns.spent),
-        burnCount: burns.count,
-        lastBurnAt: iso(burns.lastAt),
+        totalHiredSol: lamportsToSol(hiredLamports > 0n ? hiredLamports : 0n),
+        waitingSol: lamportsToSol(waitingLamports > 0n ? waitingLamports : 0n),
       },
       portfolio: summarizePortfolio(all),
       stocks: summarizeStocks(facts, all),

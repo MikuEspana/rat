@@ -3,6 +3,7 @@
 import type {
   Alerts,
   AppConfig,
+  CallBudget,
   ChainReader,
   Clock,
   KeyStore,
@@ -30,18 +31,16 @@ export interface WorkerDeps {
   guard: SpendGuard;
   keys: KeyStore;
   pump: PumpFunClient;
+  /** Jupiter Price API (or the mock), behind the Jupiter budget */
   prices: PriceSource;
-  /** Jupiter /build (or the mock) */
+  /** Jupiter /build (or the mock), behind the Jupiter budget */
   swap: SwapBuilder;
-  /** builds a direct pump.fun buy for the coin when Jupiter has no route (optional) */
-  fallbackSwap?: (coin: { mint: string; tokenProgram: string; supply: bigint }) => SwapBuilder;
+  /** the shared Jupiter budget (JUPITER_MAX_RPM calls per rolling minute): hires only start when it has room */
+  jupiter: CallBudget;
   alerts: Alerts;
   killSwitch: KillSwitch;
   stocks: StockConfigEntry[];
   creator: Pubkey;
-  fund: Pubkey;
-  /** Jito tip accounts (BURN_SEND_VIA=jito); optional */
-  jitoTipAccounts?: () => Promise<string[]>;
 }
 
 /** In-memory state that does not need to survive a restart. */
@@ -53,14 +52,4 @@ export class WorkerState {
   consecutiveFailures = new Map<string, number>();
   lastPaperClaimAt: number | null = null;
   paperFakeAccrued = 0n;
-  /** the burn round in progress (chunks left); null between rounds */
-  burnRound: BurnRound | null = null;
-}
-
-export interface BurnRound {
-  /** SOL still to burn in this round */
-  remaining: bigint;
-  chunkSize: bigint;
-  chunks: number;
-  done: number;
 }

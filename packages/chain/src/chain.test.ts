@@ -13,7 +13,6 @@ import bs58 from 'bs58';
 import { describe, expect, it } from 'vitest';
 import { buildMintData } from './mint-data';
 import { parseMintAccount } from './mint-parse';
-import { JitoTipAccounts } from './jito';
 import { RpcTxSender, type SenderConnection } from './rpc-sender';
 import { SimChain, SimChainReader, SimTxSender, SYSTEM_ACCOUNT_RENT, SIGNATURE_FEE, ataAddress } from './sim';
 import { normalizeTransaction } from './tx-normalize';
@@ -198,6 +197,40 @@ describe('RpcTxSender', () => {
     expect(out.record?.instructions.length).toBe(3);
   });
 
+  it('claims and hires go to the RPC: one send with preflight, then preflight-skipped rebroadcasts of the same bytes', async () => {
+    for (const kind of ['claim', 'hire'] as const) {
+      const sends: { bytes: Uint8Array; skipPreflight?: boolean }[] = [];
+      const { conn, state } = fakeConnection({
+        sendRawTransaction: async (bytes: Uint8Array, o: { skipPreflight?: boolean }) => {
+          sends.push({ bytes, skipPreflight: o.skipPreflight });
+          return 'sig';
+        },
+      });
+      const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => { state.height += 10; } });
+      const p = await s.prepare(request({ kind }));
+      expect((await s.submit(p)).status).toBe('expired');
+      expect(sends.length).toBeGreaterThan(1);
+      expect(sends[0]!.skipPreflight).toBe(false);
+      expect(sends.slice(1).every((x) => x.skipPreflight === true)).toBe(true);
+      expect(sends.every((x) => Buffer.from(x.bytes).equals(Buffer.from(p.serialized)))).toBe(true);
+    }
+  });
+
+  it('a send error that is not a preflight rejection may have been broadcast: it keeps polling and rebroadcasting', async () => {
+    let calls = 0;
+    const { conn, state } = fakeConnection({
+      sendRawTransaction: async () => {
+        calls++;
+        if (calls === 1) throw new Error('fetch failed: ECONNRESET');
+        return 'sig';
+      },
+    });
+    const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => { state.height += 10; } });
+    const out = await s.submit(await s.prepare(request({ kind: 'hire' })));
+    expect(out.status).toBe('expired');
+    expect(calls).toBeGreaterThan(1);
+  });
+
   it('simulates without sending', async () => {
     const { conn, state } = fakeConnection();
     const s = new RpcTxSender(conn, { dryRun: true, liveConfirmed: false, priorityFeeMaxMicroLamports: 1 });
@@ -357,86 +390,6 @@ describe('SimChain', () => {
     expect((await reader.getSignaturesSince(bob.publicKey.toBase58(), a.signature)).map((s) => s.signature)).toEqual([b.signature]);
     const tokens = await reader.getTokenAccounts([{ owner: bob.publicKey.toBase58(), mint: NATIVE_SOL_MINT, tokenProgram: TOKEN_PROGRAM }]);
     expect(tokens[0]).toMatchObject({ exists: false, amount: 0n, address: ataAddress(bob.publicKey.toBase58(), NATIVE_SOL_MINT, TOKEN_PROGRAM) });
-  });
-});
-
-// ---------------------------------------------------------------- Jito route (BURN_SEND_VIA=jito)
-
-function fakeJito(reply: (body: { method: string; params: unknown[] }) => { status?: number; json: unknown }) {
-  const calls: { url: string; body: { method: string; params: unknown[] } }[] = [];
-  const f = (async (url: string, init: { body: string }) => {
-    const body = JSON.parse(init.body) as { method: string; params: unknown[] };
-    calls.push({ url, body });
-    const r = reply(body);
-    return { ok: (r.status ?? 200) < 400, status: r.status ?? 200, json: async () => r.json } as Response;
-  }) as unknown as typeof fetch;
-  return { f, calls };
-}
-
-describe('RpcTxSender Jito route', () => {
-  const url = 'https://block-engine.test/api/v1';
-
-  it('sends burns to the block engine as bundle-only base64 transactions, never to the RPC', async () => {
-    const { conn, state } = fakeConnection({
-      getSignatureStatuses: async () => ({ context: { slot: 1 }, value: [{ confirmationStatus: 'confirmed' }] }),
-    });
-    const { f, calls } = fakeJito(() => ({ json: { jsonrpc: '2.0', id: 1, result: 'sig' } }));
-    const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => {}, maxWaitMs: 0, jito: { url, kinds: ['burn'], fetch: f } });
-    const p = await s.prepare(request({ kind: 'burn' }));
-    await s.submit(p);
-    expect(state.sent).toBe(0);
-    expect(calls[0]!.url).toBe(`${url}/transactions?bundleOnly=true`);
-    expect(calls[0]!.body.method).toBe('sendTransaction');
-    expect(calls[0]!.body.params).toEqual([Buffer.from(p.serialized).toString('base64'), { encoding: 'base64' }]);
-  });
-
-  it('other kinds (claims, hires) still go through the RPC', async () => {
-    const { conn, state } = fakeConnection({
-      getSignatureStatuses: async () => ({ context: { slot: 1 }, value: [{ confirmationStatus: 'confirmed' }] }),
-    });
-    const { f, calls } = fakeJito(() => ({ json: { result: 'x' } }));
-    const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => {}, maxWaitMs: 0, jito: { url, kinds: ['burn'], fetch: f } });
-    await s.submit(await s.prepare(request({ kind: 'hire' })));
-    expect(state.sent).toBeGreaterThanOrEqual(1);
-    expect(calls.length).toBe(0);
-  });
-
-  it('a Jito error never falls back to a public send: it polls until the blockhash expires', async () => {
-    const { conn, state } = fakeConnection();
-    const { f, calls } = fakeJito(() => ({ status: 400, json: { error: { message: 'bundle must tip' } } }));
-    const s = new RpcTxSender(conn, {
-      dryRun: false,
-      liveConfirmed: true,
-      priorityFeeMaxMicroLamports: 1,
-      sleep: async () => {
-        state.height += 10;
-      },
-      jito: { url, kinds: ['burn'], fetch: f, rebroadcastMs: 0 },
-    });
-    const out = await s.submit(await s.prepare(request({ kind: 'burn' })));
-    expect(out.status).toBe('expired');
-    expect(state.sent).toBe(0);
-    expect(calls.length).toBeGreaterThan(1);
-  });
-
-  it('refuses in DRY RUN before any call to the block engine', async () => {
-    const { conn } = fakeConnection();
-    const { f, calls } = fakeJito(() => ({ json: { result: 'x' } }));
-    const s = new RpcTxSender(conn, { dryRun: true, liveConfirmed: false, priorityFeeMaxMicroLamports: 1, jito: { url, kinds: ['burn'], fetch: f } });
-    await expect(s.submit(await s.prepare(request({ kind: 'burn' })))).rejects.toBeInstanceOf(BlockedError);
-    expect(calls.length).toBe(0);
-  });
-
-  it('tip accounts: getTipAccounts on /bundles, only valid public keys kept, cached', async () => {
-    const good = Keypair.generate().publicKey.toBase58();
-    const { f, calls } = fakeJito((b) => ({ json: { result: b.method === 'getTipAccounts' ? [good, 'not-a-key'] : null } }));
-    const tips = new JitoTipAccounts(url, { fetch: f });
-    expect(await tips.get()).toEqual([good]);
-    expect(await tips.get()).toEqual([good]);
-    expect(calls.length).toBe(1);
-    expect(calls[0]!.url).toBe(`${url}/bundles`);
-    const empty = new JitoTipAccounts(url, { fetch: fakeJito(() => ({ json: { result: [] } })).f });
-    await expect(empty.get()).rejects.toThrow(/getTipAccounts/);
   });
 });
 

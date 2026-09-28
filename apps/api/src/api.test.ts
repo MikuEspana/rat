@@ -43,11 +43,13 @@ describe('state API on a running paper world', () => {
     expect(s.stocks.length).toBe(10);
     expect(s.stocks.reduce((a, x) => a + x.hireWeightPct, 0)).toBeCloseTo(100, 0);
     expect(s.treasury.totalClaimedSol).toBeGreaterThan(1);
-    expect(s.treasury.burnCount).toBeGreaterThanOrEqual(1);
+    // every claimed SOL is either spent on hires or still waiting (claim fees are the only other cost)
+    expect(s.treasury.totalHiredSol).toBeGreaterThan(0);
+    expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeLessThanOrEqual(s.treasury.totalClaimedSol + 1e-9);
+    expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeGreaterThan(s.treasury.totalClaimedSol - 0.01);
+    expect(s.portfolio.positionCount).toBeGreaterThan(1);
     expect(s.coin.mint).toBe(w.coinMint);
     expect(s.coin.priceUsd).toBeGreaterThan(0);
-    // nextBurnAt is the earliest start of the next burn round (the real, random time is never published)
-    expect(s.bot.nextBurnAt).toBe(await w.store.settings.get(SETTINGS.burnWindowOpensAt));
 
     const rats = await getJson(app, '/api/rats');
     expectValid(RatsResponseSchema, rats.body);
@@ -82,7 +84,9 @@ describe('state API on a live SimChain world', () => {
     expect(s.events.length).toBeGreaterThan(0);
     expect(s.events.every((e) => !e.dryRun)).toBe(true);
     expect(s.treasury.totalClaimedSol).toBe(1.5);
-    expect(s.coin.burnedTokens).not.toBe('0');
+    expect(s.treasury.totalHiredSol).toBeCloseTo(s.portfolio.ratCount * 0.03, 1);
+    expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeLessThanOrEqual(1.5);
+    expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeGreaterThan(1.49);
     await w.store.settings.set(SETTINGS.killSwitch, 'on');
     expect(StateResponseSchema.parse((await getJson(app, '/api/state')).body).bot.mode).toBe('paused');
   });

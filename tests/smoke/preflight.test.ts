@@ -12,7 +12,6 @@ const good = {
   LIVE_CONFIRM: LIVE_CONFIRM_PHRASE,
   COIN_MINT: pk(),
   CREATOR_PUBKEY: pk(),
-  FUND_PUBKEY: pk(),
   MAX_HIRES_PER_LOOP: '2',
 };
 
@@ -27,6 +26,7 @@ describe('smoke preflight (the script is never run by agents)', () => {
     expect((await smokePreflight(loadConfig({ ...good, DRY_RUN: 'true', LIVE_CONFIRM: '' }), null)).join()).toMatch(/real transactions/);
     expect((await smokePreflight(loadConfig({ ...good, MAX_HIRES_PER_LOOP: '20' }), null)).join()).toMatch(/2 or less/);
     expect((await smokePreflight(loadConfig({ ...good, COIN_MINT: '' }), null)).join()).toMatch(/THROWAWAY test coin/);
+    expect((await smokePreflight(loadConfig({ ...good, CREATOR_PUBKEY: '' }), null)).join()).toMatch(/CREATOR_PUBKEY must be the throwaway test wallet/);
   });
 
   it('refuses a database that already has live rats', async () => {
