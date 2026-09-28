@@ -37,11 +37,36 @@ NAMES = {
     "eggs_0": "disco_ball", "eggs_1": "phone_booth", "eggs_2": "treasure", "eggs_3": "ufo", "eggs_4": "rubber_duck",
 }
 
+# round 3 (assets/raw/props4): more buildings for the city, fences, alley and street props, the food truck, and
+# the two visitors' walk cycles. The street sign (gibberish text) is left out.
+CROPS4 = os.path.join(OUT, "raw", "props4", "crops")
+NAMES4 = {
+    "townhouses_0": "townhouses", "cottage_0": "cottage", "diner_0": "diner", "corner_store_0": "corner_store",
+    "office_low_0": "office_low", "office_mid_0": "office_mid", "apartment_tower_0": "apartment_tower",
+    "parking_garage_0": "parking_garage", "warehouse_0": "warehouse", "gas_station_0": "gas_station",
+    "evil_office_0": "evil_office", "fountain_0": "fountain", "food_truck_0": "food_truck",
+    "fences_0": "fence_chain", "fences_1": "barrier_board", "fences_2": "fence_gate", "fences_3": "hoarding",
+    "fences_4": "fence_orange",
+    "alley_0": "dumpster", "alley_1": "pallets", "alley_2": "garbage", "alley_3": "barrels", "alley_4": "portaloo",
+    "street2_0": "news_box", "street2_1": "planter", "street2_2": "parking_meter", "street2_4": "kiosk",
+}
+
 items = []
 for src, name in NAMES.items():
     im = Image.open(os.path.join(CROPS, f"{src}.png")).convert("RGBA")
     im = im.crop(im.getbbox())
     items.append((name, src, im))
+for src, name in NAMES4.items():
+    im = Image.open(os.path.join(CROPS4, f"{src}.png")).convert("RGBA")
+    im = im.crop(im.getbbox())
+    items.append((name, f"../props4/crops/{src}", im))
+# visitors: walk cycles keep their shared frame box (feet at the bottom centre)
+for who in ("cat", "pigeon"):
+    for d in ("se", "ne"):
+        for k in range(8):
+            f = os.path.join(OUT, "raw", "props4", who, f"walk_{d}_{k}.png")
+            if os.path.exists(f):
+                items.append((f"{who}_walk_{d}_{k}", f"../props4/{who}/walk_{d}_{k}", Image.open(f).convert("RGBA")))
 
 W = 1024
 x = y = row = 0
@@ -58,7 +83,7 @@ frames = {}
 for name, src, im in items:
     px, py = pos[name]
     sheet.alpha_composite(im, (px, py))
-    frames[name] = {"frame": {"x": px, "y": py, "w": im.width, "h": im.height}, "anchor": {"x": 0.5, "y": 1.0}, "source": f"raw/props3/crops/{src}.png"}
+    frames[name] = {"frame": {"x": px, "y": py, "w": im.width, "h": im.height}, "anchor": {"x": 0.5, "y": 1.0}, "source": f"raw/props3/crops/{src}.png".replace("props3/crops/../", "")}
 sheet.save(os.path.join(OUT, "props3.png"), optimize=True)
 json.dump({"frames": frames, "meta": {"app": "rat-race pixel-site tools/build_props3.py", "image": "props3.png", "size": {"w": W, "h": H}}},
           open(os.path.join(OUT, "props3.json"), "w"), indent=1)

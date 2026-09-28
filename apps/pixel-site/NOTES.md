@@ -4,6 +4,24 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Round 3: a real city and idle hooks (owner, 2026-09-28).** The ring of buildings read as a fence.
+  - **Street hierarchy** (`src/floor/city.ts`, drawn fresh per stage): one avenue past the front with the subway on its near sidewalk, one cross street beside the office, one alley behind it. Big blocks get a footpath, so each side has 2 or 3 irregular blocks. Blocks split recursively into lots of mixed sizes; a quarter of the split decisions break the rules (a lot left big, or cut off-centre).
+  - **Every lot has a purpose:** a building, park (trees, bench, fountain), parking lot (bay lines, parked cars), building site (fence, scaffold, crane, cement, portaloo, a hard-hat crew) or fenced vacant lot. No bare ground.
+  - **Falloff and edge:** taller near the office, houses, parks and empty lots towards the edge. The edge is an irregular circle that dithers (4x4 ordered) and darkens into the night, with a faint far skyline behind (evil red at the last stage).
+  - **Composition:** the establishing shot puts the office on the lower-left thirds point and the city's tallest building on the opposite diagonal. From the corporate floor on, our own tower rises behind the back corner and towers over everything by megacorp.
+  - **Growth:** each stage converts 2 to 4 lots next to the office up a level (house, shop, office); the office absorbs the lots next to it as it grows. A building is rerolled when a neighbour has the same sprite or reads the same height.
+  - **Street scenes:** street furniture by Poisson disk along the sidewalks, plus a food truck with a queue, a smoker outside a shop, a delivery with a box, and the crew on the building site. One-way traffic on the avenue and the cross street (every car drives the way its sprite points).
+  - **Idle hooks:**
+    - lots the office takes next are grey shells labelled "NEXT FLOOR AT n RATS"
+    - at 90% of a stage they get scaffolding, a crane and a crew
+    - unlocks drop in with a bounce, puff dust, hold a beat, shake 2 px and chime (sound toggle on the HUD, off until switched on)
+    - 3 nested HUD bars (desk room filling up, next room, next stage)
+    - a RAT NEWS ticker from the live numbers whose voice darkens every stage
+    - a visitor every one to three minutes (pizza delivery, the inspector cat, a pigeon)
+    - applicants queue in the lobby, and the founders hang about the garage from day one
+  - **Find my rat:** search by wallet (or #id or name), the rat card opens with a spotlight, `?rat=<id>` or `?wallet=<address>` links straight to it (COPY LINK on the card), and an era badge from the stage the company was in at hire ("FLOOR 1 OG").
+  - **Timelapse:** one click replays the company from its first rat to now and records the canvas (MP4 where the browser can, WebM otherwise) with a caption, then puts everything back. Hires that arrive meanwhile are picked up at the end.
+
 - **Round 2: close the gap with floor796 (owner, 2026-09-28).** Rooms were the problem more than the art, so most of it is code:
   - **Desk pods** (`src/floor/furnish.ts` `deskRoom`): pods of 2 to 4 desks facing each other on a grid with aisles round each one, plus rows along the two front walls. No random rotations: one pod direction per room. Every rat faces its own monitor; the far side of a pod and the front-wall rows face the camera over the back of their monitor (`desk_back`, the oak desk turned round in `tools/build_gen.py`), the near side shows its back and the screen. Rats fill a room pod by pod.
   - **Seated poses** (`tools/build_rats2.py`): `sit_front` and `sit_back` are the standing idle frames cut at the hips and set on a chair (the desk hides the legs); `sulk_*` sits lower for a falling stock and for naps.
@@ -67,6 +85,10 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | `create_map_object` (basic, any size up to 400x400) | 1 |
 | `create_building_kit`, `create_tiles_pro`, `create_character_state`, objects | 20 to 40 (out of budget) |
 | `pixelart_workbench` (recolor, edit, draw) | free |
+
+### Round 3 (cap 100): 26 used
+
+17 map objects plus 3 retries, 3 character creations (cat, pigeon, one pigeon retry) and 4 walk directions. Log in `assets/raw/props4/log.json`, contact sheet `assets/preview/props4_contact.png`. Notes: the corner store's generated sign read a rude word, repainted by hand to SHOP (free); the street name sign has gibberish text and is left out; the pigeon is an upright pigeon-person (a true bird body needs the 20 to 40 generation mode).
 
 ### Round 2 (paid plan, cap 150 for this round): 31 used
 

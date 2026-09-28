@@ -3,7 +3,7 @@
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
 import './style.css';
-import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
+import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
   API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
@@ -24,6 +24,9 @@ import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
+import { sound } from './ui/sound';
+import type { NewsStats } from './ui/news';
+import { pct, tokens, usd } from './ui/format';
 import { setNowSource } from './now';
 import { LaunchSim } from './sim/engine';
 import { SimPanel } from './sim/panel';
@@ -68,6 +71,8 @@ export interface Site {
   ui: Ui;
   /** debug: rebuild the company at N rats */
   setRats?: (n: number) => void;
+  /** the establishing shot for the current stage */
+  compose?: () => { x: number; y: number; zoom: number };
   /** the launch simulator, when it replaces the API */
   sim?: LaunchSim;
   simPanel?: SimPanel;
@@ -134,7 +139,7 @@ async function boot(): Promise<Site> {
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, world.signs, markers);
+    scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, world.signs, markers);
     camera.apply();
   };
   const wireRats = (): void => {
@@ -158,23 +163,48 @@ async function boot(): Promise<Site> {
   window.addEventListener('resize', () => camera.apply());
 
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
-  ui.setStage(STAGES[growth.stage]!.name, ratCount);
+  ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
 
   /** Simulator: glide out to show the whole building when it grows into a new stage. */
-  const frameBuilding = (): void => {
+  /**
+   * The establishing shot: the office on the lower-left thirds point, the city's tallest building (placed for this)
+   * on the opposite one. Phones keep it centred (too narrow for thirds).
+   */
+  const composeView = (): { x: number; y: number; zoom: number } => {
     const r = plan.rings[growth.stage]!;
     const pts = [cellCentre(r.i0, r.j0), cellCentre(r.i1, r.j0), cellCentre(r.i0, r.j1), cellCentre(r.i1, r.j1)];
     const xs = pts.map((p) => p.x);
     const ys = pts.map((p) => p.y);
-    const w = Math.max(...xs) - Math.min(...xs) + 160;
-    const h = Math.max(...ys) - Math.min(...ys) + 220;
+    const w = Math.max(...xs) - Math.min(...xs) + 120;
+    const h = Math.max(...ys) - Math.min(...ys) + 160;
     const small = window.innerWidth < 900;
-    const zoom = Math.min(1.4, window.innerWidth / w, (window.innerHeight - (small ? 330 : 190)) / h);
-    const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
-    const cy = (Math.max(...ys) + Math.min(...ys)) / 2 - 40;
-    camera.flyTo(cx, cy + (small ? 40 : 0) / zoom, zoom, 1200);
+    const W = window.innerWidth;
+    const H = window.innerHeight - (small ? 330 : 190);
+    const bx = (Math.max(...xs) + Math.min(...xs)) / 2;
+    const by = (Math.max(...ys) + Math.min(...ys)) / 2 - 30;
+    if (small) {
+      const zoom = Math.min(1.4, W / w, H / h);
+      return { x: bx, y: by + 40 / zoom, zoom };
+    }
+    // our tower (corporate floor on) rises behind the back corner: leave room above for it
+    const tower = [0, 0, 0, 0.28, 0.5, 0.62][growth.stage]! * (r.i1 - r.i0) * 32;
+    const zoom = Math.min(1.4, (W * 0.66) / w, (H * 0.7) / (h + tower * 0.6));
+    return { x: bx + (W * 0.12) / zoom, y: by - (H * 0.12) / zoom - tower * 0.3 + 40 / zoom, zoom };
+  };
+  const frameBuilding = (): void => {
+    const v = composeView();
+    camera.flyTo(v.x, v.y, v.zoom, 1200);
   };
 
+  let hold = 0;
+  let recording = false;
+  let missed = 0;
+  /** Within 10% of the next stage the site gets ready for it. */
+  const updatePrep = (): void => {
+    const next = STAGES[growth.stage + 1];
+    world.setPrep(!!next && ratCount >= next.min * 0.9);
+  };
+  updatePrep();
   /** Something got built: rebuild the world, new rooms pop in, tell the feed (and the banner on a new stage). */
   const grew = (events: GrowthEvent[], announce: boolean): void => {
     const rooms = new Set<number>();
@@ -195,7 +225,14 @@ async function boot(): Promise<Site> {
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
+    updatePrep();
     if (!announce) return;
+    // unlock juice: a beat of stillness, a 2 px shake, a chime (a fanfare for a new stage)
+    const newStage = events.some((e) => e.kind === 'stage');
+    hold = newStage ? 0.12 : 0.05;
+    camera.shake(2, newStage ? 0.45 : 0.25);
+    if (newStage) sound.stage();
+    else sound.room();
     const lines = events.map(buildLine);
     ui.pushLocal(lines.slice(-12));
     const stage = events.filter((e) => e.kind === 'stage').pop();
@@ -203,7 +240,7 @@ async function boot(): Promise<Site> {
       ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats and growing`);
       if (sim) frameBuilding();
     }
-    ui.setStage(STAGES[growth.stage]!.name, ratCount);
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
 
   // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
@@ -223,11 +260,17 @@ async function boot(): Promise<Site> {
       if (at) effects.dust(at.x, at.y);
       rats.hire(r, rats.walking < MAX_WALKERS);
     }
-    ui.setStage(STAGES[growth.stage]!.name, ratCount);
+    sound.hire();
+    updatePrep();
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
   store.on((e) => {
     if (e.kind === 'hire') {
       if (DEBUG_RATS) return; // the debug slider sets the rat count
+      if (recording) {
+        missed++; // picked up when the timelapse puts the company back
+        return;
+      }
       ratCount++;
       batchGrowth.push(...growth.add(e.rat.facts.id, e.rat.facts.stock).events);
       batchHires.push(e.rat);
@@ -246,6 +289,11 @@ async function boot(): Promise<Site> {
   app.ticker.add((t) => {
     const t0 = performance.now();
     const dt = Math.min(0.1, t.deltaMS / 1000);
+    camera.tick(dt);
+    if (hold > 0) {
+      hold -= dt; // the hit-stop after an unlock: one still beat
+      return;
+    }
     rats.update(dt);
     world.update(dt);
     effects.update(dt);
@@ -291,7 +339,7 @@ async function boot(): Promise<Site> {
   }
 
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout: plan, growth, ui };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView };
   if (sim) {
     site.sim = sim;
     site.simPanel = new SimPanel({
@@ -304,36 +352,147 @@ async function boot(): Promise<Site> {
     });
   }
 
+  /** Rebuild the whole company at n rats (the debug slider and the timelapse). announce: banner, sounds, dust. */
+  const rebuildAt = (n: number, announce: boolean): void => {
+    const before = new Set(plan.rooms.filter((r) => growth.isBuilt(r)).map((r) => r.id));
+    const beforeStage = growth.stage;
+    ratCount = Math.max(1, Math.min(Math.max(5000, everyone().length), Math.round(n)));
+    recs = replay(ratCount);
+    const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
+    const old = world;
+    world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set());
+    rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+    wireRats();
+    applyMoods(store.state ?? state);
+    rats.load(recs);
+    effects.setWorld(world);
+    ui.setRats(rats);
+    site.rats = rats;
+    site.growth = growth;
+    mount();
+    old.destroy();
+    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
+    updatePrep();
+    if (!announce) return;
+    if (growth.stage > beforeStage) {
+      ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
+      sound.stage();
+      camera.shake(2, 0.45);
+    } else if (popIn.size) sound.room();
+    if (popIn.size < 60) {
+      for (const id of [...popIn].slice(0, 16)) {
+        const r = plan.rooms[id]!;
+        const c = cellCentre(r.i0 + r.w / 2 - 0.5, r.j0 + r.h / 2 - 0.5);
+        effects.dust(c.x, c.y, 20);
+      }
+    }
+    if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
+  };
+
+  // the news ticker: headlines from the live numbers, the voice darkens with the stage
+  const newsStats = (): NewsStats => {
+    const st = store.state;
+    const stocks = [...store.stocks.values()];
+    const top = [...stocks].sort((a, b) => b.ratCount - a.ratCount)[0];
+    const worst = [...stocks].filter((x) => x.change24hPct !== null).sort((a, b) => a.change24hPct! - b.change24hPct!)[0];
+    let best: RatRecord | null = null;
+    for (const r of store.rats.values()) if (!best || r.view.pnlPct > best.view.pnlPct) best = r;
+    return {
+      stage: growth.stage,
+      rats: ratCount,
+      frozen: st?.portfolio.frozenCount ?? 0,
+      burned: st ? tokens(st.coin.burnedTokens) : '0',
+      fund: st ? usd(st.portfolio.valueUsd) : '$0',
+      mcap: st?.coin.marketCapUsd != null ? usd(st.coin.marketCapUsd) : 'PRE-LAUNCH',
+      price: st?.coin.priceUsd != null ? `$${st.coin.priceUsd}` : '--',
+      topStock: top?.symbol ?? 'NOBODY',
+      topRats: top?.ratCount ?? 0,
+      worstStock: worst?.symbol ?? 'EVERYONE',
+      worstPct: worst?.change24hPct != null ? pct(worst.change24hPct) : '--',
+      bestRat: best?.view.name.toUpperCase() ?? 'A RAT',
+      bestPct: best ? pct(best.view.pnlPct) : '--',
+    };
+  };
+  let newsStage = -1;
+  const refreshNews = (): void => {
+    newsStage = growth.stage;
+    ui.setNews(newsStats());
+  };
+  refreshNews();
+  setInterval(refreshNews, 30_000);
+  setInterval(() => {
+    if (growth.stage !== newsStage) refreshNews();
+  }, 2000);
+
+  // timelapse: replay the company from its first rat to now and record it (one click, a video file for X)
+  const caption = new Text({ text: '', style: { fontFamily: 'monospace', fontSize: 26, fontWeight: '700', fill: '#ffd23f', stroke: { color: '#16182c', width: 5 } } });
+  caption.position.set(18, 14);
+  caption.visible = false;
+  app.stage.addChild(caption);
+  const recBtn = document.createElement('button');
+  recBtn.textContent = 'TIMELAPSE';
+  recBtn.title = 'Record the building growing from its first rat to now, as a video';
+  ui.tools.append(recBtn);
+  recBtn.onclick = () => void timelapse();
+  const timelapse = async (): Promise<void> => {
+    if (recording) return;
+    const canvas = app.canvas as HTMLCanvasElement;
+    if (typeof canvas.captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
+      recBtn.textContent = 'NO RECORDER';
+      return;
+    }
+    recording = true;
+    recBtn.textContent = 'RECORDING...';
+    const live = ratCount;
+    const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    const mime = types.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+    const rec = new MediaRecorder(canvas.captureStream(30), mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
+    const stopped = new Promise<void>((r) => (rec.onstop = () => r()));
+    caption.visible = true;
+    rec.start(250);
+    const steps = 36;
+    const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+    for (let k = 0; k < steps; k++) {
+      const n = Math.max(1, Math.round(Math.exp((Math.log(Math.max(2, live)) * k) / (steps - 1))));
+      rebuildAt(n, false);
+      const v = composeView();
+      camera.centerOn(v.x, v.y, v.zoom);
+      caption.text = `RAT RACE  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
+      await wait(k === steps - 1 ? 1800 : 260);
+    }
+    rec.stop();
+    await stopped;
+    caption.visible = false;
+    rebuildAt(live + missed, false);
+    missed = 0;
+    recording = false;
+    recBtn.textContent = 'TIMELAPSE';
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `rat-race-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  };
+
+  // find my rat from a shared link: ?rat=<id> or ?wallet=<address>
+  const q = new URLSearchParams(location.search);
+  const deep = q.get('rat') ?? q.get('wallet');
+  if (deep) {
+    setTimeout(() => {
+      const id = ui.find(deep);
+      if (id !== null) ui.spotlight(id);
+    }, 900);
+  }
+
   // debug: ?rats=N shows the company at N rats, with a slider to scrub through the stages
   if (DEBUG_RATS) {
     site.setRats = (n: number): void => {
-      const before = new Set(plan.rooms.filter((r) => growth.isBuilt(r)).map((r) => r.id));
-      const beforeStage = growth.stage;
-      ratCount = Math.max(1, Math.min(5000, Math.round(n)));
-      recs = replay(ratCount);
-      const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
-      const old = world;
-      world = buildWorld(plan, growth, atlas, store.stocks, popIn.size < 60 ? popIn : new Set());
-      rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
-      wireRats();
-      applyMoods(store.state ?? state);
-      rats.load(recs);
-      effects.setWorld(world);
-      ui.setRats(rats);
-      site.rats = rats;
-      site.growth = growth;
-      mount();
-      old.destroy();
-      ui.setStage(STAGES[growth.stage]!.name, ratCount);
-      if (growth.stage > beforeStage) ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
-      if (popIn.size < 60) {
-        for (const id of [...popIn].slice(0, 16)) {
-          const r = plan.rooms[id]!;
-          const c = cellCentre(r.i0 + r.w / 2 - 0.5, r.j0 + r.h / 2 - 0.5);
-          effects.dust(c.x, c.y, 20);
-        }
-      }
-      if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
+      rebuildAt(n, true);
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };
     ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000));

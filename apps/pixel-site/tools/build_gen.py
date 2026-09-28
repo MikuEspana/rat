@@ -222,10 +222,18 @@ def grass(u, v, x, y, ctx):
     return add((58, 104, 62, 255), d)
 
 
+def dirt(u, v, x, y, ctx):
+    r = ctx["rnd"]
+    d = r.gauss(0, 6)
+    if r.random() < 0.08:
+        d += r.choice([14, -12])
+    return add((112, 92, 70, 255), d)
+
+
 FLOORS = {
     "carpet": carpet, "vinyl": vinyl, "wood_i": plank_fn("i"), "wood_j": plank_fn("j"), "bath": bath, "checker": checker,
     "raised": raised, "concrete": concrete, "marble": marble, "asphalt": asphalt, "sidewalk": sidewalk,
-    "driveway": driveway, "lot": lot, "blueprint": blueprint, "grass": grass,
+    "driveway": driveway, "lot": lot, "blueprint": blueprint, "grass": grass, "dirt": dirt,
 }
 
 # ------------------------------------------------------------------ walls
@@ -411,6 +419,26 @@ def worn(seed):
     return parallelogram(2, 2, f)
 
 
+def road_mark(kind, axis):
+    """Flat road paint on one cell: lane dash, zebra stripes, a parking bay line. axis: the way the road runs."""
+    im = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+    p = im.load()
+    white = (236, 236, 228, 210)
+    for y in range(TH):
+        for x in range(TW):
+            if not in_diamond(x, y):
+                continue
+            u, v = uv(x, y)
+            along, across = (u, v) if axis == "i" else (v, u)
+            if kind == "lane" and 0.46 < across < 0.54 and 0.1 < along < 0.6:
+                p[x, y] = (240, 210, 90, 220)
+            elif kind == "zebra" and 0.15 < across < 0.85 and int(along * 5) % 2 == 0:
+                p[x, y] = white
+            elif kind == "pline" and across < 0.07 and along < 0.9:
+                p[x, y] = white
+    return im
+
+
 def tape(axis):
     """Hazard tape along one cell edge (flat): axis 'i' runs down-right, 'j' down-left."""
     im = Image.new("RGBA", (17, 12), (0, 0, 0, 0))
@@ -449,6 +477,9 @@ for name, a, b, o, i_, acc, pat in rugs:
 for k in range(3):
     im = worn(k)
     frames[f"worn_{k}"] = (im, im.width // 2, im.height // 2)
+for axis in ("i", "j"):
+    for kind in ("lane", "zebra", "pline"):
+        frames[f"{kind}_{axis}"] = (road_mark(kind, axis), 16, 0)
 for axis in ("i", "j"):
     frames[f"tape_{axis}"] = (tape(axis), 8 if axis == "i" else 8, 5)
 

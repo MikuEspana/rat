@@ -121,6 +121,23 @@ export class Camera {
     requestAnimationFrame(step);
   }
 
+  private shakeLeft = 0;
+  private shakePx = 0;
+
+  /** Screen shake (px on screen, seconds). */
+  shake(px: number, seconds: number): void {
+    this.shakePx = px;
+    this.shakeLeft = seconds;
+  }
+
+  /** Call every frame: runs the shake. */
+  tick(dt: number): void {
+    if (this.shakeLeft <= 0) return;
+    this.shakeLeft -= dt;
+    const s = this.shakeLeft > 0 ? this.shakePx : 0;
+    this.world.position.set(Math.round(this.x + (Math.random() * 2 - 1) * s), Math.round(this.y + (Math.random() * 2 - 1) * s));
+  }
+
   apply(): void {
     this.world.scale.set(this.zoom);
     this.world.position.set(Math.round(this.x), Math.round(this.y));

@@ -493,12 +493,56 @@ body {
   color: #16182c;
   background: #ffd23f;
 }
+.stage-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stage-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .stage-bar {
   position: relative;
   width: 120px;
   height: 8px;
   background: #1b1f33;
   border: 1px solid #ffd23f;
+}
+.stage-row.desk .stage-bar {
+  height: 4px;
+  width: 80px;
+  margin-left: 40px;
+  border-color: #7ad7ff;
+}
+.stage-row.desk .stage-bar i {
+  background: #7ad7ff;
+}
+.stage-row.desk .stage-next {
+  color: #9fdcff;
+  font-weight: 400;
+}
+.stage-row.room .stage-bar {
+  height: 6px;
+  width: 100px;
+  margin-left: 20px;
+  border-color: #6dffb0;
+}
+.stage-row.room .stage-bar i {
+  background: #6dffb0;
+}
+.stage-row.room .stage-next {
+  color: #9dffcb;
+}
+.sound-toggle {
+  font: inherit;
+  font-size: 9px;
+  padding: 1px 5px;
+  color: #ffd23f;
+  background: transparent;
+  border: 1px solid #ffd23f;
+  cursor: pointer;
 }
 .stage-bar i {
   position: absolute;
@@ -767,4 +811,119 @@ body {
 }
 .ui.sim-ui {
   z-index: 1;
+}
+
+/* ---------------------------------------------------------------- round 3: news, find my rat, tools */
+.news {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #0d1124;
+  border-top: 1px solid #2b3150;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #d6e4ff;
+  pointer-events: none;
+}
+.news-tag {
+  flex: none;
+  padding: 0 8px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  color: #16182c;
+  background: #ffd23f;
+  z-index: 1;
+}
+.news-text {
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: news-scroll 60s linear infinite;
+}
+@keyframes news-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+.news.stage-3 .news-text,
+.news.stage-4 .news-text {
+  color: #ffd7a0;
+}
+.news.stage-5 {
+  background: #1c0508;
+  border-top-color: #5a1018;
+}
+.news.stage-5 .news-text {
+  color: #ff9a9a;
+}
+.news.stage-5 .news-tag {
+  background: #d0283a;
+  color: #fff;
+}
+.board,
+.debug {
+  bottom: 28px;
+}
+.spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.find {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.find-input {
+  font: inherit;
+  font-size: 10px;
+  width: 170px;
+  padding: 2px 4px;
+  color: #e8f0ff;
+  background: #10152a;
+  border: 1px solid #3a4266;
+}
+.find-go,
+.card-share,
+.hud-tools button {
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  color: #16182c;
+  background: #ffd23f;
+  border: 0;
+  cursor: pointer;
+}
+.find-note {
+  font-size: 9px;
+  color: #ff9aa8;
+}
+.hud-tools {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+}
+.badge.era {
+  margin-left: 4px;
+  background: #6dffb0;
+  color: #16182c;
+}
+@media (max-width: 700px) {
+  .find-input {
+    width: 130px;
+  }
+  .news {
+    font-size: 10px;
+  }
 }

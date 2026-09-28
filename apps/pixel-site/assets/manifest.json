@@ -7,7 +7,7 @@
     "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which.",
     "rats2.png / rats2.json": "built by tools/build_rats2.py from the tier sheets: 5 tiers x 4 furs (grey, brown, white, black) + frozen, the 55 base frames plus sit_front, sit_back, sulk_front, sulk_back (pod desks), trimmed; accessory overlays acc/<glasses|phones_red|phones_white|hat_bowler|hat_cap|hat_beanie>/<frame>. No generations.",
     "gen.png / gen.json": "drawn in code by tools/build_gen.py: floor tiles (carpet, vinyl, wood both ways, bath tile, checker, raised floor, concrete, marble, asphalt, sidewalk, driveway, lot, blueprint, grass), thin wall faces (low, tall, window, panel, garage door header), desk_back, rugs, worn spots, hazard tape. No generations.",
-    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs."
+    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs. Round 3 adds (assets/raw/props4): townhouses, cottage, diner, corner store, office blocks, apartment tower, parking garage, warehouse, gas station, evil office, fountain, food truck, fences, alley and street props, and the cat and pigeon walk cycles."
   },
   "generations": [
     {
@@ -968,6 +968,449 @@
         "shading": "basic shading",
         "detail": "high detail"
       }
+    },
+    {
+      "id": "r3_townhouses_try1",
+      "raw": "raw/props4/townhouses",
+      "tool": "create_map_object",
+      "pixellabId": "95cfa3a3-5c0e-4f00-a1a7-412598f16a67",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": false,
+      "args": {
+        "description": "a row of three narrow two-storey townhouses in different colours, lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_townhouses",
+      "raw": "raw/props4/townhouses",
+      "tool": "create_map_object",
+      "pixellabId": "61c224df-e42b-4127-ad09-aa8c25167b70",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "a row of three narrow two-storey townhouses joined side by side in different colours, lit windows, pitched roofs, seen from above at an angle showing the roofs and two side walls, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_cottage",
+      "raw": "raw/props4/cottage",
+      "tool": "create_map_object",
+      "pixellabId": "48e9c3a8-e04a-4627-b1fa-e663dede904c",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "small yellow one-storey cottage with a red door and a lit window, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 160,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_diner",
+      "raw": "raw/props4/diner",
+      "tool": "create_map_object",
+      "pixellabId": "54aa16e8-2f7f-42a9-8431-40de4aef3acf",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "retro chrome diner with a glowing neon DINER sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_corner_store",
+      "raw": "raw/props4/corner_store",
+      "tool": "create_map_object",
+      "pixellabId": "5846ba4c-7fb0-4b54-837b-0653eb4e2735",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "small convenience store with a bright lit shop window and a sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_office_low_try1",
+      "raw": "raw/props4/office_low",
+      "tool": "create_map_object",
+      "pixellabId": "7d07ed81-0bb4-49b3-9959-e9830bb04f70",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": false,
+      "args": {
+        "description": "three-storey modern office block, white panels, rows of lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_office_low",
+      "raw": "raw/props4/office_low",
+      "tool": "create_map_object",
+      "pixellabId": "8470d73f-926a-4927-a486-5963b6222d2a",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "short wide low-rise modern office building, only three floors tall, white panels, rows of lit windows, flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_office_mid",
+      "raw": "raw/props4/office_mid",
+      "tool": "create_map_object",
+      "pixellabId": "e2c7fe7a-7e5c-42a7-90db-b0098173bb07",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "six-storey office building with blue glass bands and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 288,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_cat",
+      "raw": "raw/props4/cat",
+      "tool": "create_character",
+      "pixellabId": "e2faaa7e-8e68-4ae7-80d1-a282bc4706b5",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "grey tabby cat inspector wearing a tiny brown detective hat, walking on four legs",
+        "name": "Cat Inspector",
+        "body_type": "quadruped",
+        "template": "cat",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 32,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_pigeon_try1",
+      "raw": "raw/props4/pigeon",
+      "tool": "create_character",
+      "pixellabId": "fd1aa74d-df62-44df-bac6-47d6de421a2b",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": false,
+      "args": {
+        "description": "city pigeon, grey with a green and purple neck, small round bird with folded wings, orange eyes, pink feet",
+        "name": "City Pigeon",
+        "body_type": "humanoid",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 32,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_pigeon",
+      "raw": "raw/props4/pigeon",
+      "tool": "create_character",
+      "pixellabId": "512db6e2-1f63-40bc-94ce-28c812f4ca4a",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "a real city pigeon bird, not a person: small head with a short beak, plump round grey feathered body, shiny green and purple neck, wings folded against its sides, no arms, no clothes, short thin pink legs",
+        "name": "City Pigeon 2",
+        "body_type": "humanoid",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 32,
+        "proportions": "{\"type\": \"custom\", \"head_size\": 1.3, \"arms_length\": 0.5, \"legs_length\": 0.5, \"shoulder_width\": 1.3, \"hip_width\": 1.4}",
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_apartment_tower",
+      "raw": "raw/props4/apartment_tower",
+      "tool": "create_map_object",
+      "pixellabId": "9fbb7225-5662-4940-b9be-0f934f40b9a6",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "ten-storey grey concrete apartment tower with balconies and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 320,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_parking_garage",
+      "raw": "raw/props4/parking_garage",
+      "tool": "create_map_object",
+      "pixellabId": "1f83e11c-ad2a-4976-99b3-fdb632dc8107",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "three-level concrete parking garage with cars visible inside, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_warehouse",
+      "raw": "raw/props4/warehouse",
+      "tool": "create_map_object",
+      "pixellabId": "f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "red brick warehouse with a big roll-up loading door and a flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_gas_station",
+      "raw": "raw/props4/gas_station",
+      "tool": "create_map_object",
+      "pixellabId": "8ae73296-f049-4b2b-af43-81be1a06bd9d",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "small gas station with a lit canopy over two pumps and a tiny shop, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_cat_walk",
+      "raw": "raw/props4/cat_walk",
+      "tool": "animate_character",
+      "pixellabId": "group 0a1ce6d0-9468-45d9-a181-6cebdc12b51f",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "character_id": "e2faaa7e-8e68-4ae7-80d1-a282bc4706b5",
+        "template_animation_id": "walk-8-frames",
+        "animation_name": "walk",
+        "directions": [
+          "south-east",
+          "north-east"
+        ]
+      }
+    },
+    {
+      "id": "r3_evil_office",
+      "raw": "raw/props4/evil_office",
+      "tool": "create_map_object",
+      "pixellabId": "9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "black glass office block with glowing red window strips, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 288,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_fountain",
+      "raw": "raw/props4/fountain",
+      "tool": "create_map_object",
+      "pixellabId": "6a0e087e-8444-4c8f-846e-a4ea7952db78",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "small round stone park fountain with water, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 96,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_fences_try1",
+      "raw": "raw/props4/fences",
+      "tool": "create_map_object",
+      "pixellabId": "2c5e12e3-a5ab-4395-b7d3-21da086911f8",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate, wooden construction hoarding panel with a yellow stripe, KEEP OUT sign on a post, orange plastic construction fence section. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_fences",
+      "raw": "raw/props4/fences",
+      "tool": "create_map_object",
+      "pixellabId": "9c05bde0-4d4e-47f0-85d9-2318fb66cc06",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate with a padlock, wooden construction hoarding panel with a yellow stripe, white KEEP OUT sign on a wooden post, orange plastic mesh construction fence section. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_alley",
+      "raw": "raw/props4/alley",
+      "tool": "create_map_object",
+      "pixellabId": "dae8d39f-7f5c-4157-af7e-db6eb56a0cd9",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate back alley props in one row with empty space between them, not touching, each standing on its own: green metal dumpster, stack of wooden pallets, pile of black garbage bags, orange and white traffic barrel, blue portable toilet. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_street2",
+      "raw": "raw/props4/street2",
+      "tool": "create_map_object",
+      "pixellabId": "36b61bd0-75ce-46c6-adde-88626931dcf4",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate street props in one row with empty space between them, not touching, each standing on its own: red newspaper box, parking meter, concrete planter box with a small tree, street name sign on a pole, glowing vending kiosk. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_food_truck",
+      "raw": "raw/props4/food_truck",
+      "tool": "create_map_object",
+      "pixellabId": "f0eb5a0d-1efb-4dfa-bfdd-279db03c180d",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "description": "colourful food truck with an open serving window, awning and a menu board, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 128,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r3_pigeon_walk",
+      "raw": "raw/props4/pigeon_walk",
+      "tool": "animate_character",
+      "pixellabId": "group b17f27af-7efc-40ee-be74-0f3e731beaf7",
+      "costGenerations": 1,
+      "phase": "round3-city-visitors",
+      "used": true,
+      "args": {
+        "character_id": "fd1aa74d-df62-44df-bac6-47d6de421a2b",
+        "template_animation_id": "walking-8-frames",
+        "animation_name": "walk",
+        "directions": [
+          "south-east",
+          "north-east"
+        ]
+      }
     }
   ],
   "freeEdits": [
@@ -1085,14 +1528,15 @@
   "totals": {
     "generationsInFinalAssets": 46,
     "phase1StyleSamplesNotUsed": 12,
-    "accountUsed": 67,
+    "accountUsed": 93,
     "accountLeft": "paid plan since round 2 (2000 a month); the round 2 cap is 150",
     "byPhase": {
       "phase1": 6,
       "variations": 3,
       "phase2": 11,
       "denseFloor": 4,
-      "round2WorldVignettes": 31
+      "round2WorldVignettes": 31,
+      "round3CityVisitors": 26
     },
     "round2": {
       "budget": 150,
@@ -1100,7 +1544,11 @@
       "used": 31,
       "note": "paid plan (2000/month on the account); round 2 counts against the owner's 150 cap for this round"
     },
-    "allTime": 67
+    "allTime": 93,
+    "round3": {
+      "budget": 100,
+      "used": 26
+    }
   },
   "cc0Assets": "none: itch.io, kenney.nl and opengameart.org are blocked by the environment network policy"
 }

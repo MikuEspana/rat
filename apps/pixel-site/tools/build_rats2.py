@@ -231,6 +231,13 @@ def acc_frame(kind, info, front_back):
                 for x in range(bx, bx + 4):
                     put(x, crown, d)
                     put(x, crown + 1, OUTLINE)
+        elif style == "hard":
+            c, d = (0xF2, 0xC2, 0x1E, 255), (0xC8, 0x92, 0x10, 255)
+            for y in range(crown - 4, crown + 1):
+                for x in range(hx0 - 1, hx0 + w + 1):
+                    edge = y == crown - 4 or x in (hx0 - 1, hx0 + w)
+                    put(x, y, OUTLINE if edge else (c if y < crown else d))
+            put(cx - 1, crown - 3, (0xFF, 0xEE, 0x9A, 255))
         else:  # beanie
             c, d = (0xE0, 0x9A, 0x2A, 255), (0xB0, 0x6C, 0x18, 255)
             for y in range(crown - 5, crown + 1):
@@ -257,7 +264,7 @@ def tie_frame(src):
     return im
 
 
-ACCS = ["glasses", "phones_red", "phones_white", "hat_bowler", "hat_cap", "hat_beanie", "tie_stripes"]
+ACCS = ["glasses", "phones_red", "phones_white", "hat_bowler", "hat_cap", "hat_beanie", "tie_stripes", "hat_hard"]
 ref = base["analyst"]
 accs = {}
 for n in all_names:

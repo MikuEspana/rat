@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Growth } from './growth';
 import { Paths } from './path';
 import { buildMaster, STAGES, stageOf } from './plan';
+import { buildCity, CITY_KEY } from './city';
 import { idx, type FloorLayout } from './types';
 
 const SYMBOLS = ['TSLAx', 'MSTRx', 'COINx', 'AMDx', 'NVDAx', 'AAPLx', 'METAx', 'AMZNx', 'GOOGLx', 'SPYx'];
@@ -129,5 +130,50 @@ describe('growth (the idle game)', () => {
       checked++;
     }
     expect(checked).toBeGreaterThan(5);
+  });
+});
+
+describe('the city round the office', () => {
+  const plan = buildMaster();
+  const has = (): boolean => true;
+  const size = (): { w: number; h: number } => ({ w: 200, h: 240 });
+
+  it('is deterministic per stage', () => {
+    const a = buildCity(plan, 2, has, size);
+    const b = buildCity(plan, 2, has, size);
+    expect(b.lots).toEqual(a.lots);
+    expect(b.ground.size).toBe(a.ground.size);
+  });
+
+  it('has an avenue, a cross street and an alley, not a ring road, and every lot has a purpose', () => {
+    for (let stage = 0; stage < STAGES.length; stage++) {
+      const c = buildCity(plan, stage, has, size);
+      const ring = plan.rings[stage]!;
+      const styles = new Map<string, number>();
+      for (const g of c.ground.values()) styles.set(g.style, (styles.get(g.style) ?? 0) + 1);
+      expect(styles.get('asphalt') ?? 0).toBeGreaterThan(50);
+      // lots never overlap the office (and its 2-cell apron) or each other
+      const seen = new Set<number>();
+      let inOffice = 0;
+      let overlaps = 0;
+      for (const l of c.lots) {
+        expect(['building', 'park', 'parking', 'site', 'vacant', 'shell']).toContain(l.use);
+        for (let i = l.i0; i < l.i0 + l.w; i++) {
+          for (let j = l.j0; j < l.j0 + l.h; j++) {
+            if (i >= ring.i0 - 2 && i <= ring.i1 + 2 && j >= ring.j0 - 2 && j <= ring.j1 + 2) inOffice++;
+            const k = CITY_KEY(i, j);
+            if (seen.has(k)) overlaps++;
+            seen.add(k);
+          }
+        }
+      }
+      expect(inOffice).toBe(0);
+      expect(overlaps).toBe(0);
+      const uses = new Set(c.lots.map((l) => l.use));
+      for (const u of ['building', 'park']) expect(uses.has(u as never)).toBe(true);
+      // the next stage's lots show as shells; the last stage has none
+      expect(c.lots.some((l) => l.use === 'shell')).toBe(stage < STAGES.length - 1);
+      expect(c.landmark).not.toBeNull();
+    }
   });
 });

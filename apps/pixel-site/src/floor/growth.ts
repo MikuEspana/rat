@@ -5,7 +5,7 @@
 // - Amenities open at their set rat count.
 // - Desks on demand: a rat takes a free desk in its stock's rooms; when there is none, the next desk-room slot is
 //   built and handed to that stock. Before the full-floor stage everyone shares the garage and open offices.
-import { STAGES } from './plan';
+import { ROOM_LOOK, STAGES } from './plan';
 import { CORRIDOR_REGION, T, idx, type FloorLayout, type Room, type Seat } from './types';
 import { hash32 } from './rng';
 
@@ -27,6 +27,7 @@ export class Growth {
   private events: GrowthEvent[] = [];
   /** rats that found no desk, seated as soon as a room for them is built */
   private waiting: Array<{ id: number; stock: string }> = [];
+  private lastSeat = -1;
   /** rats seated late (their desk changed after they were added) */
   readonly moved: number[] = [];
 
@@ -44,6 +45,30 @@ export class Growth {
 
   get stageName(): string {
     return STAGES[this.stage]!.name;
+  }
+
+  /** The three bars on the HUD: the desk room filling up now, the next room to unlock, the next stage. */
+  progress(): {
+    desk: { filled: number; total: number; label: string } | null;
+    room: { from: number; at: number; label: string } | null;
+    stage: { from: number; at: number; label: string } | null;
+  } {
+    const lastSeat = this.lastSeat >= 0 ? this.plan.seats[this.lastSeat] : undefined;
+    let desk = null;
+    if (lastSeat) {
+      const r = this.plan.rooms[lastSeat.room]!;
+      const filled = r.seats.filter((x) => this.owner[x.id]! >= 0).length;
+      const what = this.symbolOf[r.id] ? `${this.symbolOf[r.id]} DESKS` : r.kind === 'garage' ? 'GARAGE DESKS' : 'DESKS';
+      desk = { filled, total: r.seats.length, label: what };
+    }
+    const next = this.amenities[this.amenityAt];
+    const prev = this.amenities[this.amenityAt - 1];
+    const room = next && next.ring <= this.stage + 1
+      ? { from: prev?.unlockAt ?? STAGES[this.stage]!.min, at: next.unlockAt!, label: ROOM_LOOK[next.kind].label }
+      : null;
+    const ns = STAGES[this.stage + 1];
+    const stage = ns ? { from: STAGES[this.stage]!.min, at: ns.min, label: ns.name } : null;
+    return { desk, room, stage };
   }
 
   isBuilt(room: Room): boolean {
@@ -80,6 +105,7 @@ export class Growth {
         this.owner[id] = ratId;
         this.next[room.id] = p + 1;
         this.seatOfRat.set(ratId, id);
+        this.lastSeat = id;
         return this.plan.seats[id]!;
       }
     }
