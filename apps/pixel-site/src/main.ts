@@ -23,6 +23,8 @@ import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
+import { VaultView } from './world/vault';
+import { VAULT_STAGES, vaultStageOf } from './floor/vault';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
@@ -81,6 +83,8 @@ export interface Site {
   skipReveal?: () => void;
   /** the launch simulator, when it replaces the API */
   sim?: LaunchSim;
+  /** the Vault's money pile (screenshots and debugging) */
+  vault?: VaultView;
   simPanel?: SimPanel;
 }
 
@@ -140,12 +144,19 @@ async function boot(): Promise<Site> {
   let world: World = buildWorld(plan, growth, atlas, store.stocks);
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
-  const effects = new Effects(atlas, world);
+  const effects = new Effects();
+  // the Vault: the money pile in the middle of the building shows the Rat Race portfolio (?vault=USD pins a value)
+  const vault = new VaultView(atlas, world.vault);
+  const VAULT_PIN = new URLSearchParams(location.search).get('vault');
+  const PNL_PIN = new URLSearchParams(location.search).get('vaultpnl');
+  const vaultValue = (s: StateResponse): number => (VAULT_PIN !== null ? Number(VAULT_PIN) || 0 : s.portfolio.valueUsd);
+  const vaultPnl = (s: StateResponse): number => (PNL_PIN !== null ? Number(PNL_PIN) || 0 : s.portfolio.pnlPct);
+  vault.set(vaultValue(state), vaultPnl(state), false);
   const camera = new Camera(scene, app.canvas);
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, world.signs, markers);
+    scene.addChild(world.backdrop, world.floor, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, world.signs, markers);
     camera.apply();
   };
   const wireRats = (): void => {
@@ -165,11 +176,13 @@ async function boot(): Promise<Site> {
     world.setZoom(camera.zoom);
     world.parallax(v.x + v.w / 2, v.y + v.h / 2);
   };
-  const hq = cellCentre(plan.furnace.i, plan.furnace.j);
+  const hq = cellCentre(plan.vault.i, plan.vault.j);
   camera.centerOn(hq.x, hq.y + 60, window.innerWidth < 700 ? 0.6 : 0.9);
   window.addEventListener('resize', () => camera.apply());
 
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
+  ui.vaultHit = (x, y) => vault.hit(x, y);
+  ui.vaultStage = (v) => VAULT_STAGES[vaultStageOf(v)]!.name;
   ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
 
   /** Simulator: glide out to show the whole building when it grows into a new stage. */
@@ -210,25 +223,40 @@ async function boot(): Promise<Site> {
   // the camera flies to it, holds on it with a banner, then eases back. Skip it with a click or a key; it never
   // grabs the camera from a viewer who is dragging (they just get the banner).
   let landmarksOn = unlocked(ratCount);
-  const reveals: string[] = [];
+  interface Reveal {
+    title: string;
+    sub: string;
+    kicker: string;
+    focus: () => { x: number; y: number; h: number } | null;
+  }
+  const landmarkReveal = (id: string): Reveal => {
+    const def = LANDMARKS.find((l) => l.id === id)!;
+    return { title: def.name, sub: `${def.at.toLocaleString('en-US')} rats`, kicker: 'UNLOCKED', focus: () => world.landmarkFocus(id) };
+  };
+  const vaultReveal = (stage: number): Reveal => ({
+    title: `THE VAULT: ${VAULT_STAGES[stage]!.name}`,
+    sub: `${usd(vault.value)} in the Rat Race portfolio`,
+    kicker: 'VAULT UPGRADE',
+    focus: () => vault.focus(),
+  });
+  const reveals: Reveal[] = [];
   let revealing = false;
   let skipReveal: (() => void) | null = null;
   const revealNext = (): void => {
-    const id = reveals.shift();
-    if (!id) {
+    const rv = reveals.shift();
+    if (!rv) {
       revealing = false;
       return;
     }
     revealing = true;
-    const def = LANDMARKS.find((l) => l.id === id)!;
-    const at = world.landmarkFocus(id);
+    const at = rv.focus();
     const done = (): void => {
       skipReveal = null;
       setTimeout(revealNext, 400);
     };
     sound.stage();
     if (!at || camera.userBusy) {
-      ui.milestone(def.name, `${def.at.toLocaleString('en-US')} rats`, 'UNLOCKED', 3600);
+      ui.milestone(rv.title, rv.sub, rv.kicker, 3600);
       setTimeout(done, 3600);
       return;
     }
@@ -249,7 +277,7 @@ async function boot(): Promise<Site> {
     skipReveal = finish;
     timers.push(
       window.setTimeout(() => {
-        ui.milestone(def.name, `${def.at.toLocaleString('en-US')} rats`, 'UNLOCKED', 3600);
+        ui.milestone(rv.title, rv.sub, rv.kicker, 3600);
         effects.dust(at.x, at.y + 30, 26);
         camera.shake(2, 0.3);
       }, 1300),
@@ -270,13 +298,13 @@ async function boot(): Promise<Site> {
     world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
     rats.rebind(world.main, world.blocked);
     wireRats();
-    effects.setWorld(world);
+    vault.setAnchor(world.vault);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
     updatePrep();
     if (announce) {
-      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => l.id));
+      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => landmarkReveal(l.id)));
       if (!revealing) revealNext();
     }
     return true;
@@ -299,7 +327,7 @@ async function boot(): Promise<Site> {
     landmarksOn = now;
     world = buildWorld(plan, growth, atlas, store.stocks, rooms, announce ? fresh : new Set());
     if (announce && fresh.size) {
-      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => l.id));
+      reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => landmarkReveal(l.id)));
       if (!revealing) setTimeout(revealNext, 900);
     }
     if (announce) {
@@ -311,7 +339,7 @@ async function boot(): Promise<Site> {
     }
     rats.rebind(world.main, world.blocked);
     wireRats();
-    effects.setWorld(world);
+    vault.setAnchor(world.vault);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
@@ -363,8 +391,24 @@ async function boot(): Promise<Site> {
     checkLandmarks(true);
     ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
+  // every hire sends its money flying from where the rat came in into the Vault; a burst rains bills from above
+  const recentHires: number[] = [];
+  let lastRain = -1e9;
+  const moneyIn = (usdIn: number): void => {
+    const sp = plan.rings[growth.stage]!.spawn;
+    const c = cellCentre(sp.i, sp.j);
+    vault.hire({ x: c.x, y: c.y - 16 }, usdIn);
+    const now = performance.now();
+    recentHires.push(now);
+    while (recentHires.length && recentHires[0]! < now - 3000) recentHires.shift();
+    if (recentHires.length >= 4 && now - lastRain > 4000) {
+      lastRain = now;
+      vault.rain(22);
+    }
+  };
   store.on((e) => {
     if (e.kind === 'hire') {
+      moneyIn(e.rat.facts.costUsd);
       if (DEBUG_RATS) return; // the debug slider sets the rat count
       if (recording) {
         missed++; // picked up when the timelapse puts the company back
@@ -375,10 +419,17 @@ async function boot(): Promise<Site> {
       batchHires.push(e.rat);
     } else if (e.kind === 'feed') flushHires();
     else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
-    else if (e.kind === 'burn') effects.burn(e.event.data.solSpent, rats.sample(12));
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
       applyMoods(e.state);
+      // the pile follows the portfolio; a new stage gets its upgrade and its reveal
+      const up = vault.set(vaultValue(e.state), vaultPnl(e.state), true);
+      if (up) {
+        const b = vault.focus();
+        effects.dust(b.x, b.y + b.h / 2 - 60, 30);
+        reveals.push(vaultReveal(up.to));
+        if (!revealing) revealNext();
+      }
     }
   });
 
@@ -396,6 +447,7 @@ async function boot(): Promise<Site> {
     rats.update(dt);
     world.update(dt);
     effects.update(dt);
+    vault.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -438,9 +490,9 @@ async function boot(): Promise<Site> {
   }
 
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, compose: composeView, vault };
   site.reveal = (id: string): void => {
-    reveals.push(id);
+    reveals.push(id === 'vault' ? vaultReveal(Math.max(0, vault.stage)) : landmarkReveal(id));
     if (!revealing) revealNext();
   };
   site.skipReveal = (): void => skipReveal?.();
@@ -473,7 +525,7 @@ async function boot(): Promise<Site> {
     wireRats();
     applyMoods(store.state ?? state);
     rats.load(recs);
-    effects.setWorld(world);
+    vault.setAnchor(world.vault);
     ui.setRats(rats);
     site.rats = rats;
     site.growth = growth;
@@ -496,7 +548,7 @@ async function boot(): Promise<Site> {
     }
     if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
     if (freshOn.size && freshOn.size <= 2) {
-      reveals.push(...LANDMARKS.filter((l) => freshOn.has(l.id)).map((l) => l.id));
+      reveals.push(...LANDMARKS.filter((l) => freshOn.has(l.id)).map((l) => landmarkReveal(l.id)));
       if (!revealing) setTimeout(revealNext, 700);
     }
   };
@@ -513,7 +565,6 @@ async function boot(): Promise<Site> {
       stage: growth.stage,
       rats: ratCount,
       frozen: st?.portfolio.frozenCount ?? 0,
-      burned: st ? tokens(st.coin.burnedTokens) : '0',
       fund: st ? usd(st.portfolio.valueUsd) : '$0',
       mcap: st?.coin.marketCapUsd != null ? usd(st.coin.marketCapUsd) : 'PRE-LAUNCH',
       price: st?.coin.priceUsd != null ? `$${st.coin.priceUsd}` : '--',

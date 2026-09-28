@@ -1,8 +1,7 @@
 // The launch simulator: a whole launch in the browser, no server. A market cap curve (scenarios.ts) makes
 // trading volume, volume makes creator fees, and the backend's rules (rules.ts) turn fees into claims and hires:
-// a claim every 35 s loop, every lamport to hires (the fund holds stocks, nothing is burned), 0.03 SOL per rat, at
-// most 10 hires per loop, 30 SOL per hour. With a lower split the rest goes to buy and burn, like the bot: burn
-// rounds 8 to 12 minutes apart in chunks of at most 1 SOL.
+// a claim every 35 s loop, every lamport to hires (the rats' stocks are the portfolio; nothing is ever burned),
+// 0.03 SOL per rat, at most 10 hires per loop, 30 SOL per hour.
 // Stock picks use the worker's own picker. Responses are built with the contract's display math, in the exact
 // shapes of /api/state, /api/rats and /api/events, so the site renders them with its real code.
 //
@@ -51,7 +50,7 @@ interface SimStock {
   nextTrendAt: number;
 }
 
-type Pending = { at: number; kind: 'hire' } | { at: number; kind: 'chunk'; sol: number };
+type Pending = { at: number; kind: 'hire' };
 
 export interface SimStats {
   /** ms since launch */
@@ -63,12 +62,8 @@ export interface SimStats {
   rats: number;
   feesSol: number;
   claimedSol: number;
-  burnedTokens: number;
-  burnSpentSol: number;
-  burnCount: number;
-  /** claimed SOL waiting for the hourly caps */
+  /** claimed SOL waiting for the hourly cap */
   hireWaitingSol: number;
-  burnWaitingSol: number;
   /** what all the rats' stocks are worth now */
   fundValueUsd: number;
 }
@@ -81,19 +76,15 @@ export class LaunchSim {
   private launched = false;
   private noise = 0;
   private mcap = 0;
-  private supply = COIN_SUPPLY;
-  private burned = 0;
+  private readonly supply = COIN_SUPPLY;
   private claimable = 0;
   private hireBucket = 0;
-  private burnBucket = 0;
   private fees = 0;
   private hireSpends: Array<{ at: number; sol: number }> = [];
-  private burnSpends: Array<{ at: number; sol: number }> = [];
   private pending: Pending[] = [];
   private nextStepAt = 0;
   private nextPriceAt = 0;
   private nextLoopAt = 0;
-  private nextRoundAt = 0;
   private lastClaimAt: number | null = null;
   private readonly stocks: SimStock[];
   private readonly rats: RatFacts[] = [];
@@ -109,15 +100,10 @@ export class LaunchSim {
     lastBurnAt: null,
   };
 
-  private readonly hireSplitBps: number;
-
   constructor(
     readonly scenario: Scenario,
     epoch = Date.now(),
-    /** the bot's HIRE_SPLIT_BPS (default: all to hires); tests lower it to cover the burn path */
-    opts: { hireSplitBps?: number } = {},
   ) {
-    this.hireSplitBps = opts.hireSplitBps ?? RULES.hireSplitBps;
     this.epoch = epoch;
     this.endMs = scenario.minutes * 60_000;
     this.rng = new Rng(scenario.seed);
@@ -136,7 +122,6 @@ export class LaunchSim {
     this.nextStepAt = STEP_MS;
     this.nextPriceAt = RULES.priceSec * 1000;
     this.nextLoopAt = RULES.loopSec * 1000;
-    this.nextRoundAt = this.gap(RULES.burnMinSec, RULES.burnMaxSec);
   }
 
   get isLaunched(): boolean {
@@ -224,21 +209,16 @@ export class LaunchSim {
     this.noise += -this.noise * k + 0.06 * Math.sqrt(2 * k) * this.gauss();
   }
 
-  /** The bot's loop: claim, split by HIRE_SPLIT_BPS (all to hires by default), then hire as far as the budget, the per-loop limit and the cap allow. */
+  /** The bot's loop: claim (every lamport hires rats), then hire as far as the budget, the per-loop limit and the cap allow. */
   private loop(): void {
     if (this.claimable >= RULES.minClaimSol) {
       const amount = round6(this.claimable);
-      const toHires = round6((amount * this.hireSplitBps) / 10_000);
-      const toFund = round6(amount - toHires);
       this.claimable = 0;
-      this.hireBucket += toHires;
-      this.burnBucket += toFund;
+      this.hireBucket += amount;
       this.treasury.totalClaimedSol = round6(this.treasury.totalClaimedSol + amount);
-      this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + toHires);
-      this.treasury.totalToFundSol = round6(this.treasury.totalToFundSol + toFund);
-      this.treasury.fundWalletSol = round6(this.treasury.fundWalletSol + toFund);
+      this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + amount);
       this.lastClaimAt = this.t;
-      this.push({ type: 'claim', data: { amountSol: amount, toHiresSol: toHires, toFundSol: toFund, source: 'bot' } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
+      this.push({ type: 'claim', data: { amountSol: amount, toHiresSol: amount, toFundSol: 0, source: 'bot' } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
     }
     const capLeft = RULES.capHireSolPerHour - this.spentLastHour(this.hireSpends);
     const n = Math.max(0, Math.min(RULES.maxHiresPerLoop, Math.floor((this.hireBucket + 1e-9) / RULES.salarySol), Math.floor((capLeft + 1e-9) / RULES.salarySol)));
@@ -275,60 +255,27 @@ export class LaunchSim {
     this.push({ type: 'hire', data: { ratId: id, ratName: name, wallet, stock: stock.symbol, salarySol: RULES.salarySol, costUsd } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
   }
 
-  /** A burn round: as much as the fund's claimed SOL, the round limit and the hourly cap allow, in chunks. */
-  private burnRound(): void {
-    const capLeft = RULES.capBurnSolPerHour - this.spentLastHour(this.burnSpends);
-    const amount = Math.min(this.burnBucket, RULES.burnRoundMaxSol, capLeft);
-    if (amount >= RULES.minBurnSol) {
-      const n = Math.ceil(amount / RULES.burnChunkMaxSol - 1e-9);
-      const chunk = round6(amount / n);
-      let at = this.t;
-      for (let k = 0; k < n; k++) {
-        this.schedule({ at, kind: 'chunk', sol: chunk });
-        at += this.gap(RULES.chunkGapMinSec, RULES.chunkGapMaxSec);
-      }
-      this.burnBucket -= chunk * n;
-      this.burnSpends.push({ at: this.t, sol: chunk * n });
-    }
-    this.nextRoundAt = this.t + this.gap(RULES.burnMinSec, RULES.burnMaxSec);
-  }
-
-  private burnChunk(sol: number): void {
-    const price = this.mcap / this.supply;
-    const tokens = Math.min(this.supply * 0.01, ((sol * SOL_USD) / price) * (1 - 0.004)); // small price impact, inside the 1.5% slippage
-    this.burned += tokens;
-    this.supply -= tokens;
-    this.treasury.totalBurnSpentSol = round6(this.treasury.totalBurnSpentSol + sol);
-    this.treasury.fundWalletSol = round6(Math.max(0, this.treasury.fundWalletSol - sol));
-    this.treasury.burnCount++;
-    this.treasury.lastBurnAt = this.iso();
-    this.push({ type: 'burn', data: { solSpent: sol, tokensBurned: tokens.toFixed(2) } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
-  }
-
   /** Runs everything due up to `targetMs` after launch (stops at the scenario's end). */
   advanceTo(targetMs: number): void {
     if (!this.launched) return;
     const target = Math.min(targetMs, this.endMs);
     for (;;) {
       const p = this.pending[0];
-      const next = Math.min(this.nextStepAt, this.nextPriceAt, this.nextLoopAt, this.nextRoundAt, p ? p.at : Number.POSITIVE_INFINITY);
+      const next = Math.min(this.nextStepAt, this.nextPriceAt, this.nextLoopAt, p ? p.at : Number.POSITIVE_INFINITY);
       if (next > target) break;
       this.t = next;
       if (p && p.at === next) {
         this.pending.shift();
-        if (p.kind === 'hire') this.hire();
-        else this.burnChunk(p.sol);
+        this.hire();
       } else if (this.nextStepAt === next) {
         this.accrue();
         this.nextStepAt += STEP_MS;
       } else if (this.nextPriceAt === next) {
         this.stepPrices();
         this.nextPriceAt += RULES.priceSec * 1000;
-      } else if (this.nextLoopAt === next) {
+      } else {
         this.loop();
         this.nextLoopAt += RULES.loopSec * 1000;
-      } else {
-        this.burnRound();
       }
     }
     this.t = Math.max(this.t, target);
@@ -344,11 +291,7 @@ export class LaunchSim {
       rats: this.rats.length,
       feesSol: this.fees,
       claimedSol: this.treasury.totalClaimedSol,
-      burnedTokens: this.burned,
-      burnSpentSol: this.treasury.totalBurnSpentSol,
-      burnCount: this.treasury.burnCount,
       hireWaitingSol: Math.max(0, this.hireBucket),
-      burnWaitingSol: Math.max(0, this.burnBucket),
       fundValueUsd: this.fundValue(),
     };
   }
@@ -388,7 +331,7 @@ export class LaunchSim {
         mode: 'live',
         lastClaimAt: this.lastClaimAt === null ? null : this.iso(this.lastClaimAt),
         nextClaimAt: live && !this.finished ? this.iso(this.nextLoopAt) : null,
-        nextBurnAt: live && !this.finished ? this.iso(this.nextRoundAt) : null,
+        nextBurnAt: null,
       },
       coin: {
         mint: live ? SIM_COIN_MINT : null,
@@ -396,7 +339,7 @@ export class LaunchSim {
         priceUsd: live ? Number(price.toPrecision(4)) : null,
         supply: live ? this.supply.toFixed(2) : null,
         marketCapUsd: live ? Math.round(this.mcap) : null,
-        burnedTokens: this.burned.toFixed(2),
+        burnedTokens: '0.00',
       },
       wallets: { creator: null, fund: null },
       treasury: { ...this.treasury },

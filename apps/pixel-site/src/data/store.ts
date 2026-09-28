@@ -1,9 +1,8 @@
 // Client-side state. The roster is loaded once; after that only /api/state (prices, stocks, bot) and
-// /api/events (hires, freezes, burns) are followed. Live PnL and tiers are recomputed here with the contract's
+// /api/events (hires, freezes, claims) are followed. Live PnL and tiers are recomputed here with the contract's
 // display math, so the roster never needs a re-poll.
 import {
   computeRatView,
-  type BurnEvent,
   type ClaimEvent,
   type FreezeEvent,
   type HireEvent,
@@ -30,7 +29,6 @@ export type StoreEvent =
   | { kind: 'hire'; rat: RatRecord; event: HireEvent }
   | { kind: 'freeze'; ratIds: number[]; event: FreezeEvent }
   | { kind: 'unfreeze'; ratIds: number[]; event: UnfreezeEvent }
-  | { kind: 'burn'; event: BurnEvent }
   | { kind: 'claim'; event: ClaimEvent }
   | { kind: 'state'; state: StateResponse }
   | { kind: 'tiers'; ratIds: number[] }
@@ -116,10 +114,11 @@ export class Store {
       this.lastEventId = Math.max(this.lastEventId, e.id);
       if (e.type === 'hire') this.hire(e);
       else if (e.type === 'freeze' || e.type === 'unfreeze') this.freeze(e);
-      else if (e.type === 'burn') this.emit({ kind: 'burn', event: e });
       else if (e.type === 'claim') this.emit({ kind: 'claim', event: e });
     }
-    this.emit({ kind: 'feed', events: fresh });
+    // burns are never shown: every fee hires rats
+    const shown = fresh.filter((e) => e.type !== 'burn');
+    if (shown.length) this.emit({ kind: 'feed', events: shown });
   }
 
   private hire(e: HireEvent): void {

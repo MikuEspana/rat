@@ -45,7 +45,7 @@ export interface Seat {
 
 export type SpotKind =
   | 'coffee' | 'cooler' | 'vending' | 'fridge' | 'chat' | 'sink' | 'toilet' | 'server' | 'copier' | 'filing'
-  | 'whiteboard' | 'meeting' | 'shelf' | 'furnace' | 'smoke' | 'boxes' | 'queue' | 'lobby';
+  | 'whiteboard' | 'meeting' | 'shelf' | 'vault' | 'smoke' | 'boxes' | 'queue' | 'lobby';
 
 export interface Spot {
   id: number;
@@ -171,7 +171,8 @@ export interface FloorLayout {
   lobby: Room;
   /** top of the subway stairs, on the street: new hires appear here */
   spawn: Cell;
-  furnace: Cell;
+  /** the Vault: the money pile at the centre of the building (the garage plaza) */
+  vault: Cell;
   /** building rectangle (outer walls included) */
   building: { i0: number; j0: number; i1: number; j1: number };
   /** corridor cells, for rats out for a stroll */

@@ -4,6 +4,7 @@ import { Paths } from './path';
 import { buildMaster, STAGES, stageOf } from './plan';
 import { buildCity, carSprite, CITY_KEY } from './city';
 import { LANDMARKS, towerFloors, towerSpots, unlocked } from './landmarks';
+import { shortUsd, VAULT_STAGES, vaultStageOf } from './vault';
 import { idx, type FloorLayout } from './types';
 
 const SYMBOLS = ['TSLAx', 'MSTRx', 'COINx', 'AMDx', 'NVDAx', 'AAPLx', 'METAx', 'AMZNx', 'GOOGLx', 'SPYx'];
@@ -247,5 +248,45 @@ describe('traffic', () => {
       expect(new Set(c.movers.map((m) => m.dir))).toEqual(new Set([1, -1]));
       for (const m of c.movers) expect(m.kind.endsWith('_rear')).toBe(m.dir < 0);
     }
+  });
+});
+
+describe('the Vault', () => {
+  it('grows in 6 stages on a steep early curve, visible from the very first rat', () => {
+    expect(VAULT_STAGES).toHaveLength(6);
+    expect(vaultStageOf(0)).toBe(0);
+    expect(vaultStageOf(4.91)).toBe(0);
+    expect(vaultStageOf(49.99)).toBe(0);
+    expect(vaultStageOf(50)).toBe(1);
+    expect(vaultStageOf(499)).toBe(1);
+    expect(vaultStageOf(500)).toBe(2);
+    expect(vaultStageOf(5_000)).toBe(3);
+    expect(vaultStageOf(50_000)).toBe(4);
+    expect(vaultStageOf(500_000)).toBe(5);
+    expect(vaultStageOf(9e9)).toBe(5);
+    for (let k = 1; k < VAULT_STAGES.length; k++) expect(VAULT_STAGES[k]!.min).toBe(VAULT_STAGES[k - 1]!.min === 0 ? 50 : VAULT_STAGES[k - 1]!.min * 10);
+  });
+
+  it('labels amounts short and without em dashes', () => {
+    expect(shortUsd(4.91)).toBe('$4.91');
+    expect(shortUsd(152.4)).toBe('$152');
+    expect(shortUsd(1234)).toBe('$1.2K');
+    expect(shortUsd(56_789)).toBe('$57K');
+    expect(shortUsd(3_400_000)).toBe('$3.4M');
+  });
+
+  it('sits on a marble plaza in the middle of the garage, clear of furniture, with the espresso machine in its own corner', () => {
+    const plan = buildMaster();
+    const v = plan.vault;
+    const g = plan.garage;
+    expect(v.i).toBeGreaterThan(g.i0 + 4);
+    expect(v.j).toBeGreaterThan(g.j0 + 4);
+    for (const pr of plan.props) {
+      if (pr.flat || pr.wall) continue;
+      expect(pr.i >= v.i - 3 && pr.i <= v.i + 2 && pr.j >= v.j - 3 && pr.j <= v.j + 2).toBe(false);
+    }
+    const e = plan.landmarkSpots.espresso!;
+    expect(e.room).toBe(g.id);
+    expect(e.i0 + e.w <= v.i - 3 || e.j0 + e.h <= v.j - 3).toBe(true);
   });
 });

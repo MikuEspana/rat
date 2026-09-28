@@ -211,7 +211,7 @@ export class SimPanel {
       ['Market cap', s.mcap === null ? 'pre-launch' : usd(s.mcap)],
       ['Rats', s.rats.toLocaleString('en-US')],
       ['Stage', this.d.stage()],
-      s.burnCount > 0 ? ['Burned', `${compact(s.burnedTokens)} RAT (${s.burnSpentSol.toFixed(2)} SOL)`] : ['Fund value', usd(s.fundValueUsd)],
+      ['Portfolio', usd(s.fundValueUsd)],
       ['Fees', `${s.feesSol.toFixed(2)} SOL`],
     ];
     this.readout.replaceChildren(

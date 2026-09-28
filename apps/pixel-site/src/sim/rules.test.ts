@@ -1,4 +1,5 @@
-// The simulator must run the backend's rules: compare every number with the worker's real default config.
+// The simulator must run the backend's rules: compare every number it uses with the worker's real default config
+// (the simulator never burns, so the burn settings are not part of it).
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../../../../packages/core/src/config';
 import { RULES } from './rules';
@@ -15,17 +16,8 @@ describe('launch simulator rules', () => {
     expect(RULES.ratBufferSol).toBe(sol(c.ratBufferLamports));
     expect(RULES.maxHiresPerLoop).toBe(c.maxHiresPerLoop);
     expect(RULES.minClaimSol).toBe(sol(c.minClaimLamports));
-    expect(RULES.minBurnSol).toBe(sol(c.minBurnLamports));
     expect(RULES.minStockWeightBps).toBe(c.minStockWeightBps);
     expect(RULES.capHireSolPerHour).toBe(sol(c.spendCapLamportsPerHour.hire));
-    expect(RULES.capBurnSolPerHour).toBe(sol(c.spendCapLamportsPerHour.burn));
-    expect(RULES.burnMinSec).toBe(c.intervals.burnMinSec);
-    expect(RULES.burnMaxSec).toBe(c.intervals.burnMaxSec);
-    expect(RULES.burnChunkMaxSol).toBe(sol(c.burn.chunkMaxLamports));
-    expect(RULES.burnRoundMaxSol).toBe(sol(c.burn.roundMaxLamports));
-    expect(RULES.chunkGapMinSec).toBe(c.burn.chunkGapMinSec);
-    expect(RULES.chunkGapMaxSec).toBe(c.burn.chunkGapMaxSec);
     expect(RULES.priceSec).toBe(c.intervals.priceSec);
-    expect(RULES.slippageBpsCoin).toBe(c.slippageBpsCoin);
   });
 });

@@ -676,14 +676,4 @@ export class RatSystem {
     const a = this.agents.get(id);
     return a ? { x: a.item.p.x, y: a.item.p.y } : null;
   }
-
-  /** Screen positions of up to n seated rats (burn bags fly from their desks). */
-  sample(n: number): Array<{ x: number; y: number }> {
-    const out: Array<{ x: number; y: number }> = [];
-    for (let k = 0; k < n * 4 && out.length < n && this.list.length; k++) {
-      const a = this.list[Math.floor(Math.random() * this.list.length)]!;
-      if (a.seated) out.push({ x: a.item.p.x, y: a.item.p.y - 30 });
-    }
-    return out;
-  }
 }

@@ -1,5 +1,5 @@
 {
- "_gens_used": 14,
+ "_gens_used": 23,
  "seat_front": {
   "tool": "edit_image_pixen",
   "attempts": [
@@ -268,6 +268,227 @@
     "result_text": "status: completed\nid: 4303facc-3392-4c92-b079-f6f36245bbd9\njob_id: 4303facc-3392-4c92-b079-f6f36245bbd9\nframes: 1\ntransparent: yes\nasset_id: 15148227-a4a5-5054-869b-d2785b873de8\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/4303facc-3392-4c92-b079-f6f36245bbd9/download",
     "files": [
      "limo_rear_4303fa_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_0": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "4d91e25b-4307-487c-87d3-1643850b9879",
+    "args": {
+     "description": "a few loose green dollar bills lying on the floor next to a small stack of gold coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 64,
+     "height": 64,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 4d91e25b-4307-487c-87d3-1643850b9879\ndescription: a few loose green dollar bills lying on the floor next to a small stack of gold coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 64x64px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"4d91e25b-4307-48",
+    "result_text": "status: completed\nid: 4d91e25b-4307-487c-87d3-1643850b9879\ndescription: a few loose green dollar bills lying on the floor next to a small stack of gold coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 64x64px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/4d91e25b-4307-487c-87d3-1643850b9879/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"4d91e25b-4307-487c-87d3-1643850b9879\")",
+    "files": [
+     "vault_0_4d91e2_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_1": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "8e3aed57-42eb-4803-a593-fd146902b7f2",
+    "args": {
+     "description": "a small wooden desk with neat stacks of green cash bundles piled on top of it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 96,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 8e3aed57-42eb-4803-a593-fd146902b7f2\ndescription: a small wooden desk with neat stacks of green cash bundles piled on top of it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"8e3aed57-42eb-4803-a593-",
+    "result_text": "status: completed\nid: 8e3aed57-42eb-4803-a593-fd146902b7f2\ndescription: a small wooden desk with neat stacks of green cash bundles piled on top of it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/8e3aed57-42eb-4803-a593-fd146902b7f2/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"8e3aed57-42eb-4803-a593-fd146902b7f2\")",
+    "files": [
+     "vault_1_8e3aed_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_2": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "18c2af1e-5524-487b-803f-552306e38da4",
+    "args": {
+     "description": "a wooden shipping pallet stacked high with bundled green cash wrapped in paper bands, a few loose bills sliding off the sides, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 128,
+     "height": 128,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 18c2af1e-5524-487b-803f-552306e38da4\ndescription: a wooden shipping pallet stacked high with bundled green cash wrapped in paper bands, a few loose bills sliding off the sides, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 128x128px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: ",
+    "result_text": "status: completed\nid: 18c2af1e-5524-487b-803f-552306e38da4\ndescription: a wooden shipping pallet stacked high with bundled green cash wrapped in paper bands, a few loose bills sliding off the sides, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 128x128px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/18c2af1e-5524-487b-803f-552306e38da4/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"18c2af1e-5524-487b-803f-552306e38da4\")",
+    "files": [
+     "vault_2_18c2af_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_3": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a",
+    "args": {
+     "description": "a huge heap of green cash bundles and gold coins piled up high like a mountain, a pyramid of money, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a\ndescription: a huge heap of green cash bundles and gold coins piled up high like a mountain, a pyramid of money, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"f",
+    "result_text": "status: completed\nid: fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a\ndescription: a huge heap of green cash bundles and gold coins piled up high like a mountain, a pyramid of money, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"fdfa5fdb-bc3b-4c88-b56b-d248dfcae48a\")",
+    "files": [
+     "vault_3_fdfa5f_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_4": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "0589196f-c532-46b3-9244-23dd362c0e91",
+    "args": {
+     "description": "a large glass vault box with a steel frame and a round steel vault door hanging open, packed and overflowing with green cash bundles and gold coins spilling out onto the floor, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 192,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 0589196f-c532-46b3-9244-23dd362c0e91\ndescription: a large glass vault box with a steel frame and a round steel vault door hanging open, packed and overflowing with green cash bundles and gold coins spilling out onto the floor, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 192x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent ",
+    "result_text": "status: completed\nid: 0589196f-c532-46b3-9244-23dd362c0e91\ndescription: a large glass vault box with a steel frame and a round steel vault door hanging open, packed and overflowing with green cash bundles and gold coins spilling out onto the floor, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 192x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/0589196f-c532-46b3-9244-23dd362c0e91/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"0589196f-c532-46b3-9244-23dd362c0e91\")",
+    "files": [
+     "vault_4_058919_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "vault_5": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "990492ff-7da7-4eef-a13b-c373de2c909c",
+    "args": {
+     "description": "a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, small grey rats in business suits swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 256,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 990492ff-7da7-4eef-a13b-c373de2c909c\ndescription: a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, small grey rats in business suits swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 256x256px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 ",
+    "result_text": "status: completed\nid: 990492ff-7da7-4eef-a13b-c373de2c909c\ndescription: a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, small grey rats in business suits swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 256x256px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/990492ff-7da7-4eef-a13b-c373de2c909c/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"990492ff-7da7-4eef-a13b-c373de2c909c\")",
+    "files": [
+     "vault_5_990492_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "bill": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "ea1844ed-39cf-4681-86ee-ef643a927877",
+    "args": {
+     "description": "one single green paper dollar bill, slightly curled, flying through the air, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 32,
+     "height": 32,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: ea1844ed-39cf-4681-86ee-ef643a927877\ndescription: one single green paper dollar bill, slightly curled, flying through the air, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 32x32px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent \u2014 place it with place_map_object once ready\nhint: get_map_object(object_id=\"ea1844ed-39cf-4681-86ee-ef",
+    "result_text": "status: completed\nid: ea1844ed-39cf-4681-86ee-ef643a927877\ndescription: one single green paper dollar bill, slightly curled, flying through the air, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 32x32px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/ea1844ed-39cf-4681-86ee-ef643a927877/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"ea1844ed-39cf-4681-86ee-ef643a927877\")",
+    "files": [
+     "bill_ea1844_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "espresso_giant": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "9e92fffb-63d9-487b-b4aa-aa573d89bce1",
+    "args": {
+     "description": "a giant chrome and brass espresso machine as big as a car, big pressure gauges, curly steam pipes, a row of tiny cups on top, warm glowing lights, standing on a small marble platform like a shrine, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9e92fffb-63d9-487b-b4aa-aa573d89bce1\ndescription: a giant chrome and brass espresso machine as big as a car, big pressure gauges, curly steam pipes, a row of tiny cups on top, warm glowing lights, standing on a small marble platform like a shrine, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe",
+    "result_text": "status: completed\nid: 9e92fffb-63d9-487b-b4aa-aa573d89bce1\ndescription: a giant chrome and brass espresso machine as big as a car, big pressure gauges, curly steam pipes, a row of tiny cups on top, warm glowing lights, standing on a small marble platform like a shrine, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 10:13\ndownload: https://api.pixellab.ai/mcp/map-objects/9e92fffb-63d9-487b-b4aa-aa573d89bce1/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9e92fffb-63d9-487b-b4aa-aa573d89bce1\")",
+    "files": [
+     "espresso_giant_9e92ff_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "kneel": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": null,
+    "args": {
+     "input": "raw/anim/cheer_input_rot_se_navy.png",
+     "description": "kneeling on both knees, bowing in worship, arms raised",
+     "seed": 5301
+    },
+    "submit_text": "error: rate limit exceeded (8/8 jobs)\n\nhint: wait for a job to finish, then retry"
+   },
+   {
+    "id": "4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f",
+    "args": {
+     "input": "raw/anim/cheer_input_rot_se_navy.png",
+     "description": "kneeling on both knees, bowing in worship, arms raised",
+     "seed": 5301
+    },
+    "submit_text": "id: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\njob_id: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\nmodel: pixen\nedit: The same rat office worker now kneeling on both knees on the floor, bowing forward in worship with both arms raised up high above his head. Keep the same colors, size, outline and pixel style, same three-quarter view facing down-right.\nsource: 68x68px\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5301\nasset_id: 666d7a37-6c90-5f36-9e4d-47f4b3dc2fc0\nasset_status: pending",
+    "result_text": "status: completed\nid: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\njob_id: 4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f\nframes: 1\ntransparent: yes\nasset_id: 666d7a37-6c90-5f36-9e4d-47f4b3dc2fc0\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/4cbe29b2-7b4c-4e6d-8d3e-d44334bd9f2f/download",
+    "files": [
+     "kneel_4cbe29_0.png"
     ]
    }
   ],

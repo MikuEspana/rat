@@ -29,7 +29,7 @@ const SQ2: Off = [[0, 0], [-1, 0], [0, -1], [-1, -1]];
 export const FOOTPRINT: Record<string, Off> = {
   coffee_counter: I2, whiteboard: I2, filing: I2, filing_printer: I2, filing_plant: I2, sofa: I2, sofa_navy: I2,
   sofa_green: I2, bookshelf: I2, tv_stand: I2, copier: SQ2, exec_desk: SQ2, exec_desk_gold: SQ2, round_table: SQ2,
-  box_pile2: SQ2, furnace: SQ2, ping_pong: SQ2, shark_tank: SQ2, foosball: I2, aquarium: I2, copier_jam: I2, vault_door: SQ2,
+  box_pile2: SQ2, ping_pong: SQ2, shark_tank: SQ2, foosball: I2, aquarium: I2, copier_jam: I2, vault_door: SQ2,
 };
 
 function footprint(kind: string, mirror: boolean): Array<[number, number]> {
@@ -669,20 +669,6 @@ export function ceoRoom(f: Fit, seats: number): void {
   f.commit();
 }
 
-export function hqRoom(f: Fit, furnace: Cell): void {
-  f.put('furnace', furnace.i, furnace.j, false, { bias: 0.1 });
-  const ring: Array<[number, number, Face]> = [
-    [furnace.i + 1, furnace.j - 1, 'nw'], [furnace.i - 1, furnace.j + 1, 'ne'], [furnace.i + 1, furnace.j + 1, 'nw'],
-    [furnace.i - 2, furnace.j, 'se'], [furnace.i, furnace.j - 2, 'sw'],
-  ];
-  for (const [i, j, face] of ring) f.spot('furnace', i, j, face);
-  f.settle();
-  f.clutter(['cashbag', 'cashbag', 'cashbag', 'box_half'], 6, 0.2);
-  f.corners(['plant', 'lamp'], 1);
-  f.mountAnywhere('tv_wall', 3);
-  f.commit();
-}
-
 export function lobbyRoom(f: Fit): void {
   const { i0, j0, w, h } = f.r;
   f.rug('rug_sand', i0 + Math.floor(w / 2) - 1, j0 + Math.floor(h / 2) - 1, 3, 3);
@@ -700,15 +686,16 @@ export function lobbyRoom(f: Fit): void {
   f.commit();
 }
 
-/** The founders' garage: the furnace in the middle (room around it to grow), shared desks, a couch, boxes. */
-export function garageRoom(f: Fit, furnace: Cell, seats: number): void {
+/** The founders' garage: the Vault's plaza in the middle (room for the money pile to grow), shared desks, a couch,
+ *  boxes. The pile itself is drawn by the world (it follows the portfolio value). */
+export function garageRoom(f: Fit, vault: Cell, seats: number): void {
   const { i0, j0, w, h } = f.r;
-  f.put('furnace', furnace.i, furnace.j, false, { bias: 0.1 });
-  for (let i = furnace.i - 3; i <= furnace.i + 2; i++) for (let j = furnace.j - 3; j <= furnace.j + 2; j++) if (f.inside(i, j)) f.reserve(i, j);
+  for (let i = vault.i - 3; i <= vault.i + 2; i++) for (let j = vault.j - 3; j <= vault.j + 2; j++) if (f.inside(i, j)) f.reserve(i, j);
+  // rats stop by to admire the pile
   const ring: Array<[number, number, Face]> = [
-    [furnace.i + 1, furnace.j + 1, 'nw'], [furnace.i - 2, furnace.j + 1, 'ne'], [furnace.i + 1, furnace.j - 2, 'nw'],
+    [vault.i + 2, vault.j + 2, 'nw'], [vault.i - 3, vault.j + 2, 'ne'], [vault.i + 2, vault.j - 3, 'nw'],
   ];
-  for (const [i, j, face] of ring) f.spot('furnace', i, j, face);
+  for (const [i, j, face] of ring) f.spot('vault', i, j, face);
   alongBackWall(f, [{ kind: 'coffee_counter', spot: 'coffee', w: 2 }, { kind: 'coffee_machine', spot: 'coffee' }, { kind: 'box_pile' }], 1);
   alongLeftWall(f, [{ kind: 'sofa', w: 2 }, { kind: 'box_pile2', w: 2 }], 2, 1);
   const variant = (): number => (f.rng.chance(0.5) ? 1 : 0);

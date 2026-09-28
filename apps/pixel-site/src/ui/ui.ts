@@ -57,6 +57,12 @@ export class Ui {
   private boardList = el('ol', 'board-list');
   private boardMode: 'top' | 'bottom' = 'top';
   private card = el('div', 'card');
+  private vaultCard = el('div', 'card vault-card');
+  /** set by main: is a world point on the Vault's money pile? */
+  vaultHit: ((x: number, y: number) => boolean) | null = null;
+  /** set by main: the Vault's stage name for a value */
+  vaultStage: ((usd: number) => string) | null = null;
+  private vaultOpen: string | null = null;
   private stageChip = el('div', 'stage-chip', '');
   private milestoneEl = el('div', 'milestone');
   private milestoneTimer = 0;
@@ -73,7 +79,8 @@ export class Ui {
 
   constructor(private readonly d: UiDeps) {
     document.body.appendChild(this.root);
-    this.root.append(this.spot, this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.milestoneEl, this.news);
+    this.root.append(this.spot, this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.vaultCard, this.milestoneEl, this.news);
+    this.vaultCard.hidden = true;
     this.spot.hidden = true;
     this.milestoneEl.hidden = true;
     this.card.hidden = true;
@@ -85,14 +92,26 @@ export class Ui {
     d.camera.onClick = (sx, sy) => {
       const w = d.camera.toWorld(sx, sy);
       const id = d.rats.pick(w.x, w.y);
+      if (id === null && this.vaultHit?.(w.x, w.y)) {
+        this.close();
+        this.openVault();
+        return;
+      }
+      this.closeVault();
       if (id === null) this.close();
       else this.open(id, false);
     };
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.close();
+      if (e.key === 'Escape') {
+        this.close();
+        this.closeVault();
+      }
     });
     d.store.on((e) => {
-      if (e.kind === 'state') this.onState(e.state);
+      if (e.kind === 'state') {
+        this.onState(e.state);
+        if (!this.vaultCard.hidden) this.renderVault();
+      }
       else if (e.kind === 'feed') this.pushFeed(e.events, true);
       else if (e.kind === 'tiers' || e.kind === 'freeze' || e.kind === 'unfreeze') {
         if (this.selected !== null && e.ratIds.includes(this.selected)) this.renderCard();
@@ -127,7 +146,7 @@ export class Ui {
     for (const [key, label] of [
       ['mcap', 'Market cap'],
       ['rats', 'Rats hired'],
-      ['fund', 'Fund value'],
+      ['fund', 'Portfolio value'],
       ['pnl', 'Portfolio PnL'],
     ] as const) {
       const box = el('div', 'stat');
@@ -173,12 +192,12 @@ export class Ui {
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
-    set('fund', usd(s.portfolio.valueUsd), s.treasury.burnCount > 0 ? `${tokens(s.coin.burnedTokens)} RAT burned` : holdings || 'no positions yet');
+    set('fund', usd(s.portfolio.valueUsd), holdings || 'no positions yet');
     set('pnl', usd(s.portfolio.pnlUsd), pct(s.portfolio.pnlPct), signClass(s.portfolio.pnlUsd));
     const mode = s.bot.mode;
     this.banner.hidden = mode === 'live';
     this.banner.textContent =
-      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No hires, no burns.' : '';
+      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No hires.' : '';
     this.banner.className = `banner ${mode}`;
     this.renderBoard();
     if (this.selected !== null) this.renderCard();
@@ -231,6 +250,7 @@ export class Ui {
   private pushFeed(events: RatEvent[], live: boolean): void {
     for (const e of events) {
       const d = describe(e);
+      if (!d) continue;
       const li = el('li', `ev ${e.type}${live ? ' fresh' : ''}`);
       const time = el('span', 'ev-time', ago(e.at));
       const body = el('span', 'ev-text', d.text);
@@ -436,6 +456,79 @@ export class Ui {
         return li;
       }),
     );
+  }
+
+  // ------------------------------------------------------------------ the Vault
+  /** The Vault's panel: the Rat Race portfolio in total and by stock, and the wallets of the rats that hold it. */
+  openVault(): void {
+    this.vaultCard.hidden = false;
+    this.renderVault();
+  }
+
+  closeVault(): void {
+    this.vaultCard.hidden = true;
+    this.vaultOpen = null;
+  }
+
+  private renderVault(): void {
+    const st = this.d.store.state;
+    if (!st) return;
+    const p = st.portfolio;
+    const close = el('button', 'card-close', 'x');
+    close.onclick = () => this.closeVault();
+    const head = el('div', 'card-head');
+    const who = el('div', 'card-who');
+    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Rat Race portfolio'));
+    head.append(who, close);
+    const total = el('div', 'vault-total', usd(p.valueUsd));
+    const line = el('div', `vault-pnl ${signClass(p.pnlPct)}`, `${pct(p.pnlPct)}  ${usd(p.pnlUsd)} on ${usd(p.costUsd)} paid`);
+    const stage = el('div', 'vault-stage', `${this.vaultStage?.(p.valueUsd) ?? ''}  .  ${p.ratCount.toLocaleString('en-US')} rats, each holding its stock in its own wallet`);
+    const list = el('div', 'vault-stocks');
+    const stocks = [...st.stocks].filter((s) => s.ratCount > 0).sort((a, b) => b.valueUsd - a.valueUsd);
+    const most = Math.max(1, ...stocks.map((s) => s.valueUsd));
+    for (const s of stocks) {
+      const row = el('button', 'vault-row');
+      const bar = el('span', 'vault-bar');
+      bar.style.width = `${Math.max(2, Math.round((s.valueUsd / most) * 100))}%`;
+      row.append(
+        el('span', 'vault-sym', s.symbol),
+        el('span', 'vault-barbox', ''),
+        el('span', 'vault-val', usd(s.valueUsd)),
+        el('span', `vault-chg ${signClass(s.pnlPct)}`, pct(s.pnlPct)),
+        el('span', 'vault-n', `${s.ratCount} rats`),
+      );
+      row.children[1]!.append(bar);
+      row.onclick = () => {
+        this.vaultOpen = this.vaultOpen === s.symbol ? null : s.symbol;
+        this.renderVault();
+      };
+      list.append(row);
+      if (this.vaultOpen === s.symbol) list.append(this.walletList(s.symbol));
+    }
+    const note = el('div', 'card-note', 'Every fee hires rats. Tap a stock to see the rat wallets that hold it.');
+    this.vaultCard.replaceChildren(head, total, line, stage, list, note);
+  }
+
+  private walletList(symbol: string): HTMLElement {
+    const box = el('div', 'vault-wallets');
+    const holders = [...this.d.store.rats.values()].filter((r) => r.view.stock === symbol).sort((a, b) => b.view.valueUsd - a.view.valueUsd);
+    for (const r of holders.slice(0, 25)) {
+      const row = el('div', 'vault-wallet');
+      const name = el('button', 'vault-rat', r.view.name);
+      name.onclick = () => {
+        this.closeVault();
+        this.open(r.facts.id, true);
+      };
+      const w = r.facts.wallet;
+      const short = `${w.slice(0, 4)}...${w.slice(-4)}`;
+      row.append(name, el('span', 'vault-v', usd(r.view.valueUsd)));
+      if (this.d.simulated) row.append(el('span', 'vault-addr', short));
+      else row.append(link(r.view.solscanUrl, short));
+      box.append(row);
+    }
+    if (holders.length > 25) box.append(el('div', 'card-note', `and ${(holders.length - 25).toLocaleString('en-US')} more (find any rat by wallet in the search box)`));
+    if (this.d.simulated) box.append(el('div', 'card-note', 'simulated rats: made-up wallets, nothing on chain'));
+    return box;
   }
 
   // ------------------------------------------------------------------ rat card

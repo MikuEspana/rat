@@ -14,8 +14,8 @@ function stageOf(rats: number): string {
 }
 
 /** Runs a scenario to its end, checking the contract shapes along the way. */
-function run(id: ScenarioId, hireSplitBps?: number): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
-  const sim = new LaunchSim(SCENARIOS[id], EPOCH, { hireSplitBps });
+function run(id: ScenarioId): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
+  const sim = new LaunchSim(SCENARIOS[id], EPOCH);
   const pre = sim.stateResponse();
   expect(StateResponseSchema.parse(pre).coin.marketCapUsd).toBeNull();
   sim.launch();
@@ -41,39 +41,33 @@ function run(id: ScenarioId, hireSplitBps?: number): { sim: LaunchSim; events: R
 }
 
 const results = new Map<string, ReturnType<typeof run>>();
-const get = (id: ScenarioId, hireSplitBps?: number): ReturnType<typeof run> => {
-  const key = `${id}:${hireSplitBps ?? 'default'}`;
-  if (!results.has(key)) results.set(key, run(id, hireSplitBps));
-  return results.get(key)!;
+const get = (id: ScenarioId): ReturnType<typeof run> => {
+  if (!results.has(id)) results.set(id, run(id));
+  return results.get(id)!;
 };
 
 describe('launch simulator', () => {
-  // the default (every fee to hires, nothing burned) for every scenario, and the burn path with a 50/50 split
-  const runs: Array<[ScenarioId, number | undefined]> = [['normal', undefined], ['mega', undefined], ['rug', undefined], ['normal', 5000]];
-  for (const [id, split] of runs) {
-    it(`${id}${split ? ` with a ${split / 100}% hire split` : ''}: runs the backend rules (split, per-loop limit, hourly caps, burn chunks and rounds)`, () => {
-      const { sim, events } = get(id, split);
-      const hireSplitBps = split ?? RULES.hireSplitBps;
+  for (const id of ['normal', 'mega', 'rug'] as const) {
+    it(`${id}: runs the backend rules (every fee hires, per-loop limit, hourly cap), and never burns`, () => {
+      const { sim, events } = get(id);
       const st = sim.stateResponse();
       const hires = events.filter((e) => e.type === 'hire');
-      const burns = events.filter((e) => e.type === 'burn');
       const claims = events.filter((e) => e.type === 'claim');
       const t = (e: RatEvent): number => Date.parse(e.at) - EPOCH;
 
-      // the split of every claim
+      // every claim goes to hires, nothing to a fund, nothing is burned
       for (const c of claims) {
         if (c.type !== 'claim') continue;
-        expect(Math.abs(c.data.toHiresSol - (c.data.amountSol * hireSplitBps) / 10_000)).toBeLessThanOrEqual(2e-6);
-        expect(Math.abs(c.data.toHiresSol + c.data.toFundSol - c.data.amountSol)).toBeLessThanOrEqual(2e-6);
+        expect(c.data.toHiresSol).toBe(c.data.amountSol);
+        expect(c.data.toFundSol).toBe(0);
       }
-      // all to hires: nothing goes to the fund, nothing is burned
-      if (hireSplitBps === 10_000) {
-        expect(burns).toHaveLength(0);
-        expect(st.treasury.totalToFundSol).toBe(0);
-      } else expect(burns.length).toBeGreaterThan(0);
-      // never spends more than was claimed into each bucket
+      expect(events.filter((e) => e.type === 'burn')).toHaveLength(0);
+      expect(st.treasury.totalToFundSol).toBe(0);
+      expect(st.treasury.burnCount).toBe(0);
+      expect(st.coin.burnedTokens).toBe('0.00');
+      expect(st.bot.nextBurnAt).toBeNull();
+      // never spends more than was claimed
       expect(hires.length * RULES.salarySol).toBeLessThanOrEqual(st.treasury.totalToHiresSol + 1e-6);
-      expect(st.treasury.totalBurnSpentSol).toBeLessThanOrEqual(st.treasury.totalToFundSol + 1e-6);
       // at most 10 hires per 35 s loop
       const perLoop = new Map<number, number>();
       for (const h of hires) perLoop.set(Math.floor(t(h) / 35_000), (perLoop.get(Math.floor(t(h) / 35_000)) ?? 0) + 1);
@@ -84,23 +78,10 @@ describe('launch simulator', () => {
         while (loops[a]! <= loops[b]! - 3_600_000) a++;
         expect((b - a + 1) * RULES.salarySol).toBeLessThanOrEqual(RULES.capHireSolPerHour + 1e-6);
       }
-      // burns: chunks of at most 1 SOL; rounds of at most 5 SOL, 8 to 12 minutes apart
-      const rounds: Array<{ at: number; sol: number }> = [];
-      for (const b of burns) {
-        if (b.type !== 'burn') continue;
-        expect(b.data.solSpent).toBeLessThanOrEqual(RULES.burnChunkMaxSol + 1e-9);
-        const last = rounds[rounds.length - 1];
-        if (last && t(b) - last.at < 120_000) last.sol += b.data.solSpent;
-        else rounds.push({ at: t(b), sol: b.data.solSpent });
-      }
-      for (const r of rounds) expect(r.sol).toBeLessThanOrEqual(RULES.burnRoundMaxSol + 1e-6);
-      for (let k = 1; k < rounds.length; k++) expect(rounds[k]!.at - rounds[k - 1]!.at).toBeGreaterThanOrEqual(RULES.burnMinSec * 1000 - 1);
       // events carry no transaction: nothing was sent
       for (const e of events) expect(e.txSig).toBeNull();
       const s = sim.stats();
-      console.log(
-        `${id}${split ? ` (split ${split})` : ''}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, fund $${Math.round(s.fundValueUsd)}, claimed ${s.claimedSol.toFixed(1)}, burned ${s.burnSpentSol.toFixed(1)} SOL in ${s.burnCount} chunks, waiting hire ${s.hireWaitingSol.toFixed(1)} burn ${s.burnWaitingSol.toFixed(1)}`,
-      );
+      console.log(`${id}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, portfolio $${Math.round(s.fundValueUsd)}, claimed ${s.claimedSol.toFixed(1)}, waiting ${s.hireWaitingSol.toFixed(1)}`);
     });
   }
 
@@ -130,9 +111,8 @@ describe('launch simulator', () => {
     expect(sim.stats().rats).toBeLessThan(1500);
   });
 
-  it('with the default split every fee hires rats: the fund is worth about what they paid for their stocks', () => {
+  it('every fee hires rats: the portfolio is worth about what they paid for their stocks', () => {
     const s = get('normal').sim.stats();
-    expect(s.burnCount).toBe(0);
     expect(s.fundValueUsd).toBeGreaterThan(s.rats * 4);
   });
 

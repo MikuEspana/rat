@@ -64,13 +64,13 @@ export const TIER_LABEL: Record<Tier | 'frozen', string> = {
   frozen: 'Frozen',
 };
 
-/** One feed line: a tag and a sentence. */
-export function describe(e: RatEvent): { tag: string; text: string } {
+/** One feed line: a tag and a sentence. Burn events are not shown (every fee hires rats; nothing is burned). */
+export function describe(e: RatEvent): { tag: string; text: string } | null {
   switch (e.type) {
     case 'hire':
       return { tag: 'HIRE', text: `${e.data.ratName} hired for ${e.data.stock} (${usd(e.data.costUsd)})` };
     case 'burn':
-      return { tag: 'BURN', text: `${sol(e.data.solSpent)} bought ${tokens(e.data.tokensBurned)} RAT and burned it` };
+      return null;
     case 'claim':
       if (e.data.toFundSol === 0) return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees, all of it hires rats` };
       return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees: ${sol(e.data.toHiresSol)} to hires, ${sol(e.data.toFundSol)} to the fund` };
