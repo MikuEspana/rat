@@ -1,13 +1,12 @@
-// Claim (every ~35s). One tx signed by the creator: pump.fun claim(s) + WSOL unwrap + transfer of the fund's
-// share to the fund wallet (the part HIRE_SPLIT_BPS does not send to hires; none by default, so no transfer). The amount claimed is measured from what left OUR vaults in that tx, so the
-// math only uses what was actually claimed (fee-agnostic).
+// Claim (every ~35s). One tx signed by the creator: pump.fun claim(s) + WSOL unwrap. Every claimed lamport is
+// credited to the hire bucket (there is no other spending). The amount claimed is measured from what left OUR
+// vaults in that tx, so the math only uses what was actually claimed (fee-agnostic).
 //
 // DRY RUN: claims are paper. The paper amount is the growth of the real claimable since the last paper claim
 // (so nothing is counted twice) plus DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR for rehearsals.
-import { SETTINGS, formatSol, fundShareOf, lamportsToSol, solDelta } from '@rat/core';
+import { SETTINGS, formatSol, lamportsToSol, solDelta } from '@rat/core';
 import type { ClaimRow } from '@rat/db';
 import type { PumpClaimable } from '@rat/pump';
-import { SystemProgram, PublicKey } from '@solana/web3.js';
 import type { WorkerDeps, WorkerState } from '../deps';
 
 export interface ClaimResult {
@@ -19,25 +18,20 @@ export interface ClaimResult {
 /** Books a confirmed claim (ours or external) into the ledger, the claims table and the event feed. */
 export async function creditClaim(
   d: WorkerDeps,
-  args: { claimed: bigint; fee: bigint; toFund: bigint; source: 'bot' | 'external'; sig: string | null; claimable?: bigint; claimId?: number },
+  args: { claimed: bigint; fee: bigint; source: 'bot' | 'external'; sig: string | null; claimable?: bigint; claimId?: number },
 ): Promise<void> {
-  const fundShare = fundShareOf(args.claimed, d.config.hireSplitBps);
-  const hireShare = args.claimed - fundShare;
   const row = {
     status: d.store.mode === 'paper' ? 'simulated' : 'confirmed',
     sig: args.sig,
     claimedLamports: args.claimed,
-    toFundLamports: args.toFund,
-    fundShareLamports: fundShare,
-    hireShareLamports: hireShare,
+    hireShareLamports: args.claimed,
     feeLamports: args.fee,
   };
   let claimId = args.claimId;
   if (claimId) await d.store.claims.update(claimId, row);
   else claimId = await d.store.claims.insert({ source: args.source, claimableLamports: args.claimable ?? args.claimed, ...row });
   const ref = { refType: 'claim', refId: String(claimId) };
-  if (hireShare > 0n) await d.store.ledger.append({ bucket: 'hire', deltaLamports: hireShare, reason: 'claim_credit', ...ref });
-  if (fundShare > 0n) await d.store.ledger.append({ bucket: 'burn', deltaLamports: fundShare, reason: 'claim_credit', ...ref });
+  if (args.claimed > 0n) await d.store.ledger.append({ bucket: 'hire', deltaLamports: args.claimed, reason: 'claim_credit', ...ref });
   if (args.fee > 0n) await d.store.ledger.append({ bucket: 'hire', deltaLamports: -args.fee, reason: 'claim_fee', ...ref });
   if (args.claimed > 0n) {
     await d.store.events.append({
@@ -45,8 +39,6 @@ export async function creditClaim(
       txSig: args.sig,
       data: {
         amountSol: lamportsToSol(args.claimed),
-        toHiresSol: lamportsToSol(hireShare),
-        toFundSol: lamportsToSol(fundShare),
         source: args.source,
       },
     });
@@ -65,7 +57,7 @@ async function reconcileOpenClaims(d: WorkerDeps): Promise<void> {
       // Crash between "attempt written" and "claim row updated": the attempt log knows the signature.
       const sent = await d.store.attempts.latestForRef('claim', String(c.id));
       if (!sent) {
-        await d.store.claims.update(c.id, { status: 'failed', toFundLamports: 0n });
+        await d.store.claims.update(c.id, { status: 'failed' });
         continue;
       }
       await d.store.claims.update(c.id, { sig: sent.signature });
@@ -75,7 +67,7 @@ async function reconcileOpenClaims(d: WorkerDeps): Promise<void> {
     const attempt = await d.store.attempts.bySignature(sig);
     if (!attempt) {
       // cannot be checked, and an open claim blocks new ones: close it (unbooked income is the safe direction)
-      await d.store.claims.update(c.id, { status: 'failed', toFundLamports: 0n });
+      await d.store.claims.update(c.id, { status: 'failed' });
       await d.alerts.send('warn', `claim_unverifiable_${c.id}`, `Claim #${c.id} (${sig}) has no attempt record; marked failed. Check it on Solscan.`);
       continue;
     }
@@ -86,13 +78,12 @@ async function reconcileOpenClaims(d: WorkerDeps): Promise<void> {
       await creditClaim(d, {
         claimed: m?.totalLamports ?? 0n,
         fee: st.record.feeLamports,
-        toFund: c.toFundLamports,
         source: 'bot',
         sig: c.sig,
         claimId: c.id,
       });
     } else if (st.status === 'failed' || st.status === 'expired') {
-      await d.store.claims.update(c.id, { status: st.status, toFundLamports: 0n });
+      await d.store.claims.update(c.id, { status: st.status });
       if (st.record) await d.store.ledger.append({ bucket: 'hire', deltaLamports: -st.record.feeLamports, reason: 'claim_fee', refType: 'claim', refId: String(c.id) });
     }
   }
@@ -104,29 +95,22 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
   if (d.store.mode === 'paper') return runPaperClaim(d, s);
 
   await reconcileOpenClaims(d);
-  // A claim that may still land would forward the same fund share twice: wait until it lands or expires.
+  // One claim at a time: a claim that may still land is resolved before the next one is sent.
   if ((await openBotClaims(d)).length > 0) return { status: 'skipped', claimedLamports: 0n, reason: 'previous claim unresolved' };
   const claimable = (await d.pump.getClaimable(d.creator)) as PumpClaimable;
-  const owed = await d.store.claims.pendingFundTransfer();
   const worthClaiming = claimable.totalLamports >= d.config.minClaimLamports;
-  const worthForwarding = owed >= d.config.minBurnLamports;
-  if (!worthClaiming && !worthForwarding && claimable.creatorWsolLamports === 0n) {
+  if (!worthClaiming && claimable.creatorWsolLamports === 0n) {
     return { status: 'skipped', claimedLamports: 0n, reason: 'nothing to claim' };
   }
   const readable = worthClaiming ? claimable : { ...claimable, bondingLamports: 0n, ammLamports: 0n, totalLamports: 0n };
-  const toFund = fundShareOf(readable.totalLamports, d.config.hireSplitBps) + owed;
   const creatorKp = await d.keys.creator();
   const ixs = d.pump.buildClaimInstructions({ creator: d.creator, claimable: readable });
-  if (toFund > 0n) {
-    ixs.push(SystemProgram.transfer({ fromPubkey: creatorKp.publicKey, toPubkey: new PublicKey(d.fund), lamports: toFund }));
-  }
   if (ixs.length === 0) return { status: 'skipped', claimedLamports: 0n, reason: 'nothing to do' };
 
   const claimId = await d.store.claims.insert({
     source: 'bot',
     status: 'pending',
     claimableLamports: readable.totalLamports,
-    toFundLamports: toFund,
   });
   const r = await d.sender.execute({
     request: {
@@ -136,13 +120,13 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
       signers: [],
       instructions: ixs,
       computeUnitLimit: d.config.computeUnitLimitClaim,
-      // the claim pays in; the creator may only lose what it already owes the fund, plus fees
-      limits: { solOut: [{ account: d.creator, maxLamports: owed + d.config.hireOverheadEstLamports }] },
+      // the claim only pays in: the creator may lose no more than the fees
+      limits: { solOut: [{ account: d.creator, maxLamports: d.config.hireOverheadEstLamports }] },
     },
     ref: { type: 'claim', id: String(claimId) },
   });
   if (r.status !== 'done') {
-    await d.store.claims.update(claimId, { status: 'failed', toFundLamports: 0n });
+    await d.store.claims.update(claimId, { status: 'failed' });
     return { status: 'failed', claimedLamports: 0n, reason: r.reason };
   }
   const out = r.outcome;
@@ -150,15 +134,15 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
   if (out.status === 'confirmed' && out.record) {
     const m = d.pump.parseClaim(out.record, d.creator);
     const claimed = m?.totalLamports ?? 0n;
-    await creditClaim(d, { claimed, fee: out.record.feeLamports, toFund, source: 'bot', sig: out.signature, claimId });
-    d.log.info({ claimed: formatSol(claimed), toFund: formatSol(toFund), sig: out.signature }, 'claimed');
+    await creditClaim(d, { claimed, fee: out.record.feeLamports, source: 'bot', sig: out.signature, claimId });
+    d.log.info({ claimed: formatSol(claimed), sig: out.signature }, 'claimed');
     return { status: 'claimed', claimedLamports: claimed };
   }
   if (out.status === 'unknown') {
     await d.store.claims.update(claimId, { status: 'unknown' });
     return { status: 'pending', claimedLamports: 0n, reason: 'confirmation pending' };
   }
-  await d.store.claims.update(claimId, { status: out.status === 'expired' ? 'expired' : 'failed', toFundLamports: 0n });
+  await d.store.claims.update(claimId, { status: out.status === 'expired' ? 'expired' : 'failed' });
   if (out.record) {
     // landed with an error: only the fee was spent (paid from the hire bucket)
     const fee = -solDelta(out.record, d.creator) > 0n ? out.record.feeLamports : 0n;
@@ -191,8 +175,6 @@ async function runPaperClaim(d: WorkerDeps, s: WorkerState): Promise<ClaimResult
   if (real > 0n) {
     const creatorKp = await d.keys.creator();
     const ixs = d.pump.buildClaimInstructions({ creator: d.creator, claimable });
-    const toFund = fundShareOf(claimable.totalLamports, d.config.hireSplitBps);
-    if (toFund > 0n) ixs.push(SystemProgram.transfer({ fromPubkey: creatorKp.publicKey, toPubkey: new PublicKey(d.fund), lamports: toFund }));
     const r = await d.sender.execute({
       request: { kind: 'claim', label: 'paper claim', feePayer: creatorKp, signers: [], instructions: ixs, computeUnitLimit: d.config.computeUnitLimitClaim },
       ref: { type: 'claim', id: 'paper' },
@@ -204,7 +186,6 @@ async function runPaperClaim(d: WorkerDeps, s: WorkerState): Promise<ClaimResult
   }
   await d.store.settings.set(SETTINGS.paperClaimWatermark, claimable.totalLamports.toString());
   s.paperFakeAccrued = 0n;
-  const fundShare = fundShareOf(claimed, d.config.hireSplitBps);
-  await creditClaim(d, { claimed, fee: 0n, toFund: fundShare, source: 'bot', sig, claimable: claimed });
+  await creditClaim(d, { claimed, fee: 0n, source: 'bot', sig, claimable: claimed });
   return { status: 'paper', claimedLamports: claimed };
 }

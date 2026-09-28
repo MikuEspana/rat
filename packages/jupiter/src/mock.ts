@@ -67,7 +67,7 @@ export interface MockSwapOptions {
   noRoute?: Set<Pubkey>;
 }
 
-/** Quotes from MockPriceSource prices. SOL -> token only (what hires and burns need). */
+/** Quotes from MockPriceSource prices. SOL -> token only (what hires need). */
 export class MockSwapBuilder implements SwapBuilder {
   calls = 0;
   /** the last requests (kept short for long simulations) */

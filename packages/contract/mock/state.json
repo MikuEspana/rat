@@ -1,37 +1,31 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-10-01T18:00:05Z",
   "bot": {
     "mode": "live",
     "lastClaimAt": "2026-10-01T17:59:50Z",
-    "nextClaimAt": "2026-10-01T18:00:25Z",
-    "nextBurnAt": "2026-10-01T18:08:05Z"
+    "nextClaimAt": "2026-10-01T18:00:25Z"
   },
   "coin": {
     "mint": "RaTRaceMockMint1111111111111111111111111pump",
     "symbol": "RAT",
     "priceUsd": 0.00182,
     "supply": "987654321.12",
-    "marketCapUsd": 1797531,
-    "burnedTokens": "12345678.90"
+    "marketCapUsd": 1797531
   },
   "wallets": {
-    "creator": "CreatorMockWa11et1111111111111111111111111",
-    "fund": "FundMockWa11et11111111111111111111111111111"
+    "creator": "CreatorMockWa11et1111111111111111111111111"
   },
   "treasury": {
-    "totalClaimedSol": 15.0,
-    "totalToHiresSol": 15.0,
-    "totalToFundSol": 0,
-    "fundWalletSol": 0.62,
-    "totalBurnSpentSol": 6.88,
-    "burnCount": 36,
-    "lastBurnAt": "2026-10-01T17:58:05Z"
+    "totalClaimedSol": 7.8,
+    "totalHiredSol": 7.5,
+    "waitingSol": 0.3
   },
   "portfolio": {
     "ratCount": 250,
     "activeCount": 227,
     "frozenCount": 23,
+    "positionCount": 10,
     "costUsd": 1125.6,
     "valueUsd": 1134.71,
     "pnlUsd": 9.11,
@@ -668,8 +662,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.5216,
-        "toHiresSol": 0.2608,
-        "toFundSol": 0.2608,
         "source": "bot"
       }
     },
@@ -682,8 +674,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.966,
-        "toHiresSol": 0.483,
-        "toFundSol": 0.483,
         "source": "bot"
       }
     },
@@ -736,18 +726,6 @@
       }
     },
     {
-      "id": 5052,
-      "type": "burn",
-      "at": "2026-10-01T17:57:25Z",
-      "txSig": "zD6Vq5KRp5ugdNoGdJTysYtRT9xTCGMmqdR1QF19pR5pbL29QYucV1ERaS4Nu4SG3SSGUv1Q39oayi6ihUJv1gbe",
-      "txUrl": "https://solscan.io/tx/zD6Vq5KRp5ugdNoGdJTysYtRT9xTCGMmqdR1QF19pR5pbL29QYucV1ERaS4Nu4SG3SSGUv1Q39oayi6ihUJv1gbe",
-      "dryRun": false,
-      "data": {
-        "solSpent": 0.9827,
-        "tokensBurned": "99483.14"
-      }
-    },
-    {
       "id": 5051,
       "type": "hire",
       "at": "2026-10-01T17:57:05Z",
@@ -777,18 +755,6 @@
         "stock": "SPYx",
         "salarySol": 0.03,
         "costUsd": 4.51
-      }
-    },
-    {
-      "id": 5049,
-      "type": "burn",
-      "at": "2026-10-01T17:56:25Z",
-      "txSig": "y1mvXTM5rqf5sXh3mcwrP6XmGjBxbeP6JPRDH3fu5csPZ1PPbp6opt7MzvVHJntgSjQGfj8S4iYuX14K1eGzvt1n",
-      "txUrl": "https://solscan.io/tx/y1mvXTM5rqf5sXh3mcwrP6XmGjBxbeP6JPRDH3fu5csPZ1PPbp6opt7MzvVHJntgSjQGfj8S4iYuX14K1eGzvt1n",
-      "dryRun": false,
-      "data": {
-        "solSpent": 1.7459,
-        "tokensBurned": "176745.31"
       }
     },
     {
@@ -936,18 +902,6 @@
       }
     },
     {
-      "id": 5039,
-      "type": "burn",
-      "at": "2026-10-01T17:53:05Z",
-      "txSig": "AVXmBdv81raLN3mWivvcR2KGQTqyU3Nz3FnGVJUeZGE2SXiVjE2uSXmsyz8c9CpCTTywXdiJr6g2rZVZiZUNEZqN",
-      "txUrl": "https://solscan.io/tx/AVXmBdv81raLN3mWivvcR2KGQTqyU3Nz3FnGVJUeZGE2SXiVjE2uSXmsyz8c9CpCTTywXdiJr6g2rZVZiZUNEZqN",
-      "dryRun": false,
-      "data": {
-        "solSpent": 3.205,
-        "tokensBurned": "324456.57"
-      }
-    },
-    {
       "id": 5038,
       "type": "hire",
       "at": "2026-10-01T17:52:45Z",
@@ -980,18 +934,6 @@
       }
     },
     {
-      "id": 5036,
-      "type": "burn",
-      "at": "2026-10-01T17:52:05Z",
-      "txSig": "x9SKEnanP11dMFWCDJU6VuUjAwFk8ExyDsT81isgHKn6UL9Dn7RPJzuK8pDWCWXjzRaQXTzq3UwmEsHfKCg3uJyU",
-      "txUrl": "https://solscan.io/tx/x9SKEnanP11dMFWCDJU6VuUjAwFk8ExyDsT81isgHKn6UL9Dn7RPJzuK8pDWCWXjzRaQXTzq3UwmEsHfKCg3uJyU",
-      "dryRun": false,
-      "data": {
-        "solSpent": 3.7354,
-        "tokensBurned": "378151.35"
-      }
-    },
-    {
       "id": 5035,
       "type": "claim",
       "at": "2026-10-01T17:51:45Z",
@@ -1000,8 +942,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.1351,
-        "toHiresSol": 0.0675,
-        "toFundSol": 0.0675,
         "source": "bot"
       }
     },
@@ -1030,8 +970,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.8556,
-        "toHiresSol": 0.4278,
-        "toFundSol": 0.4278,
         "source": "bot"
       }
     },
@@ -1044,8 +982,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.1958,
-        "toHiresSol": 0.0979,
-        "toFundSol": 0.0979,
         "source": "bot"
       }
     },
@@ -1058,8 +994,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.6261,
-        "toHiresSol": 0.313,
-        "toFundSol": 0.313,
         "source": "bot"
       }
     },
@@ -1088,8 +1022,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.3877,
-        "toHiresSol": 0.6938,
-        "toFundSol": 0.6938,
         "source": "bot"
       }
     },
@@ -1118,8 +1050,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.1663,
-        "toHiresSol": 0.0832,
-        "toFundSol": 0.0832,
         "source": "bot"
       }
     },
@@ -1148,8 +1078,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.2533,
-        "toHiresSol": 0.6267,
-        "toFundSol": 0.6267,
         "source": "bot"
       }
     },
@@ -1162,8 +1090,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.4673,
-        "toHiresSol": 0.7337,
-        "toFundSol": 0.7337,
         "source": "bot"
       }
     },
@@ -1192,21 +1118,7 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.3941,
-        "toHiresSol": 0.697,
-        "toFundSol": 0.697,
         "source": "bot"
-      }
-    },
-    {
-      "id": 5021,
-      "type": "burn",
-      "at": "2026-10-01T17:47:05Z",
-      "txSig": "U1uGYA7noixZR44DB4mD7fVcuegf466tJ31ELXu8G7qmYp7euWqicT3rp7yhqRyAqPkngq4oZH7eiKwhWuaNxQ1h",
-      "txUrl": "https://solscan.io/tx/U1uGYA7noixZR44DB4mD7fVcuegf466tJ31ELXu8G7qmYp7euWqicT3rp7yhqRyAqPkngq4oZH7eiKwhWuaNxQ1h",
-      "dryRun": false,
-      "data": {
-        "solSpent": 0.9819,
-        "tokensBurned": "99402.16"
       }
     },
     {
@@ -1218,8 +1130,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 0.9975,
-        "toHiresSol": 0.4988,
-        "toFundSol": 0.4988,
         "source": "bot"
       }
     },
@@ -1232,33 +1142,7 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.2678,
-        "toHiresSol": 0.6339,
-        "toFundSol": 0.6339,
         "source": "bot"
-      }
-    },
-    {
-      "id": 5018,
-      "type": "burn",
-      "at": "2026-10-01T17:46:05Z",
-      "txSig": "dphU5P692izHbnQ1YpUUqMFurzoqHLRo3yLiCzAVTFwhLRu27g6NG1QYopthEoLYwAHGPcT6YTbBBMq7pk9uWjCS",
-      "txUrl": "https://solscan.io/tx/dphU5P692izHbnQ1YpUUqMFurzoqHLRo3yLiCzAVTFwhLRu27g6NG1QYopthEoLYwAHGPcT6YTbBBMq7pk9uWjCS",
-      "dryRun": false,
-      "data": {
-        "solSpent": 2.3123,
-        "tokensBurned": "234084.53"
-      }
-    },
-    {
-      "id": 5017,
-      "type": "burn",
-      "at": "2026-10-01T17:45:45Z",
-      "txSig": "AzSA3aPZy5YHmMz9WFsPhDTLBFPW21K6Bg7rc9cmN7c8kT5hCshMPd2KjxzS8y34WfCF4HUT2469cGaAW626oypC",
-      "txUrl": "https://solscan.io/tx/AzSA3aPZy5YHmMz9WFsPhDTLBFPW21K6Bg7rc9cmN7c8kT5hCshMPd2KjxzS8y34WfCF4HUT2469cGaAW626oypC",
-      "dryRun": false,
-      "data": {
-        "solSpent": 1.302,
-        "tokensBurned": "131807.32"
       }
     },
     {
@@ -1334,8 +1218,6 @@
       "dryRun": false,
       "data": {
         "amountSol": 1.3261,
-        "toHiresSol": 0.6631,
-        "toFundSol": 0.6631,
         "source": "bot"
       }
     }

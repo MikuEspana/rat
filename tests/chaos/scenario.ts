@@ -1,19 +1,20 @@
 // Chaos scenarios (in-memory only, SimChain in live mode), shared by the chaos test files:
 //   A. the worker is killed right before EVERY single operation (database write/read, RPC call, Jupiter call) of a
-//      hire and of a burn; a restarted worker (fresh process state, same database and chain) must finish the job
-//      with every lamport accounted for
-//   B. the RPC goes down from every RPC call of a hire / burn on, then comes back
-//   C. the database drops from every database call of a hire / burn on (mid-transaction), then comes back
+//      hire; a restarted worker (fresh process state, same database and chain) must finish the job with every
+//      lamport accounted for
+//   B. the RPC goes down from every RPC call of a hire on, then comes back
+//   C. the database drops from every database call of a hire on (mid-transaction), then comes back
 //   D. Jupiter 429 storm in the middle of a launch
-import { SOL, type SimWorld, WorkerState, createSimWorld, createWorker, runBurnStep, runClaimStep, runHireStep, runMintStep, runPriceStep, runWatchStep } from '@rat/worker';
+// Hires are the only spending (every claimed lamport hires rats), so they are the step these scenarios break.
+import { SOL, type SimWorld, createSimWorld, createWorker, runClaimStep, runHireStep, runMintStep, runPriceStep, runWatchStep } from '@rat/worker';
 import { expect } from 'vitest';
 import { Chaos, type OpKind } from './chaos';
 import { type MoneyStart, checkMoney, moneyStart } from '../e2e/money-check';
 
 export type HireMode = 'single' | 'two_step';
-export type StepName = 'hire' | 'burn';
-/** Loops (35 s) after the chaos: a burn needs long enough for a new round (8 to 12 minutes). */
-const loopsAfter = (step: StepName) => (step === 'burn' ? 26 : 8);
+export type StepName = 'hire';
+/** Loops (35 s) after the chaos. */
+const LOOPS_AFTER = 8;
 /** `drop`: the step's first transaction never lands (its blockhash expires), so the release path runs too. */
 export type Variant = 'clean' | 'drop';
 
@@ -40,15 +41,13 @@ async function restartAndRun(w: SimWorld, loops: number): Promise<void> {
   }
 }
 
-function runStep(step: StepName, w: SimWorld, chaos: Chaos): Promise<unknown> {
-  const d = w.rebuildDeps(chaos.parts(w));
-  return step === 'hire' ? runHireStep(d, w.worker.state) : runBurnStep(d, new WorkerState());
+function runStep(_step: StepName, w: SimWorld, chaos: Chaos): Promise<unknown> {
+  return runHireStep(w.rebuildDeps(chaos.parts(w)), w.worker.state);
 }
 
-async function expectFinished(w: SimWorld, step: StepName): Promise<void> {
+async function expectFinished(w: SimWorld): Promise<void> {
   expect(await w.store.rats.listByStatus(['hiring']), 'no rat left half hired').toEqual([]);
-  if (step === 'hire') expect((await w.store.rats.listByStatus(['active'])).length).toBeGreaterThan(0);
-  else expect((await w.store.burns.listByStatus(['confirmed'])).length).toBeGreaterThan(0);
+  expect((await w.store.rats.listByStatus(['active'])).length).toBeGreaterThan(0);
 }
 
 /** Runs the step with chaos, then a restarted worker; returns the operations the step made (or reached). */
@@ -72,17 +71,17 @@ export async function scenario(
       chaos.failing = null;
       chaos.down.clear();
       const worker = createWorker(w.rebuildDeps(chaos.parts(w)));
-      for (let i = 0; i < loopsAfter(step); i++) {
+      for (let i = 0; i < LOOPS_AFTER; i++) {
         await worker.tick();
         w.clock.advanceSeconds(35);
         w.chain.advanceBlocks(90);
         w.prices.step(w.rng);
       }
     } else {
-      await restartAndRun(w, loopsAfter(step));
+      await restartAndRun(w, LOOPS_AFTER);
     }
     await checkMoney(w, start);
-    await expectFinished(w, step);
+    await expectFinished(w);
     return { ops: chaos.ops };
   } finally {
     await w.close();
@@ -110,7 +109,5 @@ export const MATRIX = [
   ['single', 'hire', 'clean'],
   ['single', 'hire', 'drop'],
   ['two_step', 'hire', 'clean'],
-  ['single', 'burn', 'clean'],
-  ['single', 'burn', 'drop'],
 ] as const;
 

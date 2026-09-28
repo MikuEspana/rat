@@ -1,10 +1,10 @@
 # RAT RACE: Status
 
-Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://wallstreetrats.world). **Economics (owner decision after legal advice): every fee hires rats and the fund holds their stocks. No burns (the code stays, off by default: `HIRE_SPLIT_BPS=10000`), no dividends.**
+Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://wallstreetrats.world). **Economics (owner decisions after legal advice): every claimed fee hires rats, and the rats hold their stocks forever. Buy and burn was removed completely on 2026-09-28 (no fund wallet, no coin buys, no burns). No dividends, no holder payouts. Hiring: at most 20 rats per 35 s loop and 60 SOL per hour.**
 
 **Hard limits kept:**
 - DRY RUN is on by default everywhere.
-- No mainnet transaction was ever sent, Jito was never called, no smoke test was run.
+- No mainnet transaction was ever sent, Jito was never called (the Jito route is now removed), no smoke test was run.
 - Test keypairs only, no secrets in the repo.
 - Nothing was created on Supabase, Railway or Vercel.
 - No holder payout code (a CI guard forbids it).
@@ -33,10 +33,10 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | # | Risk | Why it is still there | What limits it / what to do |
 |---|---|---|---|
 | 1 | **Nothing has run on mainnet yet.** Jupiter routes into xStocks, the 1-tx hire with a `payer`, pump.fun claims after graduation, real fees and rent. | By rule, no mainnet transaction was sent. Everything is proven on SimChain and against official docs only. | Run the smoke test (`tests/smoke`, 0.1 SOL cap) before launch. If the 1-tx hire fails there: `HIRE_MODE=two_step`. The effects check refuses any tx that would cost more than reserved. |
-| 2 | **Outside parties can cost value inside our limits.** A wrong Jupiter quote or price; the xStocks issuer can pause, freeze or take back tokens (permanent delegate). | We cannot control them. | Worst case per tx: one salary (0.03 SOL) or one burn chunk. Hourly caps stop a long bleed. Reconcile freezes and alerts on issuer actions. |
+| 2 | **Outside parties can cost value inside our limits.** A wrong Jupiter quote or price; the xStocks issuer can pause, freeze or take back tokens (permanent delegate). | We cannot control them. | Worst case per tx: one salary (0.03 SOL). The 60 SOL/h hire cap stops a long bleed. Reconcile freezes and alerts on issuer actions. |
 | 3 | **One worker, one database, one RPC.** | A small project on one host. | Restarts are safe at every step (chaos tests), the watchdog alerts if the worker dies, a backup RPC is supported. Losing the database without a key backup loses every rat wallet: turn on Supabase backups and run `rat keys backup`. |
 | 4 | **Launch-day operator mistakes.** A tx from a bot wallet (trips the kill switch), a wrong `WATCH_FROM_SLOT`, DRY RUN flipped back and forth, the dev buy left in the creator wallet. | People get tired. | `rat preflight --live`, `LAUNCH-DAY.md`, the admin page. Every mistake above stops the bot instead of losing money. |
-| 5 | **A bigger or faster launch than planned.** | The 30 SOL/h caps make money wait (for hours at 2x the plan). The paced defaults use 29 of Jupiter's 55 calls a minute; raising `MAX_HIRES_PER_LOOP` to 20 brings that to 54. | Nothing is lost, only delayed. For faster spending: a paid Jupiter key, then higher caps. |
+| 5 | **A bigger or faster launch than planned.** | The 60 SOL/h hire cap makes money wait during a big rush (180 SOL of fees takes about 3 hours to spend). We stay on Jupiter's Free tier: a hard budget of 40 calls a minute (prices + builds + retries) caps hiring at about 38 rats a minute (about 57 SOL/h in a long rush, a little under the 60 SOL/h cap). In the 3-hour simulation every fee was still spent by minute 189. | Nothing is lost, only delayed: hires wait in line for the next loop. A 429 backs off and alerts. |
 
 ## 3. Now
 
@@ -50,17 +50,17 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 |---|---|---|
 | Foundation | `packages/core` | types, ports, config (DRY RUN default, live needs `LIVE_CONFIRM`), lamports math, redacting logger |
 | Frontend contract | `packages/contract`, `CONTRACT.md` | zod schemas + display math (PnL, tier, rank, size) + mock JSON for your animations |
-| Database | `packages/db` | 13 tables, migrations, ledger, paper vs live separation, lease lock |
-| Keys | `packages/keys` | AES-256-GCM vault; key store: every rat gets a fresh keypair at hire time, encrypted, stored and read back before any SOL is sent; creator/fund import |
+| Database | `packages/db` | 12 tables, migrations, ledger, paper vs live separation, lease lock |
+| Keys | `packages/keys` | AES-256-GCM vault; key store: every rat gets a fresh keypair at hire time, encrypted, stored and read back before any SOL is sent; creator key import |
 | Chain | `packages/chain` | RPC reader, the only transaction sender, SimChain (in-memory Solana for tests) |
-| pump.fun | `packages/pump` | claim instructions from the official IDL, external claim parser, burn, direct buy fallback |
+| pump.fun | `packages/pump` | claim instructions from the official IDL, external claim parser |
 | Jupiter | `packages/jupiter` | Price v3 (one batched call), Swap v2 `/build` (taker + payer), rate limiter, mocks |
-| Safety | `packages/safety` | spend guard (ledger only, 30 SOL/h per bucket, exactly-once settle), kill switch, guarded sender (effects check before every live send, lease fence), Telegram alerts (secrets redacted), xStocks mint verifier |
+| Safety | `packages/safety` | spend guard (ledger only, one hire bucket, 60 SOL/h, exactly-once settle), kill switch, guarded sender (effects check before every live send, lease fence), Telegram alerts (secrets redacted), xStocks mint verifier |
 | Operator CLI | `apps/cli` | status, **preflight** (PASS / WARN / FAIL launch checklist), kill/resume, key import/rotate/**backup/restore**, ledger, dry-run reset, stocks sync, alert test, emergency sweep |
 | Admin page | `apps/admin` | private page: money, caps used, last transactions, errors, worker loops, KILL / Resume; worker-down watchdog (Telegram) |
-| The bot | `apps/worker` | prices, mint checks, claim + wallet watch + hire (every fee hires rats by default), buy + burn (off by default; random 8 to 12 min rounds, chunks of at most 1 SOL, 1.5% slippage, optional Jito), reconcile; tick scheduler; single-worker lease |
+| The bot | `apps/worker` | prices, mint checks, claim + wallet watch + hire (every claimed lamport hires rats, at most 20 per loop and 60 SOL/h), reconcile; tick scheduler; single-worker lease. No buy and burn. |
 | State API | `apps/api` | `/api/state`, `/api/rats`, `/api/events`, `/health` exactly per `CONTRACT.md` |
-| Live mock API | `apps/api/src/mock`, `pnpm mock:api` | the same 4 endpoints with live-changing mock data (hires, price drift, tier changes, claims, burns every minute, a stock pausing and resuming) for building the site |
+| Live mock API | `apps/api/src/mock`, `pnpm mock:api` | the same 4 endpoints with live-changing mock data (hires, price drift, tier changes, claims, a stock pausing and resuming) for building the site |
 | Tests | `tests/` | e2e + property tests, chaos suite (`tests/chaos`), 3-hour launch simulation (`tests/sim`, `SIMULATION.md`), smoke script (not run), docs checks |
 | Deploy | `infra/`, `docs/runbooks/`, `LAUNCH-DAY.md` | Dockerfile, Railway config (worker, api, admin), read-only DB role, runbooks, launch-day checklist |
 
@@ -69,15 +69,15 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 
 | # | Decision | Built as |
 |---|---|---|
-| 1 | Cap 30 SOL/h per bucket, alert at 50% | `SPEND_CAP_SOL_PER_HOUR_HIRE` / `_BURN`. Burns use the room left under the cap instead of skipping. |
+| 1 | Cap 30 SOL/h per bucket, alert at 50%; raised to 60 SOL/h for hires on 2026-09-28 (every fee hires) | `SPEND_CAP_SOL_PER_HOUR_HIRE=60`, `MAX_HIRES_PER_LOOP=20`. The only bucket left is hires. |
 | 2 | Skip HOODx / CRCLx | Not in `config/stocks.json`. |
 | 3 | 1-tx hire, 2-tx fallback flag | `HIRE_MODE=single` (default) / `two_step`, both tested. |
-| 4 | Direct pump.fun buy fallback | `PumpDirectBuyBuilder` (official SDK), used when Jupiter has no route. |
+| 4 | Direct pump.fun buy fallback | Removed with buy and burn (2026-09-28). |
 | 5 | Coin token program at runtime | Read from the mint account owner. |
 | 6 | Scaled UI vs price | Script `check:scaled-ui` ready. Current valuation: scaled amount x price (display only). |
-| 7 | External claims | Our vault claimed by anyone: booked with the same split as our own claims (all to hires by default; any fund share rides in the next claim tx). Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
+| 7 | External claims | Our vault claimed by anyone: booked to hires like our own claims. Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
 | 8 | Tier names | intern, analyst, associate, vp, partner. |
-| 10 | Jupiter free tier, limit in config | `JUPITER_MAX_RPM=55`. |
+| 10 | Jupiter free tier, limit in config; stay on Free (2026-09-28) | `JUPITER_MAX_RPM=40`, a hard maximum: one shared budget for every worker call (prices every 45 s + one build per hire + retries). Hires wait when it is used up; a 429 backs off 5 s doubling to 5 min and alerts. |
 | 11 | Emergency sweep | `rat sweep`, CLI only, exact typed phrase, never called by the bot. |
 | 12 | Mint verification | Token-2022 + expected mint authority (config or majority of at least 3), else rejected. Runs at startup and every 35s. |
 | review | Live readiness | The worker refuses to start LIVE with 0 approved stocks or none passing the mint check (exact reasons in the logs + Telegram). `hire_idle` alert when no rat is hired for 30 min while more than 0.1 SOL waits. |
@@ -90,12 +90,10 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | Solana | SimChain (real System/ATA/Token semantics) | `RpcChainReader` + `RpcTxSender` | Sender/reader unit-tested with fake connections. Never sent a real tx (by rule). |
 | pump.fun claims | real instruction builders executed by SimChain handlers | same builders on mainnet | Builders match the official IDL. Not executed on mainnet. |
 | Jupiter prices / swaps | `MockPriceSource`, `MockSwapBuilder` | Price v3 + Swap v2 `/build` | Request/response shapes from Jupiter's docs repo. Not called (no network, no key). |
-| pump.fun direct buy | stubbed API | `@pump-fun/pump-sdk` | SDK loads; not executed. |
 | Database | PGlite (in-process Postgres) | Supabase Postgres | Same migrations; Postgres itself not run here. |
 | xStocks mints | synthetic mints | the 13 mints in `config/stocks.json` | Not checked on-chain (mainnet RPC blocked here). Run `check:stocks`. |
 | Telegram | recorded alerts | Telegram Bot API | Not called. |
 | Docker image | not built here (no daemon) | Railway | Built and started by the CI `docker` job. |
-| Jito block engine | fake HTTP endpoint | `BURN_SEND_VIA=jito` (off by default) | No: request format from Jito's official client; never called (no mainnet by rule). |
 | Live mock API | n/a | `pnpm mock:api` for the site | It is a mock: exaggerated prices, random wallets and signatures. |
 
 ## 7. PRs, in merge order
@@ -149,13 +147,13 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Supabase backups turned on, plus `rat keys backup` files kept apart from the master key | the rat wallets' keys exist only in the database |
 | Telegram bot token + chat id | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 | Master key (32 random bytes, base64), backed up | `KEY_ENCRYPTION_KEY` |
-| Fresh creator, fund and cold wallets | `CREATOR_PUBKEY`, `FUND_PUBKEY`; import keys with `rat keys import` |
+| Fresh creator and cold wallets | `CREATOR_PUBKEY`; import the creator key with `rat keys import --role creator` |
 | Stock approvals | verify mints on xstocks.fi, set `approved: true` in `config/stocks.json` |
 | Optional: confirmed xStocks mint authority | `XSTOCKS_MINT_AUTHORITY` |
-| Funding | creator: 0.05 SOL reserve + launch cost; fund: 0.01 SOL; smoke test: ~0.12 SOL on throwaway wallets |
+| Funding | creator: 0.05 SOL reserve + launch cost; smoke test: ~0.1 SOL on a throwaway wallet |
 | At launch: the launch transaction's signature and slot | `WATCH_FROM_SLOT` (slot + 1), `KNOWN_OWNER_TX_SIGS` |
-| Optional: Jito for burns | `BURN_SEND_VIA=jito` after a smoke test with it on (OPEN-QUESTIONS #12) |
-| Launch pacing | on by default: `MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5` (`SIMULATION.md`) |
+| Jupiter plan for launch day | **Free** is enough: the worker never makes more than 40 calls in any minute (hard budget), leaving 20 of the Free tier's 60 for your own checks (`SIMULATION.md`) |
+| Launch pacing | on by default: `MAX_HIRES_PER_LOOP=20`, `SPEND_CAP_SOL_PER_HOUR_HIRE=60` (`SIMULATION.md`) |
 | Decisions left | `OPEN-QUESTIONS.md` |
 
 ## 9. Sources for external behavior
@@ -166,22 +164,17 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Creator vault is per creator wallet, claims are permissionless, bonding claims pay native SOL, AMM claims pay WSOL | VERIFIED | same doc |
 | Fee sharing breaks direct claims | VERIFIED | [CREATOR_FEE_SHARING.md](https://github.com/pump-fun/pump-public-docs/blob/main/docs/instructions/CREATOR_FEE_SHARING.md) |
 | `create_v2` coins are Token-2022 with 6 decimals | VERIFIED | [COIN_CREATION.md](https://github.com/pump-fun/pump-public-docs/blob/main/docs/instructions/COIN_CREATION.md) |
-| Holder rewards mode exists; `sharing_config` mandatory for buys; `@pump-fun/pump-sdk` | VERIFIED | [pump-public-docs README](https://github.com/pump-fun/pump-public-docs) |
-| `@pump-fun/pump-sdk@2.0.0` ESM build does not import under Node (loaded via CommonJS) | VERIFIED | reproduced in this repo (`packages/pump`) |
+| Holder rewards mode exists | VERIFIED | [pump-public-docs README](https://github.com/pump-fun/pump-public-docs) |
 | Creator fee rates (0.05% to 0.95% by market cap) | UNCLEAR | [soltokencreator.io](https://www.soltokencreator.io/blog/pump-fun-fees-explained), [smithii.io](https://smithii.io/en/project-ascend-update/). Irrelevant to the code: all math uses what is actually claimed |
 | PumpSwap claim works for SOL-quoted pools with WSOL | VERIFIED (docs) / UNCLEAR (mainnet) | COLLECT_CREATOR_FEE.md; to be proven by the smoke test after graduation |
 | Price v3: `api.jup.ag/price/v3`, `x-api-key`, max 50 ids, `priceChange24h` in %, unreliable tokens omitted | VERIFIED | [jup-ag/docs price/index.mdx](https://github.com/jup-ag/docs/blob/main/price/index.mdx) |
 | Swap v2 `/build`: quote + instructions in one call, `taker`, `payer`, lookup tables, no price impact field | VERIFIED | [jup-ag/docs swap/build/index.mdx](https://github.com/jup-ag/docs/blob/main/swap/build/index.mdx) |
-| Free tier 60 req/min, 60s sliding window, per organisation, `x-ratelimit-reset` | VERIFIED | [jup-ag/docs portal/rate-limits.mdx](https://github.com/jup-ag/docs/blob/main/portal/rate-limits.mdx) |
+| Tiers: Keyless 0.5 RPS, Free 1 RPS (60/min), Developer 10 RPS ($25/month), Launch 50 RPS ($100), Pro 150 RPS ($500); 60s sliding window, per organisation; Swap, Price and Token requests share one bucket; `x-ratelimit-reset` | VERIFIED (2026-09-21 docs) | [jup-ag/docs portal/rate-limits.mdx](https://github.com/jup-ag/docs/blob/main/portal/rate-limits.mdx), [portal/plans.mdx](https://github.com/jup-ag/docs/blob/main/portal/plans.mdx) |
 | `/build` works with an unfunded taker + `payer` in one tx | UNCLEAR | smoke test decides (fallback: `HIRE_MODE=two_step`) |
-| Jupiter routes pump.fun bonding curve buys | UNCLEAR | direct pump.fun buy fallback built |
 | xStocks are Token-2022 with PermanentDelegate, Pausable, Scaled UI Amount, transfer hook disabled | REPORTED | [solana.com xStocks case study](https://solana.com/news/case-study-xstocks) |
 | Pausable blocks transfers, mints and burns | REPORTED | [solana.com Pausable docs](https://solana.com/docs/tokens/extensions/pausable); parsing VERIFIED against `@solana/spl-token` layouts |
 | xStocks mint addresses | REPORTED | [kdai03/xpaper js/tokens.js](https://github.com/kdai03/xpaper) (third party); verify on xstocks.fi |
 | Whether `usdPrice` is per scaled UI unit | UNCLEAR | `check:scaled-ui` script |
-| Jito: `sendTransaction` on `/api/v1/transactions?bundleOnly=true` with base64, `getTipAccounts` on `/bundles`, tip = transfer to a tip account inside the tx | VERIFIED (official client) | [jito-labs/jito-js-rpc src/index.ts](https://github.com/jito-labs/jito-js-rpc/blob/master/src/index.ts), [examples/basic_txn.js](https://github.com/jito-labs/jito-js-rpc/blob/master/examples/basic_txn.js) |
-| Jito bundle-only transactions are not included when they fail and are not exposed before inclusion; minimum tip 1,000 lamports | REPORTED | docs.jito.wtf (not reachable from this sandbox) |
-| How much sandwich protection Jito gives in practice; tip needed under congestion | UNCLEAR | smoke test with `BURN_SEND_VIA=jito` |
 | `simulateTransaction` with `accounts` returns post-simulation account state; `minContextSlot` | VERIFIED | [solana.com simulateTransaction](https://solana.com/docs/rpc/http/simulatetransaction) |
 | `getSignaturesForAddress`: newest first, max 1,000 per call, `before` / `until` paging | VERIFIED | [solana.com getSignaturesForAddress](https://solana.com/docs/rpc/http/getsignaturesforaddress) |
 | Token account layout: amount (u64) at byte 64 | VERIFIED | `AccountLayout` in `@solana/spl-token` ([solana-program/token](https://github.com/solana-program/token)) |

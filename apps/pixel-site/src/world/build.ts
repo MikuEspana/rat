@@ -8,7 +8,7 @@ import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
 import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixelfont';
-import { cellCentre, cellToScreen } from '../iso';
+import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
 import { layoutScene, type Scene } from '../floor/scene';
@@ -65,6 +65,8 @@ export interface World {
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
+  /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
+  setJobFair(count: number, head: Cell | null): void;
   destroy(): void;
 }
 
@@ -728,7 +730,8 @@ export function buildWorld(
   let lastLayoutZoom = -1;
   for (const r of plan.rooms) {
     if (!built(r)) continue;
-    const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : ROOM_LOOK[r.kind].label;
+    // the garage's centrepiece has its own sign (THE VAULT)
+    const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : r.kind === 'garage' ? '' : ROOM_LOOK[r.kind].label;
     if (!label) continue;
     const s = new Sprite(signTexture(label, r.tint, 2));
     const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
@@ -738,7 +741,7 @@ export function buildWorld(
     roomSigns.push(s);
   }
   const top = cellToScreen(ring.i0, ring.j0);
-  const name = new Sprite(signTexture(`RAT RACE ${STAGES[stage]!.name}`, STAGE_COLOR[stage] ?? 0xffd36b, 3));
+  const name = new Sprite(signTexture(`WALL STREET RATS: ${STAGES[stage]!.name}`, STAGE_COLOR[stage] ?? 0xffd36b, 3));
   name.anchor.set(0.5, 1);
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
@@ -772,6 +775,11 @@ export function buildWorld(
       builders.push({ s: cr, t: 0, life: 2.4, base: 0.8 });
     }
   }
+
+  // the job-fair sign: made when the first rat lines up outside, redrawn when the count changes
+  let fair: Sprite | null = null;
+  let fairText = '';
+  let signScale = 1;
 
   main.sync(true);
   let blink = 0;
@@ -897,7 +905,9 @@ export function buildWorld(
         sg.visible = a > 0.01;
       }
       // the building name and landmark names keep a readable size on screen: bigger zoomed out, smaller close up
-      name.scale.set(Math.max(0.4, Math.min(4, 0.6 / z)));
+      signScale = Math.max(0.4, Math.min(4, 0.6 / z));
+      name.scale.set(signScale);
+      fair?.scale.set(Math.max(1, signScale));
       for (const l of lockSigns) {
         l.visible = z >= 0.6;
         l.scale.set(1);
@@ -921,6 +931,27 @@ export function buildWorld(
         x.s.y = signBase.get(x.s)! - sp.dy;
         x.s.renderable = sp.visible;
       });
+    },
+    setJobFair(count: number, head: Cell | null): void {
+      if (!head || count <= 0) {
+        if (fair) fair.visible = false;
+        return;
+      }
+      const text = `JOB FAIR: ${count.toLocaleString('en-US')} IN LINE`;
+      if (!fair) {
+        fair = new Sprite(signTexture(text, 0x43d17a, 2));
+        fair.anchor.set(0.5, 1);
+        fair.scale.set(signScale);
+        signs.addChild(fair);
+      } else if (text !== fairText) {
+        const old = fair.texture;
+        fair.texture = signTexture(text, 0x43d17a, 2);
+        old.destroy(true);
+      }
+      fairText = text;
+      const c = cellCentre(head.i, head.j);
+      fair.position.set(c.x, c.y - 56);
+      fair.visible = true;
     },
     destroy(): void {
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {

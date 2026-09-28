@@ -40,7 +40,6 @@ const REQUIRED: [(c: AppConfig) => unknown, string][] = [
   [(c) => c.rpcUrl, 'RPC_URL'],
   [(c) => c.keyEncryptionKey, 'KEY_ENCRYPTION_KEY'],
   [(c) => c.creatorPubkey, 'CREATOR_PUBKEY'],
-  [(c) => c.fundPubkey, 'FUND_PUBKEY'],
   [(c) => c.coinMint, 'COIN_MINT'],
   [(c) => c.jupiter.apiKey, 'JUPITER_API_KEY'],
 ];
@@ -127,13 +126,11 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
   if (!d.keys) {
     add('FAIL', 'keys', 'KEY_ENCRYPTION_KEY or the database is missing: stored keys cannot be checked.');
   } else {
-    for (const role of ['creator', 'fund'] as const) {
-      try {
-        const kp = role === 'creator' ? await d.keys.creator() : await d.keys.fund();
-        add('PASS', `${role} key`, `imported, decrypts, matches ${kp.publicKey.toBase58()}.`);
-      } catch (err) {
-        add('FAIL', `${role} key`, errText(err));
-      }
+    try {
+      const kp = await d.keys.creator();
+      add('PASS', 'creator key', `imported, decrypts, matches ${kp.publicKey.toBase58()}.`);
+    } catch (err) {
+      add('FAIL', 'creator key', errText(err));
     }
   }
 
@@ -151,18 +148,14 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
     }
   }
 
-  // 7. wallet balances (their own SOL must cover the reserves: fees before the first claim, rent)
-  if (d.chain && c.creatorPubkey && c.fundPubkey) {
+  // 7. wallet balance (its own SOL must cover the reserve: fees before the first claim, rent)
+  if (d.chain && c.creatorPubkey) {
     try {
-      const sol = await d.chain.getSolBalances([c.creatorPubkey, c.fundPubkey]);
-      for (const [role, key, reserve] of [
-        ['creator', c.creatorPubkey, c.creatorReserveLamports],
-        ['fund', c.fundPubkey, c.fundReserveLamports],
-      ] as const) {
-        const have = sol.get(key) ?? 0n;
-        if (have >= reserve) add('PASS', `${role} wallet`, `${formatSol(have)} SOL (reserve ${formatSol(reserve)}).`);
-        else add('FAIL', `${role} wallet`, `${formatSol(have)} SOL, needs at least the ${formatSol(reserve)} SOL reserve. Send SOL to ${key}.`);
-      }
+      const sol = await d.chain.getSolBalances([c.creatorPubkey]);
+      const have = sol.get(c.creatorPubkey) ?? 0n;
+      const reserve = c.creatorReserveLamports;
+      if (have >= reserve) add('PASS', 'creator wallet', `${formatSol(have)} SOL (reserve ${formatSol(reserve)}).`);
+      else add('FAIL', 'creator wallet', `${formatSol(have)} SOL, needs at least the ${formatSol(reserve)} SOL reserve. Send SOL to ${c.creatorPubkey}.`);
     } catch (err) {
       add('FAIL', 'wallets', `balance read failed: ${errText(err)}`);
     }
@@ -217,7 +210,7 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
   }
 
   // 12. caps (information)
-  add('PASS', 'caps', `hires ${formatSol(c.spendCapLamportsPerHour.hire)} SOL/h, burns ${formatSol(c.spendCapLamportsPerHour.burn)} SOL/h, salary ${formatSol(c.salaryLamports)} SOL, max ${c.maxHiresPerLoop} hires per loop.`);
+  add('PASS', 'caps', `hires ${formatSol(c.spendCapLamportsPerHour.hire)} SOL/h, salary ${formatSol(c.salaryLamports)} SOL, max ${c.maxHiresPerLoop} hires per loop. Every claimed SOL goes to hires.`);
 
   // 13. Telegram
   if (!c.telegram.botToken || !c.telegram.chatId) {

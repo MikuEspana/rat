@@ -29,7 +29,7 @@ export async function sweepCommand(ctx: CliContext, deps: SweepDeps, opts: { to:
   // The destination must be a normal wallet the owner controls: never one of the bot's own wallets (their keys
   // live on the server, which may be exactly what leaked) and never a program address (tokens could be stuck).
   if (!PublicKey.isOnCurve(coldKey.toBytes())) throw new Error(`sweep refused: ${cold} is not a normal wallet address (off-curve / program address)`);
-  const own = [ctx.config.creatorPubkey, ctx.config.fundPubkey].filter(Boolean);
+  const own = [ctx.config.creatorPubkey].filter(Boolean);
   if (own.includes(cold) || (await store.keys.get(cold))) throw new Error(`sweep refused: ${cold} is one of the bot's own wallets; sweep to a cold wallet only the owner holds`);
   const liveStore = store.forMode('live');
   // failed rats are included: a two-step hire that funded the rat but never bought leaves its SOL there

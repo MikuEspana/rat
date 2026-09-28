@@ -1,4 +1,6 @@
-// Minimal Jupiter HTTP client: API key header, shared limiter, retries on 429 / 5xx / network errors.
+// Minimal Jupiter HTTP client: API key header, optional limiter, retries on 429 / 5xx / network errors.
+// The worker runs it with no limiter and no retries: its JupiterBudget (budget.ts) counts every request and owns
+// the 429 backoff. The CLI and scripts use the limiter and a retry or two.
 import type { SlidingWindowLimiter } from './rate-limiter';
 
 export class JupiterError extends Error {
@@ -6,6 +8,8 @@ export class JupiterError extends Error {
     message: string,
     readonly status: number,
     readonly body: string,
+    /** 429: when Jupiter says a slot frees up (x-ratelimit-reset), epoch ms */
+    readonly resetAtMs?: number,
   ) {
     super(message);
     this.name = 'JupiterError';
@@ -15,7 +19,8 @@ export class JupiterError extends Error {
 export interface JupiterHttpOptions {
   baseUrl: string;
   apiKey?: string;
-  limiter: SlidingWindowLimiter;
+  /** waits for a slot before each request (the CLI); the worker counts calls with its JupiterBudget instead */
+  limiter?: SlidingWindowLimiter;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   maxRetries?: number;
@@ -41,7 +46,7 @@ export class JupiterHttp {
     const maxRetries = this.opts.maxRetries ?? 3;
     let lastErr: unknown;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      await this.opts.limiter.acquire();
+      await this.opts.limiter?.acquire();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs ?? 10_000);
       try {
@@ -51,9 +56,10 @@ export class JupiterHttp {
         });
         if (res.status === 429) {
           const reset = Number(res.headers.get('x-ratelimit-reset'));
-          const until = Number.isFinite(reset) && reset > 0 ? reset * 1000 : this.now() + 1_000 * 2 ** attempt;
-          this.opts.limiter.blockUntil(until);
-          lastErr = new JupiterError('rate limited (429)', 429, await res.text());
+          const resetAt = Number.isFinite(reset) && reset > 0 ? reset * 1000 : undefined;
+          this.opts.limiter?.blockUntil(resetAt ?? this.now() + 1_000 * 2 ** attempt);
+          lastErr = new JupiterError('rate limited (429)', 429, await res.text(), resetAt);
+          if (attempt < maxRetries && !this.opts.limiter) await this.sleep(1_000 * 2 ** attempt);
           continue;
         }
         if (res.status >= 500) {

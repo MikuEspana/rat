@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import idl from '../fixtures/creator-fee-idl.json';
 import { PumpFunClient } from './client';
 import { DISCRIMINATORS, PUMP_AMM_PROGRAM_ID, PUMP_PROGRAM_ID } from './constants';
-import { type PumpBuyApi, PumpDirectBuyBuilder } from './direct-buy';
 import { collectCoinCreatorFeeIx, collectCreatorFeeV2Ix } from './instructions';
 import { creatorAccounts } from './pdas';
 import { accrueCreatorFees, registerPumpSimPrograms } from './sim';
@@ -144,70 +143,19 @@ describe('claims on SimChain', () => {
   });
 });
 
-describe('coin info and burn', () => {
+describe('coin info', () => {
   for (const program of [TOKEN_PROGRAM, TOKEN_2022_PROGRAM]) {
-    it(`detects the token program and burns with it (${program === TOKEN_PROGRAM ? 'SPL Token' : 'Token-2022'})`, async () => {
-      const { chain, sender, pump, creator, req } = world();
+    it(`detects the token program (${program === TOKEN_PROGRAM ? 'SPL Token' : 'Token-2022'})`, async () => {
+      const { chain, pump } = world();
       const mint = Keypair.generate().publicKey.toBase58();
       chain.createMint({ mint, decimals: 6, tokenProgram: program, supply: 1_000_000_000n });
-      const fund = creator;
-      chain.setTokenBalance(fund.publicKey.toBase58(), mint, 500_000n, program);
       const info = await pump.getCoinInfo(mint);
-      expect(info).toMatchObject({ tokenProgram: program, decimals: 6 });
-      const ix = pump.buildBurnInstruction({ owner: fund.publicKey.toBase58(), mint, amount: 400_000n, decimals: 6, tokenProgram: info.tokenProgram });
-      const out = await sender.submit(await sender.prepare({ ...req(fund, [ix]), kind: 'burn' }));
-      expect(out.status).toBe('confirmed');
-      expect(chain.mintState(mint)!.supply).toBe(1_000_000_000n - 400_000n);
-      expect(chain.tokenBalance(fund.publicKey.toBase58(), mint, program)).toBe(100_000n);
+      expect(info).toMatchObject({ tokenProgram: program, decimals: 6, supply: 1_000_000_000n });
     });
   }
 
   it('rejects unknown coin mints', async () => {
     const { pump } = world();
     await expect(pump.getCoinInfo(Keypair.generate().publicKey.toBase58())).rejects.toThrow(/not found/);
-  });
-});
-
-describe('PumpDirectBuyBuilder', () => {
-  const coin = { mint: Keypair.generate().publicKey.toBase58(), tokenProgram: TOKEN_2022_PROGRAM, supply: null };
-  const stub = (complete: boolean): PumpBuyApi & { calls: unknown[] } => {
-    const calls: unknown[] = [];
-    return {
-      calls,
-      fetchGlobal: async () => ({}),
-      fetchFeeConfig: async () => ({}),
-      fetchBuyState: async () => ({ bondingCurveAccountInfo: {}, bondingCurve: { complete }, associatedUserAccountInfo: null }),
-      quoteTokens: () => 1_000_000n,
-      buyInstructions: async (a) => {
-        calls.push(a);
-        return [SystemProgram.transfer({ fromPubkey: a.user, toPubkey: a.user, lamports: 1 })];
-      },
-    };
-  };
-
-  it('builds a buy with min out from slippage', async () => {
-    const api = stub(false);
-    const b = new PumpDirectBuyBuilder(api, coin);
-    const taker = Keypair.generate().publicKey.toBase58();
-    const r = await b.build({ inputMint: NATIVE_SOL_MINT, outputMint: coin.mint, amount: SOL, taker, slippageBps: 300 });
-    expect(r.outAmount).toBe(1_000_000n);
-    expect(r.minOutAmount).toBe(970_000n);
-    expect((api.calls[0] as { slippagePct: number }).slippagePct).toBe(3);
-  });
-
-  it('refuses graduated curves and non-SOL input', async () => {
-    const taker = Keypair.generate().publicKey.toBase58();
-    await expect(new PumpDirectBuyBuilder(stub(true), coin).build({ inputMint: NATIVE_SOL_MINT, outputMint: coin.mint, amount: SOL, taker, slippageBps: 300 })).rejects.toThrow(/graduated/);
-    await expect(new PumpDirectBuyBuilder(stub(false), coin).build({ inputMint: coin.mint, outputMint: coin.mint, amount: SOL, taker, slippageBps: 300 })).rejects.toThrow(/SOL input/);
-  });
-});
-
-describe('pump sdk loading', () => {
-  it('loads the official SDK lazily through its CommonJS build', async () => {
-    const { sdkBuyApi } = await import('./direct-buy');
-    const { Connection } = await import('@solana/web3.js');
-    const api = sdkBuyApi(new Connection('http://127.0.0.1:1'));
-    expect(typeof api.fetchBuyState).toBe('function');
-    expect(typeof api.buyInstructions).toBe('function');
   });
 });

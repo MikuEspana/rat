@@ -16,4 +16,4 @@ The database is the source of truth: rats, the ledger, encrypted keys, attempts.
 3. Start the worker. On start it re-checks every in-flight attempt by signature (nothing is double sent: a rat is never retried while an attempt can land, and the rat wallet is read on-chain before any retry).
 4. `rat status`, then `rat resume`.
 
-Transactions that landed after the backup are picked up by the wallet watch (signatures on the creator and fund wallets) and the hire/claim reconciliation.
+Transactions that landed after the backup are picked up by the wallet watch (signatures on the creator wallet) and the hire/claim reconciliation.

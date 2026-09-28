@@ -3,14 +3,18 @@
 // Seated rats type, slump when their stock is down and jump up to cheer when it is up. A few percent are always up
 // and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll down the
 // corridor, fetching a box, a smoke outside, a nap at the desk. Frozen rats go grey and stop. Size follows tier.
-import type { Tier } from '@rat/contract';
+// The job-fair line outside the lobby, around the block: hired rats with no desk (the building is full) at the
+// front, then applicants. Every claim sends applicants (one per salary) up the subway stairs and into the line at
+// once; each confirmed hire turns the applicant at the front into the new rat, who walks in to its desk (early on
+// that is straight from the subway). The line moves up as they go.
+import { computeRatView, type Tier } from '@rat/contract';
 import { ACCESSORIES, type Accessory, type Atlas, type Frame } from '../gfx/atlas';
 import { makeParticle, type LayerItem, type SortedLayer } from '../gfx/layer';
 import { cellCentre, type Cell } from '../iso';
 import { Paths } from '../floor/path';
 import type { Growth } from '../floor/growth';
 import { hash32 } from '../floor/rng';
-import { standCells } from '../floor/plan';
+import { queueCells } from '../floor/plan';
 import type { Face, FloorLayout, Seat, Spot } from '../floor/types';
 import type { RatRecord } from '../data/store';
 
@@ -18,6 +22,27 @@ export type Look = Tier | 'frozen';
 export type Mood = 'up' | 'down' | 'flat';
 type Mode = 'walk' | 'type' | 'slump' | 'cheer' | 'stand' | 'sit' | 'nap' | 'frozen';
 type AnimName = 'walk_se' | 'walk_ne' | 'idle_se' | 'idle_ne' | 'type' | 'slump' | 'cheer' | 'sit_front' | 'sit_back' | 'sulk_front' | 'sulk_back';
+
+/** at most this many applicants are drawn (the HUD counts all of them) */
+export const APPLICANT_CAP = 2000;
+
+/** A candidate waiting for its buy: no wallet or stock yet, in an intern's suit. */
+function applicantRecord(id: number): RatRecord {
+  const facts = {
+    id,
+    name: 'Applicant',
+    wallet: '',
+    stock: '',
+    stockMint: '',
+    status: 'active' as const,
+    avatarSeed: '',
+    hiredAt: new Date(0).toISOString(),
+    hireTx: null,
+    tokenAmount: '0',
+    costUsd: 0,
+  };
+  return { facts, view: { ...computeRatView(facts, null), tier: 'intern' }, estimated: true };
+}
 
 export const TIER_SCALE: Record<Tier, number> = { intern: 0.88, analyst: 1, associate: 1.08, vp: 1.17, partner: 1.3 };
 const FPS: Record<AnimName, number> = { walk_se: 10, walk_ne: 10, idle_se: 5, idle_ne: 5, type: 8, slump: 6, cheer: 11, sit_front: 8, sit_back: 6, sulk_front: 3, sulk_back: 3 };
@@ -58,6 +83,8 @@ interface Agent {
   seat: Seat | null;
   /** standing place for a rat without a desk */
   home: Cell;
+  /** place in the job-fair line (-1: has a desk) */
+  qi: number;
   pos: Cell;
   path: Cell[];
   seg: number;
@@ -108,7 +135,17 @@ export class RatSystem {
   private spotsByKind = new Map<string, Spot[]>();
   /** spots by 24-cell neighbourhood, so errands stay local */
   private spotGrid = new Map<string, Spot[]>();
-  private stand = new Map<number, Cell[]>();
+  /** the job-fair line: street cells from the lobby door outwards, and the rats in it (by id) */
+  private line: Cell[] = [];
+  private lineAt = new Map<number, number>();
+  private lineStage = -1;
+  private queue: Agent[] = [];
+  /** hired rats at the front of the line (the rest of it are applicants) */
+  private realInLine = 0;
+  /** applicants beyond APPLICANT_CAP: counted, not drawn */
+  private hiddenApplicants = 0;
+  private applicantSeq = 0;
+  private lineDirty = false;
   private paths: Paths;
   private time = 0;
   private tripClock = 0;
@@ -134,16 +171,22 @@ export class RatSystem {
     this.index();
   }
 
-  /** What rats can use right now: spots in built rooms, the current street, built corridors, the CEO office. */
-  private index(): void {
+  /** What rats can use right now: spots in built rooms, the current street, built corridors, the CEO office.
+   * Returns true when the job-fair line moved (a new stage). */
+  private index(): boolean {
     const L = this.layout;
     const g = this.growth;
     this.spawn = L.rings[g.stage]!.spawn;
+    const moved = g.stage !== this.lineStage;
+    if (moved) {
+      this.lineStage = g.stage;
+      this.line = queueCells(L, g.stage, this.blocked);
+      this.lineAt = new Map(this.line.map((c, k) => [c.j * L.W + c.i, k]));
+    }
     this.ceoSeats = L.ceo.kind === 'ceo' && g.isBuilt(L.ceo) ? [...L.ceo.seats] : [];
     this.spots = L.spots.filter((s) => (s.room >= 0 ? g.built[s.room] === 1 : s.ring === g.stage));
     this.spotsByKind.clear();
     this.spotGrid.clear();
-    this.stand.clear();
     const corridor = L.corridor.filter((c) => !this.blocked[c.j * L.W + c.i]);
     this.strollCells = [];
     for (let k = 0; k < 40 && corridor.length; k++) this.strollCells.push(corridor[hash32(`stroll:${k}`) % corridor.length]!);
@@ -160,6 +203,7 @@ export class RatSystem {
         }
       }
     }
+    return moved;
   }
 
   /** The world was rebuilt (a room went up): move every rat onto the new layer and walk mask. */
@@ -167,7 +211,7 @@ export class RatSystem {
     this.layer = layer;
     this.blocked = blocked;
     this.paths = new Paths(this.layout, 64, blocked);
-    this.index();
+    const lineMoved = this.index();
     for (const a of this.list) {
       a.item = layer.add(a.item.p, this.depthOf(a));
       if (a.acc) a.acc = layer.add(a.acc.p, this.depthOf(a) + 0.002);
@@ -176,19 +220,178 @@ export class RatSystem {
       if (a.case) a.case = layer.add(a.case.p, this.depthOf(a) + 0.003);
       if (a.seat && !a.seated) this.onChair(a.seat.id, true);
     }
-    // rats that just got a desk in a new room walk over to it
+    // rats that just got a desk in a new room walk over to it (out of the job-fair line, mostly)
+    let left = 0;
     for (const id of this.growth.moved.splice(0)) {
       const a = this.agents.get(id);
       const sid = this.growth.seatOfRat.get(id);
-      if (!a || sid === undefined || a.trip || a.mode === 'walk') continue;
+      if (!a || sid === undefined || a.trip || (a.mode === 'walk' && a.qi < 0)) continue;
       const seat = this.layout.seats[sid]!;
+      if (a.qi >= 0) {
+        this.queue.splice(this.queue.indexOf(a), 1);
+        this.realInLine--;
+        a.qi = -1;
+        left++;
+      }
       const from = { i: Math.round(a.pos.i), j: Math.round(a.pos.j) };
       const route = this.paths.route(from, seat.access);
       a.seat = seat;
+      a.home = seat.access;
       if (route) this.walkTo(a, [a.pos, ...route, seat.pos], { kind: 'move', spot: null, back: [], stay: 0 });
       else this.sit(a);
     }
+    if (lineMoved || left) this.reflow(!lineMoved);
     layer.sync(true);
+  }
+
+  /** Everyone in the job-fair line outside: hired rats with no desk plus applicants (drawn or not). */
+  get lineLength(): number {
+    return this.queue.length + this.hiddenApplicants;
+  }
+
+  /** Hired rats with no desk (the building is full). */
+  get seatlessCount(): number {
+    return this.realInLine;
+  }
+
+  /** Applicants: claimed salaries whose buy has not confirmed yet. */
+  get applicantCount(): number {
+    return this.queue.length - this.realInLine + this.hiddenApplicants;
+  }
+
+  /** Adds or removes applicants (at the back of the line) until there are `n`. */
+  setApplicants(n: number, walk: boolean): void {
+    const diff = Math.max(0, Math.round(n)) - this.applicantCount;
+    if (diff > 0) this.addApplicants(diff, walk);
+    else if (diff < 0) this.removeApplicants(-diff);
+  }
+
+  /** New applicants come up the subway stairs and join the back of the line (walk false: they appear there). */
+  addApplicants(n: number, walk: boolean): void {
+    for (let k = 0; k < n; k++) {
+      if (this.queue.length - this.realInLine >= APPLICANT_CAP) {
+        this.hiddenApplicants += n - k;
+        return;
+      }
+      this.createApplicant(walk && k < 60);
+    }
+  }
+
+  /** Applicants leave from the back of the line (the ones not drawn go first). */
+  removeApplicants(n: number): void {
+    const hidden = Math.min(n, this.hiddenApplicants);
+    this.hiddenApplicants -= hidden;
+    for (let k = hidden; k < n && this.queue.length > this.realInLine; k++) this.dropAgent(this.queue.pop()!);
+  }
+
+  private createApplicant(walk: boolean): void {
+    const rec = applicantRecord(-++this.applicantSeq);
+    const qi = this.queue.length;
+    const home = this.lineCell(qi);
+    const fur = styleOf(rec).fur;
+    const first = this.frames({ look: 'intern', fur }, 'idle_se')[0]!;
+    const start = walk ? { ...this.spawn } : { ...home };
+    const c = cellCentre(start.i, start.j);
+    const item = this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE.intern), 0);
+    const a: Agent = {
+      id: rec.facts.id, rec, item, acc: null, accKind: null, accFrames: [], fur, hasMug: false, mug: null, look: 'intern', mode: 'stand', anim: 'idle_se', frames: [first], frame: 0, t: 0, once: false, mirror: false,
+      seat: null, home, qi, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null, case: null, caseFrames: [], nextCheer: 0, seated: false,
+    };
+    this.agents.set(a.id, a);
+    this.list.push(a);
+    this.queue.push(a);
+    const back = walk ? this.paths.route(home, this.spawn) : null;
+    if (back) this.walkTo(a, back.reverse(), null);
+    else this.standInLine(a, false);
+    this.place(a);
+  }
+
+  /** Takes a particle off the floor for good (an applicant who left the line). */
+  private dropAgent(a: Agent): void {
+    this.walkers.delete(a);
+    this.agents.delete(a.id);
+    const k = this.list.indexOf(a);
+    if (k >= 0) this.list.splice(k, 1);
+    this.layer.remove(a.item);
+    if (a.acc) this.layer.remove(a.acc);
+    if (a.case) this.layer.remove(a.case);
+  }
+
+  /** The way in for a rat standing outside: along the line to its head, to the door, then to its desk. */
+  private walkIn(a: Agent, seat: Seat): void {
+    const ring = this.layout.rings[this.growth.stage]!;
+    const door = ring.entrance[1]!;
+    const onI = ring.entrance[0]!.i === ring.i1 && door.i === ring.i1;
+    const front = onI ? { i: door.i + 1, j: door.j } : { i: door.i, j: door.j + 1 };
+    const here = { i: Math.round(a.pos.i), j: Math.round(a.pos.j) };
+    const at = this.lineAt.get(here.j * this.layout.W + here.i);
+    let outside: Cell[] | null = null;
+    if (at !== undefined && at <= 60) outside = [...this.line.slice(0, at).reverse()];
+    else outside = this.paths.route(here, front);
+    const inside = this.paths.route(seat.access, door);
+    a.seat = seat;
+    a.home = seat.access;
+    a.qi = -1;
+    if (!outside || !inside) {
+      this.sit(a);
+      return;
+    }
+    this.walkTo(a, [a.pos, ...outside, front, ...inside.reverse(), seat.pos], null);
+  }
+
+  /** Where the line starts (by the lobby door), null while nobody is waiting. */
+  lineHead(): Cell | null {
+    return this.queue.length ? this.lineCell(0) : null;
+  }
+
+  /** Place p of the line (a line longer than the street doubles up from the head). */
+  private lineCell(p: number): Cell {
+    const n = this.line.length;
+    return n ? this.line[p % n]! : { ...this.spawn };
+  }
+
+  /** Which way a rat in the line looks: at the rat in front of it, or at the door for the one at the front. */
+  private lineFace(p: number): Face {
+    const here = this.lineCell(p);
+    const ring = this.layout.rings[this.growth.stage]!;
+    const ahead = p > 0 && p < this.line.length ? this.lineCell(p - 1) : ring.entrance[1]!;
+    const di = ahead.i - here.i;
+    const dj = ahead.j - here.j;
+    return Math.abs(di) >= Math.abs(dj) ? (di >= 0 ? 'se' : 'nw') : dj >= 0 ? 'sw' : 'ne';
+  }
+
+  /** The line moved up (someone got a desk) or moved out (a new stage): everyone takes their new place. */
+  private reflow(walk: boolean): void {
+    this.lineDirty = false;
+    let walking = 0;
+    this.queue.forEach((a, p) => {
+      const cell = this.lineCell(p);
+      if (a.qi === p && a.home.i === cell.i && a.home.j === cell.j) return;
+      a.qi = p;
+      a.home = cell;
+      if (a.mode === 'walk') return; // on arrival it steps along to its new place
+      this.standInLine(a, walk && walking++ < 300);
+    });
+  }
+
+  /** No desk: stand in the job-fair line, stepping along it first if the line moved up meanwhile. */
+  private standInLine(a: Agent, walk = true): void {
+    a.seated = false;
+    const here = { i: Math.round(a.pos.i), j: Math.round(a.pos.j) };
+    if (here.i !== a.home.i || here.j !== a.home.j) {
+      // the line moved up a few places: step along it; anything else (a new stage, a big jump) just moves over
+      const from = this.lineAt.get(here.j * this.layout.W + here.i);
+      const to = a.qi % Math.max(1, this.line.length);
+      if (walk && a.look !== 'frozen' && from !== undefined && from > to && from - to <= 40) {
+        this.walkTo(a, [a.pos, ...this.line.slice(to, from).reverse()], null);
+        return;
+      }
+      a.pos = { ...a.home };
+    }
+    a.mode = a.look === 'frozen' ? 'frozen' : 'stand';
+    const f = faceAnim(this.lineFace(a.qi));
+    this.setAnim(a, f.anim, a.look === 'frozen', f.mirror);
+    this.place(a);
   }
 
   get count(): number {
@@ -229,13 +432,6 @@ export class RatSystem {
   private homeSeat(a: Agent): Seat | null {
     const sid = this.growth.seatOfRat.get(a.id);
     return sid === undefined ? null : this.layout.seats[sid]!;
-  }
-
-  private homeFor(rec: RatRecord): Cell {
-    const room = this.layout.hq;
-    let cells = this.stand.get(room.id);
-    if (!cells) this.stand.set(room.id, (cells = standCells(this.layout, room, this.blocked)));
-    return cells.length ? cells[hash32(`home:${rec.facts.id}`) % cells.length]! : { i: room.i0 + 1, j: room.j0 + 1 };
   }
 
   private depthOf(a: Agent): number {
@@ -325,9 +521,7 @@ export class RatSystem {
   private sit(a: Agent): void {
     const seat = a.seat;
     if (!seat) {
-      a.seated = false;
-      a.mode = a.look === 'frozen' ? 'frozen' : 'stand';
-      this.setAnim(a, 'idle_se', a.look === 'frozen', false);
+      this.standInLine(a);
       return;
     }
     if (!a.seated) this.onChair(seat.id, false);
@@ -375,18 +569,67 @@ export class RatSystem {
   load(recs: RatRecord[]): void {
     const sorted = [...recs].sort((x, y) => (x.view.tier === 'partner' ? 0 : 1) - (y.view.tier === 'partner' ? 0 : 1) || x.facts.id - y.facts.id);
     for (const rec of sorted) this.create(rec, false);
+    // the line goes by hire order (partners were placed first)
+    this.queue.sort((x, y) => x.id - y.id);
+    this.realInLine = this.queue.length;
+    this.reflow(false);
     this.layer.sync(true);
   }
 
-  /** A hire: comes up the subway stairs and walks to the next free desk of its stock (walk false: appears there). */
+  /**
+   * A confirmed hire. The applicant at the front of the line becomes this rat: it walks in to its desk (or, with
+   * the building full, keeps its place in line). With no applicant waiting it comes up the subway stairs.
+   * walk false: it appears at its desk.
+   */
   hire(rec: RatRecord, walk = true): void {
     if (this.agents.has(rec.facts.id)) return;
-    this.create(rec, walk);
+    const app = this.queue[this.realInLine];
+    if (!app || app.id >= 0) {
+      if (this.hiddenApplicants > 0) this.hiddenApplicants--;
+      this.create(rec, walk);
+      return;
+    }
+    // the applicant becomes the rat, in place
+    this.agents.delete(app.id);
+    app.id = rec.facts.id;
+    app.rec = rec;
+    app.look = lookOf(rec);
+    // and gets its own looks: fur, accessory, mug
+    const style = styleOf(rec);
+    app.fur = style.fur;
+    app.hasMug = style.mug;
+    app.accKind = style.acc;
+    if (style.acc && !app.acc) app.acc = this.layer.add(makeParticle(app.frames[0]!, app.item.p.x, app.item.p.y, false, TIER_SCALE[rec.view.tier]), this.depthOf(app) + 0.002);
+    this.agents.set(app.id, app);
+    if (this.hiddenApplicants > 0) {
+      // one more applicant steps into view at the back
+      this.hiddenApplicants--;
+      this.createApplicant(false);
+    }
+    const seat = this.claim(rec);
+    if (!seat) {
+      // the building is full: a hired rat in line, right where it stands
+      this.realInLine++;
+      this.setAnim(app, app.anim, false, app.mirror);
+      return;
+    }
+    this.queue.splice(this.realInLine, 1);
+    this.lineDirty = true;
+    if (walk) this.walkIn(app, seat);
+    else {
+      this.walkers.delete(app);
+      app.seat = seat;
+      app.home = seat.access;
+      app.qi = -1;
+      app.path = [];
+      this.sit(app);
+    }
   }
 
   private create(rec: RatRecord, walk: boolean): void {
     const seat = this.claim(rec);
-    const home = seat ? seat.pos : this.homeFor(rec);
+    const qi = seat ? -1 : this.realInLine;
+    const home = seat ? seat.pos : this.lineCell(qi);
     const look = lookOf(rec);
     const style = styleOf(rec);
     const first = this.frames({ look, fur: style.fur }, 'idle_se')[0]!;
@@ -396,11 +639,17 @@ export class RatSystem {
     const acc = style.acc ? this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0.001) : null;
     const a: Agent = {
       id: rec.facts.id, rec, item, acc, accKind: style.acc, accFrames: [], fur: style.fur, hasMug: style.mug, mug: null, look, mode: 'type', anim: 'type', frames: [first], frame: 0, t: 0, once: false, mirror: false,
-      seat, home: seat ? seat.access : home, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null,
+      seat, home: seat ? seat.access : home, qi, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null,
       case: null, caseFrames: [], nextCheer: 0, seated: false,
     };
     this.agents.set(a.id, a);
     this.list.push(a);
+    if (!seat) {
+      // hired rats with no desk stand at the front of the line, ahead of the applicants
+      this.queue.splice(this.realInLine, 0, a);
+      this.realInLine++;
+      this.lineDirty = true;
+    }
     if (walk) {
       const target = seat ? seat.access : home;
       const back = this.paths.route(target, this.spawn);
@@ -450,6 +699,11 @@ export class RatSystem {
           a.mode = 'frozen';
           this.setAnim(a, 'idle_se', true, a.mirror);
         }
+        continue;
+      }
+      if (a.mode === 'frozen' && a.qi >= 0) {
+        // thawed in the line: back to waiting
+        this.standInLine(a, false);
         continue;
       }
       if (a.mode === 'frozen' && !a.seated && a.seat) {
@@ -558,6 +812,7 @@ export class RatSystem {
 
   update(dt: number): void {
     this.time += dt;
+    if (this.lineDirty) this.reflow(true);
     this.tripClock -= dt;
     if (this.tripClock <= 0) {
       this.tripClock = 0.2;
@@ -667,6 +922,7 @@ export class RatSystem {
       const p = a.item.p;
       const s = TIER_SCALE[a.rec.view.tier];
       if (Math.abs(x - p.x) > 13 * s || y > p.y + 2 || y < p.y - 48 * s) continue;
+      if (a.id < 0) continue; // applicants have no card yet
       if (!best || a.item.depth > best.item.depth) best = a;
     }
     return best ? best.id : null;

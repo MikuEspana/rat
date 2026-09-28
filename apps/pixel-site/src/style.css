@@ -145,7 +145,7 @@ body {
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
   gap: 8px;
   flex: 1;
 }
@@ -407,6 +407,10 @@ body {
   .stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 8px;
+  }
+  /* the job-fair line gets its own row on small screens */
+  .stats .stat:last-child {
+    grid-column: span 2;
   }
   .stat-value {
     font-size: 14px;
@@ -782,6 +786,9 @@ body {
 .ev-tag.sim {
   background: var(--gold);
 }
+.ev-tag.line {
+  background: #43d17a;
+}
 @media (max-width: 900px) {
   .sim-mode .feed {
     top: auto;
@@ -1013,4 +1020,10 @@ body {
     width: calc(100vw - 20px);
     top: 80px;
   }
+}
+
+/* the job-fair line: a hype number */
+.stat-value.hype {
+  color: #6dff9a;
+  text-shadow: 0 0 8px rgba(109, 255, 154, 0.45), 2px 2px 0 #0b0c18;
 }

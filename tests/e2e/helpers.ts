@@ -21,6 +21,35 @@ export interface Meter {
   maxHiresPerLoop: number;
 }
 
+/** Jupiter call counter samples (one per tick, after the tick ran). */
+export type CallSample = { t: number; calls: number };
+
+/** Jupiter calls so far (swap builds + price calls), stamped with the fake clock. */
+export function jupiterSample(w: SimWorld): CallSample {
+  return { t: w.clock.now().getTime(), calls: w.swap.calls + w.prices.calls };
+}
+
+/** Max calls made in any rolling 60 seconds, from per-tick samples of a running counter. */
+export function maxCallsPerMinute(samples: CallSample[]): number {
+  let max = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const start = samples[i]!;
+    let j = i;
+    while (j + 1 < samples.length && samples[j + 1]!.t - start.t < 60_000) j++;
+    const before = i > 0 ? samples[i - 1]!.calls : 0;
+    max = Math.max(max, samples[j]!.calls - before);
+  }
+  return max;
+}
+
+/**
+ * Lets the event loop run queued I/O. The in-memory database, chain and Jupiter mock resolve everything as
+ * microtasks, so a long simulation never yields on its own and the test runner's own messages time out.
+ */
+export function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 /** Runs a world for `seconds`, accruing fees along the curve, measuring Jupiter usage. */
 export async function runLaunch(
   w: SimWorld,
@@ -28,7 +57,7 @@ export async function runLaunch(
 ): Promise<Meter> {
   const step = opts.stepSec ?? 5;
   const curve = launchCurve(opts.totalFees, opts.seconds, step);
-  const samples: { t: number; calls: number }[] = [];
+  const samples: CallSample[] = [];
   let maxHires = 0;
   for (let i = 0; i < curve.length; i++) {
     const t = i * step;
@@ -39,56 +68,67 @@ export async function runLaunch(
     const claim = ran.get('claim') as { hire?: { attempted: number; retried: number } } | undefined;
     if (claim?.hire) maxHires = Math.max(maxHires, claim.hire.attempted + claim.hire.retried);
     await opts.onTick?.(t);
-    samples.push({ t: w.clock.now().getTime(), calls: w.swap.calls + w.prices.calls });
+    samples.push(jupiterSample(w));
     w.clock.advanceSeconds(step);
     w.prices.step(w.rng);
+    if (i % 60 === 59) await yieldToEventLoop();
   }
-  let maxPerMinute = 0;
-  for (let i = 0; i < samples.length; i++) {
-    const start = samples[i]!;
-    let j = i;
-    while (j + 1 < samples.length && samples[j + 1]!.t - start.t < 60_000) j++;
-    const before = i > 0 ? samples[i - 1]!.calls : 0;
-    maxPerMinute = Math.max(maxPerMinute, samples[j]!.calls - before);
+  return { maxJupiterPerMinute: maxCallsPerMinute(samples), maxHiresPerLoop: maxHires };
+}
+
+/** A ledger row as the spend checks need it. */
+export type SpendRow = { at: Date; deltaLamports: bigint };
+
+/**
+ * The largest net outflow in any rolling window of `windowMs` (the window the spend guard uses: rows with
+ * at >= end - windowMs, up to end). Checked at every row time and right after every row leaves the window
+ * (a release leaving the window raises the outflow), so no window is missed.
+ */
+export function maxRollingOutflow(rows: SpendRow[], windowMs: number): { lamports: bigint; endsAt: Date | null } {
+  const sorted = [...rows].sort((a, b) => a.at.getTime() - b.at.getTime());
+  const times = sorted.map((r) => r.at.getTime());
+  const prefix: bigint[] = [0n];
+  for (const r of sorted) prefix.push(prefix[prefix.length - 1]! - r.deltaLamports);
+  /** first index with time >= x */
+  const lower = (x: number) => {
+    let lo = 0;
+    let hi = times.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid]! < x) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  let best = 0n;
+  let endsAt: Date | null = null;
+  const ends = new Set<number>();
+  for (const t of times) {
+    ends.add(t);
+    ends.add(t + windowMs + 1);
   }
-  return { maxJupiterPerMinute: maxPerMinute, maxHiresPerLoop: maxHires };
+  for (const end of ends) {
+    const from = lower(end - windowMs);
+    const to = lower(end + 1); // rows with time <= end
+    const out = prefix[to]! - prefix[from]!;
+    if (out > best) {
+      best = out;
+      endsAt = new Date(end);
+    }
+  }
+  return { lamports: best, endsAt };
+}
+
+/** The most rows booked at one instant: with a fake clock, one worker loop books all its hires at one time. */
+export function maxAtOneInstant(rows: { at: Date }[]): number {
+  const n = new Map<number, number>();
+  for (const r of rows) n.set(r.at.getTime(), (n.get(r.at.getTime()) ?? 0) + 1);
+  return Math.max(0, ...n.values());
 }
 
 function sol(n: number): bigint {
   return BigInt(Math.round(n * 1e9));
 }
-
-
-export interface BurnRounds {
-  rounds: number;
-  txs: number;
-  /** largest single burn transaction (lamports reserved) */
-  maxChunk: bigint;
-  /** seconds from the last chunk of a round to the first chunk of the next (the random delay) */
-  roundGaps: number[];
-  /** seconds between chunks of the same round */
-  chunkGaps: number[];
-}
-
-/** Groups burn rows (oldest first) into rounds: chunks less than a minute apart belong to one round. */
-export function burnRounds(rows: { at: Date; reservedLamports: bigint }[]): BurnRounds {
-  const sorted = [...rows].sort((a, b) => a.at.getTime() - b.at.getTime());
-  let rounds = 0;
-  const roundGaps: number[] = [];
-  const chunkGaps: number[] = [];
-  let maxChunk = 0n;
-  sorted.forEach((b, i) => {
-    if (b.reservedLamports > maxChunk) maxChunk = b.reservedLamports;
-    const gap = i > 0 ? (b.at.getTime() - sorted[i - 1]!.at.getTime()) / 1000 : Number.POSITIVE_INFINITY;
-    if (gap < 60) chunkGaps.push(gap);
-    else {
-      rounds++;
-      if (i > 0) roundGaps.push(gap);
-    }
-  });
-  return { rounds, txs: sorted.length, maxChunk, roundGaps, chunkGaps };
-}
-
 
 export interface Phase {
   label: string;

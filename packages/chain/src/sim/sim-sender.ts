@@ -36,7 +36,7 @@ export class SimTxSender implements TxSender {
   }
 
   /** Every submitted tx of `kinds` fails with probability `rate`, in a random mode. */
-  setRandomFailures(rate: number, rng: Rng, modes: FailureMode[] = ['drop', 'fail', 'land_timeout', 'reject'], kinds: TxKind[] = ['claim', 'hire', 'burn']): void {
+  setRandomFailures(rate: number, rng: Rng, modes: FailureMode[] = ['drop', 'fail', 'land_timeout', 'reject'], kinds: TxKind[] = ['claim', 'hire']): void {
     this.random = { rate, rng, modes, kinds };
   }
 
