@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyBps, formatSol, lamportsToSol, maxBig, minBig, rawToDecimalString, solToLamports, sumBig } from './money';
+import { applyBps, formatSol, fundShareOf, lamportsToSol, maxBig, minBig, rawToDecimalString, solToLamports, sumBig } from './money';
 
 describe('money', () => {
   it('parses SOL strings and numbers exactly', () => {
@@ -36,6 +36,14 @@ describe('money', () => {
     expect(applyBps(101n, 5000)).toBe(50n);
     expect(applyBps(1_284_000_001n, 5000)).toBe(642_000_000n);
     expect(() => applyBps(1n, 10_001)).toThrow();
+  });
+
+  it('fund share is what the hire split leaves (the split is the HIRES\' share)', () => {
+    expect(fundShareOf(1_000n, 10_000)).toBe(0n); // default: everything to rats
+    expect(fundShareOf(1_000n, 0)).toBe(1_000n);
+    expect(fundShareOf(1_000n, 7_000)).toBe(300n);
+    expect(fundShareOf(101n, 5_000)).toBe(50n); // 50/50: the rounding lamport stays with hires, as before
+    expect(fundShareOf(1_284_000_001n, 5_000)).toBe(642_000_000n);
   });
 
   it('min/max/sum', () => {

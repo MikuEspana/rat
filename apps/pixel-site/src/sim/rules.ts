@@ -3,8 +3,8 @@
 export const RULES = {
   /** CLAIM_INTERVAL_SEC: one claim + hire loop */
   loopSec: 35,
-  /** HIRE_SPLIT_BPS: share of every claim that pays for hires; the rest goes to the buy-and-burn fund */
-  hireSplitBps: 5000,
+  /** HIRE_SPLIT_BPS: share of every claim that pays for hires (all of it); any rest would go to buy and burn */
+  hireSplitBps: 10_000,
   /** SALARY_SOL: what one hire costs, all in */
   salarySol: 0.03,
   /** HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL come out of the salary; the rest is swapped into the stock */

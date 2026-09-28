@@ -40,7 +40,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   mega: {
     id: 'mega',
     label: 'Mega',
-    blurb: 'Runs to about $10M. Enough rats for the evil empire.',
+    blurb: 'Runs to about $10M in 4 hours. Hiring maxes out at the hourly cap.',
     curve: [
       [0, 6_000],
       [4, 30_000],
@@ -55,7 +55,8 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       [360, 7_000_000],
       [480, 6_000_000],
     ],
-    minutes: 480,
+    // ends while money still waits under the hourly cap: about 5,000 rats, what the building is drawn for
+    minutes: 300,
     seed: 'mega-1',
   },
   rug: {
@@ -103,9 +104,9 @@ export function curveAt(s: Scenario, minutes: number): { mcap: number; slopePerH
 
 /**
  * Trading volume, USD per hour: a base turnover of the market cap, plus more while the price moves fast (pumps
- * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees
- * (about 2,400 rats, the megacorp stage), a little under the backend's 3-hour launch simulation (180 SOL,
- * SIMULATION.md), and only the Mega launch reaches the evil empire.
+ * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees, a
+ * little under the backend's 3-hour launch simulation (180 SOL, SIMULATION.md). Every fee hires rats, so that is
+ * about 4,900 rats.
  */
 export const TURNOVER_BASE_PER_HOUR = 0.62;
 export const TURNOVER_PER_MOVE = 0.8;

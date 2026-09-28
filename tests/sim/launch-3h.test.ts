@@ -1,6 +1,7 @@
 // Q5: a 3-hour launch, live on SimChain (in memory, no network): a huge first 30 minutes, cooling, a second pump,
-// then the coin dies. 180 SOL of creator fees = the ~3,000 rat plan. Runs twice: the default settings, and hires
-// paced to 10 per loop. Asserts the money invariants and the limits; with WRITE_SIMULATION=1 it also writes the
+// then the coin dies. 180 SOL of creator fees = the ~3,000 rat plan at a 50/50 split (the test worlds' split, so the
+// buy-and-burn path stays covered; production now sends every fee to hires). Runs twice: unpaced, and the pacing
+// defaults. Asserts the money invariants and the limits; with WRITE_SIMULATION=1 it also writes the
 // numbers into SIMULATION.md (`pnpm sim:3h`). Part of the long CI job (`pnpm test:long`).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';

@@ -1,6 +1,6 @@
 import { EventsResponseSchema, RatsResponseSchema, StateResponseSchema, type RatEvent } from '@rat/contract';
 import { describe, expect, it } from 'vitest';
-import { STAGES } from '../floor/plan';
+import { PLAN_RATS, STAGES } from '../floor/plan';
 import { LaunchSim } from './engine';
 import { RULES } from './rules';
 import { SCENARIOS, type ScenarioId } from './scenarios';
@@ -14,8 +14,8 @@ function stageOf(rats: number): string {
 }
 
 /** Runs a scenario to its end, checking the contract shapes along the way. */
-function run(id: ScenarioId): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
-  const sim = new LaunchSim(SCENARIOS[id], EPOCH);
+function run(id: ScenarioId, hireSplitBps?: number): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
+  const sim = new LaunchSim(SCENARIOS[id], EPOCH, { hireSplitBps });
   const pre = sim.stateResponse();
   expect(StateResponseSchema.parse(pre).coin.marketCapUsd).toBeNull();
   sim.launch();
@@ -40,24 +40,37 @@ function run(id: ScenarioId): { sim: LaunchSim; events: RatEvent[]; peak: number
   return { sim, events, peak, mcapAt: (m) => mcaps.get(m) ?? 0 };
 }
 
-const results = new Map<ScenarioId, ReturnType<typeof run>>();
-const get = (id: ScenarioId): ReturnType<typeof run> => {
-  if (!results.has(id)) results.set(id, run(id));
-  return results.get(id)!;
+const results = new Map<string, ReturnType<typeof run>>();
+const get = (id: ScenarioId, hireSplitBps?: number): ReturnType<typeof run> => {
+  const key = `${id}:${hireSplitBps ?? 'default'}`;
+  if (!results.has(key)) results.set(key, run(id, hireSplitBps));
+  return results.get(key)!;
 };
 
 describe('launch simulator', () => {
-  for (const id of ['normal', 'mega', 'rug'] as const) {
-    it(`${id}: runs the backend rules (split, per-loop limit, hourly caps, burn chunks and rounds)`, () => {
-      const { sim, events } = get(id);
+  // the default (every fee to hires, nothing burned) for every scenario, and the burn path with a 50/50 split
+  const runs: Array<[ScenarioId, number | undefined]> = [['normal', undefined], ['mega', undefined], ['rug', undefined], ['normal', 5000]];
+  for (const [id, split] of runs) {
+    it(`${id}${split ? ` with a ${split / 100}% hire split` : ''}: runs the backend rules (split, per-loop limit, hourly caps, burn chunks and rounds)`, () => {
+      const { sim, events } = get(id, split);
+      const hireSplitBps = split ?? RULES.hireSplitBps;
       const st = sim.stateResponse();
       const hires = events.filter((e) => e.type === 'hire');
       const burns = events.filter((e) => e.type === 'burn');
       const claims = events.filter((e) => e.type === 'claim');
       const t = (e: RatEvent): number => Date.parse(e.at) - EPOCH;
 
-      // 50/50 split of every claim
-      for (const c of claims) if (c.type === 'claim') expect(Math.abs(c.data.toHiresSol - c.data.toFundSol)).toBeLessThanOrEqual(2e-6);
+      // the split of every claim
+      for (const c of claims) {
+        if (c.type !== 'claim') continue;
+        expect(Math.abs(c.data.toHiresSol - (c.data.amountSol * hireSplitBps) / 10_000)).toBeLessThanOrEqual(2e-6);
+        expect(Math.abs(c.data.toHiresSol + c.data.toFundSol - c.data.amountSol)).toBeLessThanOrEqual(2e-6);
+      }
+      // all to hires: nothing goes to the fund, nothing is burned
+      if (hireSplitBps === 10_000) {
+        expect(burns).toHaveLength(0);
+        expect(st.treasury.totalToFundSol).toBe(0);
+      } else expect(burns.length).toBeGreaterThan(0);
       // never spends more than was claimed into each bucket
       expect(hires.length * RULES.salarySol).toBeLessThanOrEqual(st.treasury.totalToHiresSol + 1e-6);
       expect(st.treasury.totalBurnSpentSol).toBeLessThanOrEqual(st.treasury.totalToFundSol + 1e-6);
@@ -86,23 +99,27 @@ describe('launch simulator', () => {
       for (const e of events) expect(e.txSig).toBeNull();
       const s = sim.stats();
       console.log(
-        `${id}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, claimed ${s.claimedSol.toFixed(1)}, burned ${s.burnSpentSol.toFixed(1)} SOL in ${s.burnCount} chunks, waiting hire ${s.hireWaitingSol.toFixed(1)} burn ${s.burnWaitingSol.toFixed(1)}`,
+        `${id}${split ? ` (split ${split})` : ''}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, fund $${Math.round(s.fundValueUsd)}, claimed ${s.claimedSol.toFixed(1)}, burned ${s.burnSpentSol.toFixed(1)} SOL in ${s.burnCount} chunks, waiting hire ${s.hireWaitingSol.toFixed(1)} burn ${s.burnWaitingSol.toFixed(1)}`,
       );
     });
   }
 
-  it('normal: pumps to about $1.8M in about 3 hours and ends in the megacorp stage, short of the evil empire', () => {
+  it('normal: pumps to about $1.8M in about 3 hours, then cools off; every fee hires, so it reaches the evil empire', () => {
     const { sim, peak, mcapAt } = get('normal');
     expect(peak).toBeGreaterThan(1_500_000);
     expect(peak).toBeLessThan(2_300_000);
     expect(mcapAt(180)).toBeGreaterThan(mcapAt(360));
-    expect(stageOf(sim.stats().rats)).toBe('MEGACORP');
+    expect(stageOf(sim.stats().rats)).toBe('EVIL EMPIRE');
+    expect(sim.stats().rats).toBeLessThanOrEqual(PLAN_RATS);
   });
 
-  it('mega: runs to about $10M and reaches the evil empire', () => {
+  it('mega: runs to about $10M; hiring maxes out at the hourly cap and the rest waits', () => {
     const { sim, peak } = get('mega');
+    const s = sim.stats();
     expect(peak).toBeGreaterThan(8_000_000);
-    expect(stageOf(sim.stats().rats)).toBe('EVIL EMPIRE');
+    expect(stageOf(s.rats)).toBe('EVIL EMPIRE');
+    expect(s.rats).toBeLessThanOrEqual(PLAN_RATS); // stays inside the building the site draws
+    expect(s.hireWaitingSol).toBeGreaterThan(1);
   });
 
   it('rug: pumps to about $300K, then loses about 80%', () => {
@@ -111,6 +128,12 @@ describe('launch simulator', () => {
     expect(peak).toBeLessThan(400_000);
     expect(mcapAt(70)).toBeLessThan(peak * 0.3);
     expect(sim.stats().rats).toBeLessThan(1500);
+  });
+
+  it('with the default split every fee hires rats: the fund is worth about what they paid for their stocks', () => {
+    const s = get('normal').sim.stats();
+    expect(s.burnCount).toBe(0);
+    expect(s.fundValueUsd).toBeGreaterThan(s.rats * 4);
   });
 
   it('is deterministic for a scenario', () => {
