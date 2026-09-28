@@ -1,6 +1,6 @@
-# RAT RACE pixel site
+# WALL STREET RATS pixel site
 
-An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, an evil empire. Pan around and click into it. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Money is always moving: every claim and every hire sends bills flying into the Vault (a gold safe in HQ), and "+$X" pops up above it.
+An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, Wall Street. Pan around and click into it. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Money is always moving: every claim and every hire sends bills flying into the Vault (a gold safe in HQ), and "+$X" pops up above it.
 
 Every claim shows its rats at once. Hires are paced (at most 40 Jupiter calls a minute, 60 SOL an hour), so when fees come in faster than the bot can hire, one applicant per 0.03 SOL waiting to be spent lines up outside the lobby in a job-fair line around the block, under a "JOB FAIR: N IN LINE" sign. Each hire turns the rat at the front of the line into the new hire, who walks straight in to a desk. Early on, with no backlog, a hire just comes up the subway stairs and walks to its desk. When every desk is taken (about 5,800 rats), a hired rat stays in line until a desk is built for it.
 
@@ -30,7 +30,7 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 ```
 
 - "Simulate launch", then Start / Pause / Reset, speed 1x, 10x, 60x or 300x, and a scenario:
-  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,900 rats (evil empire), a portfolio worth about $23K. Everyone gets a desk.
+  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,900 rats (Wall Street), a portfolio worth about $23K. Everyone gets a desk.
   - **Mega**: runs to about $10M in 4 hours. About 6,400 rats after 5 hours: every desk is taken and about 550 line up outside.
   - **Rug**: pumps to about $300K, then dumps 80%. About 820 rats (corporate floor).
   - **Rush**: the backend's 3-hour launch (`SIMULATION.md`): 90 SOL of fees in the first 30 minutes, 180 SOL in all. The job-fair line swells to about 2,000 applicants while the Jupiter budget paces the hires, then drains. About 6,000 rats.
@@ -70,7 +70,7 @@ Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 7000, with
 | 100+ | Full floor | ring 2: a desk room per stock (on demand), meeting, server, copy, storage |
 | 500+ | Corporate floor | ring 3: the CEO office (partners move in), more of everything |
 | 1500+ | Megacorp | ring 4 |
-| 3000+ | Evil empire | ring 5: war room, vaults, red sky |
+| 3000+ | Wall Street | ring 5: war room, vaults, red sky |
 
 Screenshots: `assets/preview/idle_stages_*.png` (every stage at zoom 0.4 and 0.9, and the whole building), `assets/preview/idle_milestone.png`.
 

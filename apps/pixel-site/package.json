@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "RAT RACE pixel site: isometric PixiJS office floor fed by the public API (CONTRACT.md).",
+  "description": "WALL STREET RATS pixel site: isometric PixiJS office floor fed by the public API (CONTRACT.md).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

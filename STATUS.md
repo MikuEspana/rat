@@ -1,4 +1,4 @@
-# RAT RACE: Status
+# WALL STREET RATS: Status
 
 Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://wallstreetrats.world). **Economics (owner decisions after legal advice): every claimed fee hires rats, and the rats hold their stocks forever. Buy and burn was removed completely on 2026-09-28 (no fund wallet, no coin buys, no burns). No dividends, no holder payouts. Hiring: at most 20 rats per 35 s loop and 60 SOL per hour.**
 

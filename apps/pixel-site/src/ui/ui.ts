@@ -143,7 +143,7 @@ export class Ui {
   private buildHud(): HTMLElement {
     const hud = el('div', 'hud panel');
     const title = el('div', 'title');
-    title.append(el('div', 'brand', 'RAT RACE'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip);
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],

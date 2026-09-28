@@ -1,4 +1,4 @@
-# RAT RACE
+# WALL STREET RATS
 
 > The rat always loses. The fund always wins.
 

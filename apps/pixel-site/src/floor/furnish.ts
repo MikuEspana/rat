@@ -677,7 +677,7 @@ export function openRoom(f: Fit, seats: number): void {
   stockRoom(f, seats);
 }
 
-/** The evil empire's war room: a meeting room with a gold desk and screens everywhere. */
+/** Wall Street's war room: a meeting room with a gold desk and screens everywhere. */
 export function warRoom(f: Fit): void {
   const { i0, j0, w, h } = f.r;
   f.put('exec_desk_gold', i0 + Math.floor(w / 2), j0 + 2);

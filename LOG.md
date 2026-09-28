@@ -342,3 +342,10 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 **Tests**
 - The simulator's engine tests run Rush too: every rule holds, about 180 SOL of fees, more than 1,000 rats waiting at the peak, less than one salary left at the end.
 - Headless browser (Playwright): no console errors; Rush shows the line and the HUD stat (1,662 in line at minute 12); Normal has no line and hires walk straight in; bills and popups on screen; the HUD fits on mobile.
+
+## Miguel's decision: the name is WALL STREET RATS (2026-09-28)
+
+- Every public "RAT RACE" on the site is now "WALL STREET RATS": page title, OG and Twitter titles, HUD brand, the sign over the building, the simulator panel, the loading text.
+- The last stage (3,000+ rats) is WALL STREET (was EVIL EMPIRE). Its feed line: "The company made it to Wall Street".
+- Tagline unchanged: "The rat always loses. The fund always wins."
+- Left as is on purpose: operator-only text (admin page, CLI, Telegram alert prefix in `packages/safety`), and internal ids (package name `rat-race`, key backup format `rat-race-keys-v1`, which restores depend on). The coin ticker stays RAT.

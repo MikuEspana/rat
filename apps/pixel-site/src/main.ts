@@ -1,5 +1,5 @@
-// RAT RACE pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
-// evil empire (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
+// WALL STREET RATS pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
+// Wall Street (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
 import './style.css';
@@ -77,6 +77,7 @@ export interface Site {
 /** Feed line for something that got built. */
 function buildLine(e: GrowthEvent): { tag: string; text: string } {
   if (e.kind === 'stage') {
+    if (e.stage === STAGES.length - 1) return { tag: 'STAGE', text: 'The company made it to Wall Street' };
     const name = STAGES[e.stage]!.name.toLowerCase();
     return { tag: 'STAGE', text: `The company is now ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}` };
   }
@@ -87,7 +88,7 @@ function buildLine(e: GrowthEvent): { tag: string; text: string } {
 }
 
 async function boot(): Promise<Site> {
-  setStatus('Loading the building...');
+  setStatus('WALL STREET RATS: loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
