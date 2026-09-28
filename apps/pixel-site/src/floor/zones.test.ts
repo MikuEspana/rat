@@ -104,6 +104,8 @@ describe('zoning', () => {
         const id = slotOf[l.id] ?? l.id;
         expect(scene.standing.has(id), `${l.name} at ${n} rats`).toBe(true);
       }
+      // the sewer's way out always fits in front of the lobby
+      expect(scene.sewer.some((p) => p.main)).toBe(true);
       // shut wings exist only in the current ring
       for (const r of open.closedRects) expect(r.i0 >= ring.i0 - 1 && r.i0 + r.w <= ring.i1 + 2).toBe(true);
 
@@ -134,7 +136,8 @@ describe('signs', () => {
         fair: scene.line.length ? { head: scene.line[0]!, count: 1234 } : null,
       });
       const landmarks = spots.filter((s) => s.kind === 'landmark');
-      expect(landmarks.length).toBe(LANDMARKS.filter((l) => n >= l.at).length + (scene.standing.has('annex') ? 1 : 0));
+      const hiring = scene.sewer.some((p) => p.main && p.kind === 'tunnel') ? 1 : 0;
+      expect(landmarks.length).toBe(LANDMARKS.filter((l) => n >= l.at).length + (scene.standing.has('annex') ? 1 : 0) + hiring);
       for (const z of ZOOMS) {
         const { boxes, index } = signBoxes(spots, z);
         const laid = layoutLabels(boxes);

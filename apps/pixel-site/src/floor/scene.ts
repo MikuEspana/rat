@@ -4,6 +4,7 @@
 import type { Cell } from '../iso';
 import type { City } from './city';
 import { LANDMARKS } from './landmarks';
+import { type SewerPart, sewerParts, spawnStageOf } from './sewer';
 import { idx, T, type FloorLayout, type Room } from './types';
 import { type Openness, rectCells, Zoning } from './zones';
 
@@ -39,6 +40,8 @@ export interface Scene {
   pylon: { i: number; j: number } | null;
   /** landmarks standing in their slots (or lots) */
   standing: Set<string>;
+  /** the sewer parts that fit in front of the lobby (floor/sewer.ts) */
+  sewer: SewerPart[];
   /** the job-fair line, head first: outdoor, free tiles only (the apron round the office, then sidewalks) */
   line: Cell[];
 }
@@ -65,6 +68,11 @@ export function layoutScene(plan: FloorLayout, open: Openness, city: City, count
     if (!up) continue;
     if (z.claim({ what: id, cat: 'landmark', cells: rectCells(sp.i0, sp.j0, sp.w, sp.h) }, ['slot'], id)) standing.add(id);
   }
+
+  // the sewer rats come out of, in front of the lobby: before the city's street furniture takes the sidewalk
+  const sewer = sewerParts(spawnStageOf(count), ring.spawn).filter((p) =>
+    z.claim({ what: `sewer ${p.kind}`, cat: 'spawn', cells: rectCells(p.i0, p.j0, p.w, p.h) }, ['spawn', 'apron', 'sidewalk']),
+  );
 
   // landmarks in lots of their own: the rocket, the annex (and the annex's pylon on the office apron)
   let pylon: Scene['pylon'] = null;
@@ -149,7 +157,7 @@ export function layoutScene(plan: FloorLayout, open: Openness, city: City, count
     }
   }
   const line = jobFairLine(plan, stage, z);
-  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing, line };
+  return { zoning: z, keepItem, keepExtra, siteProps, cranes, crew, kneelers, pylon, standing, sewer, line };
 }
 
 /** Enough places for every applicant the page draws (rats.ts APPLICANT_CAP) and the hires waiting for a desk. */

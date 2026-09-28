@@ -64,6 +64,8 @@ export function towerTop(fi: number, fj: number, floors: number, scale: number):
 }
 
 export const TOWER_SCALE = (TOWER_SLOT - 0.5) / 6;
+/** how big the sewer entrance is drawn (world/sewer.ts) */
+export const SEWER_TUNNEL_SCALE = 1.25;
 
 /** The annex's size and footprint in its lot (landmarks.ts draws it from the same numbers). */
 export function annexGeometry(lot: { i0: number; j0: number; w: number; h: number }, stage: number): { scale: number; fp: number; fi: number; fj: number; floors: number } {
@@ -135,6 +137,17 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
   if (G && o.built(G.room) && on('gym')) {
     const c = cellCentre(G.i0 + G.w / 2 - 0.5, G.j0 + G.h / 2 - 0.5);
     add('gym', named('gym'), c.x, c.y - 50);
+  }
+
+  // the big sewer entrance: WALL ST RATS HIRING over its arch (world/sewer.ts draws it at this size)
+  const way = scene.sewer.find((p) => p.main && p.kind === 'tunnel');
+  if (way) {
+    const c = cellCentre(way.i0 + way.w / 2 - 0.5, way.j0 + way.h / 2 - 0.5);
+    const front = cellToScreen(way.i0 + way.w, way.j0 + way.h);
+    const base = Math.min(front.y, c.y + (way.w * 16) / 2);
+    const f = frames('sewer_tunnel');
+    const text = 'WALL ST RATS HIRING';
+    out.push({ key: 'hiring', kind: 'landmark', text, x: c.x, y: base - (f ? f.h * SEWER_TUNNEL_SCALE : 60) - 4, ...signSize(text, 2) });
   }
 
   // the rocket on its launchpad
