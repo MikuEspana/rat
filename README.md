@@ -4,6 +4,8 @@
 
 A memecoin on pump.fun (Solana) with a live 3D website. Trading volume pays creator fees. Creator fees hire rats. Every rat is a trader with its own fresh Solana wallet that buys one tokenized stock (xStocks) and holds it forever. Everything is public.
 
+Website: https://wallstreetrats.world (for now the in-browser launch simulator: a whole launch played out with the bot's real rules, no real money).
+
 ## Mechanics (v1, final)
 
 1. **Claim, every ~35s.** Claim pump.fun creator fees (bonding curve, and PumpSwap after graduation). **Every lamport goes to hires.** There is no buy and burn and no second wallet: the claimed SOL stays in the creator wallet until it pays for rats.
