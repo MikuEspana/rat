@@ -101,7 +101,8 @@ class Film:
         self.w, self.h = (1080, 1920) if aspect == '9x16' else (1920, 1080)
         if os.environ.get('FILM_GPU'):
             # your own machine: a visible Chrome window on the real graphics card (many times faster than software)
-            self.browser = pw.chromium.launch(headless=False, args=['--ignore-gpu-blocklist', '--enable-gpu-rasterization'])
+            self.browser = pw.chromium.launch(headless=False, args=['--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--disable-renderer-backgrounding',
+                                                                    '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling'])
         else:
             # a server with no GPU: software rendering (slow, same pixels)
             self.browser = pw.chromium.launch(executable_path=chromium_path(), args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
