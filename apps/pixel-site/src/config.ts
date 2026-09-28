@@ -8,8 +8,19 @@ function num(name: string, fallback: number): number {
 }
 
 export const API_BASE = (params.get('api') ?? import.meta.env.VITE_API_BASE ?? 'http://localhost:8787').replace(/\/$/, '');
-export const POLL_STATE_MS = 5000; // CONTRACT.md: /api/state every 5 s
-export const POLL_EVENTS_MS = 5000; // CONTRACT.md: /api/events every 5 s (the roster is loaded once)
+/**
+ * The in-browser launch simulator replaces the API: `?sim` in the page URL, or VITE_SIM=1 at build time (the static
+ * demo, which has no server). `?api=<url>` always wins.
+ */
+export const SIM = !params.has('api') && (params.has('sim') || import.meta.env.VITE_SIM === '1');
+export const SIM_SCENARIO = params.get('scenario') ?? 'normal';
+export const SIM_SPEED = num('speed', 60);
+/** start the launch right away (Reset and the scenario picker reload the page with this) */
+export const SIM_AUTOSTART = params.get('autostart') === '1';
+// CONTRACT.md: /api/state and /api/events every 5 s (the roster is loaded once). The simulator runs up to 300x
+// faster, so the site polls it (in memory, no network) four times a second.
+export const POLL_STATE_MS = SIM ? 250 : 5000;
+export const POLL_EVENTS_MS = SIM ? 250 : 5000;
 export const STRESS_RATS = num('stress', 0); // debug: pad the roster to this many rats
 export const STRESS_WALKERS = num('walkers', 0); // debug: synthetic hires per 10 s
 export const SHOW_PERF = params.has('perf');

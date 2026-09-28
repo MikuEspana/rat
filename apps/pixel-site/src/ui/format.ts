@@ -1,5 +1,6 @@
 // Display formatting for the HUD, feed, card and leaderboard.
 import type { RatEvent, Tier } from '@rat/contract';
+import { now as clockNow } from '../now';
 
 export function compact(n: number): string {
   const a = Math.abs(n);
@@ -32,7 +33,7 @@ export function tokens(s: string | null | undefined): string {
   return Number.isFinite(n) ? compact(n) : '--';
 }
 
-export function ago(iso: string, now = Date.now()): string {
+export function ago(iso: string, now = clockNow()): string {
   const s = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
   if (s < 60) return `${s}s ago`;
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
@@ -86,7 +87,7 @@ export function describe(e: RatEvent): { tag: string; text: string } {
 }
 
 /** Share of the wait from the last claim to the next one, 0..1 (null when unknown). */
-export function claimProgress(last: string | null, next: string | null, now = Date.now()): number | null {
+export function claimProgress(last: string | null, next: string | null, now = clockNow()): number | null {
   if (!last || !next) return null;
   const a = Date.parse(last);
   const b = Date.parse(next);

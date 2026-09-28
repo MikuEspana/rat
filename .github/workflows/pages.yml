@@ -1,0 +1,61 @@
+name: pages
+
+# The launch simulator demo: the pixel site built as a static site (VITE_SIM=1: the simulator runs in the browser,
+# no server, no API, no keys) and published to GitHub Pages. The same folder is kept as a downloadable artifact
+# (rat-race-demo) for Netlify Drop or Vercel.
+#
+# Pages must be on with Source: GitHub Actions (Settings > Pages > Build and deployment). The configure step tries to
+# turn it on; if the workflow token is not allowed to, the repo owner flips that one setting.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the static demo (launch simulator, no API)
+        run: pnpm --filter @rat/pixel-site build
+        env:
+          VITE_SIM: '1'
+      - name: Keep the folder for manual hosting (Netlify Drop, Vercel)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rat-race-demo
+          path: apps/pixel-site/dist
+      - name: Enable Pages (Source: GitHub Actions) if it is not on yet
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/pixel-site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

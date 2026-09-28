@@ -1,11 +1,15 @@
 // RAT RACE pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
 // evil empire (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
-// their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md).
+// their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
+// from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
 import './style.css';
 import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
-import { API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, STRESS_RATS, STRESS_WALKERS } from './config';
-import { Api } from './data/api';
+import {
+  API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
+  STRESS_WALKERS,
+} from './config';
+import { Api, type ApiLike } from './data/api';
 import { Store, type RatRecord } from './data/store';
 import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
@@ -20,6 +24,14 @@ import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
+import { setNowSource } from './now';
+import { LaunchSim } from './sim/engine';
+import { SimPanel } from './sim/panel';
+import { SimApi } from './sim/sim-api';
+import { SCENARIOS, type ScenarioId } from './sim/scenarios';
+
+/** At most this many rats walk in at once; later hires in a burst (a fast simulation) appear at their desks. */
+const MAX_WALKERS = 80;
 
 const statusEl = document.getElementById('status') as HTMLDivElement;
 
@@ -50,12 +62,15 @@ export interface Site {
   store: Store;
   rats: RatSystem;
   camera: Camera;
-  api: Api;
+  api: ApiLike;
   layout: FloorLayout;
   growth: Growth;
   ui: Ui;
   /** debug: rebuild the company at N rats */
   setRats?: (n: number) => void;
+  /** the launch simulator, when it replaces the API */
+  sim?: LaunchSim;
+  simPanel?: SimPanel;
 }
 
 /** Feed line for something that got built. */
@@ -80,7 +95,9 @@ async function boot(): Promise<Site> {
   });
   document.getElementById('stage')!.appendChild(app.canvas);
 
-  const api = new Api(API_BASE);
+  const sim = SIM ? new LaunchSim(SCENARIOS[(SIM_SCENARIO in SCENARIOS ? SIM_SCENARIO : 'normal') as ScenarioId]) : null;
+  if (sim) setNowSource(() => sim.now());
+  const api: ApiLike = sim ? new SimApi(sim) : new Api(API_BASE);
   const store = new Store();
   const [atlas, state, roster] = await Promise.all([loadAtlas(), retry('state', () => api.state()), retry('rats', () => api.rats())]);
   store.initState(state);
@@ -140,6 +157,21 @@ async function boot(): Promise<Site> {
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers });
   ui.setStage(STAGES[growth.stage]!.name, ratCount);
 
+  /** Simulator: glide out to show the whole building when it grows into a new stage. */
+  const frameBuilding = (): void => {
+    const r = plan.rings[growth.stage]!;
+    const pts = [cellCentre(r.i0, r.j0), cellCentre(r.i1, r.j0), cellCentre(r.i0, r.j1), cellCentre(r.i1, r.j1)];
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const w = Math.max(...xs) - Math.min(...xs) + 160;
+    const h = Math.max(...ys) - Math.min(...ys) + 220;
+    const small = window.innerWidth < 900;
+    const zoom = Math.min(1.4, window.innerWidth / w, (window.innerHeight - (small ? 330 : 190)) / h);
+    const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+    const cy = (Math.max(...ys) + Math.min(...ys)) / 2 - 40;
+    camera.flyTo(cx, cy + (small ? 40 : 0) / zoom, zoom, 1200);
+  };
+
   /** Something got built: rebuild the world, new rooms pop in, tell the feed (and the banner on a new stage). */
   const grew = (events: GrowthEvent[], announce: boolean): void => {
     const rooms = new Set<number>();
@@ -157,19 +189,34 @@ async function boot(): Promise<Site> {
     const lines = events.map(buildLine);
     ui.pushLocal(lines.slice(-12));
     const stage = events.filter((e) => e.kind === 'stage').pop();
-    if (stage && stage.kind === 'stage') ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats and growing`);
+    if (stage && stage.kind === 'stage') {
+      ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats and growing`);
+      if (sim) frameBuilding();
+    }
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
 
+  // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
+  let batchGrowth: GrowthEvent[] = [];
+  let batchHires: RatRecord[] = [];
+  const flushHires = (): void => {
+    if (!batchHires.length) return;
+    const events = batchGrowth;
+    const hires = batchHires;
+    batchGrowth = [];
+    batchHires = [];
+    grew(events, true);
+    for (const r of hires) rats.hire(r, rats.walking < MAX_WALKERS);
+    ui.setStage(STAGES[growth.stage]!.name, ratCount);
+  };
   store.on((e) => {
     if (e.kind === 'hire') {
       if (DEBUG_RATS) return; // the debug slider sets the rat count
       ratCount++;
-      const { events } = growth.add(e.rat.facts.id, e.rat.facts.stock);
-      grew(events, true);
-      rats.hire(e.rat);
-      ui.setStage(STAGES[growth.stage]!.name, ratCount);
-    } else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
+      batchGrowth.push(...growth.add(e.rat.facts.id, e.rat.facts.stock).events);
+      batchHires.push(e.rat);
+    } else if (e.kind === 'feed') flushHires();
+    else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
     else if (e.kind === 'burn') effects.burn(e.event.data.solSpent, rats.sample(12));
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
@@ -215,7 +262,7 @@ async function boot(): Promise<Site> {
     }
   };
   setInterval(() => void pollState(), POLL_STATE_MS);
-  setTimeout(() => setInterval(() => void pollEvents(), POLL_EVENTS_MS), 2500);
+  setTimeout(() => setInterval(() => void pollEvents(), POLL_EVENTS_MS), POLL_EVENTS_MS / 2);
   void pollEvents();
   if (STRESS_WALKERS) {
     setInterval(() => {
@@ -229,6 +276,17 @@ async function boot(): Promise<Site> {
 
   setStatus(null);
   const site: Site = { store, rats, camera, api, layout: plan, growth, ui };
+  if (sim) {
+    site.sim = sim;
+    site.simPanel = new SimPanel({
+      sim,
+      ui,
+      speed: SIM_SPEED,
+      autostart: SIM_AUTOSTART,
+      stage: () => STAGES[growth.stage]!.name,
+      onLaunch: frameBuilding,
+    });
+  }
 
   // debug: ?rats=N shows the company at N rats, with a slider to scrub through the stages
   if (DEBUG_RATS) {
