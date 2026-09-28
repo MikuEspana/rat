@@ -49,6 +49,7 @@ export class SimPanel {
   private simT = 0;
   private last = performance.now();
   private announcedEnd = false;
+  private finishedAt = 0;
 
   constructor(private readonly d: PanelDeps) {
     this.speed = (SPEEDS as readonly number[]).includes(d.speed) ? d.speed : 60;
@@ -188,7 +189,8 @@ export class SimPanel {
       sim.advanceTo(this.simT);
       if (sim.finished) this.running = false;
     }
-    if (sim.finished && !this.announcedEnd) {
+    if (sim.finished && !this.announcedEnd && (this.finishedAt ||= t) && t - this.finishedAt > 800) {
+      // after the site's next event polls, so the closing line lands below the launch's last events
       this.announcedEnd = true;
       const s = sim.stats();
       this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, ${s.burnSpentSol.toFixed(1)} SOL burned. Reset to run it again.` }]);

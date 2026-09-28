@@ -36,7 +36,7 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 - `src/sim/rules.ts` holds the bot's rules (50/50 split, 0.03 SOL per rat, at most 10 hires per 35 s loop, 30 SOL per hour per bucket, burn rounds 8 to 12 minutes apart, chunks of at most 1 SOL, at most 5 SOL per round). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
 - `src/sim/scenarios.ts`: the market cap curves, the volume model and the creator fee tiers. Volume and fee rates are rough models (the fee tiers approximate pump.fun's, which are set on-chain and can change), tuned so Normal pays about 145 SOL of fees.
 - `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (split, per-loop limit, hourly cap, chunk and round sizes, round spacing, never spending more than was claimed).
-- `.github/workflows/pages.yml` publishes the static demo to GitHub Pages on every push to `main`, and keeps the same folder as the `rat-race-demo` workflow artifact.
+- Live demo: https://mikuespana.github.io/rat/ . `.github/workflows/pages.yml` rebuilds it on every push to `main` and publishes it to the `gh-pages` branch, which GitHub Pages serves. The same folder is kept as the `rat-race-demo` workflow artifact (drag it onto Netlify Drop or Vercel).
 
 ## What is on screen
 
