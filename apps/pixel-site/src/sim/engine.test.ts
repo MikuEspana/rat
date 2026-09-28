@@ -48,7 +48,7 @@ const get = (id: ScenarioId): ReturnType<typeof run> => {
 };
 
 describe('launch simulator', () => {
-  for (const id of ['normal', 'mega', 'rug'] as const) {
+  for (const id of ['normal', 'mega', 'rush', 'rug'] as const) {
     it(`${id}: runs the backend rules (every claim to hires, per-loop limit, hourly cap)`, () => {
       const { sim, events } = get(id);
       const st = sim.stateResponse();
@@ -132,6 +132,26 @@ describe('launch simulator', () => {
     expect(maxHour).toBeGreaterThan(55);
     expect(sim.stats().jupiterMaxPerMin).toBeLessThanOrEqual(RULES.jupiterPerMin);
     expect(maxWaiting).toBeGreaterThan(5);
+  });
+
+  it('rush: the backend\'s 3-hour launch (180 SOL of fees): the line of waiting hires swells past 1,000, then every fee is spent', () => {
+    const { sim } = get('rush');
+    const s = sim.stats();
+    expect(s.feesSol).toBeGreaterThan(178);
+    expect(s.feesSol).toBeLessThan(181);
+    // most of it waits in the job-fair line during the rush (applicants: claimed SOL not hired yet)
+    let peak = 0;
+    const probe = new LaunchSim(SCENARIOS.rush, EPOCH);
+    probe.launch();
+    for (let min = 1; min <= SCENARIOS.rush.minutes; min++) {
+      probe.advanceTo(min * 60_000);
+      peak = Math.max(peak, probe.stats().hireWaitingSol);
+    }
+    expect(peak / RULES.salarySol).toBeGreaterThan(1000);
+    // and all of it hires rats by the end
+    expect(s.hireWaitingSol).toBeLessThan(RULES.salarySol);
+    expect(s.rats).toBeGreaterThan(5_900);
+    console.log(`rush: peak ${Math.round(peak / RULES.salarySol)} rats waiting in line, ${s.rats} rats at the end`);
   });
 
   it('rug: pumps to about $300K, then loses about 80%', () => {

@@ -150,6 +150,7 @@ export class Ui {
       ['rats', 'Rats hired'],
       ['portfolio', 'Portfolio value'],
       ['pnl', 'Portfolio PnL'],
+      ['line', 'Job fair'],
     ] as const) {
       const box = el('div', 'stat');
       const value = el('div', 'stat-value', '--');
@@ -180,6 +181,15 @@ export class Ui {
     ring.append(svg, this.ringLabel);
     hud.append(title, grid, ring);
     return hud;
+  }
+
+  /** The job-fair line: rats waiting outside for their buy (or, with the building full, a desk). */
+  setLine(n: number): void {
+    const st = this.stats.get('line');
+    if (!st) return;
+    st.value.textContent = n.toLocaleString('en-US');
+    st.value.className = `stat-value ${n > 0 ? 'hype' : ''}`;
+    st.sub.textContent = n === 1 ? 'rat in line' : n > 0 ? 'rats in line' : 'no line: walk right in';
   }
 
   private statText(key: string, text: string): void {

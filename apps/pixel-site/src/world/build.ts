@@ -1,6 +1,6 @@
 // Builds what stands of the office from the master plan and the growth state: floor tiles (a colour per room type),
 // empty lots for rooms not built yet, the street around the current building, walls, desks, props, things hung on
-// walls, the subway stairs, the furnace (it grows with the company) and its light beam, lamp glows, blinking
+// walls, the subway stairs, the Vault in HQ (it grows with the company) and its light beam, lamp glows, blinking
 // server lights, wall tickers and big room signs for reading the building from far away.
 // Rebuilt from scratch whenever a room is built (rare); new rooms pop in.
 import { Container, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
@@ -36,7 +36,12 @@ export interface World {
   lights: Container; // additive glows and blinking lights
   signs: Container; // room signs, readable when zoomed out
   tickers: Ticker[];
-  furnaceGlow: Sprite;
+  /** where money lands: the top of the Vault in HQ */
+  vault: { x: number; y: number };
+  /** where "+$X" popups start: just above the Vault's sign */
+  vaultPop: { x: number; y: number };
+  /** the Vault glows up for a moment (money just landed) */
+  flare(): void;
   /** the walk mask this world was built for */
   blocked: Uint8Array;
   /** call every frame: server lights blink, new rooms pop in, the beam pulses */
@@ -351,7 +356,8 @@ export function buildWorld(
   const fp = cellCentre(plan.furnace.i, plan.furnace.j);
   for (const pr of plan.props) {
     if (pr.flat || !propVisible(pr)) continue;
-    const f = atlas.frame(`world:${pr.kind}`);
+    // the HQ centrepiece is the Vault (the plan still calls its spot the furnace)
+    const f = atlas.frame(pr.kind === 'furnace' ? 'world:vault' : `world:${pr.kind}`);
     const pop = popping(pr);
     if (pr.wall) {
       const item = placeOnWall(heights, W, main, f, pr);
@@ -403,8 +409,14 @@ export function buildWorld(
   }
   lights.addChild(leds);
 
-  // the furnace: glow, and a light beam that grows with the company (the landmark you see from anywhere)
-  const furnaceGlow = addGlow(glowTexture(255, 120, 40), fp.x + 8 * fscale, fp.y - 18 * fscale, 2.2 * fscale);
+  // the Vault: a gold glow, and a light beam that grows with the company (the landmark you see from anywhere)
+  const vaultGlow = addGlow(glowTexture(255, 200, 70), fp.x, fp.y - 26 * fscale, 2.2 * fscale, 0.7);
+  const vaultTop = { x: fp.x, y: fp.y - 50 * fscale };
+  let flareT = 0;
+  const vaultSign = new Sprite(signTexture('THE VAULT', 0xf0c040, 2));
+  vaultSign.anchor.set(0.5, 1);
+  vaultSign.position.set(fp.x, fp.y - 80 * fscale);
+  signs.addChild(vaultSign);
   const beam = new Sprite(beamTexture());
   beam.anchor.set(0.5, 1);
   beam.position.set(fp.x + 4 * fscale, fp.y - 40 * fscale);
@@ -441,7 +453,8 @@ export function buildWorld(
   const roomSigns: Sprite[] = [];
   for (const r of plan.rooms) {
     if (!built(r)) continue;
-    const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : ROOM_LOOK[r.kind].label;
+    // the garage's centrepiece has its own sign (THE VAULT)
+    const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : r.kind === 'garage' ? '' : ROOM_LOOK[r.kind].label;
     if (!label) continue;
     const s = new Sprite(signTexture(label, r.tint, 2));
     const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
@@ -472,11 +485,18 @@ export function buildWorld(
     lights,
     signs,
     tickers,
-    furnaceGlow,
+    vault: vaultTop,
+    vaultPop: { x: fp.x, y: fp.y - 100 * fscale },
+    flare(): void {
+      flareT = 0.45;
+    },
     blocked,
     update(dt: number): void {
       clock += dt;
       beam.alpha = 0.75 + 0.25 * Math.sin(clock * 2.1);
+      flareT = Math.max(0, flareT - dt);
+      vaultGlow.alpha = 0.7 + flareT * 1.2;
+      vaultGlow.scale.set(2.2 * fscale * (1 + flareT * 0.8));
       if (pops.length) {
         for (let k = pops.length - 1; k >= 0; k--) {
           const p = pops[k]!;
@@ -525,6 +545,7 @@ export function buildWorld(
       }
       signScale = Math.max(1, Math.min(4, 0.6 / z));
       name.scale.set(signScale);
+      vaultSign.scale.set(signScale);
       fair?.scale.set(signScale);
     },
     setJobFair(count: number, head: Cell | null): void {

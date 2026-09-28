@@ -21,6 +21,7 @@ import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
+import { MoneyFx } from './world/money';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
 import { setNowSource } from './now';
@@ -65,6 +66,7 @@ export interface Site {
   layout: FloorLayout;
   growth: Growth;
   ui: Ui;
+  money: MoneyFx;
   /** debug: rebuild the company at N rats */
   setRats?: (n: number) => void;
   /** the launch simulator, when it replaces the API */
@@ -128,12 +130,13 @@ async function boot(): Promise<Site> {
   let world: World = buildWorld(plan, growth, atlas, store.stocks);
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+  const money = new MoneyFx(atlas, world);
   const camera = new Camera(scene, app.canvas);
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, world.signs, markers);
-    world.setJobFair(rats.queueLength, rats.lineHead());
+    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, world.signs, money.container, markers);
+    world.setJobFair(rats.lineLength, rats.lineHead());
     camera.apply();
   };
   const wireRats = (): void => {
@@ -151,6 +154,7 @@ async function boot(): Promise<Site> {
     const v = camera.view();
     world.main.setView(v.x, v.y, v.w, v.h);
     world.setZoom(camera.zoom);
+    money.setZoom(camera.zoom);
   };
   const hq = cellCentre(plan.furnace.i, plan.furnace.j);
   camera.centerOn(hq.x, hq.y + 60, window.innerWidth < 700 ? 0.6 : 0.9);
@@ -183,6 +187,7 @@ async function boot(): Promise<Site> {
     world = buildWorld(plan, growth, atlas, store.stocks, rooms);
     rats.rebind(world.main, world.blocked);
     wireRats();
+    money.setWorld(world);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
@@ -197,15 +202,71 @@ async function boot(): Promise<Site> {
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
 
-  /** The job-fair line outside: its sign, and a feed line when it forms or clears. */
-  let lineWas = rats.queueLength;
+  /**
+   * The job-fair line outside: applicants (claimed salaries whose buy has not confirmed yet) and, once the building
+   * is full, hired rats waiting for a desk. Its sign, the HUD stat, and a feed line when the building fills or
+   * empties out.
+   */
+  let seatlessWas = rats.seatlessCount;
   const updateLine = (): void => {
-    const n = rats.queueLength;
-    world.setJobFair(n, rats.lineHead());
-    if (n > 0 && lineWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires line up outside the lobby, job-fair style, for the next desk.' }]);
-    else if (n === 0 && lineWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'The line outside is gone: everyone has a desk.' }]);
-    lineWas = n;
+    world.setJobFair(rats.lineLength, rats.lineHead());
+    ui.setLine(rats.lineLength);
+    const n = rats.seatlessCount;
+    if (n > 0 && seatlessWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires wait in the line outside the lobby, job-fair style, for the next desk.' }]);
+    else if (n === 0 && seatlessWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'Every hire in line has a desk again.' }]);
+    seatlessWas = n;
   };
+
+  // Money you can see: every claim sends applicants into the line and bills into the Vault; every confirmed hire
+  // pulls an applicant in and sends its stock's value into the Vault. Display only, from the same API data.
+  let salarySol = 0.03;
+  /** stock value one SOL of salary buys (what lands in the Vault), from the latest hire */
+  let usdPerSol = 0;
+  const knownCosts = [...store.rats.values()].map((r) => r.facts.costUsd).filter((c) => c > 0).sort((a, b) => a - b);
+  if (knownCosts.length) usdPerSol = knownCosts[knownCosts.length >> 1]! / salarySol;
+  let claimCarry = 0;
+  const subway = (): { x: number; y: number } => {
+    const sp = plan.rings[growth.stage]!.spawn;
+    return cellCentre(sp.i, sp.j);
+  };
+  const onClaim = (amountSol: number): void => {
+    if (DEBUG_RATS) return;
+    const sol = amountSol + claimCarry;
+    const n = Math.floor(sol / salarySol + 1e-9);
+    claimCarry = sol - n * salarySol;
+    rats.addApplicants(n, rats.walking < MAX_WALKERS);
+    const from = subway();
+    money.flyIn([from, { x: from.x + 20, y: from.y }, { x: from.x - 20, y: from.y + 6 }], Math.max(4, Math.min(30, Math.round(amountSol * 8))));
+    money.addValue('claim', amountSol * (usdPerSol || 150));
+    updateLine();
+  };
+  let applicantsSynced = false;
+  let driftSince: number | null = null;
+  /** The line follows the API: claimed SOL not hired yet (waitingSol), one applicant per salary. */
+  const syncApplicants = (s: StateResponse): void => {
+    if (DEBUG_RATS) return;
+    const target = Math.floor(s.treasury.waitingSol / salarySol + 1e-9);
+    if (!applicantsSynced) {
+      applicantsSynced = true;
+      rats.setApplicants(target, false);
+      updateLine();
+      return;
+    }
+    // Claims and hires already move the line. waitingSol leaves out the salaries of a hire loop in flight (their
+    // hire events are still coming), so only a gap bigger than a loop that lasts over 10 seconds is corrected.
+    if (Math.abs(target - rats.applicantCount) <= 25 + target * 0.05) {
+      driftSince = null;
+      return;
+    }
+    const now = performance.now();
+    driftSince ??= now;
+    if (now - driftSince < 10_000) return;
+    driftSince = null;
+    rats.setApplicants(target, rats.walking < MAX_WALKERS);
+    updateLine();
+  };
+  // on page load the line already holds everyone the API says is waiting
+  syncApplicants(state);
 
   // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
   let batchGrowth: GrowthEvent[] = [];
@@ -217,7 +278,16 @@ async function boot(): Promise<Site> {
     batchGrowth = [];
     batchHires = [];
     grew(events, true);
-    for (const r of hires) rats.hire(r, rats.walking < MAX_WALKERS);
+    let value = 0;
+    const desks: Array<{ x: number; y: number }> = [];
+    for (const r of hires) {
+      rats.hire(r, rats.walking < MAX_WALKERS);
+      value += r.facts.costUsd;
+      const at = rats.positionOf(r.facts.id);
+      if (at && desks.length < 24) desks.push({ x: at.x, y: at.y - 30 });
+    }
+    money.flyIn(desks, desks.length);
+    money.addValue('hire', value);
     updateLine();
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
@@ -227,11 +297,17 @@ async function boot(): Promise<Site> {
       ratCount++;
       batchGrowth.push(...growth.add(e.rat.facts.id, e.rat.facts.stock).events);
       batchHires.push(e.rat);
-    } else if (e.kind === 'feed') flushHires();
+      if (e.event.data.salarySol > 0) {
+        salarySol = e.event.data.salarySol;
+        if (e.event.data.costUsd > 0) usdPerSol = e.event.data.costUsd / salarySol;
+      }
+    } else if (e.kind === 'claim') onClaim(e.event.data.amountSol);
+    else if (e.kind === 'feed') flushHires();
     else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
       applyMoods(e.state);
+      syncApplicants(e.state);
     }
   });
 
@@ -243,6 +319,7 @@ async function boot(): Promise<Site> {
     const dt = Math.min(0.1, t.deltaMS / 1000);
     rats.update(dt);
     world.update(dt);
+    money.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -285,7 +362,7 @@ async function boot(): Promise<Site> {
   }
 
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout: plan, growth, ui };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui, money };
   if (sim) {
     site.sim = sim;
     site.simPanel = new SimPanel({
@@ -294,7 +371,7 @@ async function boot(): Promise<Site> {
       speed: SIM_SPEED,
       autostart: SIM_AUTOSTART,
       stage: () => STAGES[growth.stage]!.name,
-      line: () => rats.queueLength,
+      line: () => rats.lineLength,
       onLaunch: frameBuilding,
     });
   }

@@ -27,7 +27,7 @@ import mockState from '@rat/contract/mock/state.json';
 import { hireWeights, pickWeighted } from '../../../../packages/core/src/picker';
 import { Rng } from '../floor/rng';
 import { RULES, SWAP_SOL } from './rules';
-import { COIN_SUPPLY, creatorFeeRate, curveAt, SOL_USD, volumeUsdPerHour, type Scenario } from './scenarios';
+import { COIN_SUPPLY, creatorFeeRate, curveAt, phaseFeePerMin, SOL_USD, volumeUsdPerHour, type Scenario } from './scenarios';
 
 const STEP_MS = 5_000; // fee accrual resolution
 const HIRE_GAP_MS = 1_500; // the hires of one loop go out one after another (each is its own transaction)
@@ -186,7 +186,8 @@ export class LaunchSim {
     const c = curveAt(this.scenario, this.t / 60_000);
     this.mcap = c.mcap * Math.exp(this.noise);
     const volumeUsd = volumeUsdPerHour(this.mcap, c.slopePerHour) * (STEP_MS / HOUR_MS);
-    const feeSol = (volumeUsd * creatorFeeRate(this.mcap)) / SOL_USD;
+    const phases = this.scenario.feePhases;
+    const feeSol = phases ? phaseFeePerMin(phases, this.t / 60_000) * (STEP_MS / 60_000) : (volumeUsd * creatorFeeRate(this.mcap)) / SOL_USD;
     this.claimable += feeSol;
     this.fees += feeSol;
   }
