@@ -139,6 +139,11 @@ export class RatSystem {
   private line: Cell[] = [];
   private lineAt = new Map<number, number>();
   private lineStage = -1;
+  /** the line the world laid out (outdoor, free tiles: scene.ts), else the plan's own (queueCells) */
+  private lineGiven: Cell[] | null;
+  private lineSrc: Cell[] | null = null;
+  /** walking routes that stay outside the office: applicants never cut through it to reach the line */
+  private outdoor!: Paths;
   private queue: Agent[] = [];
   /** hired rats at the front of the line (the rest of it are applicants) */
   private realInLine = 0;
@@ -162,7 +167,9 @@ export class RatSystem {
     private readonly growth: Growth,
     private layer: SortedLayer,
     private blocked: Uint8Array,
+    line: Cell[] | null = null,
   ) {
+    this.lineGiven = line;
     this.paths = new Paths(layout, 64, blocked);
     this.spawn = layout.rings[growth.stage]!.spawn;
     this.strollCells = [];
@@ -177,11 +184,18 @@ export class RatSystem {
     const L = this.layout;
     const g = this.growth;
     this.spawn = L.rings[g.stage]!.spawn;
-    const moved = g.stage !== this.lineStage;
+    const moved = g.stage !== this.lineStage || this.lineSrc !== this.lineGiven;
     if (moved) {
       this.lineStage = g.stage;
-      this.line = queueCells(L, g.stage, this.blocked);
+      this.lineSrc = this.lineGiven;
+      this.line = this.lineGiven ?? queueCells(L, g.stage, this.blocked);
       this.lineAt = new Map(this.line.map((c, k) => [c.j * L.W + c.i, k]));
+      // outside only: the office (this stage's ring) is out of bounds for these routes
+      const ring = L.rings[g.stage]!;
+      const mask = this.blocked.slice();
+      for (let i = ring.i0; i <= ring.i1; i++) for (let j = ring.j0; j <= ring.j1; j++) mask[j * L.W + i] = 1;
+      this.outdoor = new Paths(L, 64, mask);
+      this.fitLine();
     }
     this.ceoSeats = L.ceo.kind === 'ceo' && g.isBuilt(L.ceo) ? [...L.ceo.seats] : [];
     this.spots = L.spots.filter((s) => (s.room >= 0 ? g.built[s.room] === 1 : s.ring === g.stage));
@@ -207,9 +221,10 @@ export class RatSystem {
   }
 
   /** The world was rebuilt (a room went up): move every rat onto the new layer and walk mask. */
-  rebind(layer: SortedLayer, blocked: Uint8Array): void {
+  rebind(layer: SortedLayer, blocked: Uint8Array, line: Cell[] | null = this.lineGiven): void {
     this.layer = layer;
     this.blocked = blocked;
+    this.lineGiven = line;
     this.paths = new Paths(this.layout, 64, blocked);
     const lineMoved = this.index();
     for (const a of this.list) {
@@ -240,7 +255,7 @@ export class RatSystem {
       if (route) this.walkTo(a, [a.pos, ...route, seat.pos], { kind: 'move', spot: null, back: [], stay: 0 });
       else this.sit(a);
     }
-    if (lineMoved || left) this.reflow(!lineMoved);
+    if (lineMoved || left) this.reflow(!lineMoved, lineMoved);
     layer.sync(true);
   }
 
@@ -269,12 +284,31 @@ export class RatSystem {
   /** New applicants come up the subway stairs and join the back of the line (walk false: they appear there). */
   addApplicants(n: number, walk: boolean): void {
     for (let k = 0; k < n; k++) {
-      if (this.queue.length - this.realInLine >= APPLICANT_CAP) {
+      if (this.queue.length - this.realInLine >= this.applicantRoom()) {
         this.hiddenApplicants += n - k;
         return;
       }
       this.createApplicant(walk && k < 60);
     }
+  }
+
+  /** How many applicants can stand in the line: one per place, never two on a tile (the rest are counted only). */
+  private applicantRoom(): number {
+    return Math.min(APPLICANT_CAP, Math.max(0, this.line.length - this.realInLine));
+  }
+
+  /** The line changed size (a new stage, a rebuilt street): step extra applicants out of view, or bring some back. */
+  private fitLine(): void {
+    const room = this.applicantRoom();
+    while (this.queue.length - this.realInLine > room && this.queue.length > this.realInLine) {
+      this.dropAgent(this.queue.pop()!);
+      this.hiddenApplicants++;
+    }
+    while (this.hiddenApplicants > 0 && this.queue.length - this.realInLine < room) {
+      this.hiddenApplicants--;
+      this.createApplicant(false);
+    }
+    this.lineDirty = true;
   }
 
   /** Applicants leave from the back of the line (the ones not drawn go first). */
@@ -300,7 +334,7 @@ export class RatSystem {
     this.agents.set(a.id, a);
     this.list.push(a);
     this.queue.push(a);
-    const back = walk ? this.paths.route(home, this.spawn) : null;
+    const back = walk ? this.outdoor.route(home, this.spawn) : null;
     if (back) this.walkTo(a, back.reverse(), null);
     else this.standInLine(a, false);
     this.place(a);
@@ -327,7 +361,7 @@ export class RatSystem {
     const at = this.lineAt.get(here.j * this.layout.W + here.i);
     let outside: Cell[] | null = null;
     if (at !== undefined && at <= 60) outside = [...this.line.slice(0, at).reverse()];
-    else outside = this.paths.route(here, front);
+    else outside = this.outdoor.route(here, front);
     const inside = this.paths.route(seat.access, door);
     a.seat = seat;
     a.home = seat.access;
@@ -361,15 +395,21 @@ export class RatSystem {
   }
 
   /** The line moved up (someone got a desk) or moved out (a new stage): everyone takes their new place. */
-  private reflow(walk: boolean): void {
+  private reflow(walk: boolean, moved = false): void {
     this.lineDirty = false;
     let walking = 0;
     this.queue.forEach((a, p) => {
       const cell = this.lineCell(p);
-      if (a.qi === p && a.home.i === cell.i && a.home.j === cell.j) return;
+      if (a.qi === p && a.home.i === cell.i && a.home.j === cell.j && !moved) return;
       a.qi = p;
       a.home = cell;
-      if (a.mode === 'walk') return; // on arrival it steps along to its new place
+      if (a.mode === 'walk') {
+        if (!moved) return; // on arrival it steps along to its new place
+        // the office grew over its route: it goes straight to its new place outside, never through the new rooms
+        this.walkers.delete(a);
+        a.path = [];
+        a.pos = { ...cell };
+      }
       this.standInLine(a, walk && walking++ < 300);
     });
   }

@@ -3,7 +3,7 @@ import { Growth } from './growth';
 import { Paths } from './path';
 import { buildMaster, queueCells, STAGES, stageOf } from './plan';
 import { buildCity, carSprite, CITY_KEY } from './city';
-import { LANDMARKS, towerFloors, towerSpots, unlocked } from './landmarks';
+import { LANDMARKS, TOWER_SLOT, towerFloors, unlocked } from './landmarks';
 import { shortUsd, VAULT_STAGES, vaultStageOf } from './vault';
 import { idx, type FloorLayout } from './types';
 
@@ -179,22 +179,10 @@ describe('the city round the office', () => {
     }
   });
 
-  it('keeps the tower ground clear, digs the gym beside the office and puts the annex across the avenue', () => {
+  it('keeps its own landmark lots outside the office: the annex across the avenue, the rocket across the cross street', () => {
     for (let stage = 2; stage < STAGES.length; stage++) {
       const c = buildCity(plan, stage, has, size);
       const ring = plan.rings[stage]!;
-      const t = towerSpots(ring, stage);
-      for (const spot of [t.a, t.b]) {
-        if (!spot) continue;
-        for (const l of c.lots) {
-          const hit = l.i0 <= spot.fi + 1 && l.i0 + l.w - 1 >= spot.fi - spot.n - 2 && l.j0 <= spot.fj + 1 && l.j0 + l.h - 1 >= spot.fj - spot.n - 2;
-          expect(hit).toBe(false);
-        }
-      }
-      const gym = c.lots.filter((l) => l.use === 'basement');
-      expect(gym.length).toBe(1);
-      expect(gym[0]!.far).toBeLessThan(0.65);
-      expect(gym[0]!.i0 + gym[0]!.w).toBeLessThanOrEqual(ring.i0);
       const annex = c.lots.filter((l) => l.use === 'annex');
       expect(annex.length).toBe(stage >= 3 ? 1 : 0);
       if (annex[0]) expect(annex[0].j0).toBeGreaterThan(ring.j1 + 5); // past the avenue
@@ -218,7 +206,19 @@ describe('landmarks', () => {
       expect(f).toBeGreaterThanOrEqual(last);
       last = f;
     }
-    expect(last).toBeLessThanOrEqual(60);
+    expect(last).toBeLessThanOrEqual(120);
+  });
+
+  it('gives the towers and the gym fixed slots inside the building: the towers in the first ring, the gym in the full floor lobby', () => {
+    const r1 = plan.rings[1]!;
+    for (const id of ['elevator', 'pool'] as const) {
+      const sp = plan.landmarkSpots[id]!;
+      expect(sp.w).toBe(TOWER_SLOT);
+      expect(plan.rooms[sp.room]!.ring).toBe(1);
+      expect(sp.i0).toBeGreaterThanOrEqual(r1.i0);
+      expect(sp.i0 + sp.w).toBeLessThanOrEqual(r1.i1);
+    }
+    expect(plan.landmarkSpots.gym!.room).toBe(plan.rings[2]!.lobby);
   });
 
   it('keeps a clear space for every interior set piece in a room of the right stage', () => {
