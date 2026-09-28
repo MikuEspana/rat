@@ -60,6 +60,19 @@ Running log of decisions and blockers. Newest first inside each section.
 - **Debug slider:** `?rats=N` (1 to 5000) shows the company at N rats (synthetic roster), with a slider and stage jump buttons. Live hires are ignored in that mode.
 - **Dense floor (owner, 2026-09-27):** the Phase 3 floor read as a spreadsheet. Rebuilt as one packed building (`src/floor/`): a slicing floor plan with 2-cell corridors only at the top splits and shared walls below, so rooms touch. HQ shrunk to about 10x10 in the centre. New room types: break room, bathroom, server room, copy room, meeting room, storage, lobby, the CEO corner office (partners sit there while it has desks). A big stock gets several stock rooms of different sizes, each laid out one of six ways (columns, rows, split, perimeter + island, pods, mixed) with jittered desks, mirrored clusters and clutter. About 7% of rats are away from their desks at any time: coffee, water cooler, vending, chats, bathroom queue, copier, filing, meetings, whiteboard, server checks, furnace watching, corridor strolls, box runs, smokers outside, naps at the desk. Night sky backdrop, street ring with lamps and the subway stairs outside the lobby.
 - **Dense floor art budget (owner, 2026-09-27):** stay free; kitbash and draw clutter in code; PixelLab only for hero props. Before that message arrived 3 generations had gone on 3 prop sheets (vending machine and server rack among them); after it, 1 hero generation (coffee machine). Gold CEO desk is a free recolor. Everything else is kitbashed or drawn in `tools/build_props2.py`.
+- **Round 5: weak spots, THE VAULT, zoning, the sewer, WALL STREET RATS (owner, 2026-09-28).**
+  - **Weak spots:**
+    - Rats at pod desks really type. Facing the camera: the seated pose edited with `edit_image_pixen`, then a 7 frame `animate_image` typing loop, recoloured for every tier and fur with maps learned from the tier sheets (`tools/build_rats2.py`). Back to the camera: forearms forward, elbows and head moving (drawn in code; the generated back view failed twice).
+    - Accessories redrawn about twice as big with bold outlines; walking rats carry a briefcase.
+    - Rear views of all 8 cars, so traffic drives both ways.
+    - Unbuilt rooms and shut wings are building sites (dirt, tape, material, cones, cranes, hard-hat crews).
+    - 4 layer skyline with parallax; room signs hide below zoom 0.62.
+  - **THE VAULT:** the money pile at the centre of the building replaces the furnace. It shows the Wall Street Rats portfolio (the sum of all the rats' stock holdings, USD) in 6 stages: $0 loose change, $50 cash on a desk, $500 a cash pallet, $5K a money mountain, $50K an overflowing glass vault, $500K a money bin with rats swimming. Hires fly bills in from the sewer with "+$X"; a burst rains bills; a new stage rises with a bounce and a VAULT UPGRADE reveal; it shimmers green while the portfolio is up and dims while down; clicking it opens the total, the breakdown by stock and the rat wallets. `?vault=USD` and `?vaultpnl=%` pin it for screenshots.
+  - **Burn is gone:** no furnace, no burn visuals, feed lines, HUD fields or news. The simulator never burns (its burn rules and tests are gone; `rules.test.ts` still checks every number it uses against the worker). The dev mock API (`apps/api`) still emits burn events; the site ignores them.
+  - **The espresso shrine** is a giant espresso machine in the garage's back corner, with steam and rats kneeling round it.
+  - **Zoning** (`floor/zones.ts`, `floor/scene.ts`, `floor/signs.ts`): every tile has a zone and an area (interior, street, spawn, skyline) and every placement claims its tiles; what does not fit is skipped. Landmarks have fixed slots inside the building (towers in the first ring's corners, the gym in the full floor's lobby, the espresso machine in the garage corner); the rocket and the annex stand in lots of their own. The job-fair line is laid out with everything else, outside only. Every sign has a fixed spot and one layout keeps them apart at every zoom. `zones.test.ts` checks it all at 0, 10, 100, 1,000 and 2,000 rats and the stage edges.
+  - **The sewer:** new rats come out of it instead of the subway stairs, in the owner's four steps: one manhole, two (50 hires), a steaming grate with vents (250), a big sewer entrance with a WALL ST RATS HIRING sign and a marching line (1,000). The job-fair line's applicants come up through it too; a hire walks in from the front of the line, or climbs out of the sewer when nobody is waiting.
+  - **Name:** WALL STREET RATS everywhere a viewer reads it (a test fails if "RAT RACE" comes back).
 - **Data loading (owner, 2026-09-27):** `/api/rats` is about 1.7 MB at 3,000 rats. Load it once on page open, then follow `/api/events` (every 5 s) for new hires, freezes and claims. Never re-poll the full roster. Live PnL and tiers are recomputed in the browser from `/api/state` stock prices with the `@rat/contract` display math (`valueUsd = tokenAmount x priceUsd`). A rat hired after page load has no `tokenAmount` in its hire event, so its value is estimated as `costUsd x price_now / price_at_hire` (price at hire = the stock price in the latest `/api/state` when the hire event arrives). Small error from slippage; exact again after a reload.
 - **Style (owner, 2026-09-27):** style A Blueprint. Tiers read by SUIT color, all free recolors of one rat: intern brown/khaki + red tie, analyst navy + red tie, associate forest green + gold tie, vp burgundy + gold tie, partner black with gold lapel trim + gold tie, frozen whole rat grey. No pale suits. 1px dark outer outline (#16182c) on every tier. Files: `style-samples/a-variants/`.
 - **Final style (owner, 2026-09-27):** mix A3 + A2: A3 density (desk clutter, wall ticker, chairs, bin, paper pile) with A2 oak desk tops, plants and lamp glow. Tier tweaks: VP brighter crimson (was burgundy, read as intern brown), partner louder gold (wide gold tie, bright gold lapels, gold seams, gold collar from behind). Assets: `assets/` (see `assets/README.md`).
@@ -151,3 +164,16 @@ Every stage works today with existing art, kitbashes and code-drawn pieces. Opti
 Left: 8.
 
 Source: PixelLab MCP `agent_help` answers and tool descriptions (REPORTED), https://api.pixellab.ai/mcp/docs (VERIFIED for template and v3 animation pricing).
+
+### Round 5 (caps about 25 + 15 + 15): 29 used
+
+- 6 for the rats: 2 seated pose edits, 2 back view edits (rejected), 1 typing animation (used), 1 back typing animation (rejected: glowing eyes, arms down).
+- 8 rear views of the cars (`edit_image_pixen` on each front sprite, all first try).
+- 9 for the Vault: 6 pile stages, the flying bill, the giant espresso machine, the kneeling rat. The money bin had a solid background (cut out) and a person in a suit (painted over with coins).
+- 6 for the sewer, all first try.
+
+Log in `assets/raw/props6/log.json`, previews in `assets/preview/round5_weakspots.png`, `vault_stages.png`, `vault_live.png`, `zoning_stages.png`, `sewer_stages.png`.
+
+### Round 6 (cap 20): 0 used
+
+Rename, zoning, the manhole and the espresso machine reuse round 5 art (the espresso machine is `r5_espresso_giant` in `assets/manifest.json`); no new PixelLab generations.
