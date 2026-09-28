@@ -1,0 +1,36 @@
+{
+  "group_id": "89c3433a-8cab-4b69-8c21-347e7552b685",
+  "states": [
+    {
+      "character": {
+        "id": "0cb1be21-e18b-4d27-b862-9c318677cdbf",
+        "name": "Idle",
+        "prompt": "slim tall grey street rat standing upright, no clothes, scruffy grey fur, lighter belly, pink ears, paws, feet and tail",
+        "size": {
+          "width": 128,
+          "height": 128
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-09-28T15:35:26.463798+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-09-28T16:01:18.361145"
+}

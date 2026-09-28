@@ -1,7 +1,7 @@
 // Shots 3 and 4 on one set: the hero walks in, sits, cracks its knuckles and types; its stock coin (NVDAx) drops
 // onto its head. Then the team: a rat drops into every chair on the beat, faster and faster, each with its own
 // stock, and the camera snaps out a step on the landings. A pure function of the beat.
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { HeroStage, at, frameAt, type View } from './stage';
 import { anim, has, META, sprite, tex, textTexture, GOLD } from './pixel';
 import { easeInCubic, easeInOutCubic, easeOutBack, lerp, span } from './timeline';
@@ -77,6 +77,11 @@ export class OfficeScene {
       [360, 448, 14, 'NVDAx', -1],
       [490, 448, 22, 'TSLAx', 1],
       [680, 448, 27, 'SPYx', 7],
+      // the third row: the snap out on beat 27 shows the floor keeps filling
+      [165, 528, 27, 'AMDx', 8],
+      [295, 528, 27.25, 'COINx', 9],
+      [425, 528, 27.5, 'MSTRx', 10],
+      [555, 528, 27.75, 'SPYx', 11],
     ];
     for (const [x, y, land, stock, variant] of layout) {
       const chair = sprite(tex('chair'), 0.5, 1);
@@ -88,7 +93,10 @@ export class OfficeScene {
       glow.scale.set(0.5);
       const coin = sprite(this.f.coin[0]!, 0.5, 1);
       const tag = sprite(textTexture([stock], { fill: GOLD }), 0.5, 1);
-      w.addChild(chair, rat, desk, glow, coin, tag);
+      // the rat shows down to the desk's front panel, never its legs under the desk
+      const clip = new Graphics().rect(x - 70, y - 400, 140, 400 - META.desk.h + DESK_TOP + 14).fill(0xffffff);
+      rat.mask = clip;
+      w.addChild(chair, clip, rat, desk, glow, coin, tag);
       at(chair, x, y - 10);
       at(desk, x, y);
       this.seats.push({ x, y, land, stock, variant, rat, chair, desk, coin, tag, glow });
@@ -103,7 +111,7 @@ export class OfficeScene {
     const st = this.stage;
     const tall = this.view.tall;
     // ---- camera: track the hero in, hold on it typing, then snap out a step on each landing
-    const steps = tall ? [8, 6, 4, 3, 2] : [8, 6, 5, 4, 3];
+    const steps = tall ? [8, 6, 5, 4, 3] : [8, 6, 5, 4, 3];
     const k = b < 20 ? 0 : b < 22 ? 1 : b < 24 ? 2 : b < 27 ? 3 : 4;
     st.S = steps[k]!;
     const walkIn = easeInOutCubic(span(b, 12, 14.2));
@@ -114,7 +122,7 @@ export class OfficeScene {
       st.camY = cyHero + (tall ? 0 : 4);
     } else {
       st.camX = tall ? 360 : 360;
-      st.camY = [cyHero, cyHero - 14, cyHero - 22, cyHero - 30, cyHero - 36][k]! + (tall ? 20 : 0);
+      st.camY = [cyHero, cyHero - 14, cyHero - 22, cyHero - 30, cyHero - 10][k]! + (tall ? 20 : 0);
     }
     const landHit = [20, 22, 24, 25, 26, 26.5, 27].find((x) => b >= x && b < x + 0.3);
     st.shakeAmp = landHit !== undefined ? 6 * (1 - (b - landHit) / 0.3) : b >= 18 && b < 18.25 ? 4 : 0;

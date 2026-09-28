@@ -20,7 +20,7 @@ import { Effects } from '../world/effects';
 import { VaultView } from '../world/vault';
 import { SewerView } from '../world/sewer';
 import { RatSystem } from '../world/rats';
-import { reseed } from './clock';
+import { reseed, setFilmTime } from './clock';
 import { anim, sprite, tex, textTexture, CREAM, GOLD, GREEN, INK } from './pixel';
 import type { View } from './stage';
 import { BEAT, FPS, HANDLE, easeInCubic, easeInOutCubic, easeOutBack, easeOutCubic, frameOf, lerp, noise, span } from './timeline';
@@ -173,7 +173,8 @@ export class WorldScene {
     const ys = pts.map((p) => p.y);
     const w = Math.max(...xs) - Math.min(...xs) + 160;
     const h = Math.max(...ys) - Math.min(...ys) + 220;
-    const z = Math.min((this.view.w * fill) / w, (this.view.h * fill) / h);
+    // vertical frames crop the sides: the building fills the height, not the width
+    const z = this.view.tall ? (this.view.h * 0.62 * fill) / h : Math.min((this.view.w * fill) / w, (this.view.h * fill) / h);
     return { x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 - 40, z };
   }
 
@@ -181,6 +182,10 @@ export class WorldScene {
   private step(frame: number): void {
     const b = frame / FPS / BEAT;
     const dt = 1 / FPS;
+    // each step has its own clock and random stream, so a frame is the same whether the scene caught up to it in
+    // one go (a shot rendered alone) or stepped there frame by frame (the whole film)
+    setFilmTime((frame / FPS) * 1000);
+    reseed(frame * 7919 + 13);
     // the Vault door bursts open, bills pour in from every desk
     this.once('open', b, 31.5, () => {
       const p = this.world.vault.item.p;
@@ -327,14 +332,31 @@ export class WorldScene {
     if (b < 56) return b < 52 ? mix(corp, wall, easeOutCubic(span(b, 48, 51))) : mix(wall, wallIn, easeInOutCubic(span(b, 52, 56)));
     // the proof: a slow push in to the picked rat
     const p = this.target !== null ? this.rats.positionOf(this.target) : null;
-    const tgt: Cam = p ? { x: p.x + (tall ? 0 : 70), y: p.y - (tall ? 60 : 30), z: 3 * (tall ? 0.8 : 1) } : wallIn;
+    const tgt: Cam = p ? { x: p.x + (tall ? 0 : 70), y: p.y - (tall ? -40 : 30), z: 3 * (tall ? 0.8 : 1) } : wallIn;
     return mix(wallIn, tgt, easeInOutCubic(span(b, 56, 59.5)));
+  }
+
+  /** Captions layer on or off (the counter and the stage banners), for the clean plates. */
+  setText(on: boolean): void {
+    this.showText = on;
+    this.counter.visible = this.counterLabel.visible = on && this.counter.visible;
+    this.banner.visible = on && this.banner.visible;
   }
 
   /** Render film beat b. Returns the white flash alpha. */
   frame(b: number, frame: number): number {
     if (frame < this.cur - 0 || this.cur < frameOf(WORLD_B0) - 1) this.reset();
-    while (this.cur < frame) this.step(++this.cur);
+    // every step sets the camera it would have had: the world culls by view, so the sequence of calls is the same
+    // whether the scene steps here frame by frame or catches up in one go
+    while (this.cur < frame) {
+      this.step(++this.cur);
+      this.applyView(this.cur / FPS / BEAT, this.cur);
+    }
+    const cam = this.applyView(b, frame);
+    return this.overlays(b, frame, cam);
+  }
+
+  private applyView(b: number, frame: number): Cam {
     const cam = this.camera(b);
     const hit = (at: number, amp: number, dur: number): number => (b >= at && b < at + dur ? amp * (1 - (b - at) / dur) : 0);
     const shake = Math.max(hit(31.5, 6, 0.5), hit(40, 18, 0.9), hit(48, 24, 1.1), hit(33, 5, 0.4));
@@ -348,7 +370,13 @@ export class WorldScene {
     this.world.main.setView(cam.x - vw / 2, cam.y - vh / 2, vw, vh);
     this.world.setZoom(cam.z);
     this.world.parallax(cam.x, cam.y);
+    this.world.main.sync(); // depth sort and cull, once per frame (as the site does)
+    return cam;
+  }
+
+  private overlays(b: number, frame: number, cam: Cam): number {
     this.world.signs.visible = false;
+    this.vault.fx.visible = b < 56; // the proof shot stays clean: no bills or +$ labels over the Vault
 
     // the Vault door bursting open (frame by frame), BOOM clouds and scaffolding
     if (this.open.visible) this.open.texture = anim('vault_open')[Math.min(8, Math.floor(span(b, 31.5, 33) * 9))]!;
@@ -427,7 +455,7 @@ export class WorldScene {
     // the card opens beside the rat (below it on vertical), pops in two steps
     const tall = this.view.tall;
     const cardX = tall ? this.view.w / 2 - this.card.width / 2 : sx + 120;
-    const cardY = tall ? sy + 120 : sy - this.card.height / 2 - 40;
+    const cardY = tall ? sy - this.card.height - 260 : sy - this.card.height / 2 - 40;
     const pop = frame - frameOf(58.5);
     this.card.scale.set(pop < 2 ? 0.9 : pop < 4 ? 1.04 : 1);
     this.card.position.set(Math.round(cardX), Math.round(cardY));

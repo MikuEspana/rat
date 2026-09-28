@@ -6,11 +6,12 @@
 //   &end=pile             the alternative ending (rats pile up into the logo)
 //   &shot=N               start on shot N (1 s before its first beat)
 //   &frame=F              render frame F once and stop (stills)
+//   &play                 play in real time (the whole film on a loop, or shot N with its handles); for previews
 //
 // Nothing of the live site runs: no API, no HUD, no feed, no panels. Time only moves when a frame is rendered, and
 // randomness is seeded (clock.ts), so the same frame always has the same pixels.
 import { Application, Container, Sprite, Texture } from 'pixi.js';
-import { setFilmTime, reseed } from './clock';
+import { realNow, setFilmTime, reseed } from './clock';
 import { loadFilmTextures, textTexture, sprite, INK } from './pixel';
 import { BEAT, CAPTIONS, FPS, HANDLE, SHOTS, TOTAL_BEATS, TOTAL_FRAMES, frameOf } from './timeline';
 import type { View } from './stage';
@@ -25,8 +26,14 @@ export interface FilmApi {
   total: number;
   view: View;
   shots: typeof SHOTS;
-  /** render one frame (may be negative or past the end for handles) */
-  render(frame: number): void;
+  /** render one frame (may be negative or past the end for handles); shot: stay on that shot's scene */
+  render(frame: number, shot?: number, text?: boolean): void;
+  /** redraw the current frame with or without captions (no time passes) */
+  redraw(text: boolean): void;
+  /** the canvas as base64 RGBA, bottom row first (gl.readPixels) */
+  pixels(): Promise<string>;
+  /** POST the canvas (raw RGBA, bottom row first) to the recorder's local server; resolves when it has it */
+  post(url: string): Promise<number>;
   /** frame range of a shot with 1 s handles */
   shotRange(n: number): [number, number];
 }
@@ -93,7 +100,7 @@ export async function bootFilm(): Promise<void> {
   const drawCaptions = (b: number, frame: number): void => {
     for (const { c, s } of caps) {
       const bb = ((b % TOTAL_BEATS) + TOTAL_BEATS) % TOTAL_BEATS;
-      const on = showText && bb >= c.b0 && bb < c.b1;
+      const on = textOn && bb >= c.b0 && bb < c.b1;
       s.visible = on;
       if (!on) continue;
       const since = frame - frameOf(c.b0) - (b >= TOTAL_BEATS ? frameOf(TOTAL_BEATS) : b < 0 ? -frameOf(TOTAL_BEATS) : 0);
@@ -105,23 +112,42 @@ export async function bootFilm(): Promise<void> {
     }
   };
 
-  const render = (frame: number): void => {
+  let textOn = showText;
+  let lastB = 0;
+  let lastFrame = 0;
+  const sceneOf = (b: number, shot?: number): 'street' | 'office' | 'world' | 'end' => {
+    if (shot) {
+      if (shot <= 2) return 'street';
+      if (shot <= 4) return 'office';
+      if (shot <= 7) return 'world';
+      return b >= 74 ? 'street' : 'end';
+    }
+    // the loop: before 0 and after 74 beats we are on the street, with the coin rolling to the manhole
+    return b < 12 || b >= 74 ? 'street' : b < 28 ? 'office' : b < 64 ? 'world' : 'end';
+  };
+  const render = (frame: number, shot?: number, text?: boolean): void => {
+    if (text !== undefined) {
+      textOn = text;
+      world?.setText(text);
+    }
     const t = frame / FPS;
     const b = t / BEAT;
     setFilmTime(t * 1000);
     reseed(1000 + frame);
+    lastB = b;
+    lastFrame = frame;
     let flashA = 0;
-    // the loop: before 0 and after 74 beats we are on the street, with the coin rolling to the manhole
-    if (b < 12 || b >= 74) {
+    const which = sceneOf(b, shot);
+    if (which === 'street') {
       street ??= new StreetScene(view);
       show(street);
-      street.frame(b < 12 ? b : b - TOTAL_BEATS, frame);
-    } else if (b < 28) {
+      street.frame(b < 74 ? b : b - TOTAL_BEATS, frame);
+    } else if (which === 'office') {
       office ??= new OfficeScene(view, atlas);
       show(office);
       office.frame(b, frame);
-    } else if (b < 64) {
-      world ??= new WorldScene(view, atlas, showText);
+    } else if (which === 'world') {
+      world ??= new WorldScene(view, atlas, textOn);
       show(world);
       flashA = world.frame(b, frame);
     } else {
@@ -133,6 +159,27 @@ export async function bootFilm(): Promise<void> {
     drawCaptions(b, frame);
     app.render();
   };
+  const redraw = (text: boolean): void => {
+    textOn = text;
+    world?.setText(text);
+    drawCaptions(lastB, lastFrame);
+    app.render();
+  };
+  const gl = (app.renderer as unknown as { gl: WebGL2RenderingContext }).gl;
+  const buf = new Uint8Array(view.w * view.h * 4);
+  const post = async (url: string): Promise<number> => {
+    gl.readPixels(0, 0, view.w, view.h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    const r = await fetch(url, { method: 'POST', body: buf, headers: { 'Content-Type': 'text/plain' } });
+    return r.status;
+  };
+  const pixels = (): Promise<string> => {
+    gl.readPixels(0, 0, view.w, view.h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    return new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve((r.result as string).slice((r.result as string).indexOf(',') + 1));
+      r.readAsDataURL(new Blob([buf]));
+    });
+  };
 
   const api: FilmApi = {
     ready: true,
@@ -140,6 +187,9 @@ export async function bootFilm(): Promise<void> {
     view,
     shots: SHOTS,
     render,
+    redraw,
+    pixels,
+    post,
     shotRange(n: number): [number, number] {
       const s = SHOTS.find((x) => x.n === n)!;
       return [frameOf(s.b0 - HANDLE), frameOf(s.b1 + HANDLE)];
@@ -150,8 +200,18 @@ export async function bootFilm(): Promise<void> {
 
   const still = q.get('frame');
   const shot = Number(q.get('shot'));
-  if (still !== null) render(Number(still));
-  else render(shot ? api.shotRange(shot)[0] : 0);
+  if (q.has('play')) {
+    // a preview: frames follow the real clock (a slow machine drops frames; the recorder never does)
+    const [f0, f1] = shot ? api.shotRange(shot) : [0, TOTAL_FRAMES];
+    const t0 = realNow();
+    const tick = (): void => {
+      const f = f0 + (Math.floor(((realNow() - t0) / 1000) * FPS) % (f1 - f0));
+      render(f, shot || undefined);
+      setTimeout(tick, 0);
+    };
+    tick();
+  } else if (still !== null) render(Number(still));
+  else render(shot ? api.shotRange(shot)[0] : 0, shot || undefined);
 }
 
 export type { Atlas };

@@ -4,6 +4,8 @@
 export const FILM = typeof location !== 'undefined' && new URLSearchParams(location.search).has('film');
 
 let nowMs = 0;
+/** the real clock, for ?film&play (previews in real time) */
+export const realNow: () => number = typeof performance !== 'undefined' ? performance.now.bind(performance) : () => Date.now();
 let seed = 0x5eed_2026;
 const rafQueue: FrameRequestCallback[] = [];
 

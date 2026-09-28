@@ -78,7 +78,7 @@ export class StreetScene {
     // ---- camera: on the hole, then over to where the rat lands, a snap zoom on the landing
     st.S = L >= 10 && L < 12.25 ? 10 : 8;
     const move = easeInOutCubic(span(L, 6, 7.6));
-    st.camX = lerp(cx, cx + 22, move);
+    st.camX = lerp(cx, cx + 32, move);
     st.camY = lerp(cy - (tall ? 38 : 12), cy - (tall ? 44 : 22), move) + (L >= 10 && L < 12.25 ? -6 : 0);
     if (L >= 12.25) st.camX += 0; // the rat walks out of frame
     // ---- shake: the lid blast, the landing, the lid falling back
@@ -143,7 +143,7 @@ export class StreetScene {
     const rat = this.rat;
     rat.visible = L >= 1.35;
     rat.mask = null;
-    const standX = cx + 34 - 64;
+    const standX = cx + 50 - 64;
     const standY = cy + 16 - 122;
     if (L < 6.5) {
       // in the hole: rises with the burst, arms up on beat 3, looks around

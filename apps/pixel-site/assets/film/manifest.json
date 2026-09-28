@@ -426,10 +426,10 @@
    "note": "3 tries: a added eye rings (read as glasses), b changed almost nothing, c put a highlight in one eye only. Kept the simple on-model hero (raw/hero2_suited) as the owner asked."
   },
   {
-   "id": "hero_walk",
+   "id": "hero_walk_refused",
    "phase": "fullBuild",
    "tool": "animate_character",
-   "costGenerations": 2,
+   "costGenerations": 0,
    "pixellabId": "ec30f611-e342-44f4-846e-79e6e4353853",
    "args": {
     "character_id": "ec30f611-e342-44f4-846e-79e6e4353853",
@@ -442,7 +442,7 @@
    },
    "raw": "raw/hero2_rot/",
    "at": "2026-09-28T15:34:40Z",
-   "note": "template walk east + south-east on the on-model suited hero"
+   "note": "refused by PixelLab (8 job slots busy): nothing was generated or charged"
   },
   {
    "id": "smoke_puff",
@@ -678,15 +678,67 @@
    "raw": "raw/hero_crack/",
    "at": "2026-09-28T15:58:45Z",
    "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "coin_spin",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 1,
+   "pixellabId": "033ffe5a-7f7a-4c78-98e7-fa63cecbdaad",
+   "args": {
+    "first_frame_file": "raw/coin.png",
+    "action": "the coin spins around its vertical axis, turning edge-on and back, shining",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7301
+   },
+   "raw": "raw/coin_spin/",
+   "at": "2026-09-28T16:01:08Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "vault4_open",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 4,
+   "pixellabId": "36c60c94-aa4d-465e-8f26-9c9a44a3ba39",
+   "args": {
+    "first_frame_file": "raw/in_vault_4.png",
+    "action": "the big round vault door swings wide open and a burst of golden light and cash bundles blows out",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7205
+   },
+   "raw": "raw/vault4_open/",
+   "at": "2026-09-28T16:24:57Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "hero_walk",
+   "phase": "fullBuild",
+   "tool": "animate_character",
+   "costGenerations": 1,
+   "pixellabId": "ec30f611-e342-44f4-846e-79e6e4353853",
+   "args": {
+    "character_id": "ec30f611-e342-44f4-846e-79e6e4353853",
+    "template_animation_id": "walking-8-frames",
+    "animation_name": "walk",
+    "directions": [
+     "east"
+    ]
+   },
+   "raw": "raw/hero2_rot/",
+   "at": "2026-09-28T16:24:58Z",
+   "note": "template walk east on the on-model suited hero"
   }
  ],
  "totals": {
-  "generations": 54,
-  "calls": 39,
+  "generations": 58,
+  "calls": 42,
   "byPhase": {
    "looktest": 30,
    "detail": 3,
-   "fullBuild": 21
+   "fullBuild": 25
   },
   "budgets": {
    "looktest": 60,

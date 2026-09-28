@@ -181,7 +181,7 @@ def fx():
 
 # ---------------------------------------------------------------- office (clock in, the team)
 def office():
-    W, H = 720, 520
+    W, H = 720, 780
     rnd = random.Random(8)
     base = Image.new('RGBA', (W, H), (0, 0, 0, 255))
     wall_h = 250
