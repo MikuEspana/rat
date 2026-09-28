@@ -7,7 +7,7 @@ export class Sky {
   private evil = false;
   private size = { w: 1, h: 1 };
 
-  /** The evil empire gets a blood-red horizon. */
+  /** Wall Street (the last stage) gets a blood-red horizon. */
   setEvil(on: boolean): void {
     if (on === this.evil) return;
     this.evil = on;

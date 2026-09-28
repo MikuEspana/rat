@@ -349,7 +349,7 @@ export function buildMaster(): FloorLayout {
     // amenities open at even steps through their stage; desk rooms get a build order wing by wing
     const [lo, hi] = stageRange(k);
     assigned.forEach((r, n) => (r.unlockAt = Math.round(lo + ((n + 1) * (hi - lo)) / (assigned.length + 1))));
-    // the evil throne room is a landmark: it opens the moment the evil empire does
+    // the evil throne room is a landmark: it opens the moment the company makes it to Wall Street
     for (const r of assigned) if (r.kind === 'war') r.unlockAt = lo;
     rs.filter((r) => r.kind === desk).sort((x, y) => rank(x) - rank(y) || angle(x) - angle(y)).forEach((r, n) => (r.order = n));
     // the entrance: a double door in the lobby's front wall, the sewer 4 cells out

@@ -15,11 +15,11 @@ import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
 import { Camera } from './gfx/camera';
 import { Sky } from './gfx/sky';
-import { cellCentre } from './iso';
+import { cellCentre, screenToCell } from './iso';
 import { Growth, type GrowthEvent } from './floor/growth';
 import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import { LANDMARKS, unlocked } from './floor/landmarks';
-import type { FloorLayout } from './floor/types';
+import { idx, type FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
@@ -161,6 +161,23 @@ async function boot(): Promise<Site> {
   let spawnStage = spawnStageOf(ratCount);
   sewer.attach(world.main, world.sewer, world.sewerDoor);
   const camera = new Camera(scene, app.canvas);
+  // the room under the mouse shows its name whatever the zoom (zoomed out only landmarks and key rooms are named)
+  let hoverId: number | null = null;
+  let hoverWorld: World | null = null;
+  app.canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    const box = app.canvas.getBoundingClientRect();
+    const w = camera.toWorld(e.clientX - box.left, e.clientY - box.top);
+    const c = screenToCell(w.x, w.y);
+    const i = Math.floor(c.i);
+    const j = Math.floor(c.j);
+    const rid = i >= 0 && j >= 0 && i < plan.W && j < plan.H ? plan.roomOf[idx(plan.W, i, j)]! : -1;
+    const id = rid >= 0 && growth.isBuilt(plan.rooms[rid]!) ? rid : null;
+    if (id === hoverId && hoverWorld === world) return;
+    hoverId = id;
+    hoverWorld = world;
+    world.hoverRoom(id);
+  });
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();

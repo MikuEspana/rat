@@ -1,5 +1,5 @@
 // The news ticker: headlines made from the live numbers, in a voice that gets darker with every stage (a cheerful
-// local paper for the garage, corporate spin in the middle, a captured press for the evil empire).
+// local paper for the garage, corporate spin in the middle, a captured press on Wall Street).
 export interface NewsStats {
   stage: number;
   rats: number;
