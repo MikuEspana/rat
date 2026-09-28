@@ -326,6 +326,13 @@ async function boot(): Promise<Site> {
       old.destroy();
       ui.setStage(STAGES[growth.stage]!.name, ratCount);
       if (growth.stage > beforeStage) ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
+      if (popIn.size < 60) {
+        for (const id of [...popIn].slice(0, 16)) {
+          const r = plan.rooms[id]!;
+          const c = cellCentre(r.i0 + r.w / 2 - 0.5, r.j0 + r.h / 2 - 0.5);
+          effects.dust(c.x, c.y, 20);
+        }
+      }
       if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };

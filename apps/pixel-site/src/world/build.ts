@@ -337,15 +337,21 @@ export function buildWorld(
   }
   // lots of the current ring not built yet: blueprint floor, and a lock sign saying what comes and when
   const lockSigns: Sprite[] = [];
-  for (const r of plan.rooms) {
-    if (r.ring !== stage || built(r)) continue;
+  // signs only on what comes next: the next few amenities by rat count and the next desk rooms in build order
+  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r));
+  const nextAmenities = lots.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!).slice(0, 4);
+  const nextDesks = lots.filter((r) => r.unlockAt === null).sort((a, b) => a.order - b.order).slice(0, 2);
+  const signed = new Set([...nextAmenities, ...nextDesks].map((r) => r.id));
+  for (const r of lots) {
     for (let i = r.i0; i < r.i0 + r.w; i++) {
       for (let j = r.j0; j < r.j0 + r.h; j++) {
         const p = cellToScreen(i, j);
         const t = makeParticle(atlas.frame(styleFrame('blueprint', i, j)), p.x, p.y);
+        t.tint = 0x9aa6c4; // muted, so big empty rings do not shout louder than the rooms
         floorLayer.add(t, 1e5 + i + j);
       }
     }
+    if (!signed.has(r.id)) continue;
     const what = r.kind === 'stock' || r.kind === 'open' ? 'DESKS' : ROOM_LOOK[r.kind].label;
     const when = r.unlockAt !== null ? `${r.unlockAt.toLocaleString('en-US')} RATS` : 'NEXT HIRES';
     const s = new Sprite(lockTexture(what, when));

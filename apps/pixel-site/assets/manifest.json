@@ -4,7 +4,10 @@
   "atlases": {
     "rats.png / rats.json": "6 tiers (intern, analyst, associate, vp, partner, frozen) x 55 frames of 68x68: rot_{s,se,e,ne,n,nw,w,sw}, idle_se, idle_ne, walk_se, walk_ne, cheer, type, slump. Animations keyed '<tier>/<anim>'.",
     "world.png / world.json": "floor_office, floor_subway, floor_hq, wall, desk_oak, desk_oak_clutter, chair, chair_dark, plant, lamp, cables, bin, papers, mug, ticker_wall (blank, pre-skewed), ticker_wall_busy, stairs, furnace, cashbag",
-    "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which."
+    "props2.png / props2.json": "built by tools/build_props2.py: the 16 sheet props and the coffee machine; kitbashes (exec_desk_gold, server_rack_white, vending_blue, sofa_navy, sofa_green, box_half, box_pile, box_pile2, filing_printer, filing_plant, crate_papers, tv_wall, tv_stand, wall_x2, wall_x3); drawn in code in the sprites' palette with the #16182c outline (box_s, box_s2, box_long, paper_stack, paper_tall, printer, sticky_wall, sticky_wall2, sticky_floor, whiteboard_wall, spill, cable_run, cable_loop). Each frame's 'source' field says which.",
+    "rats2.png / rats2.json": "built by tools/build_rats2.py from the tier sheets: 5 tiers x 4 furs (grey, brown, white, black) + frozen, the 55 base frames plus sit_front, sit_back, sulk_front, sulk_back (pod desks), trimmed; accessory overlays acc/<glasses|phones_red|phones_white|hat_bowler|hat_cap|hat_beanie>/<frame>. No generations.",
+    "gen.png / gen.json": "drawn in code by tools/build_gen.py: floor tiles (carpet, vinyl, wood both ways, bath tile, checker, raised floor, concrete, marble, asphalt, sidewalk, driveway, lot, blueprint, grass), thin wall faces (low, tall, window, panel, garage door header), desk_back, rugs, worn spots, hazard tape. No generations.",
+    "props3.png / props3.json": "built by tools/build_props3.py from the round 2 PixelLab crops (assets/raw/props3/crops): houses, shop, brick block, glass/deco/evil towers, crane, scaffold, cars, trees, street props, construction kit, vignette props, easter eggs."
   },
   "generations": [
     {
@@ -407,6 +410,564 @@
         "shading": "basic shading",
         "detail": "high detail"
       }
+    },
+    {
+      "id": "r2_house_a",
+      "raw": "raw/props3/house_a.png",
+      "tool": "create_map_object",
+      "pixellabId": "e61ffbe6-284f-42c3-9363-bf989c615858",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "cozy two-storey suburban house with a pitched grey roof, small front porch, warm lit windows, a tree beside it, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_house_b",
+      "raw": "raw/props3/house_b.png",
+      "tool": "create_map_object",
+      "pixellabId": "d9093d89-23b5-4fcc-be5f-7defe37add8d",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "small blue one-storey suburban bungalow with white picket fence and warm lit windows, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 192,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_street_props",
+      "raw": "raw/props3/street_props.png",
+      "tool": "create_map_object",
+      "pixellabId": "ba90712c-f398-4672-9bbf-12ef236ad670",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate street props in one row with empty space between them, not touching, each standing on its own: red fire hydrant, blue mailbox, green park bench, grey metal trash can, bus stop sign on a pole. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_trees",
+      "raw": "raw/props3/trees.png",
+      "tool": "create_map_object",
+      "pixellabId": "f243fe0d-3a5d-48d8-9ad1-98e910597b7f",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of four separate trees and plants in one row with empty space between them, not touching, each standing on its own: round leafy street tree, tall pine tree, round green bush, small tree in a square planter. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 128,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_cars_a",
+      "raw": "raw/props3/cars_a.png",
+      "tool": "create_map_object",
+      "pixellabId": "f4a3ecf5-db60-442d-a2af-6115648cad57",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of four separate parked cars in one row with empty space between them, not touching, each standing on its own: small red hatchback, blue sedan, yellow taxi cab, white delivery van. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_cars_b_try1",
+      "raw": "raw/props3/cars_b_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "2c7b53ef-fcb0-4a87-aa6d-8927472e930a",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of four separate parked cars in one row with empty space between them, not touching, each standing on its own: black limousine, police car with light bar, shiny gold sports car, black SUV. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_cars_b_try2",
+      "raw": "raw/props3/cars_b_reject2.png",
+      "tool": "create_map_object",
+      "pixellabId": "9caeee91-ed8c-4a64-9ab6-4f4e7a8e7958",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of four separate parked cars in one row with empty space between them, not touching, each standing on its own: extra long black stretch limousine, black and white police patrol car with red and blue light bar on the roof, low shiny gold sports car, big black SUV. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_cars_b",
+      "raw": "raw/props3/cars_b.png",
+      "tool": "create_map_object",
+      "pixellabId": "df1dd728-2c44-450b-9e3f-5938ea9855d3",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of four separate parked cars in one row with empty space between them, not touching, each standing on its own: a very long black stretch limousine with six doors, a black and white police car with a red and blue light bar, a low flat gold sports car with two doors, a tall boxy black SUV. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_shop_row",
+      "raw": "raw/props3/shop_row.png",
+      "tool": "create_map_object",
+      "pixellabId": "0a26d7c0-55b4-4155-a54e-ad848bd5700e",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "small two-storey downtown corner shop with a striped awning and a lit shop window, brick walls, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 256,
+        "height": 224,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_brick_block",
+      "raw": "raw/props3/brick_block.png",
+      "tool": "create_map_object",
+      "pixellabId": "3b62ccdf-a436-45b7-a23c-92b9131371af",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "five-storey red brick apartment building with many lit windows and a fire escape, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 288,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_glass_tower",
+      "raw": "raw/props3/glass_tower.png",
+      "tool": "create_map_object",
+      "pixellabId": "9ac0c693-9bdc-4ef6-bcbf-a592867e0b20",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "tall blue glass office skyscraper with a grid of lit windows at night, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 384,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_deco_tower",
+      "raw": "raw/props3/deco_tower.png",
+      "tool": "create_map_object",
+      "pixellabId": "7cb9c0b8-c8e4-43f1-b6f6-ac281e663500",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "tall art deco skyscraper with a golden spire and lit windows, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 384,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_evil_tower",
+      "raw": "raw/props3/evil_tower.png",
+      "tool": "create_map_object",
+      "pixellabId": "eb86f3ad-3450-4657-9b4a-100f69c2d16a",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sinister black skyscraper with glowing red windows and a red antenna light on top, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 384,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_evil_block",
+      "raw": "raw/props3/evil_block.png",
+      "tool": "create_map_object",
+      "pixellabId": "8c57af85-c371-4b96-a9e5-626e97f91773",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "dark grey fortress-like office block with red neon trim and a giant rat logo sign, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 224,
+        "height": 288,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_crane",
+      "raw": "raw/props3/crane.png",
+      "tool": "create_map_object",
+      "pixellabId": "58bf7ee3-319d-4e5f-9f59-32c1780e4c1e",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "tall yellow tower construction crane with a long horizontal jib and a hanging hook, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 192,
+        "height": 384,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_scaffold",
+      "raw": "raw/props3/scaffold.png",
+      "tool": "create_map_object",
+      "pixellabId": "cdc193c2-cc8f-4a25-991c-ab689e642667",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "metal construction scaffolding section with wooden planks, a ladder and orange safety netting, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 128,
+        "height": 160,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_construction_kit",
+      "raw": "raw/props3/construction_kit.png",
+      "tool": "create_map_object",
+      "pixellabId": "4a36519a-a78f-459b-a653-8b988dbd13a4",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate construction props in one row with empty space between them, not touching, each standing on its own: orange traffic cone, wooden A-frame ladder, yellow wet paint warning sign, stack of cement bags, red and white striped road barrier. Night city, clean bright corporate style, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_disaster",
+      "raw": "raw/props3/disaster.png",
+      "tool": "create_map_object",
+      "pixellabId": "7b08cdff-c7fd-408d-8ed6-42b375df8021",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: tall black server rack cabinet on fire with orange flames on top, broken photocopier with jammed paper flying out, old fax machine with black smoke, yellow wet floor warning sign, red fire extinguisher. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_party_try1",
+      "raw": "raw/props3/party_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "3bfbc2de-1103-4771-849a-e0f0a5b56620",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office party props in one row with empty space between them, not touching, each standing on its own: open pink donut box with a single donut left, birthday cake with lit candles, tall stack of pizza boxes, glass punch bowl on a small table, bunch of colorful party balloons. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_party",
+      "raw": "raw/props3/party.png",
+      "tool": "create_map_object",
+      "pixellabId": "9fbedbec-cd09-4e62-afb0-59ebc526323e",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office party props in one row with wide empty space between them, not touching, each standing on its own: open pink donut box with a single donut left, birthday cake with lit candles, tall stack of flat white pizza boxes with a red logo, glass punch bowl with red punch on a small round table, bunch of colorful party balloons tied to a small weight. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_fun_try1",
+      "raw": "raw/props3/fun_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "2751b212-2772-494a-b1cd-e3b9a3090ef6",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: green ping pong table, retro arcade cabinet with a glowing screen, purple bean bag chair, foosball table, office aquarium fish tank on a stand. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_fun",
+      "raw": "raw/props3/fun.png",
+      "tool": "create_map_object",
+      "pixellabId": "99971f0b-f864-44b0-b521-66776422f217",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: green ping pong table with a white net, tall retro arcade game cabinet with a glowing screen and a joystick, purple bean bag chair, foosball table, office aquarium fish tank on a wooden stand. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_rich",
+      "raw": "raw/props3/rich.png",
+      "tool": "create_map_object",
+      "pixellabId": "424c3d87-fc6b-472d-b4ff-8ebcf4213c3d",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: stack of shiny gold bars, electronic money counting machine with banknotes, big pile of green cash stacks on a small table, golden rat statue on a marble pedestal, antique globe on a wooden stand. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_meeting_try1",
+      "raw": "raw/props3/meeting_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "0849b8ba-c063-4a2f-8a12-eda10cf8c1f3",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: presentation screen on a stand showing a big red crashing stock chart, flip chart easel with a red downward arrow graph, projector on a small cart, office water dispenser jug, speakerphone on a small round table. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_meeting_try2",
+      "raw": "raw/props3/meeting_reject2.png",
+      "tool": "create_map_object",
+      "pixellabId": "ca65a8af-cbc2-427c-8a69-7e6b77b61182",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: presentation screen on a stand showing a red stock chart line crashing down, flip chart easel with a red downward arrow graph, small projector on a rolling cart, office water dispenser with a big blue jug, black conference speakerphone on a small round table. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_meeting",
+      "raw": "raw/props3/meeting.png",
+      "tool": "create_map_object",
+      "pixellabId": "6ba4559e-091c-417a-bdf4-4a8d7765d9d9",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: presentation screen on a tripod stand showing a red line chart falling steeply down, flip chart easel with a big red downward arrow, small video projector on a small rolling cart, office water dispenser with a big blue water jug on top, black triangular conference speakerphone on a small round side table. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_evil_try1",
+      "raw": "raw/props3/evil_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "8fe437eb-b626-4240-a2e1-61110df3d20f",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: red velvet and gold evil throne, glowing aquarium tank with a shark inside, big red button on a pedestal, tall stack of glowing crypto coins, red banner flag with a rat skull emblem. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_evil",
+      "raw": "raw/props3/evil.png",
+      "tool": "create_map_object",
+      "pixellabId": "fbac850c-e75b-4f2b-b115-fb4c745995a5",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: red velvet and gold evil throne, glowing aquarium tank with a shark inside, big red button on a pedestal, tall single stack of glowing gold crypto coins, red banner flag on a pole with a white rat skull emblem. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_eggs_try1",
+      "raw": "raw/props3/eggs_reject1.png",
+      "tool": "create_map_object",
+      "pixellabId": "117bc869-df82-4fc1-ab1e-1bdc3a2502bc",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: mirror disco ball hanging on a stand, old red telephone booth, treasure chest full of gold coins, small flying saucer model on a stand, rubber duck on a pedestal. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_eggs_try2",
+      "raw": "raw/props3/eggs_reject2.png",
+      "tool": "create_map_object",
+      "pixellabId": "05518034-364f-48bb-be72-c13f363936e9",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": false,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: shiny silver mirror disco ball with sparkles on a small metal stand, old red telephone booth, open wooden treasure chest full of gold coins, small silver flying saucer UFO model on a display stand, yellow rubber duck on a small pedestal. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
+    },
+    {
+      "id": "r2_eggs",
+      "raw": "raw/props3/eggs.png",
+      "tool": "create_map_object",
+      "pixellabId": "b6ec69cb-36ff-44a8-a25f-19a2e46bb738",
+      "costGenerations": 1,
+      "phase": "round2-world-vignettes",
+      "used": true,
+      "args": {
+        "description": "sprite sheet of five separate office props in one row with wide empty space between them, not touching, each standing on its own: shiny silver mirror disco ball on a small metal stand, tall old red British telephone booth with glass windows, wooden treasure chest overflowing with gold coins, small silver flying saucer UFO model on a display stand, yellow rubber duck on a small pedestal. Clean bright corporate office, isometric three-quarter view",
+        "width": 400,
+        "height": 96,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      }
     }
   ],
   "freeEdits": [
@@ -522,16 +1083,24 @@
     "crops to bounding box"
   ],
   "totals": {
-    "generationsInFinalAssets": 24,
+    "generationsInFinalAssets": 46,
     "phase1StyleSamplesNotUsed": 12,
-    "accountUsed": 36,
-    "accountLeft": 4,
+    "accountUsed": 67,
+    "accountLeft": "paid plan since round 2 (2000 a month); the round 2 cap is 150",
     "byPhase": {
       "phase1": 6,
       "variations": 3,
       "phase2": 11,
-      "denseFloor": 4
-    }
+      "denseFloor": 4,
+      "round2WorldVignettes": 31
+    },
+    "round2": {
+      "budget": 150,
+      "hardStop": 200,
+      "used": 31,
+      "note": "paid plan (2000/month on the account); round 2 counts against the owner's 150 cap for this round"
+    },
+    "allTime": 67
   },
   "cc0Assets": "none: itch.io, kenney.nl and opengameart.org are blocked by the environment network policy"
 }
