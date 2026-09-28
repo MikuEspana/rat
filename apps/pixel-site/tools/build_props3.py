@@ -63,7 +63,21 @@ NAMES5 = {
     "pool_party_0": "flamingo", "pool_party_1": "dj_booth", "pool_party_3": "lounge_chair", "pool_party_4": "umbrella",
 }
 
+# round 5 (assets/raw/props6): rear views of every car (edit_image_pixen on the front sprite), so traffic can drive
+# away from the camera too; more are added below as they are generated
+NAMES6 = {
+    "car_red_rear_0201a8_0": "car_red_rear", "car_blue_rear_cd224a_0": "car_blue_rear", "taxi_rear_8922ab_0": "taxi_rear",
+    "van_rear_08363a_0": "van_rear", "police_rear_248c69_0": "police_rear", "car_white_rear_850cd6_0": "car_white_rear",
+    "car_gold_rear_0b50cb_0": "car_gold_rear", "limo_rear_4303fa_0": "limo_rear",
+}
+DIR6 = os.path.join(OUT, "raw", "props6")
+
 items = []
+for src, name in NAMES6.items():
+    f = os.path.join(DIR6, f"{src}.png")
+    if os.path.exists(f):
+        im = Image.open(f).convert("RGBA")
+        items.append((name, f"../props6/{src}", im.crop(im.getbbox())))
 for src, name in NAMES5.items():
     f = os.path.join(CROPS5, f"{src}.png")
     if os.path.exists(f):

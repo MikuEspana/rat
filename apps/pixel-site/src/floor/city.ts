@@ -55,14 +55,28 @@ export interface CityExtra {
 }
 
 export interface Mover {
+  /** the sprite: a car's front view, or its rear view (`<car>_rear`) when it drives away from the camera */
   kind: string;
   axis: 'i' | 'j';
+  /** +1 drives towards the camera (down the screen), -1 away from it */
+  dir: 1 | -1;
   fixed: number;
   from: number;
   to: number;
   speed: number;
   mirror: boolean;
   phase: number;
+}
+
+/** Which way each car sprite points: front views nose down-right (+i) or down-left (+j); rear views nose up-left
+ *  (-i) or up-right (-j). Mirroring swaps left and right. */
+const FRONT_PLUS_I = new Set(['car_red', 'car_blue', 'taxi']);
+const REAR_MINUS_I = new Set(['car_red', 'car_blue', 'taxi', 'van', 'police']);
+
+/** The sprite and mirroring for a car driving along an axis, towards (+1) or away from (-1) the camera. */
+export function carSprite(car: string, axis: 'i' | 'j', dir: 1 | -1): { kind: string; mirror: boolean } {
+  if (dir > 0) return { kind: car, mirror: axis === 'i' ? !FRONT_PLUS_I.has(car) : FRONT_PLUS_I.has(car) };
+  return { kind: `${car}_rear`, mirror: axis === 'i' ? !REAR_MINUS_I.has(car) : REAR_MINUS_I.has(car) };
 }
 
 export interface City {
@@ -484,25 +498,21 @@ export function buildCity(
   put('van', x0 + 2, s1 - 4, frontJ, 1);
   extras.push({ ...look(rng), anim: 'walk_se', ...M(x0 - 1, s1 - 6), mirror: frontJ, carry: 'box_s' });
 
-  // traffic: one-way streets, so every car drives the way its sprite points
+  // traffic, both ways: on each street one lane drives towards the camera (front views) and the other away from it
+  // (rear views), every car nose first
   const movers: Mover[] = [];
   const cars = stage >= 5 ? ['limo', 'car_gold', 'police'] : stage >= 3 ? ['taxi', 'limo', 'car_white', 'taxi'] : ['car_red', 'car_blue', 'taxi', 'van', 'car_white'];
-  const noseRight = new Set(['car_red', 'car_blue', 'taxi']);
-  for (let k = 0; k < 3 + stage; k++) {
-    const kind = cars[k % cars.length]!;
+  const n = 4 + stage * 2;
+  for (let k = 0; k < n; k++) {
+    const car = cars[k % cars.length]!;
     const onAvenue = k % 3 !== 2;
+    const dir: 1 | -1 = k % 2 === 0 ? 1 : -1;
     // avenue runs along a: in (i, j) terms along i when the front is +j
     const axis: 'i' | 'j' = onAvenue === frontJ ? 'i' : 'j';
-    movers.push({
-      kind,
-      axis,
-      fixed: onAvenue ? av0 + 1 : x0 + 1,
-      from: E0,
-      to: E1,
-      speed: 2.5 + rng.next() * 2.5,
-      mirror: axis === 'i' ? !noseRight.has(kind) : noseRight.has(kind),
-      phase: rng.next(),
-    });
+    // towards the camera on the near lane, away on the far lane (the middle row carries the lane dashes)
+    const lane = onAvenue ? (dir > 0 ? av0 + 2 : av0) : dir > 0 ? x0 + 2 : x0;
+    const look = carSprite(car, axis, dir);
+    movers.push({ kind: look.kind, axis, dir, fixed: lane + 0.1, from: E0, to: E1, speed: 2.5 + rng.next() * 2.5, mirror: look.mirror, phase: rng.next() });
   }
 
   // a visitor's way in: along the avenue sidewalk from the edge to the subway

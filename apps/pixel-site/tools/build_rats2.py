@@ -95,14 +95,149 @@ def seat_frame(src, front, sulk):
     return out
 
 
+# ------------------------------------------------------------------ typing at a pod desk (round 5)
+# sit_front: PixelLab frames (raw/props6: the seated pose edited with edit_image_pixen, then animate_image "typing"),
+# snapped to the analyst palette and recoloured per tier with colour maps learned from the tier sheets themselves
+# (tiers are pure recolours, split at the collar). sit_back: the seated back view with the forearms brought forward
+# out of sight and the elbows and head moving in turn, drawn here.
+RAW6 = os.path.join(OUT, "raw", "props6")
+TYPE_FRONT = [os.path.join(RAW6, f"type_front_27a8a5_{k}.png") for k in range(7)]
+
+
+def collar_row(im):
+    p = im.load()
+    return next((y for y in range(CELL) if any(p[x, y][3] and p[x, y][:3] in (WHITE, RED) for x in range(CELL))), CELL)
+
+
+def learn_maps():
+    """(tier, above collar?, analyst colour) -> tier colour, by majority over every base frame."""
+    votes = {}
+    for n in names:
+        a = base["analyst"][n]
+        ap = a.load()
+        cr = collar_row(a)
+        for t in TIERS:
+            tp = base[t][n].load()
+            for y in range(CELL):
+                for x in range(CELL):
+                    c = ap[x, y]
+                    if not c[3] or not tp[x, y][3]:
+                        continue
+                    key = (t, y < cr, c[:3])
+                    d = votes.setdefault(key, {})
+                    d[tp[x, y][:3]] = d.get(tp[x, y][:3], 0) + 1
+    return {k: max(v.items(), key=lambda kv: kv[1])[0] for k, v in votes.items()}
+
+
+TIER_MAP = learn_maps()
+PAL = sorted({c[:3] for n in names for c in base["analyst"][n].getdata() if c[3]})
+
+
+def snap(im):
+    out = im.copy()
+    p = out.load()
+    for y in range(CELL):
+        for x in range(CELL):
+            c = p[x, y]
+            if not c[3]:
+                continue
+            if c[3] < 128:
+                p[x, y] = (0, 0, 0, 0)
+                continue
+            if c[:3] not in PAL:
+                q = min(PAL, key=lambda q: (q[0] - c[0]) ** 2 * .3 + (q[1] - c[1]) ** 2 * .59 + (q[2] - c[2]) ** 2 * .11)
+                p[x, y] = q + (255,)
+            else:
+                p[x, y] = c[:3] + (255,)
+    return out
+
+
+def recolor(im, t):
+    if t == "analyst":
+        return im
+    out = im.copy()
+    p = out.load()
+    cr = collar_row(im)
+    for y in range(CELL):
+        for x in range(CELL):
+            c = p[x, y]
+            if c[3]:
+                q = TIER_MAP.get((t, y < cr, c[:3])) or TIER_MAP.get((t, not (y < cr), c[:3]))
+                if q:
+                    p[x, y] = q + (255,)
+    return out
+
+
+FRONT_TYPE = [snap(Image.open(f).convert("RGBA")) for f in TYPE_FRONT]
+
+
+def type_back(src, k):
+    """The seated back view typing: the hanging forearm and paw go (the paws are on the keyboard, in front of the
+    body), the elbow bends forward (up and right on screen), and one side then the other lifts a pixel."""
+    im = src.copy()
+    p = im.load()
+    s = src.load()
+    bb = src.getbbox()
+    if not bb:
+        return im
+    # the arm hanging down the right side of the body, below the chair back's top edge
+    chair_top = next((y for y in range(CELL) if s[(bb[0] + bb[2]) // 2, y][3] and s[(bb[0] + bb[2]) // 2, y][:3] in ((0x3E, 0x3A, 0x40), (0x26, 0x23, 0x25))), None)
+    right = bb[2] - 1
+    arm_x0 = right - 5
+    ys = [y for y in range(CELL) if any(s[x, y][3] for x in range(arm_x0, right + 1))]
+    if not ys or chair_top is None:
+        return im
+    elbow = chair_top + 2
+    sleeve = s[right - 2, elbow - 1]
+    sleeve_d = s[right - 3, elbow - 1]
+    # cut the forearm below the elbow
+    for y in range(elbow + 1, CELL):
+        for x in range(arm_x0 + 1, right + 1):
+            if x > bb[0] + (bb[2] - bb[0]) * 0.72 and p[x, y][3] and p[x, y][:3] not in ((0x3E, 0x3A, 0x40), (0x26, 0x23, 0x25)):
+                p[x, y] = (0, 0, 0, 0)
+    for x in range(arm_x0 + 1, right + 1):
+        if p[x, elbow][3]:
+            p[x, elbow + 1] = OUTLINE
+    # the forearm, forward and up to the right, paw hidden beyond it
+    lift = 1 if k in (1, 2) else 0
+    for i in range(4):
+        x = right - 1 + i
+        y = elbow - 1 - i // 2 - lift
+        for dy, col in ((-1, OUTLINE), (0, sleeve), (1, sleeve_d), (2, OUTLINE)):
+            if 0 <= x < CELL and 0 <= y + dy < CELL:
+                p[x, y + dy] = col
+    if 0 <= right + 3 < CELL:
+        for dy in range(-1, 3):
+            p[right + 3, elbow - 2 - lift + dy] = OUTLINE
+    # the other shoulder (left) twitches on the off beat: its top edge rows move up a pixel
+    if k in (3, 4):
+        col = bb[0] + 5
+        for x in range(bb[0] + 3, bb[0] + 8):
+            top = next((y for y in range(CELL) if p[x, y][3]), None)
+            if top is not None and top > 30 and 0 <= top - 1:
+                p[x, top - 1] = OUTLINE
+                p[x, top] = p[x, top + 1]
+    # the head nods on beats 2 and 5 (everything above the collar down a pixel)
+    if k in (2, 5):
+        cr = collar_row(src)
+        head = im.crop((0, 0, CELL, cr))
+        clear = Image.new("RGBA", (CELL, cr + 1), (0, 0, 0, 0))
+        im.paste(clear, (0, 0))
+        im.alpha_composite(head, (0, 1))
+    return im
+
+
 SEATED = {}
 for t in TIERS:
     for k in range(4):
         se, ne = base[t][f"idle_se_{k}"], base[t][f"idle_ne_{k}"]
-        SEATED.setdefault(t, {})[f"sit_front_{k}"] = seat_frame(se, True, False)
-        SEATED[t][f"sit_back_{k}"] = seat_frame(ne, False, False)
-        SEATED[t][f"sulk_front_{k}"] = seat_frame(se, True, True)
+        SEATED.setdefault(t, {})[f"sulk_front_{k}"] = seat_frame(se, True, True)
         SEATED[t][f"sulk_back_{k}"] = seat_frame(ne, False, True)
+    for k, f in enumerate(FRONT_TYPE):
+        SEATED[t][f"sit_front_{k}"] = recolor(f, t)
+    back0 = seat_frame(base[t]["idle_ne_0"], False, False)
+    for k in range(6):
+        SEATED[t][f"sit_back_{k}"] = type_back(back0, k)
 for t in TIERS:
     base[t].update(SEATED[t])
 all_names = names + list(SEATED["analyst"].keys())
@@ -156,6 +291,7 @@ def head_info(im):
 
 
 def acc_frame(kind, info, front_back):
+    """Accessories at a readable size (round 5): bold 1px outlines, about twice the old size."""
     im = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
     if info is None:
         return im
@@ -165,87 +301,141 @@ def acc_frame(kind, info, front_back):
         if 0 <= x < CELL and 0 <= y < CELL:
             p[x, y] = c
 
+    def box(xa, ya, xb, yb, fill, edge=OUTLINE):
+        for y in range(ya, yb + 1):
+            for x in range(xa, xb + 1):
+                put(x, y, edge if x in (xa, xb) or y in (ya, yb) else fill)
+
     if kind == "tie_stripes":
         return im  # drawn from the frame itself, see tie_frame
     x0, x1, y0, y1, cx = info["x0"], info["x1"], info["y0"], info["y1"], info["cx"]
     hh = y1 - y0
     crown = y0 + max(3, hh * 2 // 5)  # between the ears
+    eyes = info["eyes"]
+    right = (sum(x for x, _ in eyes) / len(eyes) > cx) if eyes else True
     if kind == "glasses":
-        if front_back == "back":
+        if front_back == "back" or not eyes:
             return im
-        rim = (0xD8, 0xDE, 0xEE, 255)
-        for ex, ey in info["eyes"][:2]:
-            for dx in (-1, 0, 1):
-                put(ex + dx, ey - 1, rim)
-                put(ex + dx, ey + 1, rim)
-            put(ex - 1, ey, rim)
-            put(ex + 1, ey, rim)
-        if len(info["eyes"]) >= 2:
-            (ax, ay), (bx, by) = sorted(info["eyes"][:2])
-            for x in range(ax + 2, bx - 1):
-                put(x, ay, rim)
+        lens, glint = (0xA8, 0xE0, 0xFF, 255), (0xFF, 0xFF, 0xFF, 255)
+        pts = sorted(eyes[:2])
+        for ex, ey in pts:
+            box(ex - 2, ey - 2, ex + 2, ey + 2, lens)
+            put(ex - 1, ey - 1, glint)
+            put(ex, ey, OUTLINE)  # the eye behind the lens
+        if len(pts) == 2:
+            (ax, ay), (bx, by) = pts
+            for x in range(ax + 3, bx - 2):
+                put(x, ay - 1, OUTLINE)
+        # the arm back to the ear
+        ex, ey = pts[0] if right else pts[-1]
+        step = -1 if right else 1
+        start = ex - 3 if right else ex + 3
+        for i in range(4):
+            put(start + step * i, ey - 1 - (i // 2), OUTLINE)
     elif kind.startswith("phones"):
         band = (0xE8, 0x3A, 0x4A, 255) if kind == "phones_red" else (0xF0, 0xF0, 0xF4, 255)
-        band_d = (0xA0, 0x20, 0x30, 255) if kind == "phones_red" else (0xB0, 0xB4, 0xC0, 255)
-        # band over the crown, cups low on both sides of the head
-        for x in range(x0 + 3, x1 - 2):
-            put(x, crown - 1, band)
+        band_d = (0xA0, 0x20, 0x30, 255) if kind == "phones_red" else (0xA8, 0xAC, 0xBC, 255)
+        top = crown - 3
+        # a 2px band over the crown, dropping to the cups
+        for x in range(x0 + 2, x1 - 1):
+            put(x, top - 1, OUTLINE)
+            put(x, top, band)
+            put(x, top + 1, band_d)
         cy = crown + max(2, hh // 5)
-        for sx in (x0, x1 - 1):
-            for dy in range(0, 3):
-                put(sx, cy + dy, band_d)
-                put(sx + 1, cy + dy, band)
-            put(sx, cy - 1, OUTLINE)
-            put(sx + 1, cy - 1, OUTLINE)
-            put(sx, cy + 3, OUTLINE)
-            put(sx + 1, cy + 3, OUTLINE)
-        for y in range(crown - 1, cy):
-            put(x0 + 2, y, band_d)
-            put(x1 - 2, y, band_d)
+        for y in range(top, cy):
+            put(x0 + 1, y, band_d)
+            put(x0 + 2, y, band)
+            put(x1 - 2, y, band)
+            put(x1 - 1, y, band_d)
+        # big cups: the far one on the back of the head, the near one on the cheek
+        far_x = x0 - 1 if right else x1 - 3
+        near_x = x1 - 3 if right else x0 - 1
+        box(far_x, cy - 1, far_x + 4, cy + 5, band)
+        for y in range(cy, cy + 5):
+            put(far_x + 1, y, band_d)
+        box(near_x, cy, near_x + 3, cy + 4, band_d)
     elif kind.startswith("hat"):
         style = kind.split("_")[1]
-        w = max(7, (x1 - x0) // 2 + 2)
+        w = max(10, (x1 - x0) * 2 // 3 + 1)
         hx0 = cx - w // 2
+        hx1 = hx0 + w - 1
         if style == "bowler":
-            c, d = (0x2A, 0x26, 0x2C, 255), (0x44, 0x40, 0x4A, 255)
-            for x in range(hx0 - 1, hx0 + w + 1):
-                put(x, crown, OUTLINE)
-                put(x, crown - 1, d)
-            for y in range(crown - 5, crown - 1):
-                for x in range(hx0 + 1, hx0 + w - 1):
-                    put(x, y, c if y > crown - 5 else OUTLINE)
-                put(hx0, y, OUTLINE)
-                put(hx0 + w - 1, y, OUTLINE)
-            put(hx0 + 2, crown - 4, d)
+            c, d, bandc = (0x2A, 0x26, 0x2C, 255), (0x48, 0x44, 0x50, 255), (0x8A, 0x1E, 0x2C, 255)
+            # the dome, the red band, the wide brim
+            box(hx0 + 1, crown - 7, hx1 - 1, crown - 1, c)
+            for x in range(hx0 + 2, hx1 - 1):
+                put(x, crown - 2, bandc)
+            put(hx0 + 3, crown - 6, d)
+            put(hx0 + 4, crown - 6, d)
+            box(hx0 - 2, crown - 1, hx1 + 2, crown + 1, d)
         elif style == "cap":
             c, d = (0x2F, 0x6E, 0xE0, 255), (0x1F, 0x48, 0x98, 255)
-            for y in range(crown - 4, crown + 1):
-                for x in range(hx0, hx0 + w):
-                    edge = y == crown - 4 or x in (hx0, hx0 + w - 1)
-                    put(x, y, OUTLINE if edge else (c if y < crown else d))
-            # the brim towards where the rat looks
-            eyes = info["eyes"]
-            right = (sum(x for x, _ in eyes) / len(eyes) > cx) if eyes else True
+            box(hx0, crown - 6, hx1, crown, c)
+            for x in range(hx0 + 1, hx1):
+                put(x, crown - 1, d)
+            put(cx, crown - 7, OUTLINE)
+            put(cx, crown - 6, (0xF4, 0xF0, 0xE8, 255))
             if front_back != "back":
-                bx = hx0 + w if right else hx0 - 4
-                for x in range(bx, bx + 4):
-                    put(x, crown, d)
-                    put(x, crown + 1, OUTLINE)
+                bx0, bx1 = (hx1, hx1 + 5) if right else (hx0 - 5, hx0)
+                box(bx0, crown - 1, bx1, crown + 1, d)
         elif style == "hard":
             c, d = (0xF2, 0xC2, 0x1E, 255), (0xC8, 0x92, 0x10, 255)
-            for y in range(crown - 4, crown + 1):
-                for x in range(hx0 - 1, hx0 + w + 1):
-                    edge = y == crown - 4 or x in (hx0 - 1, hx0 + w)
-                    put(x, y, OUTLINE if edge else (c if y < crown else d))
-            put(cx - 1, crown - 3, (0xFF, 0xEE, 0x9A, 255))
+            box(hx0, crown - 6, hx1, crown, c)
+            for y in range(crown - 5, crown):
+                put(cx, y, d)
+            put(hx0 + 2, crown - 5, (0xFF, 0xEE, 0x9A, 255))
+            box(hx0 - 2, crown - 1, hx1 + 2, crown + 1, d)
         else:  # beanie
             c, d = (0xE0, 0x9A, 0x2A, 255), (0xB0, 0x6C, 0x18, 255)
-            for y in range(crown - 5, crown + 1):
-                for x in range(hx0, hx0 + w):
-                    edge = x in (hx0, hx0 + w - 1) or y == crown - 5
-                    put(x, y, OUTLINE if edge else (d if y >= crown - 1 else c))
-            put(cx, crown - 6, (0xF4, 0xF0, 0xE8, 255))
-            put(cx, crown - 7, OUTLINE)
+            box(hx0, crown - 7, hx1, crown, c)
+            for x in range(hx0 + 1, hx1):
+                put(x, crown - 1, d)
+                put(x, crown - 2, d)
+                if x % 2 == 0:
+                    put(x, crown - 4, d)
+            box(cx - 1, crown - 10, cx + 1, crown - 8, (0xF4, 0xF0, 0xE8, 255))
+    return im
+
+
+PINKS = {(0xDF, 0x84, 0x93), (0xCC, 0x58, 0x73), (0xE8, 0x7A, 0x91), (0xEE, 0x94, 0xA1), (0x9D, 0x5E, 0x72)}
+
+
+def briefcase_frame(src, n, k):
+    """A leather briefcase in the paw nearest the camera, for walking rats: found from the frame (the lowest pink
+    paw on the facing side), swinging with the walk."""
+    im = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    p = im.load()
+    s = src.load()
+    bb = src.getbbox()
+    if not bb:
+        return im
+    cx = (bb[0] + bb[2]) // 2
+    cr = collar_row(src)
+    se = "_se_" in n
+    cand = [(x, y) for y in range(cr + 5, min(CELL, cr + 24)) for x in range(CELL)
+            if s[x, y][3] and s[x, y][:3] in PINKS and (x >= cx - 3 if se else x >= cx - 6)]
+    if cand:
+        hx, hy = max(cand, key=lambda q: (q[1], q[0]))
+    else:
+        hx, hy = cx + 3, cr + 14
+    leather, dark, clasp = (0x8A, 0x55, 0x2E, 255), (0x5A, 0x34, 0x1C, 255), (0xF2, 0xC2, 0x1E, 255)
+
+    def put(x, y, c):
+        if 0 <= x < CELL and 0 <= y < CELL:
+            p[x, y] = c
+
+    # handle in the paw, the case hanging below it
+    for x in range(hx - 1, hx + 2):
+        put(x, hy + 1, OUTLINE)
+    put(hx - 2, hy + 2, OUTLINE)
+    put(hx + 2, hy + 2, OUTLINE)
+    x0c, y0c = hx - 4, hy + 2
+    for y in range(y0c, y0c + 7):
+        for x in range(x0c, x0c + 9):
+            edge = x in (x0c, x0c + 8) or y in (y0c, y0c + 6)
+            put(x, y, OUTLINE if edge else (dark if y == y0c + 1 or x == x0c + 1 else leather))
+    put(hx, y0c + 2, clasp)
+    put(hx + 1, y0c + 2, clasp)
     return im
 
 
@@ -272,6 +462,8 @@ for n in all_names:
     fb = "back" if ("_ne" in n or n.startswith(("sit_back", "sulk_back")) or n in ("rot_n", "rot_ne", "rot_nw")) else "front"
     for a in ACCS:
         accs[f"acc/{a}/{n}"] = tie_frame(ref[n]) if a == "tie_stripes" else acc_frame(a, info, fb)
+    if n.startswith(("walk_se_", "walk_ne_")):
+        accs[f"acc/briefcase/{n}"] = briefcase_frame(ref[n], n, int(n.rsplit("_", 1)[1]))
 
 # ------------------------------------------------------------------ pack
 
