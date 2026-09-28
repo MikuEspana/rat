@@ -1,10 +1,8 @@
 // Assembles the steps into the loop:
-//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> burn (random 8 to 12 min, chunks seconds apart)
-//   -> reconcile (35s)
+//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> reconcile (35s)
 import type { WorkerDeps } from './deps';
 import { WorkerState } from './deps';
 import { Scheduler } from './scheduler';
-import { type BurnResult, nextBurnRoundSec, runBurnStep } from './steps/burn';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
 import { runMintStep } from './steps/mints';
@@ -34,13 +32,6 @@ export function createWorker(d: WorkerDeps): Worker {
           const hire = await runHireStep(d, state);
           return { claim, watch, hire };
         },
-      },
-      {
-        name: 'burn',
-        everySec: c.intervals.burnMinSec,
-        run: () => runBurnStep(d, state),
-        // the step picks the next delay: a few seconds for the next chunk, a random 8 to 12 minutes for the next round
-        nextDelaySec: (out) => (out as BurnResult | undefined)?.nextInSec ?? nextBurnRoundSec(d),
       },
       { name: 'reconcile', everySec: c.intervals.claimSec, run: () => runReconcileStep(d, state) },
     ],

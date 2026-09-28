@@ -1,4 +1,4 @@
-// PumpClient: reads claimable fees and builds claim / burn instructions. Reads go through the ChainReader
+// PumpClient: reads claimable fees and builds claim instructions. Reads go through the ChainReader
 // port, so the same code runs against mainnet RPC or SimChain.
 import {
   type ChainReader,
@@ -15,7 +15,6 @@ import {
 import type { TransactionInstruction } from '@solana/web3.js';
 import { CREATOR_VAULT_RENT, DISCRIMINATORS, PUMP_AMM_PROGRAM_ID, PUMP_PROGRAM_ID, hasDiscriminator } from './constants';
 import {
-  burnIx,
   collectCoinCreatorFeeIx,
   collectCreatorFeeV2Ix,
   createCreatorWsolAtaIx,
@@ -58,7 +57,6 @@ export class PumpFunClient implements PumpClient {
 
   /**
    * Claim instructions for whatever is claimable, plus the WSOL unwrap when AMM fees are involved.
-   * The caller adds the transfer of the fund's share.
    */
   buildClaimInstructions(args: { creator: string; claimable: Claimable }): TransactionInstruction[] {
     const c = args.claimable as PumpClaimable;
@@ -80,10 +78,6 @@ export class PumpFunClient implements PumpClient {
       throw new Error(`coin mint ${mint} is not owned by a token program (${m.tokenProgram})`);
     }
     return { mint, decimals: m.decimals, tokenProgram: m.tokenProgram, supply: m.supply };
-  }
-
-  buildBurnInstruction(args: { owner: string; mint: string; amount: bigint; decimals: number; tokenProgram: string }): TransactionInstruction {
-    return burnIx(args);
   }
 
   /**

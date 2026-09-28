@@ -45,7 +45,7 @@ Each frame carries an `anchor` at the feet (or the chair wheels), so a sprite pl
 
 Isometric cell = 32 x 16 px. Tiles (`floor_office`, `floor_subway`, `floor_hq`, `wall`) anchor at the top apex of their top face; props anchor at their bottom centre. `ticker_wall` is the wall ticker with its demo numbers blanked (the site draws the live symbol and 24h % on it), pre-skewed 2:1 for a wall running down-right; `ticker_wall_busy` keeps the demo numbers. Mirror either for a wall running down-left.
 
-Props: `desk_oak`, `desk_oak_clutter`, `chair`, `plant`, `lamp`, `cables`, `bin`, `papers`, `mug`, `stairs` (subway entrance), `furnace` (HQ), `cashbag` (burns).
+Props: `desk_oak`, `desk_oak_clutter`, `chair`, `plant`, `lamp`, `cables`, `bin`, `papers`, `mug`, `stairs` (subway entrance), `furnace` (HQ), `cashbag` (unused since buy and burn was removed).
 
 ## Rebuild or regenerate
 

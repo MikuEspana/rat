@@ -264,9 +264,6 @@ body {
 .ev-tag.hire {
   background: #43d17a;
 }
-.ev-tag.burn {
-  background: #ff8a3d;
-}
 .ev-tag.claim {
   background: #ffd23f;
 }
@@ -717,6 +714,9 @@ body {
 }
 .ev-tag.sim {
   background: var(--gold);
+}
+.ev-tag.line {
+  background: #43d17a;
 }
 @media (max-width: 900px) {
   .sim-mode .feed {

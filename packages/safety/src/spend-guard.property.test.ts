@@ -1,7 +1,7 @@
 // Property tests (fast-check): random sequences of claims, fees, spends, settles, releases, time jumps and kill
 // switch flips against the REAL SpendGuard and the REAL database ledger, compared with a tiny independent model.
 // Invariant: SOL spent never exceeds SOL claimed, to the lamport. Every spend is granted only when the claimed
-// SOL left in its bucket covers it, the rolling-hour cap holds, the kill switch is off, and the ledger balance
+// SOL left in the hire bucket covers it, the rolling-hour hire cap holds, the kill switch is off, and the ledger balance
 // always equals the exact sum of what was booked.
 import { type Bucket, FakeClock, type KillSwitch } from '@rat/core';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
@@ -30,7 +30,8 @@ type Cmd =
   | { t: 'advance'; seconds: number }
   | { t: 'kill'; on: boolean };
 
-const bucket = fc.constantFrom<Bucket>('hire', 'burn');
+// every claimed lamport hires rats: the hire bucket is the only one
+const bucket = fc.constant<Bucket>('hire');
 const lamports = (max: bigint) => fc.bigInt({ min: 0n, max });
 
 /** Amount ranges. The tiny scale makes random scenarios land exactly on the cap boundaries (off-by-one checks). */
@@ -66,7 +67,7 @@ class Model {
   outflowSince(b: Bucket, since: number) {
     return -this.entries.filter((e) => e.bucket === b && e.spend && e.at >= since).reduce((s, e) => s + e.delta, 0n);
   }
-  /** net spend of both buckets since the start, claim fees included (what the smoke cap limits) */
+  /** net hire spend since the start, claim fees included (what the smoke cap limits) */
   lifetime() {
     return -this.entries.filter((e) => e.spend || e.fee).reduce((s, e) => s + e.delta, 0n);
   }
@@ -86,10 +87,10 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
   const guard = new SpendGuard(
     { ledger: store.ledger, killSwitch, alerts: new RecordingAlerts(), clock },
     {
-      capPerHour: { hire: CAP, burn: CAP },
+      capPerHour: { hire: CAP },
       alertPct: 50,
-      wallets: { hire: undefined, burn: undefined },
-      reserves: { hire: 0n, burn: 0n },
+      wallets: { hire: undefined },
+      reserves: { hire: 0n },
       smokeMode,
       smokeCap: SMOKE_CAP,
       checkWallets: false,
@@ -170,12 +171,10 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
     }
     // the database ledger equals the model to the lamport, after every step
     const t = clock.now().getTime();
-    for (const b of ['hire', 'burn'] as const) {
-      expect(await store.ledger.balance(b)).toBe(m.balance(b));
-      expect(await store.ledger.netOutflowSince(b, new Date(t - HOUR_MS))).toBe(m.outflowSince(b, t - HOUR_MS));
-    }
+    expect(await store.ledger.balance('hire')).toBe(m.balance('hire'));
+    expect(await store.ledger.netOutflowSince('hire', new Date(t - HOUR_MS))).toBe(m.outflowSince('hire', t - HOUR_MS));
   }
-  // globally: hires and burns (net of settles and releases) never spent more than was claimed. Claim fees are
+  // globally: hires (net of settles and releases) never spent more than was claimed. Claim fees are
   // booked too; a failed claim's fee is the only cost that can come from the creator's reserve.
   const spent = m.spent();
   expect(spent).toBeLessThanOrEqual(credited);

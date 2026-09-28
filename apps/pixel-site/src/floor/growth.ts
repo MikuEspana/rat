@@ -5,6 +5,8 @@
 // - Amenities open at their set rat count.
 // - Desks on demand: a rat takes a free desk in its stock's rooms; when there is none, the next desk-room slot is
 //   built and handed to that stock. Before the full-floor stage everyone shares the garage and open offices.
+// - No desk left: the rat waits (in the job-fair line outside, rats.ts) and is seated as soon as a room is built
+//   for it, usually when the next stage opens its ring. Once the last ring is full, the line only grows.
 import { STAGES } from './plan';
 import { CORRIDOR_REGION, T, idx, type FloorLayout, type Room, type Seat } from './types';
 import { hash32 } from './rng';
@@ -40,6 +42,11 @@ export class Growth {
     this.amenities = plan.rooms.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt! || a.id - b.id);
     this.startStage(0);
     this.events = [];
+  }
+
+  /** rats with no desk yet (they stand in the job-fair line outside) */
+  get waitingCount(): number {
+    return this.waiting.length;
   }
 
   get stageName(): string {

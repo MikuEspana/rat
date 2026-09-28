@@ -72,5 +72,6 @@ describe('scale: 6,000 rats', () => {
     expect(rats.total).toBe(all.length);
     StateResponseSchema.parse(await (await app.request('/api/state')).json());
     console.log(`[scale] ${all.length} rats: every rat reconciled within 10 min, slowest tick ${maxTickMs.toFixed(0)}ms, /api/rats ${ratsMs.toFixed(0)}ms cold`);
-  });
+    // every claimed lamport hires rats now (up to 20 per loop), so the run hires more: close to the 60 s default
+  }, 180_000);
 });

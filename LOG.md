@@ -214,3 +214,111 @@ After legal advice: hold, never burn, never pay dividends; keep buy and burn as 
 - **Tests.** Test worlds (`createSimWorld`) keep a 50/50 split so every burn test (chaos, red team, property, launch hour) keeps covering that path. New `tests/e2e/launch-hour.test.ts` D runs the production default live on SimChain: all 12 SOL claimed go to hires, 405 rats, the fund wallet untouched, 0 burns, coin supply unchanged, every claim event shows 0 to the fund.
 - **Site and simulator.** The HUD shows **Fund value** (what all the rats' stocks are worth, top positions under it) instead of Total burned; claim lines read "all of it hires rats"; the simulator runs the new split (Normal about 4,900 rats and a $23K fund; Mega ends at 5 hours with about 4,900 rats and 45 SOL still waiting under the hourly cap).
 - **Limit found.** The site's building is drawn for about 5,200 rats (`PLAN_RATS`). With every fee hiring, a big launch passes that after about 5 hours at the cap; rats beyond it stand in HQ. Follow-up: a bigger final ring or a stage after the evil empire.
+
+## Miguel's decision: buy and burn removed, every fee hires rats (2026-09-28)
+
+After legal advice: hold, never burn, never pay dividends. Buy and burn is gone completely (not just off).
+
+**What changed**
+- **Backend.** Removed:
+  - the burn step and its tests;
+  - the fund wallet (config, key import, preflight, wallet watch);
+  - the direct pump.fun buy (and `@pump-fun/pump-sdk`);
+  - the Jito route;
+  - the `burn` ledger bucket and the claims' fund columns (migration `0002` drops the `burns` table and 2 columns).
+- **Only transactions left:** claim and hire (plus the owner's manual sweep). Every claimed lamport is credited to the hire bucket.
+- **New defaults:** `MAX_HIRES_PER_LOOP=20` (was 10), `SPEND_CAP_SOL_PER_HOUR_HIRE=60` (was 30). That is about 34 rats a minute, just over the cap's 33.
+- **Contract v2 (`schemaVersion` 2):**
+  - no `burn` event;
+  - claim data is `{ amountSol, source }`;
+  - no `bot.nextBurnAt`, `coin.burnedTokens` or `wallets.fund`;
+  - treasury is `{ totalClaimedSol, totalHiredSol, waitingSol }`;
+  - new `portfolio.positionCount`.
+  - Mock files, the live mock API, the state API and the admin page follow it.
+- **Site:**
+  - "Fund value" is now **"Portfolio value"** everywhere (HUD, simulator, docs), so nobody reads it as holders' money.
+  - The furnace cash-bag effect is gone.
+  - New **job-fair line**: rats with no desk queue on the street from the lobby door, around the block, under a "JOB FAIR: N IN LINE" sign. When a desk is built for them they walk in and the rest of the line moves up. Feed lines when the line forms and when it clears.
+  - `?rats=` now goes up to 7,000 to show it.
+- **Simulator:**
+  - no split or burns; 20 per loop, 60 SOL/h.
+  - Normal: 4,845 rats, all seated.
+  - Mega: 6,373 rats, about 530 in the line.
+  - Rug: 816.
+  - A 3x Mega test checks that the 60 SOL/h cap binds.
+- **CI guard:** token burn code (`createBurn*Instruction`, `buildBurnInstruction`, `burnIx`) is refused in production source.
+
+**Tests**
+- Burn-only tests deleted:
+  - burn config;
+  - burn totals;
+  - the Jito route (5, replaced by 2 plain RPC send tests);
+  - burn step;
+  - burn drain;
+  - chaos burn rows;
+  - kill-burn.
+- Converted: the red-team burn kill-mid-send is now a hire version, and the property regression is now a fixed hire scenario.
+- `checkMoney` now also asserts that the whole claim goes to hires and that nothing is booked outside the hire bucket.
+- Launch hour B scans every hire ledger row for the rolling-hour maximum: exactly 60 SOL, 20 per loop, 44 Jupiter calls a minute at most.
+- No safety check was weakened. Some timeouts were raised, because hires doubled.
+
+**3-hour simulation** (`SIMULATION.md`)
+- 180 SOL of fees became 6,084 rats.
+- The hire budget was fully spent by minute 180 (359 with the old limits).
+- The busiest hour spent exactly 60 SOL, and hiring never paused for more than 1 minute.
+- At most 44 Jupiter calls in any minute; the limiter allows 55 and the Free tier 60.
+- The ledger equals the chain to the lamport.
+
+**Jupiter tier**: the numbers above said Developer for headroom; Miguel chose to stay on the Free tier with a hard call budget instead (next entry).
+
+## Miguel's decision: stay on Jupiter's Free tier, hard budget of 40 calls a minute (2026-09-28)
+
+**What changed**
+- **One Jupiter budget for the whole worker** (`packages/jupiter/src/budget.ts`):
+  - every call takes a token: prices, builds and retries;
+  - at most `JUPITER_MAX_RPM` = 40 in any 60 s, the same sliding window Jupiter counts with (a refill-rate bucket could burst past 40 in a rolling minute);
+  - the config refuses anything above 40;
+  - the Free tier allows 60, so 20 stay free for the CLI and scripts on the same key.
+- **Production**:
+  - `BudgetedSwapBuilder` and `BudgetedPriceSource` wrap the real clients;
+  - the HTTP client runs with no limiter and no retries, so every request is exactly one token;
+  - the budget starts spent, so a restarting or crash-looping worker cannot burst. The smoke script starts full.
+- **SimChain**: the same wrappers sit around the mocks, on the fake clock.
+- **Prices** every 45 s (was 15). All mints go in ONE batched call; more than 50 is refused. With no token, the round is skipped and the last prices stay.
+- **Hires**:
+  - a hire starts only while the budget has room, always leaving one token for prices;
+  - otherwise the rest wait for the next loop: no key, no reservation, no call;
+  - a 429 on a build stops the loop at once (no retry on the other stocks), releases the reservation and retires the unused key.
+- **429**:
+  - every caller stops for 5 s, then 10, 20, 40 ... up to 5 minutes, or Jupiter's `x-ratelimit-reset` if later;
+  - a `jupiter_429` alert goes out (Telegram, throttled);
+  - the first success resets the backoff;
+  - `hire_idle` now names the Jupiter budget as the reason when it is.
+- **Site**:
+  - the HUD's portfolio value and PnL glide to each new value over 2 s (prices refresh every 45 s);
+  - the browser simulator runs the same budget (at most 40 calls in any minute, checked in its tests).
+
+**Tests**
+- Budget unit tests:
+  - never more than 40 in any rolling minute over 5 minutes of calls every 100 ms (exactly 200 calls);
+  - an empty budget makes no call;
+  - `startEmpty`;
+  - the backoff sequence 5, 10, 20, 40, 80, 160, 300, 300 s;
+  - a later reset header wins;
+  - a success resets the backoff;
+  - one token per batched price call, and more than 50 mints refused;
+  - the worker's HTTP client reports a 429 once, with the reset time.
+- Config: `JUPITER_MAX_RPM` above 40 is refused; the defaults are 40 and 45 s.
+- Worker:
+  - with a 5-call budget, hires stop at 3 and continue a minute later, with no key or reservation for the waiting ones;
+  - a 429 costs exactly one call, alerts, skips the price round and resumes after the backoff.
+- Chaos: in a 20 minute 429 storm the worker now makes at most 12 calls (it was allowed up to 600), alerts, and still recovers with the ledger exact.
+
+**3-hour simulation at the new cap** (180 SOL of fees, `SIMULATION.md`)
+- **Most Jupiter calls in any minute: 40** (never more; the Free tier allows 60).
+- **Longest hiring delay: 64 minutes.** SOL claimed at minute 23 in the rush waited 64 minutes for its rat. Hiring itself never paused while SOL waited.
+- **Rats waiting at peak: about 2,050** (61.6 SOL claimed, not hired yet, at minute 26).
+- **Every fee spent: yes, by minute 189** (0.01 SOL left). Without the budget it was minute 180.
+- 6,084 rats; ledger = chain to the lamport.
+- **The budget binds a little before the 60 SOL/h cap.** Two 20-hire loops can fall in one minute, so the busiest hour spent 57.4 SOL.
+
