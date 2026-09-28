@@ -16,7 +16,23 @@ Point it at another API with `VITE_API_BASE` (build time) or `?api=<url>` (page 
 VITE_API_BASE=https://api.example.com pnpm --filter @rat/pixel-site build   # static files in apps/pixel-site/dist
 ```
 
-Controls: drag to pan, mouse wheel or pinch to zoom.
+Controls: drag to pan, mouse wheel or pinch to zoom, click a rat for its card (Esc closes). Click a hire in the feed or a leaderboard row to fly to that rat.
+
+## What is on screen
+
+| Piece | Source |
+|---|---|
+| Market cap | `coin.marketCapUsd` (shows "pre-launch" while null), price per RAT under it |
+| Rats hired | `portfolio.ratCount`, frozen count under it |
+| Total burned | `coin.burnedTokens` RAT, `treasury.totalBurnSpentSol` and `burnCount` under it |
+| Portfolio PnL | `portfolio.pnlUsd` and `pnlPct`, green or red |
+| Next hire ring | fills from `bot.lastClaimAt` to `bot.nextClaimAt` (each claim pays for the next hires), with a countdown |
+| Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), burns, claims, freezes, thaws, each with its Solscan tx link |
+| Rat card | name, tier badge, stock, PnL %, value and cost, rank, status, hired, Solscan wallet link; a gold marker bobs over the rat |
+| Leaderboard | `leaderboard.top` (best 10) and `leaderboard.bottom` (worst 10) |
+| Banner | `bot.mode`: DRY RUN (yellow) or PAUSED (red); hidden when live |
+
+Under 900 px wide the HUD compacts, the leaderboard starts folded and the card becomes a bottom sheet.
 
 Debug URL flags: `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
 
@@ -39,6 +55,7 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 | `src/world/effects.ts` | Burn: cash bags arc from desks into the furnace, furnace flares. |
 | `src/gfx/layer.ts` | Depth-sorted, culled `ParticleContainer`. |
 | `src/data/` | API client, store (roster once, state and events after), stress padding. |
+| `src/ui/` | HUD, ring, feed, rat card, leaderboard, banner (DOM over the canvas; API text always set with `textContent`). |
 
 ### 3,000 rats at 60 fps
 

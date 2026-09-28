@@ -103,6 +103,24 @@ export class Camera {
     this.apply();
   }
 
+  /** Glide to centre a world point at a zoom level. */
+  flyTo(wx: number, wy: number, zoom: number, ms = 450): void {
+    const from = { x: this.x, y: this.y, z: this.zoom };
+    const z = Math.min(this.maxZoom, Math.max(this.minZoom, zoom));
+    const to = { x: this.el.clientWidth / 2 - wx * z, y: this.el.clientHeight / 2 - wy * z, z };
+    const t0 = performance.now();
+    const step = (now: number): void => {
+      const u = Math.min(1, (now - t0) / ms);
+      const e = u * u * (3 - 2 * u);
+      this.zoom = from.z + (to.z - from.z) * e;
+      this.x = from.x + (to.x - from.x) * e;
+      this.y = from.y + (to.y - from.y) * e;
+      this.apply();
+      if (u < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   apply(): void {
     this.world.scale.set(this.zoom);
     this.world.position.set(Math.round(this.x), Math.round(this.y));
