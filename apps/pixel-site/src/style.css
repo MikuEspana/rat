@@ -738,3 +738,10 @@ body {
 .sim-panel[hidden] {
   display: none;
 }
+/* the site's own overlay (HUD, feed, card, stage banner) stays above the simulator panel on small screens */
+.ui {
+  z-index: 2;
+}
+.ui.sim-ui {
+  z-index: 1;
+}
