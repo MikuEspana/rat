@@ -24,6 +24,7 @@ import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { MoneyFx } from './world/money';
 import { RatSystem, type Mood } from './world/rats';
+import { stageLine } from './ui/format';
 import { Ui } from './ui/ui';
 import { setNowSource } from './now';
 import { LaunchSim } from './sim/engine';
@@ -78,8 +79,7 @@ export interface Site {
 /** Feed line for something that got built. */
 function buildLine(e: GrowthEvent): { tag: string; text: string } {
   if (e.kind === 'stage') {
-    const name = STAGES[e.stage]!.name.toLowerCase();
-    return { tag: 'STAGE', text: `The company is now ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}` };
+    return { tag: 'STAGE', text: stageLine(STAGES[e.stage]!.name, e.stage === STAGES.length - 1) };
   }
   const r = e.room;
   if (r.kind === 'stock') return { tag: 'BUILD', text: e.symbol ? `New desk room for ${e.symbol}` : 'New desk room' };
@@ -88,7 +88,7 @@ function buildLine(e: GrowthEvent): { tag: string; text: string } {
 }
 
 async function boot(): Promise<Site> {
-  setStatus('Loading WALL STREET RATS...');
+  setStatus('WALL STREET RATS: loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
