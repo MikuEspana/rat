@@ -75,7 +75,10 @@ export interface Site {
 
 /** Feed line for something that got built. */
 function buildLine(e: GrowthEvent): { tag: string; text: string } {
-  if (e.kind === 'stage') return { tag: 'STAGE', text: `The company is now a ${STAGES[e.stage]!.name.toLowerCase()}` };
+  if (e.kind === 'stage') {
+    const name = STAGES[e.stage]!.name.toLowerCase();
+    return { tag: 'STAGE', text: `The company is now ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}` };
+  }
   const r = e.room;
   if (r.kind === 'stock') return { tag: 'BUILD', text: e.symbol ? `New desk room for ${e.symbol}` : 'New desk room' };
   if (r.kind === 'open') return { tag: 'BUILD', text: 'New open-plan office' };
@@ -154,7 +157,7 @@ async function boot(): Promise<Site> {
   camera.centerOn(hq.x, hq.y + 60, window.innerWidth < 700 ? 0.6 : 0.9);
   window.addEventListener('resize', () => camera.apply());
 
-  const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers });
+  const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
   ui.setStage(STAGES[growth.stage]!.name, ratCount);
 
   /** Simulator: glide out to show the whole building when it grows into a new stage. */

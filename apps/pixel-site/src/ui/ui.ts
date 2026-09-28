@@ -33,6 +33,8 @@ export interface UiDeps {
   atlas: Atlas;
   /** world-space layer for the selection marker */
   markerLayer: Container;
+  /** the launch simulator feeds the site: wallets are made up, so no Solscan links */
+  simulated?: boolean;
 }
 
 export class Ui {
@@ -380,7 +382,8 @@ export class Ui {
     row('Status', v.status === 'frozen' ? 'frozen (stock paused or account frozen)' : 'at work');
     row('Hired', ago(v.hiredAt));
     const links = el('div', 'card-links');
-    links.append(link(v.solscanUrl, 'Wallet on Solscan'));
+    if (this.d.simulated) links.append(el('span', 'card-note', 'simulated rat: made-up wallet, nothing on chain'));
+    else links.append(link(v.solscanUrl, 'Wallet on Solscan'));
     if (rec.estimated) links.append(el('span', 'card-note', 'value estimated since hire; exact after reload'));
     this.card.replaceChildren(head, grid, links);
     this.card.hidden = false;
