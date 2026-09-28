@@ -203,6 +203,8 @@ export async function loadAtlas(): Promise<Atlas> {
     if (name.startsWith('analyst/')) {
       const anim = name.slice('analyst/'.length);
       for (const acc of [...ACCESSORIES, 'hat_hard']) anims.set(`acc/${acc}/${anim}`, list.map((k) => frames.get(`rat:acc/${acc}/${k.slice('analyst/'.length)}`)!));
+      // the briefcase walking rats carry (walk frames only)
+      if (anim.startsWith('walk_')) anims.set(`acc/briefcase/${anim}`, list.map((k) => frames.get(`rat:acc/briefcase/${k.slice('analyst/'.length)}`)!));
     }
   }
   return {

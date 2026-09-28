@@ -1,0 +1,277 @@
+{
+ "_gens_used": 14,
+ "seat_front": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "7e698361-a28a-4942-aea6-5900c1dbd171",
+    "args": {
+     "input": "raw/anim/cheer_input_rot_se_navy.png",
+     "description": "sitting on a black swivel office chair, three-quarters toward the viewer facing down-right, forearms forward, paws on a keyboard at lap height",
+     "seed": 5101
+    },
+    "submit_text": "id: 7e698361-a28a-4942-aea6-5900c1dbd171\njob_id: 7e698361-a28a-4942-aea6-5900c1dbd171\nmodel: pixen\nedit: The same rat office worker, now sitting on a black swivel office chair, body turned three-quarters toward the viewer facing down-right, back upright, both forearms reaching forward and slightly down with paws resting on a keyboard in front of him at lap height, ready to type. The chair back shows behind his shoulders. Keep the exact same colors, size, outline and pixel style.\nsource: 68x68px\n",
+    "result_text": "status: completed\nid: 7e698361-a28a-4942-aea6-5900c1dbd171\njob_id: 7e698361-a28a-4942-aea6-5900c1dbd171\nframes: 1\ntransparent: yes\nasset_id: 3b782b07-0769-5ef5-8c3c-3c942229da61\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/7e698361-a28a-4942-aea6-5900c1dbd171/download",
+    "files": [
+     "seat_front_7e6983_0.png"
+    ]
+   },
+   {
+    "id": "127393ec-24b7-48ed-b595-5dc6a39b51dc",
+    "args": {
+     "input": "raw/props6/in_sit_front_0.png (the composited sit_front)",
+     "description": "same view and chair, only the arms move forward, paws on a small keyboard in front of the belly",
+     "seed": 5103
+    },
+    "submit_text": "id: 127393ec-24b7-48ed-b595-5dc6a39b51dc\njob_id: 127393ec-24b7-48ed-b595-5dc6a39b51dc\nmodel: pixen\nedit: Keep the same rat, the same three-quarter view facing down-right, the same chair and the same body. Only move both arms: bend the elbows and bring both forearms forward and down so the paws rest on a small dark keyboard just in front of his belly, as if typing. Same colors, size and pixel style.\nsource: 68x68px\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5103\nasset_i",
+    "result_text": "status: completed\nid: 127393ec-24b7-48ed-b595-5dc6a39b51dc\njob_id: 127393ec-24b7-48ed-b595-5dc6a39b51dc\nframes: 1\ntransparent: yes\nasset_id: 15f5aa50-04e4-5c87-8f9f-40df5b4efeac\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/127393ec-24b7-48ed-b595-5dc6a39b51dc/download",
+    "files": [
+     "seat_front_127393_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "seat_back": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "f05c9327-04f1-4b6b-a951-9b423e6c2961",
+    "args": {
+     "input": "raw/anim/seat_input_rot_ne_navy.png",
+     "description": "seen from behind on a black office chair facing up-right, chair back covering the lower back, forearms forward to a keyboard",
+     "seed": 5102
+    },
+    "submit_text": "id: f05c9327-04f1-4b6b-a951-9b423e6c2961\njob_id: f05c9327-04f1-4b6b-a951-9b423e6c2961\nmodel: pixen\nedit: The same rat office worker seen from behind, now sitting on a black swivel office chair facing away from the viewer toward the upper right, the tall black chair back in front of us covering his lower back, both elbows out and forearms reaching forward to a keyboard on a desk in front of him, typing. Keep the exact same colors, size, outline and pixel style.\nsource: 68x68px\nsize: 68x68px\ntrans",
+    "result_text": "status: completed\nid: f05c9327-04f1-4b6b-a951-9b423e6c2961\njob_id: f05c9327-04f1-4b6b-a951-9b423e6c2961\nframes: 1\ntransparent: yes\nasset_id: 6107f1b0-8fee-50e4-b55b-0718b3d6ba55\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/f05c9327-04f1-4b6b-a951-9b423e6c2961/download",
+    "files": [
+     "seat_back_f05c93_0.png"
+    ]
+   },
+   {
+    "id": "886710f4-5442-4469-943e-fe3cee944573",
+    "args": {
+     "input": "raw/props6/in_sit_back_0.png (the composited sit_back)",
+     "description": "same back view and chair, only the arms move forward as if typing",
+     "seed": 5104
+    },
+    "submit_text": "id: 886710f4-5442-4469-943e-fe3cee944573\njob_id: 886710f4-5442-4469-943e-fe3cee944573\nmodel: pixen\nedit: Keep the same rat seen from behind, the same view facing up-right away from us, the same chair back in front and the same body. Only move both arms: raise the elbows out to the sides and bring the forearms forward, away from us, as if typing on a keyboard in front of him. Same colors, size and pixel style.\nsource: 68x68px\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5",
+    "result_text": "status: completed\nid: 886710f4-5442-4469-943e-fe3cee944573\njob_id: 886710f4-5442-4469-943e-fe3cee944573\nframes: 1\ntransparent: yes\nasset_id: 6026303b-3d75-5ae5-ae3e-41bd42189802\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/886710f4-5442-4469-943e-fe3cee944573/download",
+    "files": [
+     "seat_back_886710_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "type_front": {
+  "tool": "animate_image",
+  "attempts": [
+   {
+    "id": "27a8a5d8-ab49-4be4-b67a-08f86a794625",
+    "args": {
+     "input": "raw/props6/seat_front_127393_0.png",
+     "action": "typing quickly, paws tapping alternately, slight head bob, body and chair still",
+     "frame_count": 6,
+     "seed": 5105
+    },
+    "submit_text": "id: 27a8a5d8-ab49-4be4-b67a-08f86a794625\njob_id: 27a8a5d8-ab49-4be4-b67a-08f86a794625\naction: typing quickly on the keyboard, the two paws tapping up and down one after the other, head bobbing very slightly; the body, the chair and the keyboard stay still\nframes: 6\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5105\nasset_id: 739f2087-7341-5bfb-936c-5163dddf38aa\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~30-180s)\n\nhint: ",
+    "result_text": "status: completed\nid: 27a8a5d8-ab49-4be4-b67a-08f86a794625\njob_id: 27a8a5d8-ab49-4be4-b67a-08f86a794625\nframes: 7\ntransparent: yes\nasset_id: 739f2087-7341-5bfb-936c-5163dddf38aa\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/27a8a5d8-ab49-4be4-b67a-08f86a794625/download?index=0 ... ?index=6\n(3 more frames not shown \u2014 fetch them from the download URLs above)",
+    "files": [
+     "type_front_27a8a5_0.png",
+     "type_front_27a8a5_1.png",
+     "type_front_27a8a5_2.png",
+     "type_front_27a8a5_3.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "type_back": {
+  "tool": "animate_image",
+  "attempts": [
+   {
+    "id": "a9e648f8-deeb-4aa4-adfe-7e5740144540",
+    "args": {
+     "input": "raw/props6/in_sit_back_0.png",
+     "action": "seen from behind, typing: shoulders and elbows move slightly in turn, slight head bob, chair still",
+     "frame_count": 6,
+     "seed": 5106
+    },
+    "submit_text": "id: a9e648f8-deeb-4aa4-adfe-7e5740144540\njob_id: a9e648f8-deeb-4aa4-adfe-7e5740144540\naction: seen from behind, typing on a keyboard in front of him that we cannot see: his shoulders and elbows move slightly left and right in turn, his head bobs very slightly; the chair stays still and his arms stay low\nframes: 6\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5106\nasset_id: 69d7aa96-5c91-5f4d-a6bf-ebef62238f67\nasset_status: pending (saved when generation completes)\ncost: 1",
+    "result_text": "status: completed\nid: a9e648f8-deeb-4aa4-adfe-7e5740144540\njob_id: a9e648f8-deeb-4aa4-adfe-7e5740144540\nframes: 7\ntransparent: yes\nasset_id: 69d7aa96-5c91-5f4d-a6bf-ebef62238f67\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/a9e648f8-deeb-4aa4-adfe-7e5740144540/download?index=0 ... ?index=6\n(3 more frames not shown \u2014 fetch them from the download URLs above)",
+    "files": [
+     "type_back_a9e648_0.png",
+     "type_back_a9e648_1.png",
+     "type_back_a9e648_2.png",
+     "type_back_a9e648_3.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "car_red_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "0201a8d1-ee46-4d63-b30d-a869c3df9591",
+    "args": {
+     "input": "raw/props6/in_car_red.png",
+     "description": "same red car seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5201
+    },
+    "submit_text": "id: 0201a8d1-ee46-4d63-b30d-a869c3df9591\njob_id: 0201a8d1-ee46-4d63-b30d-a869c3df9591\nmodel: pixen\nedit: Turn this same red car around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, the car driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 80x52px\nsize: 80x52px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5201\nasset_id: 587a6d10-145c-5321-b83e-a712737f76bd\nasset_status: pending (saved when generat",
+    "result_text": "status: completed\nid: 0201a8d1-ee46-4d63-b30d-a869c3df9591\njob_id: 0201a8d1-ee46-4d63-b30d-a869c3df9591\nframes: 1\ntransparent: yes\nasset_id: 587a6d10-145c-5321-b83e-a712737f76bd\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/0201a8d1-ee46-4d63-b30d-a869c3df9591/download",
+    "files": [
+     "car_red_rear_0201a8_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "car_blue_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "cd224ad6-b131-454e-86e3-777710dd2394",
+    "args": {
+     "input": "raw/props6/in_car_blue.png",
+     "description": "same blue car seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5202
+    },
+    "submit_text": "id: cd224ad6-b131-454e-86e3-777710dd2394\njob_id: cd224ad6-b131-454e-86e3-777710dd2394\nmodel: pixen\nedit: Turn this same blue car around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 80x52px\nsize: 80x52px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5202\nasset_id: 75232bcf-3c5c-5f0f-aa44-3d792a28e3b0\nasset_status: pending (saved when generation com",
+    "result_text": "status: completed\nid: cd224ad6-b131-454e-86e3-777710dd2394\njob_id: cd224ad6-b131-454e-86e3-777710dd2394\nframes: 1\ntransparent: yes\nasset_id: 75232bcf-3c5c-5f0f-aa44-3d792a28e3b0\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/cd224ad6-b131-454e-86e3-777710dd2394/download",
+    "files": [
+     "car_blue_rear_cd224a_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "taxi_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "8922ab1f-fef8-4433-9f4e-aa9054e65248",
+    "args": {
+     "input": "raw/props6/in_taxi.png",
+     "description": "same yellow taxi seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5203
+    },
+    "submit_text": "id: 8922ab1f-fef8-4433-9f4e-aa9054e65248\njob_id: 8922ab1f-fef8-4433-9f4e-aa9054e65248\nmodel: pixen\nedit: Turn this same yellow taxi around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 80x52px\nsize: 80x52px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5203\nasset_id: dabe0091-af47-5c55-b18a-e87ebbfb1d26\nasset_status: pending (saved when generation ",
+    "result_text": "status: completed\nid: 8922ab1f-fef8-4433-9f4e-aa9054e65248\njob_id: 8922ab1f-fef8-4433-9f4e-aa9054e65248\nframes: 1\ntransparent: yes\nasset_id: dabe0091-af47-5c55-b18a-e87ebbfb1d26\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/8922ab1f-fef8-4433-9f4e-aa9054e65248/download",
+    "files": [
+     "taxi_rear_8922ab_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "van_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "08363a0d-9852-4006-8650-b8b00f7422c5",
+    "args": {
+     "input": "raw/props6/in_van.png",
+     "description": "same white delivery van seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5204
+    },
+    "submit_text": "id: 08363a0d-9852-4006-8650-b8b00f7422c5\njob_id: 08363a0d-9852-4006-8650-b8b00f7422c5\nmodel: pixen\nedit: Turn this same white delivery van around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 88x60px\nsize: 88x60px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5204\nasset_id: 39b7fac9-f9c6-515d-9f5a-298c4ffed39c\nasset_status: pending (saved when gene",
+    "result_text": "status: completed\nid: 08363a0d-9852-4006-8650-b8b00f7422c5\njob_id: 08363a0d-9852-4006-8650-b8b00f7422c5\nframes: 1\ntransparent: yes\nasset_id: 39b7fac9-f9c6-515d-9f5a-298c4ffed39c\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/08363a0d-9852-4006-8650-b8b00f7422c5/download",
+    "files": [
+     "van_rear_08363a_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "police_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "248c696e-4ab2-4bf7-b936-fddc57e5c4f5",
+    "args": {
+     "input": "raw/props6/in_police.png",
+     "description": "same black and white police car seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5205
+    },
+    "submit_text": "id: 248c696e-4ab2-4bf7-b936-fddc57e5c4f5\njob_id: 248c696e-4ab2-4bf7-b936-fddc57e5c4f5\nmodel: pixen\nedit: Turn this same black and white police car around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 88x56px\nsize: 88x56px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5205\nasset_id: 03d529dc-a178-579a-9ada-2b74d7181b8d\nasset_status: pending (saved w",
+    "result_text": "status: completed\nid: 248c696e-4ab2-4bf7-b936-fddc57e5c4f5\njob_id: 248c696e-4ab2-4bf7-b936-fddc57e5c4f5\nframes: 1\ntransparent: yes\nasset_id: 03d529dc-a178-579a-9ada-2b74d7181b8d\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/248c696e-4ab2-4bf7-b936-fddc57e5c4f5/download",
+    "files": [
+     "police_rear_248c69_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "car_white_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "850cd622-6f23-407a-a481-a406cbbb96b0",
+    "args": {
+     "input": "raw/props6/in_car_white.png",
+     "description": "same white sedan seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5206
+    },
+    "submit_text": "id: 850cd622-6f23-407a-a481-a406cbbb96b0\njob_id: 850cd622-6f23-407a-a481-a406cbbb96b0\nmodel: pixen\nedit: Turn this same white sedan around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 96x60px\nsize: 96x60px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5206\nasset_id: e156437e-671b-598f-ad9b-ea1eeb4b81a0\nasset_status: pending (saved when generation ",
+    "result_text": "status: completed\nid: 850cd622-6f23-407a-a481-a406cbbb96b0\njob_id: 850cd622-6f23-407a-a481-a406cbbb96b0\nframes: 1\ntransparent: yes\nasset_id: e156437e-671b-598f-ad9b-ea1eeb4b81a0\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/850cd622-6f23-407a-a481-a406cbbb96b0/download",
+    "files": [
+     "car_white_rear_850cd6_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "car_gold_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "0b50cb7b-f083-482b-a829-aa4edc1faa26",
+    "args": {
+     "input": "raw/props6/in_car_gold.png",
+     "description": "same gold luxury SUV seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5207
+    },
+    "submit_text": "id: 0b50cb7b-f083-482b-a829-aa4edc1faa26\njob_id: 0b50cb7b-f083-482b-a829-aa4edc1faa26\nmodel: pixen\nedit: Turn this same gold luxury SUV around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 92x64px\nsize: 92x64px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5207\nasset_id: 51f25044-9aa8-5894-9029-20008412832c\nasset_status: pending (saved when generat",
+    "result_text": "status: completed\nid: 0b50cb7b-f083-482b-a829-aa4edc1faa26\njob_id: 0b50cb7b-f083-482b-a829-aa4edc1faa26\nframes: 1\ntransparent: yes\nasset_id: 51f25044-9aa8-5894-9029-20008412832c\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/0b50cb7b-f083-482b-a829-aa4edc1faa26/download",
+    "files": [
+     "car_gold_rear_0b50cb_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ },
+ "limo_rear": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "id": "4303facc-3392-4c92-b079-f6f36245bbd9",
+    "args": {
+     "input": "raw/props6/in_limo.png",
+     "description": "same black and white stretch limousine seen from behind, rear three-quarter view, driving away toward the upper left",
+     "seed": 5208
+    },
+    "submit_text": "id: 4303facc-3392-4c92-b079-f6f36245bbd9\njob_id: 4303facc-3392-4c92-b079-f6f36245bbd9\nmodel: pixen\nedit: Turn this same black and white stretch limousine around so we see it from behind: rear three-quarter view, tail lights and rear window toward us, driving away from us toward the upper left. Same size, colors, outline and pixel style.\nsource: 104x64px\nsize: 104x64px\ntransparent: True \u2014 auto (input has transparency)\nseed: 5208\nasset_id: 15148227-a4a5-5054-869b-d2785b873de8\nasset_status: pending",
+    "result_text": "status: completed\nid: 4303facc-3392-4c92-b079-f6f36245bbd9\njob_id: 4303facc-3392-4c92-b079-f6f36245bbd9\nframes: 1\ntransparent: yes\nasset_id: 15148227-a4a5-5054-869b-d2785b873de8\nasset_type: image\nasset_status: saved\ngallery: saved to your PixelLab gallery (pixellab.ai/create)\ndownload: https://api.pixellab.ai/mcp/images/4303facc-3392-4c92-b079-f6f36245bbd9/download",
+    "files": [
+     "limo_rear_4303fa_0.png"
+    ]
+   }
+  ],
+  "picked": null,
+  "note": ""
+ }
+}

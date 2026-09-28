@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Growth } from './growth';
 import { Paths } from './path';
 import { buildMaster, queueCells, STAGES, stageOf } from './plan';
-import { buildCity, CITY_KEY } from './city';
+import { buildCity, carSprite, CITY_KEY } from './city';
 import { LANDMARKS, towerFloors, towerSpots, unlocked } from './landmarks';
 import { idx, type FloorLayout } from './types';
 
@@ -228,6 +228,24 @@ describe('landmarks', () => {
       for (let i = sp.i0; i < sp.i0 + sp.w; i++) {
         for (let j = sp.j0; j < sp.j0 + sp.h; j++) expect(plan.blocked[idx(plan.W, i, j)]).toBe(0);
       }
+    }
+  });
+});
+
+describe('traffic', () => {
+  it('drives both ways, nose first, with rear views for cars driving away', () => {
+    // front views: red noses down-right (+i), the van down-left (+j); rear views: red up-left (-i), the limo up-right (-j)
+    expect(carSprite('car_red', 'i', 1)).toEqual({ kind: 'car_red', mirror: false });
+    expect(carSprite('car_red', 'j', 1)).toEqual({ kind: 'car_red', mirror: true });
+    expect(carSprite('van', 'j', 1)).toEqual({ kind: 'van', mirror: false });
+    expect(carSprite('car_red', 'i', -1)).toEqual({ kind: 'car_red_rear', mirror: false });
+    expect(carSprite('car_red', 'j', -1)).toEqual({ kind: 'car_red_rear', mirror: true });
+    expect(carSprite('limo', 'j', -1)).toEqual({ kind: 'limo_rear', mirror: false });
+    const plan = buildMaster();
+    for (let stage = 0; stage < STAGES.length; stage++) {
+      const c = buildCity(plan, stage, () => true, () => ({ w: 200, h: 240 }));
+      expect(new Set(c.movers.map((m) => m.dir))).toEqual(new Set([1, -1]));
+      for (const m of c.movers) expect(m.kind.endsWith('_rear')).toBe(m.dir < 0);
     }
   });
 });

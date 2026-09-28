@@ -167,6 +167,7 @@ async function boot(): Promise<Site> {
     const v = camera.view();
     world.main.setView(v.x, v.y, v.w, v.h);
     world.setZoom(camera.zoom);
+    world.parallax(v.x + v.w / 2, v.y + v.h / 2);
     money.setZoom(camera.zoom);
   };
   const hq = cellCentre(plan.furnace.i, plan.furnace.j);

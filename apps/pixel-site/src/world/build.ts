@@ -58,6 +58,8 @@ export interface World {
   crown: { x: number; y: number } | null;
   /** within 10% of the next stage: scaffolding, a crane and a crew on the lots the office takes next */
   setPrep(on: boolean): void;
+  /** the camera moved: the skyline layers drift at their own depth */
+  parallax(cx: number, cy: number): void;
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
@@ -411,9 +413,14 @@ export function buildWorld(
     for (let i = r.i0; i < r.i0 + r.w; i++) {
       for (let j = r.j0; j < r.j0 + r.h; j++) {
         const p = cellToScreen(i, j);
-        const t = makeParticle(atlas.frame(styleFrame('blueprint', i, j)), p.x, p.y);
-        t.tint = 0x9aa6c4; // muted, so big empty rings do not shout louder than the rooms
+        // a building site, not a flat blueprint: dug-over dirt, hazard tape round the edge
+        const t = makeParticle(atlas.frame(styleFrame('dirt', i, j)), p.x, p.y);
+        t.tint = 0xd8ccb8;
         floorLayer.add(t, 1e5 + i + j);
+        if (j === r.j0) floorLayer.add(makeParticle(atlas.frame('world:tape_i'), p.x + 8, p.y + 4), 1e6 + i + j);
+        if (j === r.j0 + r.h - 1) floorLayer.add(makeParticle(atlas.frame('world:tape_i'), p.x - 8, p.y + 12), 1e6 + i + j);
+        if (i === r.i0) floorLayer.add(makeParticle(atlas.frame('world:tape_j'), p.x - 8, p.y + 4), 1e6 + i + j);
+        if (i === r.i0 + r.w - 1) floorLayer.add(makeParticle(atlas.frame('world:tape_j'), p.x + 8, p.y + 12), 1e6 + i + j);
       }
     }
     if (!signed.has(r.id)) continue;
@@ -577,7 +584,7 @@ export function buildWorld(
   }
 
   // vignette extras: posed rats that belong to the set, animated in place (tears for the one crying in the WC)
-  const extras: Array<{ p: Particle; frames: Frame[]; k: number; t: number; fps: number; hold: boolean }> = [];
+  const extras: Array<{ p: Particle; frames: Frame[]; k: number; t: number; fps: number; hold: boolean; acc?: Particle; accFrames?: Frame[] }> = [];
   const tears: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
   const tearTex = (() => {
     const c = document.createElement('canvas');
@@ -621,7 +628,7 @@ export function buildWorld(
   }
 
   // never empty: applicants queue in the lobby, the founders hang about the garage at the start
-  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean): void => {
+  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean, acc?: string): void => {
     let frames: Frame[];
     try {
       frames = atlas.anim(`${look}/${anim}`);
@@ -632,7 +639,19 @@ export function buildWorld(
     const sc = TIER_SCALE[look.split('.')[0] as keyof typeof TIER_SCALE] ?? 1;
     const p = makeParticle(frames[0]!, c.x, c.y, mirror, sc);
     main.add(p, i + j + 1.25);
-    extras.push({ p, frames, k: Math.floor(Math.random() * frames.length), t: 0, fps: anim === 'cheer' ? 8 : 4, hold: false });
+    const k = Math.floor(Math.random() * frames.length);
+    let hat: Particle | undefined;
+    let accFrames: Frame[] | undefined;
+    if (acc) {
+      try {
+        accFrames = atlas.anim(`acc/${acc}/${anim}`);
+        hat = makeParticle(accFrames[k] ?? accFrames[0]!, c.x, c.y, mirror, sc);
+        main.add(hat, i + j + 1.26);
+      } catch {
+        accFrames = undefined;
+      }
+    }
+    extras.push({ p, frames, k, t: 0, fps: anim === 'cheer' ? 8 : 4, hold: false, acc: hat, accFrames });
   };
   {
     const lobby = plan.rooms[ring.lobby]!;
@@ -650,6 +669,42 @@ export function buildWorld(
       const g = plan.garage;
       posed('partner', 'idle_ne', g.i0 + 3, g.j0 + 2, false);
       posed('vp.white', 'cheer', plan.furnace.i + 2, plan.furnace.j - 1, true);
+    }
+  }
+
+  // the rooms still to come are building sites with life on them: stacks of material and cones on the dirt, and on
+  // the next rooms to open a crane and a hard-hat crew (one prop per cell at most, never on the taped edge)
+  {
+    const h = (n: number): number => (((n * 2654435761) >>> 0) % 10007) / 10007;
+    const STUFF = ['cone', 'cone', 'cement', 'pallets', 'box_pile', 'barrier', 'cone', 'pallets'];
+    const CREW = ['intern', 'associate.brown', 'analyst.white', 'intern.black'];
+    let cranes = 0;
+    for (const r of lots) {
+      if (r.w < 3 || r.h < 3) continue;
+      const used = new Set<number>();
+      const n = Math.min(6, 1 + Math.floor((r.w * r.h) / 24));
+      for (let q = 0; q < n; q++) {
+        const i = r.i0 + 1 + Math.floor(h(r.id * 31 + q) * (r.w - 2));
+        const j = r.j0 + 1 + Math.floor(h(r.id * 57 + q * 7 + 3) * (r.h - 2));
+        const key = idx(W, i, j);
+        if (used.has(key)) continue;
+        used.add(key);
+        const kind = STUFF[Math.floor(h(r.id * 13 + q) * STUFF.length)]!;
+        if (!atlas.has(`world:${kind}`)) continue;
+        const c = cellCentre(i, j);
+        main.add(makeParticle(atlas.frame(`world:${kind}`), c.x, c.y + 4, h(r.id + q) < 0.5, kind === 'cone' ? 0.55 : 0.7), i + j + 1);
+      }
+      if (!signed.has(r.id)) continue;
+      // the next rooms to open: a crane on the corner and a crew of two in hard hats
+      const cc = cellCentre(r.i0 + 1, r.j0 + r.h - 2);
+      if (atlas.has('world:crane') && cranes++ < 2) main.add(makeParticle(atlas.frame('world:crane'), cc.x, cc.y, false, 0.62), r.i0 + r.j0 + r.h);
+      for (let q = 0; q < 2; q++) {
+        const i = r.i0 + 1 + ((r.id + q * 3) % Math.max(1, r.w - 2));
+        const j = r.j0 + r.h - 2 - q;
+        if (used.has(idx(W, i, j))) continue;
+        used.add(idx(W, i, j));
+        posed(CREW[(r.id + q) % CREW.length]!, q === 0 ? 'idle_se' : 'cheer', i, j, q === 1, 'hat_hard');
+      }
     }
   }
 
@@ -807,6 +862,12 @@ export function buildWorld(
         e.p.texture = f.texture;
         e.p.anchorX = f.anchorX;
         e.p.anchorY = f.anchorY;
+        const g = e.accFrames?.[e.k];
+        if (e.acc && g) {
+          e.acc.texture = g.texture;
+          e.acc.anchorX = g.anchorX;
+          e.acc.anchorY = g.anchorY;
+        }
       }
       for (const t of tears) {
         t.t = (t.t + dt) % 0.8;
@@ -857,6 +918,9 @@ export function buildWorld(
     setPrep(on: boolean): void {
       cityView.setPrep(on);
     },
+    parallax(cx: number, cy: number): void {
+      cityView.parallax(cx, cy);
+    },
     crown: lm.crown,
     landmarkFocus(id: string): Focus | null {
       return lm.focus.get(id) ?? null;
@@ -878,7 +942,7 @@ export function buildWorld(
     setZoom(z: number): void {
       // room labels only at mid zoom (hidden zoomed out, where only landmark names and the building name show;
       // at close zoom the rooms speak for themselves)
-      const a = z >= 1.1 ? 0 : z >= 0.85 ? (1.1 - z) / 0.25 : z >= 0.55 ? 1 : z <= 0.42 ? 0 : (z - 0.42) / 0.13;
+      const a = z >= 1.2 ? 0 : z >= 0.95 ? (1.2 - z) / 0.25 : z >= 0.72 ? 1 : z <= 0.62 ? 0 : (z - 0.62) / 0.1;
       for (const sg of roomSigns) {
         sg.alpha = a;
         sg.scale.set(1);
@@ -890,7 +954,7 @@ export function buildWorld(
       vaultSign.scale.set(Math.max(1, signScale));
       fair?.scale.set(Math.max(1, signScale));
       for (const l of lockSigns) {
-        l.visible = z >= 0.42;
+        l.visible = z >= 0.6;
         l.scale.set(1);
       }
       for (const l of landmarkSigns) l.scale.set(Math.max(0.45, Math.min(6, 0.9 / z)));
@@ -986,32 +1050,44 @@ function lockTexture(what: string, when: string): Texture {
 }
 
 
-/** A faint far skyline: dark towers with a few lit windows, drawn once. */
-function skylineTexture(width: number, evil: boolean, seed: number): Texture {
-  const h = 260;
+/** One layer of the far skyline: towers of one shade with lit windows, their bottom melting into the haze. Far layers
+ *  are paler (haze), taller and smaller-windowed; near ones darker, lower and busier. */
+function skylineLayer(width: number, evil: boolean, seed: number, depth: number): Texture {
+  const h = 320;
   const c = document.createElement('canvas');
   c.width = width;
   c.height = h;
   const ctx = c.getContext('2d')!;
   let s = seed >>> 0 || 1;
   const rnd = (): number => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
-  for (const [shade, scale] of [[evil ? '#2a0c14' : '#141a30', 1], [evil ? '#3a1018' : '#1b2340', 0.7]] as const) {
-    let x = 0;
-    while (x < width) {
-      const w = 18 + Math.floor(rnd() * 46);
-      const bh = Math.floor((40 + rnd() * 180) * scale * (0.6 + 0.4 * Math.sin((x / width) * Math.PI)));
-      ctx.fillStyle = shade;
-      ctx.fillRect(x, h - bh, w, bh);
-      if (rnd() < 0.3) ctx.fillRect(x + w / 2 - 1, h - bh - 14, 2, 14);
-      ctx.fillStyle = evil ? 'rgba(255,90,90,0.55)' : 'rgba(255,214,140,0.5)';
-      for (let y = h - bh + 6; y < h - 4; y += 7) for (let wx = x + 3; wx < x + w - 3; wx += 5) if (rnd() < 0.12) ctx.fillRect(wx, y, 2, 2);
-      x += w + Math.floor(rnd() * 8);
+  // depth 0 = farthest
+  const far = ['#2a3358', '#202a4c', '#182040', '#10162c'];
+  const farEvil = ['#4a1a26', '#3a1420', '#2c0e18', '#1e0a10'];
+  const shade = (evil ? farEvil : far)[depth]!;
+  const lit = evil ? [255, 90, 90] : [255, 214, 140];
+  const tall = [1, 0.85, 0.65, 0.45][depth]!;
+  let x = 0;
+  while (x < width) {
+    const w = [10, 14, 22, 30][depth]! + Math.floor(rnd() * [20, 30, 40, 52][depth]!);
+    const bh = Math.floor((50 + rnd() * 230) * tall * (0.55 + 0.45 * Math.sin((x / width) * Math.PI)));
+    ctx.fillStyle = shade;
+    ctx.fillRect(x, h - bh, w, bh);
+    // spires, stepped tops and the odd antenna with a red light
+    if (rnd() < 0.25) ctx.fillRect(x + Math.floor(w / 2) - 1, h - bh - 12 - depth * 2, 2, 12 + depth * 2);
+    if (rnd() < 0.3) ctx.fillRect(x + 3, h - bh - 6, w - 6, 6);
+    if (depth >= 2 && rnd() < 0.2) {
+      ctx.fillStyle = 'rgba(255,60,60,0.8)';
+      ctx.fillRect(x + Math.floor(w / 2) - 1, h - bh - 14 - depth * 2, 2, 2);
     }
+    ctx.fillStyle = `rgba(${lit[0]},${lit[1]},${lit[2]},${[0.18, 0.28, 0.42, 0.55][depth]})`;
+    const step = [5, 6, 7, 8][depth]!;
+    for (let y = h - bh + 5; y < h - 4; y += step) for (let wx = x + 2; wx < x + w - 2; wx += step - 1) if (rnd() < 0.08 + depth * 0.04) ctx.fillRect(wx, y, depth >= 2 ? 2 : 1, depth >= 2 ? 2 : 1);
+    x += w + Math.floor(rnd() * (6 + depth * 3));
   }
-  // melt the bottom into the sky: no hard line where the skyline stops
+  // melt the bottom into the haze: no hard line where the layer stops
   const img = ctx.getImageData(0, 0, width, h);
   for (let y = 0; y < h; y++) {
-    const k = y < h * 0.45 ? 1 : Math.max(0, 1 - (y - h * 0.45) / (h * 0.55));
+    const k = y < h * 0.4 ? 1 : Math.max(0, 1 - (y - h * 0.4) / (h * 0.6));
     for (let x = 0; x < width; x++) img.data[(y * width + x) * 4 + 3] = Math.round(img.data[(y * width + x) * 4 + 3]! * k);
   }
   ctx.putImageData(img, 0, 0);
@@ -1031,7 +1107,7 @@ function renderCity(
   signs: Container,
   backdrop: Container,
   lights?: Container,
-): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void } {
+): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void; parallax(cx: number, cy: number): void } {
   const fadeAt = (i: number, j: number): number => city.ground.get(CITY_KEY(Math.round(i), Math.round(j)))?.fade ?? 1;
   const warm = glowTexture(255, 186, 102);
   for (const it of city.items) {
@@ -1109,15 +1185,24 @@ function renderCity(
     }
   });
 
-  // the far skyline behind the back corner of the city
+  // the far skyline behind the back corner of the city: four layers, the farthest highest and palest, each drifting
+  // a little with the camera (parallax, see World.parallax)
   const top = cellToScreen(city.i0, city.j0);
   const span = (city.i1 - city.i0 + city.j1 - city.j0) * 16;
-  const sky = new Sprite(skylineTexture(Math.min(4000, Math.max(800, Math.round(span * 0.9))), stage >= 5, 97 + stage));
-  sky.anchor.set(0.5, 1);
-  sky.position.set(top.x, top.y + span * 0.08);
-  sky.scale.set(Math.max(1, span / 1800));
-  sky.alpha = 0.6;
-  backdrop.addChild(sky);
+  const skyW = Math.min(4000, Math.max(800, Math.round(span * 0.9)));
+  const skyScale = Math.max(1, span / 1800);
+  const skyLayers: Array<{ s: Sprite; x: number; y: number; k: number }> = [];
+  for (let d = 0; d < 4; d++) {
+    const sky = new Sprite(skylineLayer(skyW, stage >= 5, 97 + stage * 7 + d * 131, d));
+    sky.anchor.set(0.5, 1);
+    const x = top.x;
+    const y = top.y + span * 0.08 - (3 - d) * 26 * skyScale;
+    sky.position.set(x, y);
+    sky.scale.set(skyScale * (1.1 - d * 0.04));
+    sky.alpha = [0.45, 0.55, 0.7, 0.85][d]!;
+    backdrop.addChild(sky);
+    skyLayers.push({ s: sky, x, y, k: [0.3, 0.2, 0.11, 0.04][d]! });
+  }
   // extras: street scenes (food truck queue, the smoker, the delivery, the crew)
   const extras: Array<{ p: Particle; acc: Particle | null; frames: Frame[]; accFrames: Frame[]; k: number; t: number; fps: number }> = [];
   const puffs: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
@@ -1246,6 +1331,12 @@ function renderCity(
   });
   return {
     shells,
+    parallax(cx: number, cy: number): void {
+      for (const l of skyLayers) {
+        l.s.x = l.x + (cx - l.x) * l.k;
+        l.s.y = l.y + (cy - l.y) * l.k * 0.3;
+      }
+    },
     setPrep(on: boolean): void {
       for (const x of prep) {
         x.p.scaleX = on ? x.sx : 0;
@@ -1255,8 +1346,9 @@ function renderCity(
     update(dt: number): void {
       moveVisitor(dt);
       for (const v of movers) {
-        v.pos += v.m.speed * dt;
+        v.pos += v.m.speed * dt * v.m.dir;
         if (v.pos > v.m.to) v.pos = v.m.from;
+        if (v.pos < v.m.from) v.pos = v.m.to;
         const c = v.m.axis === 'i' ? cellCentre(v.pos, v.m.fixed) : cellCentre(v.m.fixed, v.pos);
         v.item.p.x = c.x;
         v.item.p.y = c.y;
