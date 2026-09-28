@@ -1,0 +1,342 @@
+{
+ "house_a_0": {
+  "w": 190,
+  "h": 143,
+  "guess": "cozy two-storey suburban house with a pitched grey roof, small front porch, warm lit windows, a tree beside it"
+ },
+ "house_b_0": {
+  "w": 160,
+  "h": 110,
+  "guess": "small blue one-storey suburban bungalow with white picket fence and warm lit windows"
+ },
+ "street_props_0": {
+  "w": 35,
+  "h": 67,
+  "guess": "red fire hydrant"
+ },
+ "street_props_1": {
+  "w": 23,
+  "h": 68,
+  "guess": "bus stop sign on a pole"
+ },
+ "street_props_2": {
+  "w": 83,
+  "h": 48,
+  "guess": "green park bench"
+ },
+ "street_props_3": {
+  "w": 42,
+  "h": 63,
+  "guess": "blue mailbox"
+ },
+ "street_props_4": {
+  "w": 36,
+  "h": 52,
+  "guess": "grey metal trash can"
+ },
+ "trees_0": {
+  "w": 58,
+  "h": 106,
+  "guess": "round leafy street tree"
+ },
+ "trees_1": {
+  "w": 67,
+  "h": 117,
+  "guess": "tall pine tree"
+ },
+ "trees_2": {
+  "w": 63,
+  "h": 105,
+  "guess": "bushy round tree (asked: round green bush)"
+ },
+ "trees_3": {
+  "w": 58,
+  "h": 104,
+  "guess": "leafy tree on a paved square (asked: small tree in a square planter)"
+ },
+ "cars_a_0": {
+  "w": 71,
+  "h": 36,
+  "guess": "small red car (asked: hatchback, reads as a sedan)"
+ },
+ "cars_a_1": {
+  "w": 70,
+  "h": 36,
+  "guess": "blue sedan"
+ },
+ "cars_a_2": {
+  "w": 69,
+  "h": 36,
+  "guess": "yellow taxi cab"
+ },
+ "cars_a_3": {
+  "w": 80,
+  "h": 43,
+  "guess": "white delivery van"
+ },
+ "cars_b_0": {
+  "w": 94,
+  "h": 47,
+  "guess": "stretch limousine, white with black (asked: black)"
+ },
+ "cars_b_1": {
+  "w": 80,
+  "h": 40,
+  "guess": "black and white police car with light bar"
+ },
+ "cars_b_2": {
+  "w": 88,
+  "h": 41,
+  "guess": "white sedan (asked: gold sports car)"
+ },
+ "cars_b_3": {
+  "w": 84,
+  "h": 46,
+  "guess": "gold boxy SUV or wagon (asked: black SUV)"
+ },
+ "shop_row_0": {
+  "w": 215,
+  "h": 187,
+  "guess": "small two-storey downtown corner shop with a striped awning and a lit shop window, brick walls"
+ },
+ "brick_block_0": {
+  "w": 150,
+  "h": 247,
+  "guess": "five-storey red brick apartment building with many lit windows and a fire escape"
+ },
+ "glass_tower_0": {
+  "w": 200,
+  "h": 273,
+  "guess": "tall blue glass office skyscraper with a grid of lit windows at night"
+ },
+ "deco_tower_0": {
+  "w": 118,
+  "h": 355,
+  "guess": "tall art deco skyscraper with a golden spire and lit windows"
+ },
+ "evil_tower_0": {
+  "w": 192,
+  "h": 347,
+  "guess": "sinister black skyscraper with glowing red windows and a red antenna light on top"
+ },
+ "evil_block_0": {
+  "w": 110,
+  "h": 247,
+  "guess": "dark office block with red neon trim and a giant red rat statue on the roof (not very fortress-like)"
+ },
+ "crane_0": {
+  "w": 146,
+  "h": 318,
+  "guess": "tall yellow tower construction crane with a long horizontal jib and a hanging hook"
+ },
+ "scaffold_0": {
+  "w": 89,
+  "h": 119,
+  "guess": "metal construction scaffolding section with wooden planks, a ladder and orange safety netting"
+ },
+ "construction_kit_0": {
+  "w": 55,
+  "h": 71,
+  "guess": "orange traffic cone"
+ },
+ "construction_kit_1": {
+  "w": 46,
+  "h": 68,
+  "guess": "wooden A-frame ladder"
+ },
+ "construction_kit_2": {
+  "w": 36,
+  "h": 67,
+  "guess": "blank yellow sign on a post (asked: wet paint sign)"
+ },
+ "construction_kit_3": {
+  "w": 50,
+  "h": 70,
+  "guess": "stack of grey cement bags"
+ },
+ "construction_kit_4": {
+  "w": 64,
+  "h": 60,
+  "guess": "red and white striped road barrier"
+ },
+ "disaster_0": {
+  "w": 42,
+  "h": 80,
+  "guess": "tall black server rack cabinet on fire"
+ },
+ "disaster_1": {
+  "w": 51,
+  "h": 56,
+  "guess": "broken dark photocopier with jammed paper flying out"
+ },
+ "disaster_2": {
+  "w": 61,
+  "h": 76,
+  "guess": "dark fax machine cabinet with black smoke"
+ },
+ "disaster_3": {
+  "w": 45,
+  "h": 61,
+  "guess": "beige photocopier (extra piece, not asked)"
+ },
+ "disaster_4": {
+  "w": 26,
+  "h": 44,
+  "guess": "yellow wet floor warning sign"
+ },
+ "disaster_5": {
+  "w": 22,
+  "h": 46,
+  "guess": "red fire extinguisher"
+ },
+ "party_0": {
+  "w": 41,
+  "h": 48,
+  "guess": "open pink donut box with one donut"
+ },
+ "party_1": {
+  "w": 33,
+  "h": 47,
+  "guess": "stack of white pizza boxes"
+ },
+ "party_2": {
+  "w": 38,
+  "h": 36,
+  "guess": "birthday cake with lit candles"
+ },
+ "party_3": {
+  "w": 33,
+  "h": 37,
+  "guess": "glass punch bowl with red punch on a small stand"
+ },
+ "party_4": {
+  "w": 45,
+  "h": 47,
+  "guess": "bunch of colorful party balloons"
+ },
+ "fun_0": {
+  "w": 74,
+  "h": 58,
+  "guess": "green ping pong table"
+ },
+ "fun_1": {
+  "w": 54,
+  "h": 47,
+  "guess": "foosball table"
+ },
+ "fun_2": {
+  "w": 39,
+  "h": 72,
+  "guess": "retro arcade cabinet with a glowing screen"
+ },
+ "fun_3": {
+  "w": 49,
+  "h": 48,
+  "guess": "purple bean bag chair"
+ },
+ "fun_4": {
+  "w": 50,
+  "h": 65,
+  "guess": "aquarium tank on a wooden stand (no fish visible)"
+ },
+ "rich_0": {
+  "w": 53,
+  "h": 44,
+  "guess": "stack of shiny gold bars"
+ },
+ "rich_1": {
+  "w": 53,
+  "h": 59,
+  "guess": "electronic money counting machine"
+ },
+ "rich_2": {
+  "w": 45,
+  "h": 60,
+  "guess": "golden rat statue on a pedestal"
+ },
+ "rich_3": {
+  "w": 60,
+  "h": 55,
+  "guess": "big pile of green cash stacks (no table)"
+ },
+ "rich_4": {
+  "w": 33,
+  "h": 57,
+  "guess": "antique globe on a stand"
+ },
+ "meeting_0": {
+  "w": 35,
+  "h": 55,
+  "guess": "presentation screen on a tripod with red bar chart (bars rise, mirror it for a crash)"
+ },
+ "meeting_1": {
+  "w": 30,
+  "h": 54,
+  "guess": "flip chart easel with a falling red line graph"
+ },
+ "meeting_2": {
+  "w": 41,
+  "h": 50,
+  "guess": "easel with a rising red line graph (mirror it for a crash)"
+ },
+ "meeting_3": {
+  "w": 34,
+  "h": 47,
+  "guess": "projector on a small table"
+ },
+ "meeting_4": {
+  "w": 32,
+  "h": 50,
+  "guess": "water dispenser jug (bottle on a base)"
+ },
+ "evil_0": {
+  "w": 51,
+  "h": 68,
+  "guess": "red velvet and gold evil throne"
+ },
+ "evil_1": {
+  "w": 48,
+  "h": 48,
+  "guess": "big red button on a gold pedestal"
+ },
+ "evil_2": {
+  "w": 69,
+  "h": 60,
+  "guess": "aquarium tank with a shark inside"
+ },
+ "evil_3": {
+  "w": 33,
+  "h": 64,
+  "guess": "tall stack of gold crypto coins"
+ },
+ "evil_4": {
+  "w": 43,
+  "h": 70,
+  "guess": "red banner flag with a white skull emblem"
+ },
+ "eggs_0": {
+  "w": 27,
+  "h": 49,
+  "guess": "mirror disco ball on a stand"
+ },
+ "eggs_1": {
+  "w": 36,
+  "h": 70,
+  "guess": "red telephone booth"
+ },
+ "eggs_2": {
+  "w": 49,
+  "h": 54,
+  "guess": "treasure chest full of gold coins"
+ },
+ "eggs_3": {
+  "w": 38,
+  "h": 49,
+  "guess": "flying saucer model on a stand"
+ },
+ "eggs_4": {
+  "w": 41,
+  "h": 41,
+  "guess": "yellow rubber duck on a pedestal"
+ }
+}

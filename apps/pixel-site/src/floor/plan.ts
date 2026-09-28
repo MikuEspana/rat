@@ -12,8 +12,9 @@ import {
   storageRoom, vaultRoom, warRoom, type Builder,
 } from './furnish';
 import { packRect, type Req } from './pack';
+import { EASTER_EGGS, placeVignette } from './vignettes';
 import { Rng } from './rng';
-import { CORRIDOR_REGION, FLOOR_STYLES, T, idx, type FloorLayout, type FloorStyle, type Ring, type Room, type RoomKind, type Spot } from './types';
+import { CORRIDOR_REGION, FLOOR_STYLES, T, idx, type Actor, type FloorLayout, type FloorStyle, type Ring, type Room, type RoomKind, type Spot } from './types';
 
 export const STAGES: ReadonlyArray<{ name: string; min: number }> = [
   { name: 'GARAGE STARTUP', min: 0 },
@@ -38,21 +39,23 @@ const GARAGE_SEATS = 26;
 
 /** Floor colour per room type, strong enough to read zones from far away. */
 export const ROOM_LOOK: Record<RoomKind, { floor: FloorStyle; tint: number; label: string }> = {
-  garage: { floor: 'tile', tint: 0xbdb5a6, label: 'GARAGE' },
-  hq: { floor: 'tile', tint: 0xbdb5a6, label: 'HQ' },
-  open: { floor: 'office', tint: 0xdce4f2, label: 'OPEN OFFICE' },
-  stock: { floor: 'office', tint: 0xb3c8f5, label: '' },
-  ceo: { floor: 'warm', tint: 0xffd36b, label: 'CEO' },
-  lobby: { floor: 'office', tint: 0x9fe0a8, label: 'LOBBY' },
-  break: { floor: 'warm', tint: 0xffb46b, label: 'BREAK ROOM' },
-  bath: { floor: 'tile', tint: 0x86e3dc, label: 'WC' },
-  server: { floor: 'dark', tint: 0x6a80cc, label: 'SERVERS' },
-  copy: { floor: 'office', tint: 0xc4c4cc, label: 'COPY' },
-  meeting: { floor: 'office', tint: 0xcaa6ff, label: 'MEETING' },
-  storage: { floor: 'office', tint: 0xbf9a6a, label: 'STORAGE' },
-  war: { floor: 'dark', tint: 0xd05050, label: 'WAR ROOM' },
-  vault: { floor: 'warm', tint: 0xf0c040, label: 'VAULT' },
+  garage: { floor: 'concrete', tint: 0xe4ddd0, label: 'GARAGE' },
+  hq: { floor: 'marble', tint: 0xffffff, label: 'HQ' },
+  open: { floor: 'carpet', tint: 0xc4d2ee, label: 'OPEN OFFICE' },
+  stock: { floor: 'carpet', tint: 0x9fb6ea, label: '' },
+  ceo: { floor: 'wood_j', tint: 0xffe2a8, label: 'CEO' },
+  lobby: { floor: 'marble', tint: 0xcff2d6, label: 'LOBBY' },
+  break: { floor: 'wood_i', tint: 0xffd6a8, label: 'BREAK ROOM' },
+  bath: { floor: 'bath', tint: 0x9ff0e6, label: 'WC' },
+  server: { floor: 'raised', tint: 0x9db0ee, label: 'SERVERS' },
+  copy: { floor: 'vinyl', tint: 0xd4d4de, label: 'COPY' },
+  meeting: { floor: 'carpet', tint: 0xcdb2ff, label: 'MEETING' },
+  storage: { floor: 'concrete', tint: 0xd8b888, label: 'STORAGE' },
+  war: { floor: 'carpet', tint: 0xe86a6a, label: 'WAR ROOM' },
+  vault: { floor: 'marble', tint: 0xffdc78, label: 'VAULT' },
 };
+/** Stock rooms get one of these carpets each (all in the blue family, so desk rooms still read as one zone). */
+const STOCK_CARPETS = [0x9fb6ea, 0x8fb0e0, 0xa8c0f0, 0x94a8dc, 0x9cc4e8, 0xb0b8e8];
 export const CORRIDOR_TINT = 0xd6dbe4;
 export const LOT_TINT = 0x2b3042;
 export const STREET_TINT = 0x454c68;
@@ -141,8 +144,9 @@ export function buildMaster(): FloorLayout {
     props: [],
     seats: [],
     spots: [],
+    nextPod: 0,
   };
-  const floorOf = new Uint8Array(N).fill(FLOOR_STYLES.indexOf('street'));
+  const floorOf = new Uint8Array(N).fill(FLOOR_STYLES.indexOf('asphalt'));
   const floorTint = new Uint32Array(N).fill(STREET_TINT);
   const ringOf = new Uint8Array(N).fill(RINGS.length + 1);
   const rooms: Room[] = [];
@@ -188,7 +192,7 @@ export function buildMaster(): FloorLayout {
       for (let j = a0 - 2; j <= a1 + 2; j++) {
         if (i >= a0 && i <= a1 && j >= a0 && j <= a1) continue;
         B.tile[at(i, j)] = T.CORRIDOR;
-        floorOf[at(i, j)] = FLOOR_STYLES.indexOf('office');
+        floorOf[at(i, j)] = FLOOR_STYLES.indexOf('vinyl');
         floorTint[at(i, j)] = CORRIDOR_TINT;
       }
     }
@@ -363,8 +367,16 @@ export function buildMaster(): FloorLayout {
     if (opts.length) r.ticker = opts[rng.int(Math.min(3, opts.length))]!;
   }
 
-  // floors
+  // floors: a look per room type, with a little variety between rooms of the same type
   for (const r of rooms) {
+    const rng = new Rng(`floor:${r.id}`);
+    if (r.kind === 'stock') r.tint = STOCK_CARPETS[rng.int(STOCK_CARPETS.length)]!;
+    if (r.kind === 'break') r.floor = rng.pick(['wood_i', 'wood_j', 'checker'] as const);
+    if (r.kind === 'meeting' && rng.chance(0.4)) {
+      r.floor = rng.pick(['wood_i', 'wood_j'] as const);
+      r.tint = 0xe8d8ff;
+    }
+    if (r.kind === 'open' && rng.chance(0.3)) r.floor = 'vinyl';
     for (let i = r.i0; i < r.i0 + r.w; i++) {
       for (let j = r.j0; j < r.j0 + r.h; j++) {
         floorOf[at(i, j)] = FLOOR_STYLES.indexOf(r.floor);
@@ -385,8 +397,16 @@ export function buildMaster(): FloorLayout {
   // furnish (deterministic per room)
   const reqOf = new Map(placed.map((p) => [p.room.id, p.req]));
   const deskSeats = (r: Room): number => Math.max(8, Math.min(48, Math.round((r.w * r.h - 16) / 7)));
+  const actors: Actor[] = [];
+  const usedByRing = new Map<number, Set<string>>();
   for (const r of rooms) {
     const f = new Fit(B, r, new Rng(`room:${r.id}:${r.kind}:${r.w}x${r.h}`));
+    // a vignette first (it needs the most room); most amenity rooms get one
+    if (r.kind !== 'stock' && r.kind !== 'open' && r.kind !== 'garage' && new Rng(`vig:${r.id}`).chance(0.8)) {
+      const used = usedByRing.get(r.ring) ?? new Set<string>();
+      usedByRing.set(r.ring, used);
+      placeVignette(f, used, actors);
+    }
     if (r.kind === 'garage') garageRoom(f, furnace, GARAGE_SEATS);
     else if (r.kind === 'stock') stockRoom(f, deskSeats(r));
     else if (r.kind === 'open') openRoom(f, deskSeats(r));
@@ -400,6 +420,28 @@ export function buildMaster(): FloorLayout {
     else if (r.kind === 'war') warRoom(f);
     else if (r.kind === 'vault') vaultRoom(f);
     else lobbyRoom(f);
+  }
+
+  // the rare props: one easter egg per ring, in a random room of it with space; the golden rat in the CEO office
+  for (let k = 0; k <= RINGS.length; k++) {
+    const rng = new Rng(`egg:${k}`);
+    const egg = EASTER_EGGS[(k + rng.int(EASTER_EGGS.length)) % EASTER_EGGS.length]!;
+    const cands = rng.shuffle(rooms.filter((r) => r.ring === k && r.w >= 5 && r.h >= 5));
+    let done = false;
+    for (const r of cands) {
+      for (let t = 0; t < 30 && !done; t++) {
+        const i = r.i0 + 1 + rng.int(r.w - 2);
+        const j = r.j0 + 1 + rng.int(r.h - 2);
+        const f = new Fit(B, r, rng);
+        if (!f.free(i, j) || !f.free(i + 1, j) || !f.free(i, j + 1)) continue;
+        const p = f.put(egg, i, j, rng.chance(0.5));
+        if (p && !f.allReachable()) {
+          B.props.splice(B.props.lastIndexOf(p), 1);
+          B.blocked[at(i, j)] = 0;
+        } else if (p) done = true;
+      }
+      if (done) break;
+    }
   }
 
   // street furniture per stage (only the outermost ring's shows): lamps, smokers by the door, the subway stairs
@@ -442,6 +484,7 @@ export function buildMaster(): FloorLayout {
     building: { i0: Q[0]!.i0, j0: Q[0]!.i0, i1: Q[0]!.i1 + 1, j1: Q[0]!.i1 + 1 },
     corridor,
     rings, ringOf, doorSides,
+    actors,
   };
 }
 

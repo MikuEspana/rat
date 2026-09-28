@@ -1,0 +1,896 @@
+{
+ "frames": {
+  "house_a": {
+   "frame": {
+    "x": 216,
+    "y": 356,
+    "w": 190,
+    "h": 143
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/house_a_0.png"
+  },
+  "house_b": {
+   "frame": {
+    "x": 565,
+    "y": 356,
+    "w": 160,
+    "h": 110
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/house_b_0.png"
+  },
+  "shop": {
+   "frame": {
+    "x": 0,
+    "y": 356,
+    "w": 215,
+    "h": 187
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/shop_row_0.png"
+  },
+  "brick_block": {
+   "frame": {
+    "x": 660,
+    "y": 0,
+    "w": 150,
+    "h": 247
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/brick_block_0.png"
+  },
+  "glass_tower": {
+   "frame": {
+    "x": 459,
+    "y": 0,
+    "w": 200,
+    "h": 273
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/glass_tower_0.png"
+  },
+  "deco_tower": {
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 118,
+    "h": 355
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/deco_tower_0.png"
+  },
+  "evil_tower": {
+   "frame": {
+    "x": 119,
+    "y": 0,
+    "w": 192,
+    "h": 347
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_tower_0.png"
+  },
+  "evil_rat_tower": {
+   "frame": {
+    "x": 811,
+    "y": 0,
+    "w": 110,
+    "h": 247
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_block_0.png"
+  },
+  "crane": {
+   "frame": {
+    "x": 312,
+    "y": 0,
+    "w": 146,
+    "h": 318
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/crane_0.png"
+  },
+  "scaffold": {
+   "frame": {
+    "x": 407,
+    "y": 356,
+    "w": 89,
+    "h": 119
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/scaffold_0.png"
+  },
+  "hydrant": {
+   "frame": {
+    "x": 351,
+    "y": 544,
+    "w": 35,
+    "h": 67
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/street_props_0.png"
+  },
+  "bus_stop": {
+   "frame": {
+    "x": 228,
+    "y": 544,
+    "w": 23,
+    "h": 68
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/street_props_1.png"
+  },
+  "bench": {
+   "frame": {
+    "x": 357,
+    "y": 617,
+    "w": 83,
+    "h": 48
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/street_props_2.png"
+  },
+  "mailbox": {
+   "frame": {
+    "x": 509,
+    "y": 544,
+    "w": 42,
+    "h": 63
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/street_props_3.png"
+  },
+  "trash_can": {
+   "frame": {
+    "x": 178,
+    "y": 617,
+    "w": 36,
+    "h": 52
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/street_props_4.png"
+  },
+  "tree_round": {
+   "frame": {
+    "x": 726,
+    "y": 356,
+    "w": 58,
+    "h": 106
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/trees_0.png"
+  },
+  "tree_pine": {
+   "frame": {
+    "x": 497,
+    "y": 356,
+    "w": 67,
+    "h": 117
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/trees_1.png"
+  },
+  "tree_bushy": {
+   "frame": {
+    "x": 785,
+    "y": 356,
+    "w": 63,
+    "h": 105
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/trees_2.png"
+  },
+  "tree_square": {
+   "frame": {
+    "x": 849,
+    "y": 356,
+    "w": 58,
+    "h": 104
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/trees_3.png"
+  },
+  "car_red": {
+   "frame": {
+    "x": 381,
+    "y": 673,
+    "w": 71,
+    "h": 36
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_a_0.png"
+  },
+  "car_blue": {
+   "frame": {
+    "x": 453,
+    "y": 673,
+    "w": 70,
+    "h": 36
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_a_1.png"
+  },
+  "taxi": {
+   "frame": {
+    "x": 524,
+    "y": 673,
+    "w": 69,
+    "h": 36
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_a_2.png"
+  },
+  "van": {
+   "frame": {
+    "x": 54,
+    "y": 673,
+    "w": 80,
+    "h": 43
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_a_3.png"
+  },
+  "limo": {
+   "frame": {
+    "x": 582,
+    "y": 617,
+    "w": 94,
+    "h": 47
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_b_0.png"
+  },
+  "police": {
+   "frame": {
+    "x": 266,
+    "y": 673,
+    "w": 80,
+    "h": 40
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_b_1.png"
+  },
+  "car_white": {
+   "frame": {
+    "x": 135,
+    "y": 673,
+    "w": 88,
+    "h": 41
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_b_2.png"
+  },
+  "car_gold": {
+   "frame": {
+    "x": 847,
+    "y": 617,
+    "w": 84,
+    "h": 46
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/cars_b_3.png"
+  },
+  "cone": {
+   "frame": {
+    "x": 40,
+    "y": 544,
+    "w": 55,
+    "h": 71
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/construction_kit_0.png"
+  },
+  "ladder": {
+   "frame": {
+    "x": 252,
+    "y": 544,
+    "w": 46,
+    "h": 68
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/construction_kit_1.png"
+  },
+  "sign_post": {
+   "frame": {
+    "x": 387,
+    "y": 544,
+    "w": 36,
+    "h": 67
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/construction_kit_2.png"
+  },
+  "cement": {
+   "frame": {
+    "x": 96,
+    "y": 544,
+    "w": 50,
+    "h": 70
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/construction_kit_3.png"
+  },
+  "barrier": {
+   "frame": {
+    "x": 598,
+    "y": 544,
+    "w": 64,
+    "h": 60
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/construction_kit_4.png"
+  },
+  "rack_fire": {
+   "frame": {
+    "x": 908,
+    "y": 356,
+    "w": 42,
+    "h": 80
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_0.png"
+  },
+  "copier_jam": {
+   "frame": {
+    "x": 942,
+    "y": 544,
+    "w": 51,
+    "h": 56
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_1.png"
+  },
+  "fax_smoke": {
+   "frame": {
+    "x": 951,
+    "y": 356,
+    "w": 61,
+    "h": 76
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_2.png"
+  },
+  "copier_beige": {
+   "frame": {
+    "x": 552,
+    "y": 544,
+    "w": 45,
+    "h": 61
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_3.png"
+  },
+  "wet_floor": {
+   "frame": {
+    "x": 955,
+    "y": 617,
+    "w": 26,
+    "h": 44
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_4.png"
+  },
+  "extinguisher": {
+   "frame": {
+    "x": 932,
+    "y": 617,
+    "w": 22,
+    "h": 46
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/disaster_5.png"
+  },
+  "donut_box": {
+   "frame": {
+    "x": 441,
+    "y": 617,
+    "w": 41,
+    "h": 48
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/party_0.png"
+  },
+  "pizza_boxes": {
+   "frame": {
+    "x": 677,
+    "y": 617,
+    "w": 33,
+    "h": 47
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/party_1.png"
+  },
+  "cake": {
+   "frame": {
+    "x": 594,
+    "y": 673,
+    "w": 38,
+    "h": 36
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/party_2.png"
+  },
+  "punch": {
+   "frame": {
+    "x": 347,
+    "y": 673,
+    "w": 33,
+    "h": 37
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/party_3.png"
+  },
+  "balloons": {
+   "frame": {
+    "x": 711,
+    "y": 617,
+    "w": 45,
+    "h": 47
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/party_4.png"
+  },
+  "ping_pong": {
+   "frame": {
+    "x": 833,
+    "y": 544,
+    "w": 74,
+    "h": 58
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/fun_0.png"
+  },
+  "foosball": {
+   "frame": {
+    "x": 757,
+    "y": 617,
+    "w": 54,
+    "h": 47
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/fun_1.png"
+  },
+  "arcade": {
+   "frame": {
+    "x": 0,
+    "y": 544,
+    "w": 39,
+    "h": 72
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/fun_2.png"
+  },
+  "beanbag": {
+   "frame": {
+    "x": 483,
+    "y": 617,
+    "w": 49,
+    "h": 48
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/fun_3.png"
+  },
+  "aquarium": {
+   "frame": {
+    "x": 424,
+    "y": 544,
+    "w": 50,
+    "h": 65
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/fun_4.png"
+  },
+  "gold_bars": {
+   "frame": {
+    "x": 0,
+    "y": 673,
+    "w": 53,
+    "h": 44
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/rich_0.png"
+  },
+  "money_counter": {
+   "frame": {
+    "x": 779,
+    "y": 544,
+    "w": 53,
+    "h": 59
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/rich_1.png"
+  },
+  "rat_statue": {
+   "frame": {
+    "x": 663,
+    "y": 544,
+    "w": 45,
+    "h": 60
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/rich_2.png"
+  },
+  "cash_pile": {
+   "frame": {
+    "x": 0,
+    "y": 617,
+    "w": 60,
+    "h": 55
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/rich_3.png"
+  },
+  "globe": {
+   "frame": {
+    "x": 908,
+    "y": 544,
+    "w": 33,
+    "h": 57
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/rich_4.png"
+  },
+  "chart_screen": {
+   "frame": {
+    "x": 61,
+    "y": 617,
+    "w": 35,
+    "h": 55
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/meeting_0.png"
+  },
+  "chart_crash": {
+   "frame": {
+    "x": 97,
+    "y": 617,
+    "w": 30,
+    "h": 54
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/meeting_1.png"
+  },
+  "chart_up": {
+   "frame": {
+    "x": 215,
+    "y": 617,
+    "w": 41,
+    "h": 50
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/meeting_2.png"
+  },
+  "projector": {
+   "frame": {
+    "x": 812,
+    "y": 617,
+    "w": 34,
+    "h": 47
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/meeting_3.png"
+  },
+  "water_jug": {
+   "frame": {
+    "x": 257,
+    "y": 617,
+    "w": 32,
+    "h": 50
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/meeting_4.png"
+  },
+  "throne": {
+   "frame": {
+    "x": 299,
+    "y": 544,
+    "w": 51,
+    "h": 68
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_0.png"
+  },
+  "red_button": {
+   "frame": {
+    "x": 533,
+    "y": 617,
+    "w": 48,
+    "h": 48
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_1.png"
+  },
+  "shark_tank": {
+   "frame": {
+    "x": 709,
+    "y": 544,
+    "w": 69,
+    "h": 60
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_2.png"
+  },
+  "coin_stack": {
+   "frame": {
+    "x": 475,
+    "y": 544,
+    "w": 33,
+    "h": 64
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_3.png"
+  },
+  "skull_flag": {
+   "frame": {
+    "x": 147,
+    "y": 544,
+    "w": 43,
+    "h": 70
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/evil_4.png"
+  },
+  "disco_ball": {
+   "frame": {
+    "x": 290,
+    "y": 617,
+    "w": 27,
+    "h": 49
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/eggs_0.png"
+  },
+  "phone_booth": {
+   "frame": {
+    "x": 191,
+    "y": 544,
+    "w": 36,
+    "h": 70
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/eggs_1.png"
+  },
+  "treasure": {
+   "frame": {
+    "x": 128,
+    "y": 617,
+    "w": 49,
+    "h": 54
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/eggs_2.png"
+  },
+  "ufo": {
+   "frame": {
+    "x": 318,
+    "y": 617,
+    "w": 38,
+    "h": 49
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/eggs_3.png"
+  },
+  "rubber_duck": {
+   "frame": {
+    "x": 224,
+    "y": 673,
+    "w": 41,
+    "h": 41
+   },
+   "anchor": {
+    "x": 0.5,
+    "y": 1.0
+   },
+   "source": "raw/props3/crops/eggs_4.png"
+  }
+ },
+ "meta": {
+  "app": "rat-race pixel-site tools/build_props3.py",
+  "image": "props3.png",
+  "size": {
+   "w": 1024,
+   "h": 718
+  }
+ }
+}

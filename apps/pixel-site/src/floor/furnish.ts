@@ -16,6 +16,8 @@ export interface Builder {
   props: Prop[];
   seats: Seat[];
   spots: Spot[];
+  /** desk pods numbered across the whole plan */
+  nextPod: number;
 }
 
 type Off = ReadonlyArray<readonly [number, number]>;
@@ -27,7 +29,7 @@ const SQ2: Off = [[0, 0], [-1, 0], [0, -1], [-1, -1]];
 export const FOOTPRINT: Record<string, Off> = {
   coffee_counter: I2, whiteboard: I2, filing: I2, filing_printer: I2, filing_plant: I2, sofa: I2, sofa_navy: I2,
   sofa_green: I2, bookshelf: I2, tv_stand: I2, copier: SQ2, exec_desk: SQ2, exec_desk_gold: SQ2, round_table: SQ2,
-  box_pile2: SQ2, furnace: SQ2,
+  box_pile2: SQ2, furnace: SQ2, ping_pong: SQ2, shark_tank: SQ2, foosball: I2, aquarium: I2, copier_jam: I2,
 };
 
 function footprint(kind: string, mirror: boolean): Array<[number, number]> {
@@ -42,6 +44,7 @@ export class Fit {
   private readonly seatsHere: Seat[] = [];
   private readonly spotsHere: Spot[] = [];
   private readonly wallUsed = new Set<string>();
+  private readonly access = new Map<Seat, Cell[]>();
   /** stop adding desks after this many (the rest of the room gets clutter) */
   maxSeats = Infinity;
 
@@ -120,6 +123,57 @@ export class Fit {
     if (k >= 0) this.B.props.splice(k, 1);
   }
 
+  /**
+   * A whole authored scene (vignettes.ts): props at fixed cells (props marked `on` stand on another prop, `flat` ones
+   * lie on the floor), and cells kept for its extras. All or nothing: if anything does not fit or a door, chair or
+   * spot would be cut off, it is taken back out.
+   */
+  scene(items: Array<{ kind: string; i: number; j: number; mirror?: boolean; scale?: number; dx?: number; dy?: number; on?: boolean; flat?: boolean }>, extras: Cell[]): boolean {
+    const done: Prop[] = [];
+    const loose: Prop[] = [];
+    const undo = (): false => {
+      for (const p of done) this.unput(p);
+      for (const p of loose) this.B.props.splice(this.B.props.lastIndexOf(p), 1);
+      this.setBlocked(extras.map((c) => [c.i, c.j] as const), 0);
+      return false;
+    };
+    for (const c of extras) if (!this.free(c.i, c.j)) return false;
+    this.setBlocked(extras.map((c) => [c.i, c.j] as const), 1);
+    for (const it of items) {
+      if (it.on || it.flat) {
+        const p: Prop = { kind: it.kind, i: it.i, j: it.j, mirror: !!it.mirror, dx: it.dx ?? 0, dy: it.dy ?? 0, bias: it.on ? 0.3 : 0 };
+        if (it.flat) p.flat = true;
+        if (it.scale) p.scale = it.scale;
+        this.B.props.push(p);
+        loose.push(p);
+        continue;
+      }
+      const p = this.put(it.kind, it.i, it.j, !!it.mirror, it.scale ? { scale: it.scale } : {});
+      if (!p) return undo();
+      if (it.dx) p.dx = (p.dx ?? 0) + it.dx;
+      done.push(p);
+    }
+    if (!this.allReachable()) return undo();
+    return true;
+  }
+
+  /** A rug (a cells along i by b along j) with its back corner at (i, j); flat, never blocks. */
+  rug(kind: string, i: number, j: number, a: number, b: number): void {
+    if (!this.inside(i, j) || !this.inside(i + a - 1, j + b - 1)) return;
+    const di = a / 2 - 0.5;
+    const dj = b / 2 - 0.5;
+    this.B.props.push({ kind, i, j, mirror: false, flat: true, dx: Math.round((di - dj) * 16), dy: Math.round((di + dj) * 8), bias: -0.5 });
+  }
+
+  /** Worn carpet where rats walk most: dark patches on aisle cells. */
+  wear(n: number): void {
+    for (let k = 0; k < n; k++) {
+      const i = this.r.i0 + this.rng.int(this.r.w);
+      const j = this.r.j0 + this.rng.int(this.r.h);
+      if (this.walkable(i, j)) this.B.props.push({ kind: `worn_${this.rng.int(3)}`, i, j, mirror: this.rng.chance(0.5), flat: true, dx: this.rng.range(-6, 6), dy: this.rng.range(-3, 3), bias: -0.4 });
+    }
+  }
+
   /** Flat floor clutter: never blocks. */
   flat(kind: string, i: number, j: number, mirror = false): void {
     if (!this.inside(i, j)) return;
@@ -155,36 +209,48 @@ export class Fit {
   }
 
   /**
-   * A desk and its chair. axis 'j': desk cells (si, sj-3..sj-1) in front of the chair, rat faces ne.
-   * axis 'i': desk cells (si-3..si-1, sj), rat faces nw (sprites mirrored).
+   * One side of a desk pair. The pair is two desks back to back (monitors meeting in the middle), each with its chair
+   * outside: in pair coordinates (a across the desks, b along their long side) the far desk takes (c, r..r+1) with its
+   * chair at (c-1, ...) and its rat facing the camera over the monitor; the near desk takes (c+1, ...) with its chair
+   * at (c+2, ...) and its rat's back to the camera. axis 'j': a is i, b is j; axis 'i': swapped (sprites mirrored).
    */
-  unit(si: number, sj: number, axis: 'i' | 'j', variant: number, symbol: string | null): Seat | null {
+  desk(c: number, r: number, axis: 'i' | 'j', side: 'far' | 'near', variant: number, symbol: string | null, pod: number): Seat | null {
     if (this.seatsHere.length >= this.maxSeats) return null;
-    const cells: Array<[number, number]> = [[si, sj]];
-    for (let k = 1; k <= 3; k++) cells.push(axis === 'j' ? [si, sj - k] : [si - k, sj]);
-    if (!cells.every(([a, b]) => this.free(a, b))) return null;
-    this.setBlocked(cells, 1);
+    const m = (x: number, y: number): Cell => (axis === 'j' ? { i: x, j: y } : { i: y, j: x });
+    const far = side === 'far';
+    const dc = far ? c : c + 1;
+    const cc = far ? c - 1 : c + 2;
+    const cells = [m(dc, r), m(dc, r + 1), m(cc, r), m(cc, r + 1)];
+    if (!cells.every((x) => this.free(x.i, x.j))) return null;
+    this.setBlocked(cells.map((x) => [x.i, x.j] as const), 1);
+    const out = far ? cc - 1 : cc + 1;
     const seat: Seat = {
       id: -1,
       room: this.r.id,
       symbol,
-      cell: { i: si, j: sj },
+      cell: m(cc, r),
       axis,
-      desk: axis === 'j' ? { i: si + 1, j: sj - 1 } : { i: si - 1, j: sj + 1 },
-      pos: axis === 'j' ? { i: si + 0.25, j: sj - 0.5 } : { i: si - 0.5, j: sj + 0.25 },
-      access: { i: si, j: sj },
-      dx: this.rng.range(-3, 3),
-      dy: this.rng.range(-2, 2),
+      view: far ? 'front' : 'back',
+      deskAt: m(dc, r + 0.5),
+      pos: m(far ? c - 0.8 : c + 1.8, r + 0.5),
+      access: m(out, r),
+      pod,
+      cells,
+      dx: 0,
+      dy: 0,
       variant,
     };
+    this.access.set(seat, [m(out, r), m(out, r + 1), m(cc, r - 1), m(cc, r + 2)]);
     this.seatsHere.push(seat);
     return seat;
   }
 
+  newPod(): number {
+    return this.B.nextPod++;
+  }
+
   private dropUnit(s: Seat): void {
-    const cells: Array<[number, number]> = [[s.cell.i, s.cell.j]];
-    for (let k = 1; k <= 3; k++) cells.push(s.axis === 'j' ? [s.cell.i, s.cell.j - k] : [s.cell.i - k, s.cell.j]);
-    this.setBlocked(cells, 0);
+    this.setBlocked(s.cells.map((x) => [x.i, x.j] as const), 0);
     this.seatsHere.splice(this.seatsHere.indexOf(s), 1);
   }
 
@@ -237,10 +303,8 @@ export class Fit {
       const seen = this.reach();
       let dropped = false;
       for (const s of [...this.seatsHere]) {
-        const { i, j } = s.cell;
-        const order: Array<[number, number]> = s.axis === 'j' ? [[i, j + 1], [i - 1, j], [i + 1, j]] : [[i + 1, j], [i, j - 1], [i, j + 1]];
-        const a = order.find(([ai, aj]) => this.reached(seen, { i: ai, j: aj }));
-        if (a) s.access = { i: a[0], j: a[1] };
+        const a = (this.access.get(s) ?? [s.access]).find((c) => this.reached(seen, c));
+        if (a) s.access = { ...a };
         else {
           this.dropUnit(s);
           dropped = true;
@@ -253,7 +317,7 @@ export class Fit {
     for (const s of this.seatsHere) this.reserve(s.access.i, s.access.j);
   }
 
-  private allReachable(): boolean {
+  allReachable(): boolean {
     const seen = this.reach();
     return (
       this.fronts.every((f) => this.reached(seen, f)) &&
@@ -317,56 +381,83 @@ export class Fit {
 
 // ------------------------------------------------------------------ desk layouts
 
-type Area = { u0: number; u1: number; v0: number; v1: number };
-
-function columns(f: Fit, a: Area, variant: () => number, sym: string | null, gap = 0.07): void {
-  const { i0, j0 } = f.r;
-  for (let u = a.u0; u <= a.u1; u += 3) {
-    const phase = f.rng.int(2);
-    for (const c of [u, u + 1]) {
-      if (c > a.u1) continue;
-      for (let v = a.v0 + 3 + phase; v <= a.v1; v += 4) if (!f.rng.chance(gap)) f.unit(i0 + c, j0 + v, 'j', variant(), sym);
-    }
+/** A pod of n desks (2 to 4) facing each other: pairs along the long side; an odd one out keeps its far desk. */
+function podAt(f: Fit, c: number, r: number, axis: 'i' | 'j', n: number, variant: () => number, sym: string | null): number {
+  const pod = f.newPod();
+  let got = 0;
+  for (let k = 0; k < n; k++) {
+    const pr = r + 2 * Math.floor(k / 2);
+    if (f.desk(c, pr, axis, k % 2 === 0 ? 'far' : 'near', variant(), sym, pod)) got++;
   }
+  return got;
 }
 
-function rows(f: Fit, a: Area, variant: () => number, sym: string | null, gap = 0.07): void {
-  const { i0, j0 } = f.r;
-  for (let v = a.v0; v <= a.v1; v += 3) {
-    const phase = f.rng.int(2);
-    for (const rr of [v, v + 1]) {
-      if (rr > a.v1) continue;
-      for (let u = a.u0 + 3 + phase; u <= a.u1; u += 4) if (!f.rng.chance(gap)) f.unit(i0 + u, j0 + rr, 'i', variant(), sym);
-    }
-  }
-}
-
-/** Small clusters of 2 or 3 desks dropped wherever they fit, each with its own orientation. */
-function pods(f: Fit, a: Area, variant: () => number, sym: string | null, tries: number): void {
-  const { i0, j0 } = f.r;
-  for (let t = 0; t < tries; t++) {
-    const n = f.rng.range(2, 3);
-    const axis: 'i' | 'j' = f.rng.chance(0.5) ? 'i' : 'j';
-    const bw = axis === 'j' ? n : 4;
-    const bh = axis === 'j' ? 4 : n;
-    if (a.u1 - a.u0 + 1 < bw + 2 || a.v1 - a.v0 + 1 < bh + 2) continue;
-    const u = a.u0 + 1 + f.rng.int(a.u1 - a.u0 - bw);
-    const v = a.v0 + 1 + f.rng.int(a.v1 - a.v0 - bh);
-    let clear = true;
-    for (let x = u - 1; x <= u + bw && clear; x++) for (let y = v - 1; y <= v + bh && clear; y++) if (!f.free(i0 + x, j0 + y)) clear = false;
-    if (!clear) continue;
-    for (let k = 0; k < n; k++) {
-      if (axis === 'j') f.unit(i0 + u + k, j0 + v + 3, 'j', variant(), sym);
-      else f.unit(i0 + u + 3, j0 + v + k, 'i', variant(), sym);
-    }
-  }
-}
-
-function perimeter(f: Fit, variant: () => number, sym: string | null): void {
+/** Room cells as pair coordinates (a across, b along) for an axis. */
+function frame(f: Fit, axis: 'i' | 'j'): { a0: number; a1: number; b0: number; b1: number; clear: (a: number, b: number) => boolean } {
   const { i0, j0, w, h } = f.r;
-  const p = f.rng.int(2);
-  for (let u = 3 + p; u <= w - 2; u += 4) f.unit(i0 + u, j0, 'i', variant(), sym);
-  for (let v = 6 + p; v <= h - 2; v += 4) f.unit(i0, j0 + v, 'j', variant(), sym);
+  const m = (a: number, b: number): [number, number] => (axis === 'j' ? [a, b] : [b, a]);
+  return axis === 'j'
+    ? { a0: i0, a1: i0 + w - 1, b0: j0, b1: j0 + h - 1, clear: (a, b) => f.free(...m(a, b)) }
+    : { a0: j0, a1: j0 + h - 1, b0: i0, b1: i0 + w - 1, clear: (a, b) => f.free(...m(a, b)) };
+}
+
+/**
+ * Desk rooms: rows along the two front walls with the rats facing the camera over their monitors, then pods of 2 to
+ * 4 facing each other on a grid with aisles all round, all in one direction per room. Back-wall rows (rats facing
+ * the wall) only when the room is still short of desks. Rats fill a room pod by pod (growth.ts).
+ */
+function deskRoom(f: Fit, seats: number, variant: () => number, sym: string | null, opts: { front?: boolean; sizes?: number[] } = {}): void {
+  const { w, h } = f.r;
+  f.maxSeats = seats;
+  const sizes = opts.sizes ?? [2, 3, 4, 4, 4];
+  // 1. front walls: a row of camera-facing desks in groups of 2 or 3
+  if (opts.front !== false) {
+    for (const axis of ['i', 'j'] as const) {
+      const F = frame(f, axis);
+      if (F.a1 - F.a0 < 6 || F.b1 - F.b0 < 6) continue;
+      const c = F.a1; // the desk against the front wall, its chair just inside
+      let r = F.b0 + 1;
+      while (r + 1 <= F.b1 - (axis === 'j' ? 3 : 1)) {
+        const n = f.rng.pick([2, 2, 3]);
+        const pod = f.newPod();
+        let k = 0;
+        for (; k < n && r + 1 <= F.b1 - (axis === 'j' ? 3 : 1); k++, r += 2) f.desk(c, r, axis, 'far', variant(), sym, pod);
+        r += 1 + (f.rng.chance(0.3) ? 1 : 0);
+      }
+    }
+  }
+  // 2. pods on a grid, aisles round each one
+  const axis: 'i' | 'j' = f.rng.chance(w >= h ? 0.35 : 0.65) ? 'j' : 'i';
+  const F = frame(f, axis);
+  const tryPod = (c: number, r: number, n: number): boolean => {
+    const L = n <= 2 ? 2 : 4;
+    for (let a = c - 2; a <= c + 3; a++) for (let b = r - 1; b <= r + L; b++) if (!F.clear(a, b)) return false;
+    return podAt(f, c, r, axis, n, variant, sym) > 0;
+  };
+  const grid = (ca: number, rb: number): void => {
+    for (let c = ca; c + 3 <= F.a1 - 1; c += 5) {
+      for (let r = rb; r + 1 <= F.b1 - 1; r += 5) {
+        if (f.seatCount >= seats) return;
+        const n = f.rng.pick(sizes);
+        if (!tryPod(c, r, n) && n > 2) tryPod(c, r, 2);
+      }
+    }
+  };
+  grid(F.a0 + 2, F.b0 + 1);
+  f.settle();
+  // 3. still short: a shifted grid, then rows facing the back walls
+  if (f.seatCount < seats) {
+    grid(F.a0 + 3, F.b0 + 3);
+    f.settle();
+  }
+  if (f.seatCount < seats) {
+    for (const ax of ['i', 'j'] as const) {
+      const G = frame(f, ax);
+      const pod = f.newPod();
+      for (let r = G.b0 + 2; r + 1 <= G.b1 - 2; r += 2) f.desk(G.a0 - 1, r, ax, 'near', variant(), sym, pod);
+    }
+    f.settle();
+  }
 }
 
 const CLUTTER = ['box_s', 'box_s2', 'paper_stack', 'paper_tall', 'bin', 'plant', 'box_half', 'crate_papers', 'box_long', 'papers'];
@@ -375,47 +466,11 @@ const LITTER = ['cables', 'cable_run', 'cable_loop', 'spill', 'sticky_floor', 'c
 
 export function stockRoom(f: Fit, seats: number): void {
   const { w, h } = f.r;
-  f.maxSeats = seats;
   const sym = f.r.symbol;
   const clean = f.rng.next();
   const variant = (): number => (f.rng.next() < 0.35 + clean * 0.4 ? 1 : 0);
-  const style = f.rng.pick(['columns', 'rows', 'split', 'perimeter', 'pods', 'mixed'] as const);
-  const full: Area = { u0: 1, u1: w - 2, v0: 1, v1: h - 2 };
-  if (style === 'columns') columns(f, full, variant, sym);
-  else if (style === 'rows') rows(f, full, variant, sym);
-  else if (style === 'split') {
-    if (w >= h) {
-      const m = Math.floor(w / 2);
-      columns(f, { ...full, u1: m - 1 }, variant, sym);
-      rows(f, { ...full, u0: m + 1 }, variant, sym);
-    } else {
-      const m = Math.floor(h / 2);
-      rows(f, { ...full, v1: m - 1 }, variant, sym);
-      columns(f, { ...full, v0: m + 1 }, variant, sym);
-    }
-  } else if (style === 'perimeter') {
-    perimeter(f, variant, sym);
-    (f.rng.chance(0.5) ? columns : rows)(f, { u0: 3, u1: w - 3, v0: 3, v1: h - 3 }, variant, sym, 0.12);
-  } else if (style === 'pods') {
-    pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, sym, 60 + w * h);
-  } else {
-    perimeter(f, variant, sym);
-    pods(f, { u0: 1, u1: w - 1, v0: 1, v1: h - 1 }, variant, sym, 40 + w * h);
-  }
-  // still short of the target: structured fills in whatever space is left (they keep their own aisles)
-  f.settle();
-  if (f.seatCount < seats) {
-    (w >= h ? columns : rows)(f, full, variant, sym, 0);
-    f.settle();
-  }
-  if (f.seatCount < seats) {
-    (w >= h ? rows : columns)(f, full, variant, sym, 0);
-    f.settle();
-  }
-  if (f.seatCount < seats || f.rng.chance(0.3)) {
-    pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, sym, 120);
-    f.settle();
-  }
+  deskRoom(f, seats, variant, sym);
+  f.wear(Math.round((w * h) / 40));
   const area = w * h;
   f.corners(['plant', 'plant', 'lamp', 'filing_plant', 'water_cooler', 'bin'], 0.7);
   f.clutter(BIG_CLUTTER, Math.round(area / 90) + f.rng.int(2));
@@ -489,7 +544,10 @@ export function breakRoom(f: Fit): void {
   alongBackWall(f, items);
   alongLeftWall(f, [{ kind: f.rng.pick(['sofa', 'sofa_navy', 'sofa_green']), w: 2 }, { kind: 'plant' }, { kind: 'vending', spot: 'vending' }], 2, 1);
   const { i0, j0, w, h } = f.r;
-  if (w >= 6 && h >= 6) f.put('round_table', i0 + Math.floor(w / 2) + 1, j0 + Math.floor(h / 2) + 1);
+  if (w >= 6 && h >= 6) {
+    f.rug('rug_green', i0 + Math.floor(w / 2), j0 + Math.floor(h / 2), 2, 2);
+    f.put('round_table', i0 + Math.floor(w / 2) + 1, j0 + Math.floor(h / 2) + 1);
+  }
   chatGroup(f);
   chatGroup(f);
   if (w * h > 50) chatGroup(f);
@@ -534,7 +592,7 @@ export function serverRoom(f: Fit): void {
     const kind = (v / 3) % 2 === 0 ? (white ? 'server_rack_white' : 'server_rack') : white ? 'server_rack' : 'server_rack_white';
     for (let u = 1; u < w - 1; u++) {
       if (f.rng.chance(0.06)) continue;
-      f.put(kind, i0 + u, j0 + v, true, { bias: 0.02 });
+      f.put(kind, i0 + u, j0 + v, true, { bias: 0.02, scale: 0.72 });
     }
     const su = 1 + f.rng.int(Math.max(1, w - 2));
     if (f.rng.chance(0.8)) f.spot('server', i0 + su, j0 + v + 1, 'ne', 'stand', { i: i0 + su, j: j0 + v + 0.95 });
@@ -565,6 +623,8 @@ export function copyRoom(f: Fit): void {
 export function meetingRoom(f: Fit): void {
   const { i0, j0, w, h } = f.r;
   const tables = w * h >= 60 ? 2 : 1;
+  if (f.rng.chance(0.5)) f.rug('rug_blue', i0 + Math.floor(w / 2) - 1, j0 + Math.floor(h / 2) - 1, 3, 2);
+  else f.rug('rug_purple', i0 + Math.floor(w / 2) - 1, j0 + Math.floor(h / 2) - 1, 2, 3);
   for (let k = 0; k < tables; k++) {
     const ti = i0 + (tables === 1 ? Math.floor(w / 2) : Math.floor(((k + 1) * w) / 3));
     const tj = j0 + Math.floor(h / 2);
@@ -597,17 +657,12 @@ export function storageRoom(f: Fit): void {
 
 export function ceoRoom(f: Fit, seats: number): void {
   const { i0, j0, w, h } = f.r;
+  f.rug('rug_red', i0 + Math.floor(w / 2) - 2, j0 + 3, 3, 2);
   f.put('exec_desk_gold', i0 + Math.floor(w / 2), j0 + 2);
   alongLeftWall(f, [{ kind: 'bookshelf', spot: 'shelf', w: 2 }, { kind: 'plant' }, { kind: 'bookshelf', spot: 'shelf', w: 2 }, { kind: 'lamp' }], 1);
   alongBackWall(f, [{ kind: 'plant' }, { kind: 'bookshelf', spot: 'shelf', w: 2 }], 0);
-  let placed = 0;
-  for (let t = 0; t < 400 && placed < seats; t++) {
-    const axis: 'i' | 'j' = f.rng.chance(0.5) ? 'i' : 'j';
-    const si = i0 + (axis === 'i' ? 3 : 0) + f.rng.int(Math.max(1, w - (axis === 'i' ? 4 : 1)));
-    const sj = j0 + (axis === 'j' ? 3 : 0) + f.rng.int(Math.max(1, h - (axis === 'j' ? 4 : 1)));
-    if (f.unit(si, sj, axis, 2, null)) placed++;
-  }
   f.put(f.rng.pick(['sofa', 'sofa_navy']), i0 + w - 1, j0 + h - 1, true);
+  deskRoom(f, seats, () => 2, null, { sizes: [2, 2, 4] });
   f.settle();
   f.mountAnywhere('tv_wall', 3);
   f.corners(['plant', 'lamp', 'water_cooler'], 0.8);
@@ -630,6 +685,7 @@ export function hqRoom(f: Fit, furnace: Cell): void {
 
 export function lobbyRoom(f: Fit): void {
   const { i0, j0, w, h } = f.r;
+  f.rug('rug_sand', i0 + Math.floor(w / 2) - 1, j0 + Math.floor(h / 2) - 1, 3, 3);
   f.put('exec_desk', i0 + Math.floor(w / 2), j0 + 2);
   alongLeftWall(f, [{ kind: 'sofa_navy', w: 2 }, { kind: 'plant' }, { kind: 'sofa_navy', w: 2 }], 1, 1);
   alongBackWall(f, [{ kind: 'plant' }, { kind: 'water_cooler', spot: 'cooler' }], 0);
@@ -655,14 +711,8 @@ export function garageRoom(f: Fit, furnace: Cell, seats: number): void {
   for (const [i, j, face] of ring) f.spot('furnace', i, j, face);
   alongBackWall(f, [{ kind: 'coffee_counter', spot: 'coffee', w: 2 }, { kind: 'coffee_machine', spot: 'coffee' }, { kind: 'box_pile' }], 1);
   alongLeftWall(f, [{ kind: 'sofa', w: 2 }, { kind: 'box_pile2', w: 2 }], 2, 1);
-  f.maxSeats = seats;
   const variant = (): number => (f.rng.chance(0.5) ? 1 : 0);
-  pods(f, { u0: 0, u1: w - 1, v0: 0, v1: h - 1 }, variant, null, 400);
-  f.settle();
-  if (f.seatCount < seats) {
-    columns(f, { u0: 1, u1: w - 2, v0: 1, v1: h - 2 }, variant, null, 0);
-    f.settle();
-  }
+  deskRoom(f, seats, variant, null, { sizes: [2, 3, 4] });
   f.mountAnywhere('whiteboard_wall', 3);
   f.mountAnywhere('tv_wall', 3);
   f.mountAnywhere('sticky_wall', 2);
@@ -685,6 +735,7 @@ export function warRoom(f: Fit): void {
   f.settle();
   for (let k = 0; k < 4; k++) f.mountAnywhere('tv_wall', 3);
   f.corners(['server_rack', 'server_rack', 'lamp'], 1);
+  for (const p of f.B.props) if (p.kind.startsWith('server_rack') && p.scale === undefined) p.scale = 0.72;
   f.commit();
 }
 

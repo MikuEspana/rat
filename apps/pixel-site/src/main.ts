@@ -182,6 +182,13 @@ async function boot(): Promise<Site> {
     if (!rooms.size && !events.some((e) => e.kind === 'stage')) return;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, rooms);
+    if (announce) {
+      for (const e of events) {
+        if (e.kind !== 'room') continue;
+        const c = cellCentre(e.room.i0 + e.room.w / 2 - 0.5, e.room.j0 + e.room.h / 2 - 0.5);
+        effects.dust(c.x, c.y, 20);
+      }
+    }
     rats.rebind(world.main, world.blocked);
     wireRats();
     effects.setWorld(world);
@@ -209,7 +216,13 @@ async function boot(): Promise<Site> {
     batchGrowth = [];
     batchHires = [];
     grew(events, true);
-    for (const r of hires) rats.hire(r, rats.walking < MAX_WALKERS);
+    for (const r of hires) {
+      // a desk in a pod still under construction: the site clears, the desks pop in with a puff of dust
+      const sid = growth.seatOfRat.get(r.facts.id);
+      const at = sid === undefined ? null : world.activatePod(sid);
+      if (at) effects.dust(at.x, at.y);
+      rats.hire(r, rats.walking < MAX_WALKERS);
+    }
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
   store.on((e) => {
