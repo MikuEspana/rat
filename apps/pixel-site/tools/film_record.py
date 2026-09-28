@@ -9,7 +9,8 @@ frame is read straight off the WebGL canvas (lossless RGBA) and piped to ffmpeg 
   python3 tools/film_record.py stills OUTDIR --frames=0,120 [--aspect 9x16] [--end pile] [--text 0]
 
 Needs the site served (pnpm --filter @rat/pixel-site dev; FILM_URL overrides http://localhost:5173/). Uses the
-Chromium Playwright finds (PLAYWRIGHT_BROWSERS_PATH) and ffmpeg from imageio-ffmpeg.
+Chromium Playwright finds (PLAYWRIGHT_BROWSERS_PATH) and ffmpeg from imageio-ffmpeg. FILM_GPU=1 records in a visible
+Chrome window on the machine's graphics card (much faster than a server's software rendering).
 """
 import argparse, base64, os, socket, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -98,7 +99,12 @@ class Film:
     def __init__(self, pw, aspect='16x9', end='vault'):
         self.sink = Sink()
         self.w, self.h = (1080, 1920) if aspect == '9x16' else (1920, 1080)
-        self.browser = pw.chromium.launch(executable_path=chromium_path(), args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+        if os.environ.get('FILM_GPU'):
+            # your own machine: a visible Chrome window on the real graphics card (many times faster than software)
+            self.browser = pw.chromium.launch(headless=False, args=['--ignore-gpu-blocklist', '--enable-gpu-rasterization'])
+        else:
+            # a server with no GPU: software rendering (slow, same pixels)
+            self.browser = pw.chromium.launch(executable_path=chromium_path(), args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
         self.page = self.browser.new_page(viewport={'width': self.w, 'height': self.h}, device_scale_factor=1)
         self.page.goto(URL + f'?film&aspect={aspect}&end={end}&frame=0')
         self.page.wait_for_function('window.__film && window.__film.ready', timeout=180000)

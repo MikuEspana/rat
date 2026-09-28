@@ -54,7 +54,11 @@ python3 apps/pixel-site/tools/film_record.py all OUT                    # everyt
 python3 apps/pixel-site/tools/film_record.py shot OUT 6                 # re-record one shot, text and no text
 python3 apps/pixel-site/tools/film_record.py shot OUT 8 --aspect 9x16 --end pile
 FILM_URL=http://localhost:4174/ python3 ...                             # record from another server
+FILM_GPU=1 python3 apps/pixel-site/tools/film_record.py all OUT         # on your own computer: uses the graphics card
 ```
+
+On a computer with a graphics card: `pip install playwright imageio-ffmpeg`, then `python -m playwright install chromium`
+once. With `FILM_GPU=1` a Chrome window opens and steps through the frames; leave it alone until it closes.
 
 Needs Python Playwright (Chromium from `PLAYWRIGHT_BROWSERS_PATH`) and `imageio-ffmpeg` (libx264). Each frame is
 rendered once and captured twice (with and without captions), as JPEG q100, into H.264 (CRF 12, `-tune animation`,
