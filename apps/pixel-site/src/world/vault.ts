@@ -44,15 +44,15 @@ interface Spark {
 
 /**
  * At most this many bills in the air (a rush sends a hire every few frames). The bill that carries a claim's or a
- * hire's "+$X" always flies, so every one still gets its gold or green label; the extra bills wait for room.
+ * hire's "+$X" always flies, so every one still gets its gold or green label; the extra bills are skipped.
  */
 export const MAX_BILLS = 240;
 
-const labelCache = new Map<string, Texture>();
+/**
+ * One small texture per "+$X" float, freed when the float fades. Every amount is different, so a cache keyed by the
+ * text only grew: a rush made a new GPU texture per hire and never let one go.
+ */
 function labelTexture(text: string, gold = false): Texture {
-  const key = `${gold ? 'g' : 'm'}${text}`;
-  const hit = labelCache.get(key);
-  if (hit) return hit;
   const sc = 2;
   const w = textWidth(text, sc) + 6;
   const h = 7 * sc + 6;
@@ -65,7 +65,6 @@ function labelTexture(text: string, gold = false): Texture {
   drawText(ctx, text, 3, 3, gold ? '#ffd23f' : '#7dff9a', sc);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  labelCache.set(key, tex);
   return tex;
 }
 
@@ -304,7 +303,7 @@ export class VaultView {
       f.s.y -= dt * 26;
       f.s.alpha = f.t < 1.1 ? 1 : Math.max(0, 1 - (f.t - 1.1) / 0.6);
       if (f.t >= 1.7) {
-        f.s.destroy();
+        f.s.destroy({ texture: true, textureSource: true });
         this.floats.splice(k, 1);
       }
     }
