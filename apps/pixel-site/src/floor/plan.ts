@@ -22,7 +22,7 @@ export const STAGES: ReadonlyArray<{ name: string; min: number }> = [
   { name: 'FULL FLOOR', min: 100 },
   { name: 'CORPORATE FLOOR', min: 500 },
   { name: 'MEGACORP', min: 1500 },
-  { name: 'EVIL EMPIRE', min: 3000 },
+  { name: 'WALL STREET', min: 3000 },
 ];
 /** the plan is drawn for about this many rats (it has a few hundred desks more); beyond its desks new hires line up
  * outside the lobby (queueCells) */
