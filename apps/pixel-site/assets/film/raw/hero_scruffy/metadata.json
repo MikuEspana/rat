@@ -1,0 +1,36 @@
+{
+  "group_id": "5e7b79e4-47d3-46f3-a656-4388dbb5bf51",
+  "states": [
+    {
+      "character": {
+        "id": "3e75bc51-b74f-4f2e-80a1-e0f8788b3d2e",
+        "name": "Idle",
+        "prompt": "scruffy sewer rat standing upright on two legs like a person, messy spiky grey fur with dirty smudges, a small nick in one ear, big bright hopeful eyes, pink ears, pink nose, pink paws, long pink tail, no clothes, lean and eager, cartoon hero character",
+        "size": {
+          "width": 128,
+          "height": 128
+        },
+        "template_id": "mannequin",
+        "directions": 8,
+        "view": "low top-down",
+        "created_at": "2026-09-28T14:21:05.204820+00:00"
+      },
+      "folder": "Idle",
+      "frames": {
+        "rotations": {
+          "south": "Idle/rotations/south.png",
+          "south-east": "Idle/rotations/south-east.png",
+          "east": "Idle/rotations/east.png",
+          "north-east": "Idle/rotations/north-east.png",
+          "north": "Idle/rotations/north.png",
+          "north-west": "Idle/rotations/north-west.png",
+          "west": "Idle/rotations/west.png",
+          "south-west": "Idle/rotations/south-west.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.1",
+  "export_date": "2026-09-28T14:24:49.712280"
+}

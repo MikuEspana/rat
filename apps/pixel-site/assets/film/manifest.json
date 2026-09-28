@@ -1,0 +1,351 @@
+{
+ "about": "PixelLab gens for the ?film demo (branch film/demo). costGenerations is what PixelLab reported for the call. Image inputs are logged as paths under assets/film/. Look-test budget 30 gens, full film budget 300.",
+ "generations": [
+  {
+   "id": "hero_scruffy",
+   "tool": "create_character",
+   "costGenerations": 3,
+   "pixellabId": "3e75bc51-b74f-4f2e-80a1-e0f8788b3d2e",
+   "args": {
+    "description": "scruffy sewer rat standing upright on two legs like a person, messy spiky grey fur with dirty smudges, a small nick in one ear, big bright hopeful eyes, pink ears, pink nose, pink paws, long pink tail, no clothes, lean and eager, cartoon hero character",
+    "name": "Hero Rat Scruffy",
+    "mode": "v3",
+    "size": 128,
+    "view": "low top-down",
+    "outline": "single color black outline",
+    "detail": "high detail"
+   },
+   "raw": "raw/hero_scruffy/",
+   "at": "2026-09-28T14:21:35Z",
+   "note": "128px hero rat, scruffy (before the suit). 8 rotations."
+  },
+  {
+   "id": "hero_suited",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "737b012f-11e4-4091-b7eb-dfdd53847b1b",
+   "args": {
+    "image_file": "raw/hero_scruffy/Idle/rotations/south.png",
+    "description": "dress this same rat in a sharp tailored navy blue business suit jacket and trousers, crisp white shirt collar, bright red silk tie, fur now neatly groomed and clean, confident smirk. Keep the same rat, same pose, same size, same pink ears, paws and tail, same dark outline",
+    "no_background": true
+   },
+   "raw": "raw/hero_suited/",
+   "at": "2026-09-28T14:26:07Z",
+   "note": ""
+  },
+  {
+   "id": "hero_burst",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "1f02068a-8af1-4787-8c14-3c8fd50f04da",
+   "args": {
+    "first_frame_file": "raw/hero_scruffy/Idle/rotations/south.png",
+    "action": "bursts upward, throws both arms up high with claws spread wide, mouth opens in a huge excited grin, ears perk up, fur bristles",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero_burst/",
+   "at": "2026-09-28T14:28:23Z",
+   "note": "cost from the 128x128x8 rule; the call reply was lost to a connection reset, job recovered via list_jobs"
+  },
+  {
+   "id": "street_asphalt",
+   "tool": "create_isometric_tile",
+   "costGenerations": 1,
+   "pixellabId": "c9494291-0ced-4a97-b4c5-174cb7b85bb3",
+   "args": {
+    "description": "dark wet asphalt road at night, fine grain, a few hairline cracks, subtle blue reflections",
+    "size": 64,
+    "tile_shape": "thin tile",
+    "outline": "lineless",
+    "shading": "detailed shading",
+    "detail": "highly detailed"
+   },
+   "raw": "raw/street_asphalt.png",
+   "at": "2026-09-28T14:29:25Z",
+   "note": ""
+  },
+  {
+   "id": "street_sidewalk",
+   "tool": "create_isometric_tile",
+   "costGenerations": 1,
+   "pixellabId": "dc85a722-05e7-454a-bdae-da3cfb27b0ff",
+   "args": {
+    "description": "grey concrete sidewalk slab at night, square paving with thin seams, worn edges",
+    "size": 64,
+    "tile_shape": "thin tile",
+    "outline": "lineless",
+    "shading": "detailed shading",
+    "detail": "highly detailed"
+   },
+   "raw": "raw/street_sidewalk.png",
+   "at": "2026-09-28T14:29:34Z",
+   "note": ""
+  },
+  {
+   "id": "manhole_hole",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "de8cfe97-cb88-48bb-9f46-0f323b12e4d8",
+   "args": {
+    "description": "open round manhole in dark asphalt street, cover removed, heavy iron rim, deep dark shaft with a rusty ladder rung, eerie green glow rising from below",
+    "width": 128,
+    "height": 96,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/manhole_hole.png",
+   "at": "2026-09-28T14:29:43Z",
+   "note": ""
+  },
+  {
+   "id": "tower_top",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "ae875f40-5667-423b-a38d-aee51d1c2e32",
+   "args": {
+    "description": "top of a very tall night skyscraper, dark navy glass facade with warm golden lit windows, stepped art deco crown, flat rooftop with a large empty rooftop sign frame on steel legs, spotlights, isometric",
+    "width": 256,
+    "height": 400,
+    "view": "high top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/tower_top.png",
+   "at": "2026-09-28T14:29:43Z",
+   "note": ""
+  },
+  {
+   "id": "manhole_lid",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "6c138cb5-47aa-4e1e-8dfe-3d7e724f7c20",
+   "args": {
+    "description": "round cast iron manhole cover with a raised grid pattern, flipping through the air, steeply tilted, seen at an angle",
+    "width": 96,
+    "height": 96,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/manhole_lid.png",
+   "at": "2026-09-28T14:33:19Z",
+   "note": ""
+  },
+  {
+   "id": "vault_cathedral",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "8742763f-7574-40c0-a56a-756a2978d8ab",
+   "args": {
+    "description": "colossal money vault shaped like a cathedral, walls of stacked gold bars and green cash bricks, a giant round steel vault door with a spoked wheel set in the front like a rose window, gold columns and arches, towering, epic scale, front view, symmetrical",
+    "width": 400,
+    "height": 400,
+    "view": "high top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/vault_cathedral.png",
+   "at": "2026-09-28T14:33:20Z",
+   "note": ""
+  },
+  {
+   "id": "hero_tumble",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "59b6b18c-0fce-4d34-8e8c-b89f67916603",
+   "args": {
+    "first_frame_file": "raw/hero_suited/0.png",
+    "action": "tumbles head over heels through the air, arms and legs flailing, falling and landing on its back",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero_tumble/",
+   "at": "2026-09-28T14:33:27Z",
+   "note": ""
+  },
+  {
+   "id": "hero_tie",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "608b125a-3139-4026-b6d1-2721c1586280",
+   "args": {
+    "first_frame_file": "raw/hero_suited/0.png",
+    "action": "straightens its tie with both paws, tugs the knot up, chin lifts with a proud confident smirk",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero_tie/",
+   "at": "2026-09-28T14:33:34Z",
+   "note": ""
+  },
+  {
+   "id": "vault_cathedral_v2",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "f47e3f2e-a0e1-4835-aa33-2e3554c4b034",
+   "args": {
+    "description": "enormous gothic cathedral built entirely of stacked gold bars and bundles of green cash, tall pointed spires, flying buttresses, a giant round steel bank vault door with a spoked wheel as the rose window on the front facade, glowing golden light, towering monument",
+    "width": 400,
+    "height": 400,
+    "view": "high top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/vault_cathedral_v2.png",
+   "at": "2026-09-28T14:34:48Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_suited",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "f327f9a8-46b1-414f-8e61-6440fb2b0fe9",
+   "args": {
+    "image_file": "raw/in_game_rat_s_2x.png",
+    "description": "redraw this exact character as a detailed high resolution pixel art sprite: the same slim tall grey rat standing upright in a navy blue business suit, white shirt, red tie, black shoes, pink ears and pink tail, small head, same proportions, same pose, same colors, finer detail in fur, face, lapels and folds, crisp dark navy outline",
+    "no_background": true
+   },
+   "raw": "raw/hero2_suited/",
+   "at": "2026-09-28T14:38:00Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_suited_detail",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "80267899-2b04-4bf3-a635-0201ef62f95d",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "description": "keep this exact character, pose, proportions and colors, only add detail: small shiny dark eyes with a white highlight and a confident look, whiskers, soft fur shading on the head, cloth folds and lapel highlights on the navy suit, a knot and shine on the red tie, shoe shine. Same silhouette and outline",
+    "no_background": true
+   },
+   "raw": "raw/hero2_suited_detail/",
+   "at": "2026-09-28T14:39:06Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_rot",
+   "tool": "create_character",
+   "costGenerations": 2,
+   "pixellabId": "ec30f611-e342-44f4-846e-79e6e4353853",
+   "args": {
+    "description": "slim tall grey rat in a navy blue business suit, white shirt, red tie, black shoes, pink ears and pink tail",
+    "name": "Hero Rat Suited (on-model)",
+    "mode": "v3",
+    "size": 128,
+    "outline": "single color black outline",
+    "detail": "high detail",
+    "reference_image_file": "raw/hero2_suited/0.png"
+   },
+   "raw": "raw/hero2_rot/",
+   "at": "2026-09-28T14:39:29Z",
+   "note": "on-model hero, 8 rotations from the locked redraw"
+  },
+  {
+   "id": "hero2_scruffy",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "4e11c59f-a1b0-4716-9a7a-6da0a085e46b",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "description": "the same slim tall grey rat, same pose, same proportions and head, but with no clothes at all: no suit, no shirt, no tie, no shoes. Bare scruffy messy grey fur with dirty smudges, lighter grey belly, pink paws and pink feet, pink tail, a street rat fresh out of the sewer. Same dark outline",
+    "no_background": true
+   },
+   "raw": "raw/hero2_scruffy/",
+   "at": "2026-09-28T14:40:13Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_tumble",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "7e7c824a-cddc-415d-94f6-296fe596b096",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "action": "tumbles head over heels through the air, arms and legs flailing, lands flat on its back",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero2_tumble/",
+   "at": "2026-09-28T14:41:21Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_tie",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "edbbaee4-62be-4fc6-b0cc-ee7c417a1ec1",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "action": "straightens its tie with both paws, tugs the knot up, chin lifts proudly",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero2_tie/",
+   "at": "2026-09-28T14:41:31Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_burst",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "77d2a0d9-e393-4663-aa10-6b030ef12174",
+   "args": {
+    "first_frame_file": "raw/hero2_scruffy/0.png",
+    "action": "bursts upward, throws both arms up high with claws spread wide, mouth opens in a huge excited grin, ears perk up, fur bristles",
+    "frame_count": 8,
+    "no_background": true
+   },
+   "raw": "raw/hero2_burst/",
+   "at": "2026-09-28T14:43:23Z",
+   "note": ""
+  },
+  {
+   "id": "manhole_lid2",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "bd55d434-21f8-4858-acd0-aa7c839e32e8",
+   "args": {
+    "description": "round cast iron manhole cover with a raised grid pattern, tilted at an angle in mid-air, seen from the side at a slant",
+    "width": 64,
+    "height": 64,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/manhole_lid2.png",
+   "at": "2026-09-28T14:47:53Z",
+   "note": ""
+  },
+  {
+   "id": "manhole_hole2",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "1b05c368-2908-45be-b32e-2fa737bc0be4",
+   "args": {
+    "description": "open round manhole in a dark asphalt street seen from above at an angle, cover removed, heavy iron rim, dark shaft with a rusty ladder rung, faint green glow from below",
+    "width": 80,
+    "height": 64,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/manhole_hole2.png",
+   "at": "2026-09-28T14:48:02Z",
+   "note": ""
+  }
+ ],
+ "totals": {
+  "generations": 30,
+  "calls": 21
+ }
+}
