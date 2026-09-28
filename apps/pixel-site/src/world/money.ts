@@ -30,6 +30,17 @@ const MAX_POPS = 12;
 /** one popup at a time above the Vault, this far apart (seconds): values that come in between add up */
 const POP_EVERY = 0.7;
 
+/**
+ * Which "+$X" goes up next: claims (gold) and hires (green) take turns while both keep coming, so a rush of claims
+ * never hides the stock bought. Pure.
+ */
+export function nextPopKind(pending: { claim: number; hire: number }, last: 'claim' | 'hire' | null): 'claim' | 'hire' | null {
+  const c = pending.claim > 0;
+  const h = pending.hire > 0;
+  if (c && h) return last === 'claim' ? 'hire' : 'claim';
+  return c ? 'claim' : h ? 'hire' : null;
+}
+
 function popTexture(text: string, color: string, scale: number): Texture {
   const pad = 2;
   const w = textWidth(text, scale) + pad * 2 + 2;
@@ -54,6 +65,7 @@ export class MoneyFx {
   /** money waiting for its popup: fees claimed, stock bought */
   private pending = { claim: 0, hire: 0 };
   private nextPop = 0;
+  private lastPop: 'claim' | 'hire' | null = null;
 
   constructor(
     private readonly atlas: Atlas,
@@ -119,18 +131,15 @@ export class MoneyFx {
   }
 
   update(dt: number): void {
-    // one popup every POP_EVERY seconds: claims first, then everything bought since the last one, added up
+    // one popup every POP_EVERY seconds, claims and stock bought taking turns, each adding up what came in since
     this.nextPop -= dt;
-    if (this.nextPop <= 0) {
-      if (this.pending.claim > 0) {
-        this.popup(`+${usd(this.pending.claim)}`, '#ffd23f', undefined, true);
-        this.pending.claim = 0;
-        this.nextPop = POP_EVERY;
-      } else if (this.pending.hire > 0) {
-        this.popup(`+${usd(this.pending.hire)}`, '#6dff9a');
-        this.pending.hire = 0;
-        this.nextPop = POP_EVERY;
-      }
+    const kind = this.nextPop <= 0 ? nextPopKind(this.pending, this.lastPop) : null;
+    if (kind) {
+      if (kind === 'claim') this.popup(`+${usd(this.pending.claim)}`, '#ffd23f', undefined, true);
+      else this.popup(`+${usd(this.pending.hire)}`, '#6dff9a');
+      this.pending[kind] = 0;
+      this.lastPop = kind;
+      this.nextPop = POP_EVERY;
     }
     const v = this.world.vault;
     for (let k = this.bills.length - 1; k >= 0; k--) {

@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { RatEvent } from '@rat/contract';
 import eventsJson from '@rat/contract/mock/events.json';
-import { ago, claimProgress, compact, describe as line, pct, usd } from './format';
+import { STAGES } from '../floor/plan';
+import { ago, claimProgress, compact, describe as line, pct, stageLine, usd } from './format';
 
 describe('format', () => {
   it('formats money, percentages and big numbers compactly', () => {
@@ -57,5 +58,15 @@ describe('format', () => {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
     expect(html).toContain('<title>WALL STREET RATS</title>');
     expect(html).toContain('<meta property="og:title" content="WALL STREET RATS" />');
+  });
+
+  it('announces every stage in the feed; the last one reads as a place (the company made it to Wall Street)', () => {
+    const lines = STAGES.map((st, k) => stageLine(st.name, k === STAGES.length - 1));
+    expect(lines[0]).toBe('The company is now a garage startup');
+    expect(lines[STAGES.length - 1]).toBe('The company made it to Wall Street');
+    for (const l of lines) {
+      expect(l).not.toMatch(/now an? wall street/i);
+      expect(l).not.toMatch(/evil empire/i);
+    }
   });
 });
