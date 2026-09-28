@@ -361,7 +361,8 @@ export class Ui {
    * Stage name and three nested bars: the desk room filling up, the next room to unlock, the next stage
    * ("FULL FLOOR: 88 / 100 rats"). Bars that have nothing left to count hide.
    */
-  setStage(name: string, rats: number, progress?: Progress): void {
+  /** rats: hired (the room bar). stageRats: hired plus applicants in line, what the stage goes by (the stage bar). */
+  setStage(name: string, rats: number, progress?: Progress, stageRats = rats): void {
     const bars = el('div', 'stage-bars');
     const row = (cls: string, fill: number, label: string): void => {
       const r = el('div', `stage-row ${cls}`);
@@ -376,7 +377,8 @@ export class Ui {
     const p = progress;
     if (p?.desk) row('desk', p.desk.filled / Math.max(1, p.desk.total), `${p.desk.label}: ${n(p.desk.filled)} / ${n(p.desk.total)} seats`);
     if (p?.room) row('room', (rats - p.room.from) / Math.max(1, p.room.at - p.room.from), `${p.room.label}: ${n(rats)} / ${n(p.room.at)} rats`);
-    if (p?.stage) row('stage', (rats - p.stage.from) / Math.max(1, p.stage.at - p.stage.from), `${p.stage.label}: ${n(rats)} / ${n(p.stage.at)} rats`);
+    const line = stageRats > rats ? ' with the line' : '';
+    if (p?.stage) row('stage', (stageRats - p.stage.from) / Math.max(1, p.stage.at - p.stage.from), `${p.stage.label}: ${n(stageRats)} / ${n(p.stage.at)} rats${line}`);
     else if (!p) {
       const k = Math.max(0, STAGES.findIndex((s) => s.name === name));
       const next = STAGES[k + 1];
