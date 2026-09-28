@@ -1,7 +1,8 @@
 // The launch simulator: a whole launch in the browser, no server. A market cap curve (scenarios.ts) makes
 // trading volume, volume makes creator fees, and the backend's rules (rules.ts) turn fees into claims and hires:
 // a claim every 35 s loop, every lamport to hires (the rats hold their stocks, nothing is bought back or burned),
-// 0.03 SOL per rat, at most 20 hires per loop, 60 SOL per hour. What the cap holds back waits and is spent later.
+// 0.03 SOL per rat, at most 20 hires per loop, 60 SOL per hour, and at most 40 Jupiter calls in any minute (one per
+// hire plus a price call every 45 s). What the limits hold back waits and is spent later.
 // Stock picks use the worker's own picker. Responses are built with the contract's display math, in the exact
 // shapes of /api/state, /api/rats and /api/events, so the site renders them with its real code.
 //
@@ -65,6 +66,8 @@ export interface SimStats {
   hiredSol: number;
   /** claimed SOL waiting for the hourly hire cap */
   hireWaitingSol: number;
+  /** most Jupiter calls in any 60 s so far */
+  jupiterMaxPerMin: number;
   /** what all the rats' stocks are worth now (the rats' portfolio, not holders' money) */
   portfolioValueUsd: number;
 }
@@ -82,6 +85,9 @@ export class LaunchSim {
   private hireBucket = 0;
   private fees = 0;
   private hireSpends: Array<{ at: number; sol: number }> = [];
+  /** times of Jupiter calls (prices + builds) in the last minute, and the most seen in any minute */
+  private jupiterCalls: number[] = [];
+  private jupiterMax = 0;
   private pending: Pending[] = [];
   private nextStepAt = 0;
   private nextPriceAt = 0;
@@ -185,8 +191,22 @@ export class LaunchSim {
     this.fees += feeSol;
   }
 
+  /** Jupiter calls left in the rolling minute. */
+  private jupiterRoom(): number {
+    while (this.jupiterCalls.length && this.jupiterCalls[0]! <= this.t - 60_000) this.jupiterCalls.shift();
+    return RULES.jupiterPerMin - this.jupiterCalls.length;
+  }
+
+  private jupiterCall(): void {
+    this.jupiterCalls.push(this.t);
+    this.jupiterMax = Math.max(this.jupiterMax, this.jupiterCalls.length);
+  }
+
   /** Stock prices drift in trends that flip (exaggerated, so rats visibly change tier within one launch). */
   private stepPrices(): void {
+    // one batched Jupiter call for every price; with no call left this round is skipped, like the worker
+    if (this.jupiterRoom() < 1) return;
+    this.jupiterCall();
     const dtH = RULES.priceSec / 3600;
     for (const s of this.stocks) {
       if (this.t >= s.nextTrendAt) {
@@ -213,8 +233,10 @@ export class LaunchSim {
       this.push({ type: 'claim', data: { amountSol: amount, source: 'bot' } } as Omit<RatEvent, 'id' | 'dryRun' | 'txSig' | 'txUrl' | 'at'>);
     }
     const capLeft = RULES.capHireSolPerHour - this.spentLastHour(this.hireSpends);
-    const n = Math.max(0, Math.min(RULES.maxHiresPerLoop, Math.floor((this.hireBucket + 1e-9) / RULES.salarySol), Math.floor((capLeft + 1e-9) / RULES.salarySol)));
+    const jupiterLeft = this.jupiterRoom() - RULES.tokensKeptForPrices;
+    const n = Math.max(0, Math.min(RULES.maxHiresPerLoop, jupiterLeft, Math.floor((this.hireBucket + 1e-9) / RULES.salarySol), Math.floor((capLeft + 1e-9) / RULES.salarySol)));
     for (let k = 0; k < n; k++) {
+      this.jupiterCall(); // one /build per hire
       // reserve before sending, like the spend guard
       this.hireBucket -= RULES.salarySol;
       this.treasury.totalHiredSol = round6(this.treasury.totalHiredSol + RULES.salarySol);
@@ -286,6 +308,7 @@ export class LaunchSim {
       claimedSol: this.treasury.totalClaimedSol,
       hiredSol: this.treasury.totalHiredSol,
       hireWaitingSol: Math.max(0, this.hireBucket),
+      jupiterMaxPerMin: this.jupiterMax,
       portfolioValueUsd: this.portfolioValue(),
     };
   }

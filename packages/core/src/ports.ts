@@ -24,6 +24,12 @@ export interface PriceQuote {
   change24hPct: number | null;
 }
 
+/** The worker's shared budget of Jupiter calls: a hard cap per rolling minute (Free tier safe). */
+export interface CallBudget {
+  /** calls that can be made right now (0 while backing off after a 429) */
+  available(): number;
+}
+
 export interface PriceSource {
   /** Mints missing from the result have no reliable price right now (treat as stale, never zero). */
   getPrices(mints: Pubkey[]): Promise<Map<Pubkey, PriceQuote>>;

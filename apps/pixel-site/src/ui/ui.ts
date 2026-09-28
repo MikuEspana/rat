@@ -38,10 +38,61 @@ export interface UiDeps {
   simulated?: boolean;
 }
 
+/**
+ * A HUD number that glides to each new value over a couple of seconds. Stock prices refresh every 45 s (one
+ * batched Jupiter call, to stay far under the Free tier), so the portfolio numbers would otherwise jump.
+ */
+class Glide {
+  private from = 0;
+  private to = 0;
+  private start = 0;
+  private started = false;
+  private running = false;
+
+  constructor(
+    private readonly ms: number,
+    private readonly render: (v: number) => void,
+  ) {}
+
+  private now(): number {
+    const u = Math.min(1, (performance.now() - this.start) / this.ms);
+    return this.from + (this.to - this.from) * (1 - (1 - u) ** 3);
+  }
+
+  set(v: number): void {
+    if (!this.started) {
+      this.started = true;
+      this.from = this.to = v;
+      this.render(v);
+      return;
+    }
+    if (v === this.to) return;
+    this.from = this.now();
+    this.to = v;
+    this.start = performance.now();
+    if (this.running) return;
+    this.running = true;
+    const step = (): void => {
+      this.render(this.now());
+      if (performance.now() - this.start < this.ms) requestAnimationFrame(step);
+      else this.running = false;
+    };
+    requestAnimationFrame(step);
+  }
+}
+
 export class Ui {
   private root = el('div', 'ui');
   private banner = el('div', 'banner');
   private stats = new Map<string, { value: HTMLElement; sub: HTMLElement }>();
+  private readonly glides = {
+    portfolio: new Glide(2000, (v) => this.statText('portfolio', usd(v))),
+    pnl: new Glide(2000, (v) => this.statText('pnl', usd(v))),
+    pnlPct: new Glide(2000, (v) => {
+      const st = this.stats.get('pnl');
+      if (st) st.sub.textContent = pct(v);
+    }),
+  };
   private ringArc!: SVGCircleElement;
   private ringLabel = el('div', 'ring-label');
   private feedList = el('ol', 'feed-list');
@@ -131,6 +182,11 @@ export class Ui {
     return hud;
   }
 
+  private statText(key: string, text: string): void {
+    const st = this.stats.get(key);
+    if (st) st.value.textContent = text;
+  }
+
   private onState(s: StateResponse): void {
     const set = (k: string, v: string, sub = '', cls = ''): void => {
       const st = this.stats.get(k);
@@ -143,8 +199,14 @@ export class Ui {
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
-    set('portfolio', usd(s.portfolio.valueUsd), holdings || 'no positions yet');
-    set('pnl', usd(s.portfolio.pnlUsd), pct(s.portfolio.pnlPct), signClass(s.portfolio.pnlUsd));
+    // the portfolio numbers glide between price updates (every 45 s) instead of jumping
+    const portfolio = this.stats.get('portfolio');
+    if (portfolio) portfolio.sub.textContent = holdings || 'no positions yet';
+    this.glides.portfolio.set(s.portfolio.valueUsd);
+    const pnl = this.stats.get('pnl');
+    if (pnl) pnl.value.className = `stat-value ${signClass(s.portfolio.pnlUsd)}`;
+    this.glides.pnl.set(s.portfolio.pnlUsd);
+    this.glides.pnlPct.set(s.portfolio.pnlPct);
     const mode = s.bot.mode;
     this.banner.hidden = mode === 'live';
     this.banner.textContent =

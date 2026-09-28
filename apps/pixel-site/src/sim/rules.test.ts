@@ -1,6 +1,7 @@
 // The simulator must run the backend's rules: compare every number with the worker's real default config.
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../../../../packages/core/src/config';
+import { TOKENS_KEPT_FOR_PRICES } from '../../../../apps/worker/src/steps/hire';
 import { RULES } from './rules';
 
 const sol = (lamports: bigint): number => Number(lamports) / 1e9;
@@ -17,5 +18,7 @@ describe('launch simulator rules', () => {
     expect(RULES.minStockWeightBps).toBe(c.minStockWeightBps);
     expect(RULES.capHireSolPerHour).toBe(sol(c.spendCapLamportsPerHour.hire));
     expect(RULES.priceSec).toBe(c.intervals.priceSec);
+    expect(RULES.jupiterPerMin).toBe(c.jupiter.maxRpm);
+    expect(RULES.tokensKeptForPrices).toBe(TOKENS_KEPT_FOR_PRICES);
   });
 });

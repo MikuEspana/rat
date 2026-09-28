@@ -1,6 +1,6 @@
 // D. Jupiter answers every call with 429 for 20 minutes in the middle of a launch (live, SimChain).
-// Claims must keep flowing, nothing that needs a Jupiter build is sent, the worker must not hammer Jupiter,
-// everything resumes afterwards, and every lamport is accounted for. Runs in the `chaos` CI job.
+// Claims must keep flowing, nothing that needs a Jupiter build is sent, the worker backs off exponentially instead
+// of hammering Jupiter and alerts the owner, everything resumes afterwards, and every lamport is accounted for. Runs in the `chaos` CI job.
 import { SOL, createSimWorld, createWorker } from '@rat/worker';
 import { describe, expect, it } from 'vitest';
 import { launchCurve } from '../e2e/helpers';
@@ -35,8 +35,9 @@ describe('D. Jupiter 429 storm', () => {
           // during the storm: claims kept going, nothing that needs a Jupiter build was sent
           expect(await attempts(['claim'])).toBeGreaterThan(before.claims);
           expect(await attempts(['hire'])).toBe(before.spend);
-          // no retry storm: well under the 55 requests/minute plan limit on average
-          expect((chaos.counts.jupiter - before.jupiter) / 20).toBeLessThan(30);
+          // no retry storm: exponential backoff (5 s, 10, 20 ... 5 min) makes a handful of calls in 20 minutes
+          expect(chaos.counts.jupiter - before.jupiter).toBeLessThanOrEqual(12);
+          expect(w.alerts.keys()).toContain('jupiter_429');
         }
         w.accrue({ bondingLamports: curve[i]! });
         await worker.tick();

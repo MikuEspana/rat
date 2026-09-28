@@ -3,6 +3,7 @@
 import type {
   Alerts,
   AppConfig,
+  CallBudget,
   ChainReader,
   Clock,
   KeyStore,
@@ -30,9 +31,12 @@ export interface WorkerDeps {
   guard: SpendGuard;
   keys: KeyStore;
   pump: PumpFunClient;
+  /** Jupiter Price API (or the mock), behind the Jupiter budget */
   prices: PriceSource;
-  /** Jupiter /build (or the mock) */
+  /** Jupiter /build (or the mock), behind the Jupiter budget */
   swap: SwapBuilder;
+  /** the shared Jupiter budget (JUPITER_MAX_RPM calls per rolling minute): hires only start when it has room */
+  jupiter: CallBudget;
   alerts: Alerts;
   killSwitch: KillSwitch;
   stocks: StockConfigEntry[];

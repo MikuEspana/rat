@@ -102,14 +102,15 @@ describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
   }, 360_000);
 });
 
-describe('B. DRY RUN double volume: 100 SOL in one hour hits the hire cap', () => {
-  it('with the defaults (20 hires per 35 s loop) hiring stops at 60 SOL/h, alerts, and spends the carried budget in the next hour', async () => {
+describe('B. DRY RUN double volume: 100 SOL in one hour hits the limits', () => {
+  it('with the defaults the 40-call Jupiter budget binds just before the 60 SOL/h cap: never over either, the rest is spent in the next hour', async () => {
     w = await createSimWorld({ dryRun: true });
     const cfg = w.deps.config;
     // the production defaults, not a test override
     expect(cfg.maxHiresPerLoop).toBe(20);
     expect(cfg.intervals.claimSec).toBe(35);
     expect(cfg.spendCapLamportsPerHour.hire).toBe(60n * SOL);
+    expect(cfg.jupiter.maxRpm).toBe(40);
     const calls: CallSample[] = [];
     const sample = () => void calls.push(jupiterSample(w));
     const t0 = performance.now();
@@ -117,9 +118,10 @@ describe('B. DRY RUN double volume: 100 SOL in one hour hits the hire cap', () =
     const hourAgo = () => new Date(w.clock.now().getTime() - HOUR * 1000);
     const hireOut = await w.store.ledger.netOutflowSince('hire', hourAgo());
     expect(hireOut).toBeLessThanOrEqual(60n * SOL);
-    // the cap is really what stopped hiring: less than one salary of room was left
-    expect(hireOut).toBeGreaterThan(60n * SOL - cfg.salaryLamports);
-    expect(w.alerts.keys()).toContain('cap_reached_hire');
+    // two 20-hire loops can fall inside one minute, so the Jupiter budget (40 calls a minute) is what holds hiring
+    // back, a little before the 60 SOL/h cap
+    expect(hireOut).toBeGreaterThan(55n * SOL);
+    expect(w.jupiter.maxInWindow).toBe(cfg.jupiter.maxRpm);
     // everything spent so far falls in this first hour: what was claimed and not hired carries over
     const carried = await w.store.ledger.balance('hire');
     expect(carried).toBe((await w.store.claims.totals()).claimed - hireOut);
@@ -134,20 +136,37 @@ describe('B. DRY RUN double volume: 100 SOL in one hour hits the hire cap', () =
     const rows = await hireSpendRows(w);
     const rolling = maxRollingOutflow(rows, HOUR * 1000);
     expect(rolling.lamports).toBeLessThanOrEqual(60n * SOL);
-    expect(rolling.lamports).toBeGreaterThan(60n * SOL - cfg.salaryLamports);
+    expect(rolling.lamports).toBeGreaterThan(55n * SOL);
     // never more than 20 hires in one loop, and the loop limit was reached
     const hiresPerLoop = maxAtOneInstant(rows.filter((r) => r.reason === 'hire_reserve'));
     expect(hiresPerLoop).toBe(cfg.maxHiresPerLoop);
     expect(meter.maxHiresPerLoop).toBe(cfg.maxHiresPerLoop);
-    // Jupiter stays under its rate limit even at 20 hires per loop
+    // Jupiter never gets more than 40 calls in any minute (the Free tier allows 60), even at 20 hires per loop
     const jupiterPerMinute = maxCallsPerMinute(calls);
     expect(jupiterPerMinute).toBeLessThanOrEqual(cfg.jupiter.maxRpm);
+    expect(w.jupiter.maxInWindow).toBeLessThanOrEqual(cfg.jupiter.maxRpm);
     expect(w.simSender.submitted).toBe(0);
     console.log(
-      `[B] 100 SOL hour: hire outflow first hour ${formatSol(hireOut)} SOL (cap 60), max ${formatSol(rolling.lamports)} SOL in any rolling hour over 2h, ` +
+      `[B] 100 SOL hour: hire outflow first hour ${formatSol(hireOut)} SOL (cap 60, Jupiter budget 40/min), max ${formatSol(rolling.lamports)} SOL in any rolling hour over 2h, ` +
         `carried ${formatSol(carried)} SOL, ${rats.length} rats after 2h, max ${hiresPerLoop} hires/loop, max ${jupiterPerMinute} Jupiter calls/min, ran in ${elapsed.toFixed(1)}s`,
     );
     // two simulated hours and about 3,300 hires (twice as many as with the 50/50 split)
+  }, 600_000);
+
+  it('the hourly cap itself: at 40 SOL/h (below the Jupiter budget\'s pace) hiring stops at exactly the cap and alerts', async () => {
+    w = await createSimWorld({ dryRun: true, env: { SPEND_CAP_SOL_PER_HOUR_HIRE: '40' } });
+    const cfg = w.deps.config;
+    const calls: CallSample[] = [];
+    await runLaunch(w, { seconds: HOUR, totalFees: 60n * SOL, onTick: () => void calls.push(jupiterSample(w)) });
+    const hireOut = await w.store.ledger.netOutflowSince('hire', new Date(w.clock.now().getTime() - HOUR * 1000));
+    expect(hireOut).toBeLessThanOrEqual(40n * SOL);
+    // the cap is really what stopped hiring: less than one salary of room was left
+    expect(hireOut).toBeGreaterThan(40n * SOL - cfg.salaryLamports);
+    expect(w.alerts.keys()).toContain('cap_reached_hire');
+    const rolling = maxRollingOutflow(await hireSpendRows(w), HOUR * 1000);
+    expect(rolling.lamports).toBeLessThanOrEqual(40n * SOL);
+    expect(maxCallsPerMinute(calls)).toBeLessThanOrEqual(cfg.jupiter.maxRpm);
+    expect(w.simSender.submitted).toBe(0);
   }, 600_000);
 });
 

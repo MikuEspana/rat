@@ -1,4 +1,5 @@
 import { NATIVE_SOL_MINT, TOKEN_2022_PROGRAM, lamportsToSol, sumBig } from '@rat/core';
+import { JupiterError } from '@rat/jupiter';
 import { collectCreatorFeeV2Ix } from '@rat/pump';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -275,6 +276,56 @@ describe('hire state machine', () => {
     expect(w.simSender.submitted).toBe(before);
   });
 
+  it('Jupiter budget empty: the rest of the hires wait for the next loop (no key, no reservation, no call)', async () => {
+    w = await createSimWorld({ dryRun: false, env: { JUPITER_MAX_RPM: '5', MAX_HIRES_PER_LOOP: '20' } });
+    await funded(w, 2n * SOL);
+    // 5 tokens: 1 went to prices, 1 is kept for the next price call, 3 for hires
+    const r1 = await runHireStep(w.deps, w.worker.state);
+    expect(r1).toMatchObject({ attempted: 3, hired: 3, waitingForJupiter: true });
+    expect(w.swap.calls).toBe(3);
+    expect(await w.store.keys.counts()).toEqual({ assigned: 3, unused: 0 });
+    expect(await w.store.ledger.openReservations('hire')).toEqual([]);
+    // nothing more until tokens come back: no hot retry
+    expect((await runHireStep(w.deps, w.worker.state)).attempted).toBe(0);
+    expect(w.swap.calls).toBe(3);
+    // a minute later the line moves again
+    w.clock.advanceSeconds(61);
+    expect((await runHireStep(w.deps, w.worker.state)).attempted).toBe(4);
+    expect(w.jupiter.maxInWindow).toBeLessThanOrEqual(5);
+  });
+
+  it('Jupiter 429: one call, then everyone backs off (no retry on other stocks), the owner is alerted, hires resume after', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await funded(w, 2n * SOL);
+    let builds = 0;
+    let limited = true;
+    const deps = w.rebuildDeps({
+      swap: {
+        build: async (req) => {
+          builds++;
+          if (limited) throw new JupiterError('rate limited (429)', 429, 'test');
+          return w.swap.build(req);
+        },
+      },
+    });
+    const budgetBefore = await w.store.ledger.balance('hire');
+    const r1 = await runHireStep(deps, w.worker.state);
+    expect(r1).toMatchObject({ attempted: 0, hired: 0, waitingForJupiter: true });
+    expect(builds).toBe(1);
+    expect(w.alerts.keys()).toContain('jupiter_429');
+    expect(await w.store.ledger.balance('hire')).toBe(budgetBefore); // the reservation was released
+    expect(await w.store.keys.counts()).toEqual({ assigned: 0, unused: 1 }); // the unused key is retired
+    // backing off: no call at all, prices skip their round too
+    expect((await runHireStep(deps, w.worker.state)).attempted).toBe(0);
+    expect((await runPriceStep(deps, w.worker.state)).skipped).toMatch(/429/);
+    expect(builds).toBe(1);
+    // after the 5 s backoff hiring resumes
+    limited = false;
+    w.clock.advanceSeconds(6);
+    const r2 = await runHireStep(deps, w.worker.state);
+    expect(r2.hired).toBeGreaterThan(0);
+  });
+
   it('two-step hire mode (fallback flag) funds then buys', async () => {
     w = await createSimWorld({ dryRun: false, env: { HIRE_MODE: 'two_step', MAX_HIRES_PER_LOOP: '2' } });
     await funded(w);
@@ -327,7 +378,7 @@ describe('scheduler and single worker', () => {
       for (const k of ran.keys()) counts.set(k, (counts.get(k) ?? 0) + 1);
       w.clock.advanceSeconds(5);
     }
-    expect(counts.get('prices')).toBe(80);
+    expect(counts.get('prices')).toBe(Math.ceil(1200 / w.deps.config.intervals.priceSec)); // every 45 s
     expect(counts.get('claim')).toBe(Math.ceil(1200 / 35));
     expect(counts.get('reconcile')).toBe(Math.ceil(1200 / 35));
     const beats = await w.store.heartbeats.all();

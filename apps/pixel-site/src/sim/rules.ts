@@ -17,8 +17,12 @@ export const RULES = {
   minStockWeightBps: 500,
   /** SPEND_CAP_SOL_PER_HOUR_HIRE: rolling hour; the rest waits and is spent later */
   capHireSolPerHour: 60,
-  /** PRICE_INTERVAL_SEC: stock prices refresh */
-  priceSec: 15,
+  /** PRICE_INTERVAL_SEC: stock prices refresh (one batched Jupiter call) */
+  priceSec: 45,
+  /** JUPITER_MAX_RPM: every Jupiter call (prices + one per hire) in any 60 s; hires wait when it is used up */
+  jupiterPerMin: 40,
+  /** TOKENS_KEPT_FOR_PRICES (worker hire step): hires always leave this many calls for the price step */
+  tokensKeptForPrices: 1,
 } as const;
 
 /** SOL swapped into the stock per hire (salary minus the fee estimate and the rat's SOL buffer). */

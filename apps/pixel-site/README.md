@@ -28,14 +28,14 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 ```
 
 - "Simulate launch", then Start / Pause / Reset, speed 1x, 10x, 60x or 300x, and a scenario:
-  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,800 rats (evil empire), a portfolio worth about $23K. Everyone gets a desk.
-  - **Mega**: runs to about $10M in 4 hours. About 6,400 rats after 5 hours: every desk is taken and about 530 line up outside.
+  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,900 rats (evil empire), a portfolio worth about $23K. Everyone gets a desk.
+  - **Mega**: runs to about $10M in 4 hours. About 6,400 rats after 5 hours: every desk is taken and about 550 line up outside.
   - **Rug**: pumps to about $300K, then dumps 80%. About 820 rats (corporate floor).
 - Page flags: `?sim&scenario=mega&speed=300&autostart=1`. `?api=<url>` always uses a real API.
 - A yellow SIMULATION banner stays on screen the whole time. Events carry no transaction signature and link to nothing.
-- `src/sim/rules.ts` holds the bot's rules (every fee to hires, 0.03 SOL per rat, at most 20 hires per 35 s loop, 60 SOL per hour; nothing is bought back or burned). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
+- `src/sim/rules.ts` holds the bot's rules (every fee to hires, 0.03 SOL per rat, at most 20 hires per 35 s loop, 60 SOL per hour, at most 40 Jupiter calls in any minute with prices every 45 s; nothing is bought back or burned). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
 - `src/sim/scenarios.ts`: the market cap curves, the volume model and the creator fee tiers. Volume and fee rates are rough models (the fee tiers approximate pump.fun's, which are set on-chain and can change), tuned so Normal pays about 145 SOL of fees. The building has desks for about 5,800 rats; the rest line up outside (`queueCells` in `src/floor/plan.ts`).
-- `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (every claim to hires, per-loop limit, hourly cap, never spending more than was claimed). A 3x Mega run checks that the 60 SOL/h cap binds and the rest waits.
+- `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (every claim to hires, per-loop limit, hourly cap, never spending more than was claimed). A 3x Mega run checks that the limits bind (the 40-call Jupiter budget a little before the 60 SOL/h cap) and the rest waits.
 - Live demo: https://wallstreetrats.world . `.github/workflows/pages.yml` rebuilds it on every push to `main` (with `VITE_BASE=/`, served from the root) and publishes it to the `gh-pages` branch with a `CNAME` file, so the custom domain survives every deploy; GitHub Pages serves it. The same folder is kept as the `rat-race-demo` workflow artifact (drag it onto Netlify Drop or Vercel). Social preview image: `public/og.png` (1200x630).
 
 ## What is on screen
@@ -44,8 +44,8 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 |---|---|
 | Market cap | `coin.marketCapUsd` (shows "pre-launch" while null), price per RAT under it |
 | Rats hired | `portfolio.ratCount`, frozen count under it |
-| Portfolio value | `portfolio.valueUsd` (what all the rats' stocks are worth; not holders' money), the two biggest positions under it (for example `AMZNx 312`) |
-| Portfolio PnL | `portfolio.pnlUsd` and `pnlPct`, green or red |
+| Portfolio value | `portfolio.valueUsd` (what all the rats' stocks are worth; not holders' money), the two biggest positions under it (for example `AMZNx 312`). Glides to each new value over 2 s: prices refresh every 45 s |
+| Portfolio PnL | `portfolio.pnlUsd` and `pnlPct`, green or red, gliding like the value |
 | Next hire ring | fills from `bot.lastClaimAt` to `bot.nextClaimAt` (each claim pays for the next hires), with a countdown |
 | Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), claims, freezes, thaws, each with its Solscan tx link |
 | Rat card | name, tier badge, stock, PnL %, value and cost, rank, status, hired, Solscan wallet link; a gold marker bobs over the rat |

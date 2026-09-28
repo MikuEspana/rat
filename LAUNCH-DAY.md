@@ -16,7 +16,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 
 - [ ] `rat preflight` says **READY**.
 - [ ] Pacing is on by default: `MAX_HIRES_PER_LOOP=20` and `SPEND_CAP_SOL_PER_HOUR_HIRE=60` (about 34 rats a minute, steady, no long pauses). Leave them unless you mean to change them.
-- [ ] Jupiter plan: **Developer** (10 RPS, $25/month) on launch day. The bot uses about 40 calls a minute at full speed, which fits the Free tier's 60 on paper but leaves little room for retries and your own checks (SIMULATION.md).
+- [ ] Jupiter: the **Free** key is enough. The worker never makes more than 40 calls in any minute (hard budget; the Free tier allows 60), so your own CLI checks on the same key stay under the limit too. A `jupiter_429` alert means something else is using the key.
 - [ ] `rat alert-test` arrives on your phone. Phone charged, Telegram notifications on, not muted.
 - [ ] `KEY_ENCRYPTION_KEY` backed up offline (without it the rat wallets are lost).
 - [ ] Admin service has `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` too: it alerts you if the worker dies (the worker cannot).

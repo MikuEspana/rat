@@ -19,6 +19,8 @@ import {
 import { SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { MockPriceSource, MockSwapBuilder, registerMockSwapProgram } from '@rat/jupiter/mock';
+import { BudgetedPriceSource, BudgetedSwapBuilder, type JupiterBudget } from '@rat/jupiter';
+import { createJupiterBudget } from './jupiter-budget';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { accrueCreatorFees, registerPumpSimPrograms } from '@rat/pump/sim';
@@ -88,6 +90,8 @@ export interface SimWorld {
   alerts: RecordingAlerts;
   prices: MockPriceSource;
   swap: MockSwapBuilder;
+  /** the worker's Jupiter budget (calls counted on the fake clock) */
+  jupiter: JupiterBudget;
   creator: Keypair;
   /** the master key ring (a restarted process builds a new DbKeyStore from it) */
   ring: MasterKeyRing;
@@ -161,6 +165,8 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
 
   const swap = new MockSwapBuilder(prices, { tokens, spreadBps: opts.spreadBps ?? 50 });
   const alerts = new RecordingAlerts();
+  // the same Jupiter budget as production, on the fake clock: every mock price and build call takes a token
+  const jupiter = createJupiterBudget(config, () => clock.now().getTime(), alerts);
   /** The deps graph on top of the given store / chain / Jupiter pieces: fresh caches, like a process restart. */
   const assemble = (o: WorldParts = {}): WorkerDeps => {
     const st = o.store ?? store;
@@ -190,8 +196,9 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
       guard,
       keys: new DbKeyStore(st.keys, ring, { expectedCreator: config.creatorPubkey }),
       pump: new PumpFunClient(chain),
-      prices: o.prices ?? prices,
-      swap: o.swap ?? swap,
+      prices: new BudgetedPriceSource(o.prices ?? prices, jupiter),
+      swap: new BudgetedSwapBuilder(o.swap ?? swap, jupiter),
+      jupiter,
       alerts,
       killSwitch,
       stocks: entries,
@@ -214,6 +221,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     alerts,
     prices,
     swap,
+    jupiter,
     creator,
     ring,
     xstocksAuthority,

@@ -78,6 +78,8 @@ describe('launch simulator', () => {
         maxHour = Math.max(maxHour, (b - a + 1) * RULES.salarySol);
         expect((b - a + 1) * RULES.salarySol).toBeLessThanOrEqual(RULES.capHireSolPerHour + 1e-6);
       }
+      // never more than 40 Jupiter calls (prices + builds) in any minute
+      expect(sim.stats().jupiterMaxPerMin).toBeLessThanOrEqual(RULES.jupiterPerMin);
       // events carry no transaction: nothing was sent
       for (const e of events) expect(e.txSig).toBeNull();
       const s = sim.stats();
@@ -109,7 +111,7 @@ describe('launch simulator', () => {
     console.log(`mega: ${growth.waitingCount} rats in the job-fair line at the end`);
   });
 
-  it('a bigger run hits the 60 SOL/h hire cap: the rest of the fees wait and are spent later', () => {
+  it('a bigger run hits the limits (60 SOL/h, 40 Jupiter calls a minute): the rest of the fees wait and are spent later', () => {
     const big = { ...SCENARIOS.mega, curve: SCENARIOS.mega.curve.map(([m, v]) => [m, v * 3] as const), minutes: 150 };
     const sim = new LaunchSim(big, EPOCH);
     sim.launch();
@@ -126,7 +128,9 @@ describe('launch simulator', () => {
       maxHour = Math.max(maxHour, (b - a + 1) * RULES.salarySol);
     }
     expect(maxHour).toBeLessThanOrEqual(RULES.capHireSolPerHour + 1e-6);
-    expect(maxHour).toBeGreaterThan(RULES.capHireSolPerHour - 0.5);
+    // two 20-hire loops can fall inside one minute, so the 40-call Jupiter budget binds a little before the cap
+    expect(maxHour).toBeGreaterThan(55);
+    expect(sim.stats().jupiterMaxPerMin).toBeLessThanOrEqual(RULES.jupiterPerMin);
     expect(maxWaiting).toBeGreaterThan(5);
   });
 

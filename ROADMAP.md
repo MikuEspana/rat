@@ -76,7 +76,7 @@ config/stocks.json
 
 **Burn: removed 2026-09-28** (every fee hires rats; the original plan follows). `min(burn bucket, fund balance - reserve)`, skip under 0.01 SOL. `/build` SOL to coin with `taker` = fund, burn in the same tx (min out + leftovers). Fallback: direct pump.fun buy (`sharing_config` account is mandatory for buys, VERIFIED [3]). Burn uses the coin's token program (pump `create_v2` coins are Token-2022, VERIFIED [2]).
 
-**Prices (every 15s)**: one Jupiter Price v3 call for all stocks + SOL + coin (max 50 ids per call, `x-api-key` header, VERIFIED [5]). Missing tokens are marked stale, never zero.
+**Prices (every 45s since 2026-09-28)**: one Jupiter Price v3 call for all stocks + SOL + coin (max 50 ids per call, `x-api-key` header, VERIFIED [5]). Missing tokens are marked stale, never zero.
 
 **Freeze (every 35s)**: read all stock mints: Pausable `paused` flag (REPORTED [9]) and Scaled UI multiplier. Paused stock = its rats frozen, one event. **Reconcile**: 500 rat token accounts per loop, account frozen or balance mismatch = rat frozen + alert (issuer has a permanent delegate, REPORTED [8]).
 
@@ -86,7 +86,7 @@ config/stocks.json
 
 - At swarmed-like volume (180 SOL of fees) all of it goes to hires = about 6,000 rats (since 2026-09-28; SIMULATION.md).
 - Peak claims above 60 SOL/h wait under the 60 SOL/h hire cap and are spent later.
-- Jupiter: 1 `/build` per hire + 4 price calls/min. At 20 hires per 35s loop that is about 38/min, under 55/min (measured in SIMULATION.md).
+- Jupiter (Free tier, since 2026-09-28): 1 `/build` per hire + 1 price call every 45 s, inside a hard budget of 40 calls in any 60 s (measured in SIMULATION.md).
 
 ## 6. Workstreams
 

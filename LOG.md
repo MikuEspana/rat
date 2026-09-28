@@ -269,9 +269,56 @@ After legal advice: hold, never burn, never pay dividends. Buy and burn is gone 
 - At most 44 Jupiter calls in any minute; the limiter allows 55 and the Free tier 60.
 - The ledger equals the chain to the lamport.
 
-**Jupiter tier for launch day**
-- **Developer** (10 RPS, $25/month).
-- Free (1 RPS, 60 a minute) fits on paper, but leaves about 25% headroom. That headroom is shared per organisation with every other use of the key (preflight, scripts) and with hire retries.
-- Going over never loses money. It only slows hiring.
-- Source: jup-ag/docs `portal/rate-limits.mdx` and `portal/plans.mdx`.
+**Jupiter tier**: the numbers above said Developer for headroom; Miguel chose to stay on the Free tier with a hard call budget instead (next entry).
+
+## Miguel's decision: stay on Jupiter's Free tier, hard budget of 40 calls a minute (2026-09-28)
+
+**What changed**
+- **One Jupiter budget for the whole worker** (`packages/jupiter/src/budget.ts`):
+  - every call takes a token: prices, builds and retries;
+  - at most `JUPITER_MAX_RPM` = 40 in any 60 s, the same sliding window Jupiter counts with (a refill-rate bucket could burst past 40 in a rolling minute);
+  - the config refuses anything above 40;
+  - the Free tier allows 60, so 20 stay free for the CLI and scripts on the same key.
+- **Production**:
+  - `BudgetedSwapBuilder` and `BudgetedPriceSource` wrap the real clients;
+  - the HTTP client runs with no limiter and no retries, so every request is exactly one token;
+  - the budget starts spent, so a restarting or crash-looping worker cannot burst. The smoke script starts full.
+- **SimChain**: the same wrappers sit around the mocks, on the fake clock.
+- **Prices** every 45 s (was 15). All mints go in ONE batched call; more than 50 is refused. With no token, the round is skipped and the last prices stay.
+- **Hires**:
+  - a hire starts only while the budget has room, always leaving one token for prices;
+  - otherwise the rest wait for the next loop: no key, no reservation, no call;
+  - a 429 on a build stops the loop at once (no retry on the other stocks), releases the reservation and retires the unused key.
+- **429**:
+  - every caller stops for 5 s, then 10, 20, 40 ... up to 5 minutes, or Jupiter's `x-ratelimit-reset` if later;
+  - a `jupiter_429` alert goes out (Telegram, throttled);
+  - the first success resets the backoff;
+  - `hire_idle` now names the Jupiter budget as the reason when it is.
+- **Site**:
+  - the HUD's portfolio value and PnL glide to each new value over 2 s (prices refresh every 45 s);
+  - the browser simulator runs the same budget (at most 40 calls in any minute, checked in its tests).
+
+**Tests**
+- Budget unit tests:
+  - never more than 40 in any rolling minute over 5 minutes of calls every 100 ms (exactly 200 calls);
+  - an empty budget makes no call;
+  - `startEmpty`;
+  - the backoff sequence 5, 10, 20, 40, 80, 160, 300, 300 s;
+  - a later reset header wins;
+  - a success resets the backoff;
+  - one token per batched price call, and more than 50 mints refused;
+  - the worker's HTTP client reports a 429 once, with the reset time.
+- Config: `JUPITER_MAX_RPM` above 40 is refused; the defaults are 40 and 45 s.
+- Worker:
+  - with a 5-call budget, hires stop at 3 and continue a minute later, with no key or reservation for the waiting ones;
+  - a 429 costs exactly one call, alerts, skips the price round and resumes after the backoff.
+- Chaos: in a 20 minute 429 storm the worker now makes at most 12 calls (it was allowed up to 600), alerts, and still recovers with the ledger exact.
+
+**3-hour simulation at the new cap** (180 SOL of fees, `SIMULATION.md`)
+- **Most Jupiter calls in any minute: 40** (never more; the Free tier allows 60).
+- **Longest hiring delay: 64 minutes.** SOL claimed at minute 23 in the rush waited 64 minutes for its rat. Hiring itself never paused while SOL waited.
+- **Rats waiting at peak: about 2,050** (61.6 SOL claimed, not hired yet, at minute 26).
+- **Every fee spent: yes, by minute 189** (0.01 SOL left). Without the budget it was minute 180.
+- 6,084 rats; ledger = chain to the lamport.
+- **The budget binds a little before the 60 SOL/h cap.** Two 20-hire loops can fall in one minute, so the busiest hour spent 57.4 SOL.
 

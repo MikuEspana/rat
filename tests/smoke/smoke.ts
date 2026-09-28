@@ -22,7 +22,8 @@ if (pre.length > 0) {
   process.exit(1);
 }
 const log = createLogger({ level: 'info', name: 'rat-smoke' });
-const { deps, handle } = await createProductionDeps(cfg, log);
+// one short run with a few Jupiter calls: the budget starts full (the 40-a-minute cap still holds)
+const { deps, handle } = await createProductionDeps(cfg, log, { jupiterStartEmpty: false });
 const again = await smokePreflight(cfg, deps.store);
 if (again.length > 0) {
   console.error(`Smoke test refused:\n  - ${again.join('\n  - ')}`);

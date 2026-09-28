@@ -6,10 +6,12 @@ Loop (tick-based scheduler, loops never overlap, single worker via a lease lock)
 
 | Task | Every | What |
 |---|---|---|
-| prices | 15s | one batched Jupiter Price v3 call: all stocks + SOL + coin |
+| prices | 45s | one batched Jupiter Price v3 call: all stocks + SOL + coin (skipped when the Jupiter budget is empty) |
 | mints | 35s | one RPC call: mint facts, xStocks mint verification (rule #12), pause -> freeze / resume -> unfreeze |
 | claim | 35s | claim both vaults + unwrap in ONE tx (every lamport to the hire budget); then wallet watch; then hires (at most 20 per loop, 60 SOL per hour) |
 | reconcile | 35s | 500 rat token accounts: issuer freeze or balance mismatch -> rat frozen + alert |
+
+Jupiter budget: every Jupiter call (prices, builds, retries) takes a token of one shared budget, at most `JUPITER_MAX_RPM` (40) in any 60 s. Hires start only while it has room (one token is always left for prices); otherwise they wait for the next loop. A 429 stops every call (5 s doubling to 5 min) and sends a `jupiter_429` alert.
 
 Hire state machine: attempt recorded before sending; never retried while it can still land; before a retry the rat wallet is read on-chain; reservations are settled with the real cost or released. `HIRE_MODE=two_step` funds first, then the rat buys.
 

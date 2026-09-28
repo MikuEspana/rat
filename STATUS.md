@@ -36,7 +36,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | 2 | **Outside parties can cost value inside our limits.** A wrong Jupiter quote or price; the xStocks issuer can pause, freeze or take back tokens (permanent delegate). | We cannot control them. | Worst case per tx: one salary (0.03 SOL). The 60 SOL/h hire cap stops a long bleed. Reconcile freezes and alerts on issuer actions. |
 | 3 | **One worker, one database, one RPC.** | A small project on one host. | Restarts are safe at every step (chaos tests), the watchdog alerts if the worker dies, a backup RPC is supported. Losing the database without a key backup loses every rat wallet: turn on Supabase backups and run `rat keys backup`. |
 | 4 | **Launch-day operator mistakes.** A tx from a bot wallet (trips the kill switch), a wrong `WATCH_FROM_SLOT`, DRY RUN flipped back and forth, the dev buy left in the creator wallet. | People get tired. | `rat preflight --live`, `LAUNCH-DAY.md`, the admin page. Every mistake above stops the bot instead of losing money. |
-| 5 | **A bigger or faster launch than planned.** | The 60 SOL/h hire cap makes money wait during a big rush (180 SOL of fees takes about 3 hours to spend). At 20 hires per loop the bot uses about 40 of Jupiter's calls a minute; the Free tier allows 60. | Nothing is lost, only delayed. Launch day: the Jupiter **Developer** plan (10 RPS, $25/month) for headroom; then higher caps if you want faster spending. |
+| 5 | **A bigger or faster launch than planned.** | The 60 SOL/h hire cap makes money wait during a big rush (180 SOL of fees takes about 3 hours to spend). We stay on Jupiter's Free tier: a hard budget of 40 calls a minute (prices + builds + retries) caps hiring at about 38 rats a minute (about 57 SOL/h in a long rush, a little under the 60 SOL/h cap). In the 3-hour simulation every fee was still spent by minute 189. | Nothing is lost, only delayed: hires wait in line for the next loop. A 429 backs off and alerts. |
 
 ## 3. Now
 
@@ -77,7 +77,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | 6 | Scaled UI vs price | Script `check:scaled-ui` ready. Current valuation: scaled amount x price (display only). |
 | 7 | External claims | Our vault claimed by anyone: booked to hires like our own claims. Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
 | 8 | Tier names | intern, analyst, associate, vp, partner. |
-| 10 | Jupiter free tier, limit in config | `JUPITER_MAX_RPM=55`. Launch day: the Developer plan is recommended (SIMULATION.md). |
+| 10 | Jupiter free tier, limit in config; stay on Free (2026-09-28) | `JUPITER_MAX_RPM=40`, a hard maximum: one shared budget for every worker call (prices every 45 s + one build per hire + retries). Hires wait when it is used up; a 429 backs off 5 s doubling to 5 min and alerts. |
 | 11 | Emergency sweep | `rat sweep`, CLI only, exact typed phrase, never called by the bot. |
 | 12 | Mint verification | Token-2022 + expected mint authority (config or majority of at least 3), else rejected. Runs at startup and every 35s. |
 | review | Live readiness | The worker refuses to start LIVE with 0 approved stocks or none passing the mint check (exact reasons in the logs + Telegram). `hire_idle` alert when no rat is hired for 30 min while more than 0.1 SOL waits. |
@@ -152,7 +152,7 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | Optional: confirmed xStocks mint authority | `XSTOCKS_MINT_AUTHORITY` |
 | Funding | creator: 0.05 SOL reserve + launch cost; smoke test: ~0.1 SOL on a throwaway wallet |
 | At launch: the launch transaction's signature and slot | `WATCH_FROM_SLOT` (slot + 1), `KNOWN_OWNER_TX_SIGS` |
-| Jupiter plan for launch day | **Developer** (10 RPS, $25/month): the bot uses about 40 calls a minute at full speed, the Free tier allows 60 (`SIMULATION.md`) |
+| Jupiter plan for launch day | **Free** is enough: the worker never makes more than 40 calls in any minute (hard budget), leaving 20 of the Free tier's 60 for your own checks (`SIMULATION.md`) |
 | Launch pacing | on by default: `MAX_HIRES_PER_LOOP=20`, `SPEND_CAP_SOL_PER_HOUR_HIRE=60` (`SIMULATION.md`) |
 | Decisions left | `OPEN-QUESTIONS.md` |
 

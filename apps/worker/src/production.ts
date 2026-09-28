@@ -2,15 +2,21 @@
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, openDatabase } from '@rat/db';
-import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimiter } from '@rat/jupiter';
+import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
+import { createJupiterBudget } from './jupiter-budget';
 
 export const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
 
-export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise<{ deps: WorkerDeps; handle: DbHandle }> {
+export async function createProductionDeps(
+  cfg: AppConfig,
+  log: Logger,
+  /** the long-running worker starts with its Jupiter budget spent (a restart loop never bursts); a one-shot run does not */
+  opts: { jupiterStartEmpty?: boolean } = {},
+): Promise<{ deps: WorkerDeps; handle: DbHandle }> {
   requireConfig(cfg, ['databaseUrl', 'keyEncryptionKey', 'rpcUrl', 'creatorPubkey']);
   if (!cfg.jupiter.apiKey) throw new Error('JUPITER_API_KEY is required (free key at portal.jup.ag)');
 
@@ -51,7 +57,10 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
   const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey });
   await keys.creator();
 
-  const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm) });
+  // Every Jupiter request goes through the one budget (no limiter or retries inside the HTTP client): at most
+  // JUPITER_MAX_RPM (40) a minute. For the worker it starts spent, so a restarting worker never bursts.
+  const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, maxRetries: 0 });
+  const jupiter = createJupiterBudget(cfg, () => Date.now(), alerts, { startEmpty: opts.jupiterStartEmpty ?? true });
   const deps: WorkerDeps = {
     config: cfg,
     store,
@@ -63,8 +72,9 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
     guard,
     keys,
     pump: new PumpFunClient(chain),
-    prices: new JupiterPriceSource(http),
-    swap: new JupiterSwapBuilder(http),
+    prices: new BudgetedPriceSource(new JupiterPriceSource(http), jupiter),
+    swap: new BudgetedSwapBuilder(new JupiterSwapBuilder(http), jupiter),
+    jupiter,
     alerts,
     killSwitch,
     stocks,

@@ -16,6 +16,7 @@ Every claimed fee now hires rats. What that changes for security:
 - **Bigger cap**: the hourly hire cap went from 30 to 60 SOL (and 10 to 20 hires per loop), so the worst case of a slow bleed (A1) doubles per hour. Lower `SPEND_CAP_SOL_PER_HOUR_HIRE` for the first hour if you want a tighter bound.
 - **CI guard**: `scripts/check-guards.mjs` now refuses token burn code (`createBurn*Instruction`, `buildBurnInstruction`, `burnIx`) in production source, so the mechanic cannot quietly come back.
 - Database: migration `0002` drops the `burns` table and the claims' fund columns.
+- **Jupiter budget (same day)**: we stay on the Free tier. Every worker call to Jupiter (prices, builds, retries) takes a token of one budget: at most 40 in any 60 s (Jupiter's own window; the Free tier allows 60). Nothing waits or retries hot: with no token a hire waits for the next loop. A 429 stops every call (5 s doubling to 5 min) and alerts; a restarting or crash-looping worker starts with the budget spent, so it cannot burst. A hostile or broken Jupiter can no longer make the worker hammer it.
 
 ## Findings (all fixed)
 

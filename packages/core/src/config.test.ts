@@ -14,9 +14,9 @@ describe('loadConfig', () => {
     expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 60_000_000_000n });
     expect(cfg.spendAlertPct).toBe(50);
     expect(cfg.maxHiresPerLoop).toBe(20);
-    expect(cfg.jupiter.maxRpm).toBe(55);
+    expect(cfg.jupiter.maxRpm).toBe(40);
     expect(cfg.hireMode).toBe('single');
-    expect(cfg.intervals).toEqual({ claimSec: 35, priceSec: 15, freezeSec: 35 });
+    expect(cfg.intervals).toEqual({ claimSec: 35, priceSec: 45, freezeSec: 35 });
   });
 
   it('idle hire budget alert: 30 min, 0.1 SOL, configurable', () => {
@@ -65,13 +65,20 @@ describe('loadConfig', () => {
     const cfg = loadConfig({
       SPEND_CAP_SOL_PER_HOUR_HIRE: '12.5',
       KEY_ENCRYPTION_KEY: KEY,
-      JUPITER_MAX_RPM: '600',
+      JUPITER_MAX_RPM: '30',
       COIN_MINT: '',
     });
     expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 12_500_000_000n });
     expect(cfg.keyEncryptionKey).toBe(KEY);
-    expect(cfg.jupiter.maxRpm).toBe(600);
+    expect(cfg.jupiter.maxRpm).toBe(30);
     expect(cfg.coinMint).toBeUndefined();
+  });
+
+  it('the Jupiter budget is capped at 40 calls a minute (Free tier is 60): a higher value is refused', () => {
+    expect(loadConfig({ JUPITER_MAX_RPM: '40' }).jupiter.maxRpm).toBe(40);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '41' })).toThrow(/JUPITER_MAX_RPM/);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '600' })).toThrow(/JUPITER_MAX_RPM/);
+    expect(() => loadConfig({ JUPITER_MAX_RPM: '0' })).toThrow(/JUPITER_MAX_RPM/);
   });
 
   it('fake claims only exist in dry run', () => {

@@ -121,7 +121,9 @@ const envSchema = z.object({
 
   JUPITER_API_KEY: optStr,
   JUPITER_BASE_URL: z.string().trim().url().default('https://api.jup.ag'),
-  JUPITER_MAX_RPM: intStr(55, 1, 100_000),
+  // Hard cap on the worker's Jupiter calls per rolling minute (prices + builds + retries). We stay on the Free tier
+  // (60 per minute per organisation): 40 at most, the rest is left for the CLI and scripts on the same key.
+  JUPITER_MAX_RPM: intStr(40, 1, 40),
 
   SALARY_SOL: solStr('0.03'),
   HIRE_OVERHEAD_EST_SOL: solStr('0.0025'),
@@ -142,7 +144,8 @@ const envSchema = z.object({
   SPEND_ALERT_PCT: intStr(50, 1, 100),
 
   CLAIM_INTERVAL_SEC: intStr(35, 1),
-  PRICE_INTERVAL_SEC: intStr(15, 1),
+  // one batched Price API call for every mint; the site smooths the numbers between updates
+  PRICE_INTERVAL_SEC: intStr(45, 1),
   FREEZE_INTERVAL_SEC: intStr(35, 1),
   PRICE_STALE_SEC: intStr(900, 1),
   RECONCILE_BATCH: intStr(500, 1, 10_000),
