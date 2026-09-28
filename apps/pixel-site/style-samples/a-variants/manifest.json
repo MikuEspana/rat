@@ -1,0 +1,157 @@
+{
+  "about": "Style A variations after the owner picked A. New art: 3 PixelLab generations (map objects). Everything else is free pixelart_workbench edits of existing PixelLab art, or layout (rooms, crowd shot, ticker skew). Rat grids are 5 columns x 4 rows of 68px cells.",
+  "generations": [
+    {
+      "id": "props_sheet",
+      "file": "props/props_sheet_source.png",
+      "tool": "create_map_object",
+      "pixellabId": "d861c699-7d0e-4cb4-83ec-5aa5726bcd75",
+      "costGenerations": 1,
+      "args": {
+        "description": "sprite sheet of six separate small office props in one row with empty space between them, not touching: potted green leafy plant, white coffee mug, neat stack of white papers, coiled black computer cables, desk lamp with warm yellow glow, small grey trash bin. Clean bright corporate office, isometric three-quarter view",
+        "width": 320,
+        "height": 80,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "derived": [
+        "props/plant.png",
+        "props/mug.png",
+        "props/papers.png",
+        "props/lamp_only.png",
+        "props/cables.png",
+        "props/bin.png (cut on empty columns; lamp and cables split at x<=20,y>=25)"
+      ]
+    },
+    {
+      "id": "wall_ticker",
+      "file": "props/ticker_source.png",
+      "tool": "create_map_object",
+      "pixellabId": "1c98567d-1ad4-4efc-9ec9-7e86bafc731e",
+      "costGenerations": 1,
+      "args": {
+        "description": "wide wall-mounted digital stock ticker screen, dark glass panel showing glowing green and red numbers and small up and down arrows, thin silver frame, front view, flat, clean corporate office",
+        "width": 128,
+        "height": 48,
+        "view": "side",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "derived": [
+        "props/ticker_right_wall.png (each column shifted down x/2 px to sit on an isometric wall face; the renderer can skew it the same way)"
+      ]
+    },
+    {
+      "id": "chair",
+      "file": "props/chair_source.png",
+      "tool": "create_map_object",
+      "pixellabId": "4794a88f-5425-4537-bcb3-7ec072d8f736",
+      "costGenerations": 1,
+      "args": {
+        "description": "modern light grey office swivel chair with black wheels, empty, isometric three-quarter view, clean corporate office",
+        "width": 48,
+        "height": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "derived": [
+        "props/chair.png (cropped)"
+      ]
+    }
+  ],
+  "freeEdits": [
+    {
+      "id": "rat_analyst",
+      "file": "rat/analyst.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "4eeec1f2-e327-4be7-bd58-74bc78d6fa0c",
+      "source": "a-blueprint rat frames (5x4 grid: 8 rotations S..SW, 4 idle SE, 8 walk SE)",
+      "changes": "edits/rat_analyst_from_phase1.json",
+      "summary": "navy suit below each collar row, red tie, thin tail edge kept grey, 1px outer outline #16182c"
+    },
+    {
+      "id": "rat_intern",
+      "file": "rat/intern.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "64cbe6e2-6649-49cc-89f8-74dd7feff2a1",
+      "source": "rat/analyst.png",
+      "summary": "map #2d3b6e->#7a5a32, #1f2850->#57401f (brown/khaki suit), tie stays red"
+    },
+    {
+      "id": "rat_associate",
+      "file": "rat/associate.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "8523e7f8-6659-4b16-9764-84659437878d",
+      "source": "rat/analyst.png",
+      "summary": "suit #2f6a3e/#1f4a2a forest green, tie #e0b12e gold"
+    },
+    {
+      "id": "rat_vp",
+      "file": "rat/vp.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "b0b9ef41-ebfb-407e-abb8-9194b75a209c",
+      "source": "rat/analyst.png",
+      "summary": "suit #74203a/#511527 burgundy, tie #e0b12e gold"
+    },
+    {
+      "id": "rat_partner",
+      "file": "rat/partner.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "9fb6716b-344f-4d35-8693-447d6fad0895",
+      "source": "rat/analyst.png",
+      "summary": "suit #23232b/#16161c black, tie gold, seam color #322e33 -> #d4a82a only on interior pixels in the 11 rows under the collar (lapel trim)"
+    },
+    {
+      "id": "rat_frozen",
+      "file": "rat/frozen.png",
+      "tool": "pixelart_workbench edit",
+      "workbenchImageId": "d64cc127-ecf7-42d0-873c-cae54ff25288",
+      "source": "rat/analyst.png",
+      "summary": "every color to luminance grey in a 70..228 band, outline kept"
+    },
+    {
+      "id": "desk_lit",
+      "file": "props/desk_lit.png",
+      "tool": "pixelart_workbench edit",
+      "source": "a-blueprint/desk.png",
+      "changes": "edits/desk_lit.json",
+      "summary": "screen #32304c -> green, 4 short text lines"
+    },
+    {
+      "id": "desk_wood",
+      "file": "props/desk_wood.png",
+      "tool": "pixelart_workbench edit",
+      "source": "a-blueprint/desk.png",
+      "changes": "edits/desk_wood.json",
+      "summary": "lit screen plus warm oak top with grain, mug and monitor edges masked"
+    },
+    {
+      "id": "desk_dense",
+      "file": "props/desk_dense.png",
+      "tool": "pixelart_workbench edit",
+      "source": "props/desk_lit.png",
+      "changes": "edits/desk_dense.json",
+      "summary": "hand-drawn clutter: blue folder, paper, sticky note, red mug, cable"
+    }
+  ],
+  "layouts": [
+    "A1_room.png",
+    "A2_room.png",
+    "A3_room.png",
+    "rooms_side_by_side.png",
+    "crowd_30.png",
+    "crowd_30_2x.png",
+    "tiers.png"
+  ],
+  "renderEffects": [
+    "A2 warm light: additive orange radial glow limited to non-background pixels (a renderer light, not art)"
+  ],
+  "generationsThisRound": 3,
+  "generationsTotal": 21,
+  "generationsLeft": 19
+}

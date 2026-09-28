@@ -1,0 +1,323 @@
+{
+  "about": "Phase 1 style samples. Every file here came from one PixelLab MCP tool call (https://api.pixellab.ai/mcp). Re-run the same tool with the same args to regenerate. create_character and create_map_object take no seed, so a regeneration is a new variation. room.png and room.gif are layouts of these files, no new art.",
+  "styles": {
+    "A": {
+      "dir": "a-blueprint",
+      "summary": "Blueprint: pale, clean, high detail, soft selective outline"
+    },
+    "B": {
+      "dir": "b-arcade",
+      "summary": "Arcade: chunky 16-bit, black outline, flat bold colors, chibi"
+    },
+    "C": {
+      "dir": "c-noir",
+      "summary": "Noir: dark, lineless, painterly shading, moody CRT green"
+    }
+  },
+  "assets": [
+    {
+      "id": "a-blueprint/floor",
+      "file": "a-blueprint/floor.png",
+      "style": "A",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "clean pale grey office floor tiles with thin light blue seams, modern corporate lobby",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1001
+      },
+      "pixellabId": "65e1f28f-1f38-4fb0-947a-1aa27979fe28",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/wall",
+      "file": "a-blueprint/wall.png",
+      "style": "A",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "white modern office partition wall block with a light blue frosted glass strip and grey baseboard",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "highly detailed",
+        "seed": 1002
+      },
+      "pixellabId": "6fb88361-79b4-4cf4-9458-3123a5990701",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/desk",
+      "file": "a-blueprint/desk.png",
+      "style": "A",
+      "tool": "create_map_object",
+      "args": {
+        "description": "modern white office desk with a slim computer monitor, keyboard and a coffee mug, isometric three-quarter view, clean corporate",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail"
+      },
+      "pixellabId": "c69a4af7-cbe0-4c94-9906-8b24bbec5102",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/floor",
+      "file": "b-arcade/floor.png",
+      "style": "B",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "bold teal and navy checkered office carpet tile, chunky retro arcade game style",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "seed": 2001
+      },
+      "pixellabId": "d33f7360-1b9e-4330-b963-cd4f7e7ab7a7",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/wall",
+      "file": "b-arcade/wall.png",
+      "style": "B",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "bright yellow office wall block with a red stripe, chunky retro arcade game style",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "seed": 2002
+      },
+      "pixellabId": "98c13ed8-17a6-4413-ba33-825c47396d9d",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/desk",
+      "file": "b-arcade/desk.png",
+      "style": "B",
+      "tool": "create_map_object",
+      "args": {
+        "description": "chunky cartoon wooden office desk with a boxy retro computer and keyboard, bold saturated colors, isometric three-quarter view",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "single color outline",
+        "shading": "flat shading",
+        "detail": "low detail"
+      },
+      "pixellabId": "7cb40d51-a5d2-4211-8483-f3b9f167abfd",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/floor",
+      "file": "c-noir/floor.png",
+      "style": "C",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "dark worn brown office carpet floor tile with faint coffee stains, dim moody noir lighting",
+        "size": 32,
+        "tile_shape": "thin tile",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "seed": 3001
+      },
+      "pixellabId": "27305191-6d69-4477-8147-34ec0deba6b5",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/wall",
+      "file": "c-noir/wall.png",
+      "style": "C",
+      "tool": "create_isometric_tile",
+      "args": {
+        "description": "dark green wood paneled office wall block with brass trim, dim noir mood",
+        "size": 32,
+        "tile_shape": "block",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "seed": 3002
+      },
+      "pixellabId": "39fd027f-41f9-4bdb-859f-bfd352d3e392",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/desk",
+      "file": "c-noir/desk.png",
+      "style": "C",
+      "tool": "create_map_object",
+      "args": {
+        "description": "cluttered dark wooden office desk with a glowing green CRT monitor, stacks of papers and a coffee cup, dim noir lighting, isometric three-quarter view",
+        "width": 64,
+        "height": 64,
+        "view": "high top-down",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail"
+      },
+      "pixellabId": "09a0ae94-377a-42c7-93eb-741b6614ed51",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat",
+      "file": "a-blueprint/rat_rotations.png",
+      "style": "A",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat A Blueprint",
+        "description": "anthropomorphic grey rat office worker standing upright, crisp light grey business suit, white shirt, thin blue tie, pink ears and long pink tail, clean corporate look",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 48,
+        "view": "high top-down",
+        "outline": "selective outline",
+        "shading": "basic shading",
+        "detail": "high detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"stylized\"}"
+      },
+      "pixellabId": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat_idle",
+      "file": "a-blueprint/rat_idle.gif",
+      "style": "A",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "9a2e6da8-7f9b-48dc-81c9-33ad2bc45490",
+      "costGenerations": 1
+    },
+    {
+      "id": "a-blueprint/rat_walk",
+      "file": "a-blueprint/rat_walk.gif",
+      "style": "A",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "9b0400de-c980-4b55-b4a5-4f4a489f9255",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "23723beb-1b88-4b40-9ff8-aa5c77a8a7af",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat",
+      "file": "b-arcade/rat_rotations.png",
+      "style": "B",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat B Arcade",
+        "description": "cute chubby brown rat standing upright wearing a navy blue business suit and bright red tie, big round pink ears, pink tail, bold saturated colors",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 32,
+        "view": "high top-down",
+        "outline": "single color black outline",
+        "shading": "flat shading",
+        "detail": "low detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"chibi\"}"
+      },
+      "pixellabId": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat_idle",
+      "file": "b-arcade/rat_idle.gif",
+      "style": "B",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "6cc724e2-abb9-4cc9-8876-352b460bdeb4",
+      "costGenerations": 1
+    },
+    {
+      "id": "b-arcade/rat_walk",
+      "file": "b-arcade/rat_walk.gif",
+      "style": "B",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "4c47cd6a-08f6-46d6-8bda-582e305fdd42",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "d32a2067-e319-4e3f-8111-67f66f21dd6f",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat",
+      "file": "c-noir/rat_rotations.png",
+      "style": "C",
+      "tool": "create_character",
+      "args": {
+        "name": "Rat C Noir",
+        "description": "scrawny tired sewer rat standing upright in a rumpled dark charcoal pinstripe suit, loosened green tie, dark circles under eyes, long pink tail, moody dim lighting",
+        "mode": "standard",
+        "n_directions": 8,
+        "size": 48,
+        "view": "high top-down",
+        "outline": "lineless",
+        "shading": "detailed shading",
+        "detail": "medium detail",
+        "proportions": "{\"type\": \"preset\", \"name\": \"cartoon\"}"
+      },
+      "pixellabId": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat_idle",
+      "file": "c-noir/rat_idle.gif",
+      "style": "C",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+        "template_animation_id": "breathing-idle",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "0b8a576b-54e2-4901-93cb-8f4a58701011",
+      "costGenerations": 1
+    },
+    {
+      "id": "c-noir/rat_walk",
+      "file": "c-noir/rat_walk.gif",
+      "style": "C",
+      "tool": "animate_character",
+      "args": {
+        "character_id": "a61c0508-6236-4b4b-8184-2b1c650f8e8a",
+        "template_animation_id": "walking-8-frames",
+        "directions": [
+          "south-east"
+        ]
+      },
+      "pixellabId": "d0b75169-3629-43d5-b284-07753dba5f89",
+      "costGenerations": 1
+    }
+  ],
+  "totalGenerations": 18
+}
