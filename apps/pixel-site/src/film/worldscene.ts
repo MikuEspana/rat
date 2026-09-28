@@ -72,6 +72,8 @@ export class WorldScene {
   private buttonHi: Sprite;
   private target: number | null = null;
   private lastCount = '';
+  /** ?film&play (a preview in real time): when a slow machine falls behind, skip ahead instead of catching up */
+  preview = false;
 
   constructor(readonly view: View, private atlas: Atlas, private showText: boolean) {
     this.sky.resize(view.w, view.h);
@@ -348,9 +350,10 @@ export class WorldScene {
     if (frame < this.cur - 0 || this.cur < frameOf(WORLD_B0) - 1) this.reset();
     // every step sets the camera it would have had: the world culls by view, so the sequence of calls is the same
     // whether the scene steps here frame by frame or catches up in one go
+    if (this.preview && frame - this.cur > 4) this.cur = frame - 4; // behind: skip time (events still fire)
     while (this.cur < frame) {
       this.step(++this.cur);
-      this.applyView(this.cur / FPS / BEAT, this.cur);
+      if (!this.preview || this.cur === frame) this.applyView(this.cur / FPS / BEAT, this.cur);
     }
     const cam = this.applyView(b, frame);
     return this.overlays(b, frame, cam);

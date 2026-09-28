@@ -147,7 +147,10 @@ export async function bootFilm(): Promise<void> {
       show(office);
       office.frame(b, frame);
     } else if (which === 'world') {
-      world ??= new WorldScene(view, atlas, textOn);
+      if (!world) {
+        world = new WorldScene(view, atlas, textOn);
+        world.preview = q.has('play');
+      }
       show(world);
       flashA = world.frame(b, frame);
     } else {
