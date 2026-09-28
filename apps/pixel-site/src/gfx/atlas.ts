@@ -202,7 +202,7 @@ export async function loadAtlas(): Promise<Atlas> {
     // accessory overlays follow the same poses: acc/<kind>/<anim>, frame for frame
     if (name.startsWith('analyst/')) {
       const anim = name.slice('analyst/'.length);
-      for (const acc of ACCESSORIES) anims.set(`acc/${acc}/${anim}`, list.map((k) => frames.get(`rat:acc/${acc}/${k.slice('analyst/'.length)}`)!));
+      for (const acc of [...ACCESSORIES, 'hat_hard']) anims.set(`acc/${acc}/${anim}`, list.map((k) => frames.get(`rat:acc/${acc}/${k.slice('analyst/'.length)}`)!));
     }
   }
   return {

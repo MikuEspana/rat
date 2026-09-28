@@ -1,0 +1,142 @@
+{
+ "alley_0": {
+  "w": 58,
+  "h": 54,
+  "guess": "green metal dumpster on wheels"
+ },
+ "alley_1": {
+  "w": 54,
+  "h": 50,
+  "guess": "stack of wooden pallets"
+ },
+ "alley_2": {
+  "w": 74,
+  "h": 63,
+  "guess": "pile of black garbage bags"
+ },
+ "alley_3": {
+  "w": 50,
+  "h": 43,
+  "guess": "two orange and white striped traffic barrels lying on their sides"
+ },
+ "alley_4": {
+  "w": 45,
+  "h": 72,
+  "guess": "blue portable toilet"
+ },
+ "apartment_tower_0": {
+  "w": 172,
+  "h": 296,
+  "guess": "tall grey concrete apartment tower (about fourteen floors), rows of lit windows, grass plot with trees and a tiny person"
+ },
+ "corner_store_0": {
+  "w": 174,
+  "h": 140,
+  "guess": "small convenience store with a bright lit shop window and a roof sign reading SHOP (sign letters hand-repainted from the generated SHIT)"
+ },
+ "cottage_0": {
+  "w": 139,
+  "h": 137,
+  "guess": "small yellow one-storey cottage, red door, lit windows, grey roof and chimney, two trees on a grass plot"
+ },
+ "diner_0": {
+  "w": 193,
+  "h": 144,
+  "guess": "retro chrome diner with pink neon DINER sign on the roof and a second small DINER sign, on a tiled plot"
+ },
+ "evil_office_0": {
+  "w": 205,
+  "h": 263,
+  "guess": "black glass office block with glowing red and orange window strips and a lit entrance"
+ },
+ "fences_0": {
+  "w": 52,
+  "h": 68,
+  "guess": "grey chain-link fence section (see-through mesh)"
+ },
+ "fences_1": {
+  "w": 55,
+  "h": 67,
+  "guess": "orange and yellow striped barrier board on two wooden legs"
+ },
+ "fences_2": {
+  "w": 51,
+  "h": 64,
+  "guess": "chain-link fence gate with a yellow padlock (see-through mesh)"
+ },
+ "fences_3": {
+  "w": 49,
+  "h": 67,
+  "guess": "wooden board on posts with a blank white sign panel (for a KEEP OUT sign, no text)"
+ },
+ "fences_4": {
+  "w": 50,
+  "h": 67,
+  "guess": "orange plastic mesh construction fence section"
+ },
+ "food_truck_0": {
+  "w": 63,
+  "h": 48,
+  "guess": "red and cream food truck with red and white striped awnings over the serving window"
+ },
+ "fountain_0": {
+  "w": 54,
+  "h": 58,
+  "guess": "small round stone park fountain, two tiers with blue water"
+ },
+ "gas_station_0": {
+  "w": 176,
+  "h": 128,
+  "guess": "small gas station shop with a pink lit band, two red pumps in front and a lit price sign on a pole (no canopy over the pumps)"
+ },
+ "office_low_0": {
+  "w": 200,
+  "h": 186,
+  "guess": "low wide white office block, four floors of lit white windows, glass entrance, pale blue plot (smoother, less outlined than the rest)"
+ },
+ "office_mid_0": {
+  "w": 198,
+  "h": 251,
+  "guess": "blue glass office tower with white floor bands (about ten floors, taller than asked), trees and grass on the plot"
+ },
+ "parking_garage_0": {
+  "w": 190,
+  "h": 162,
+  "guess": "open three-level concrete parking garage with red, blue and white cars inside and a parking sign post"
+ },
+ "street2_0": {
+  "w": 42,
+  "h": 70,
+  "guess": "red newspaper box (reads like a post box)"
+ },
+ "street2_1": {
+  "w": 33,
+  "h": 64,
+  "guess": "concrete planter box with a small green tree"
+ },
+ "street2_2": {
+  "w": 18,
+  "h": 63,
+  "guess": "grey parking meter on a pole"
+ },
+ "street2_3": {
+  "w": 25,
+  "h": 72,
+  "guess": "street name sign on a pole, red and blue plates with gibberish text"
+ },
+ "street2_4": {
+  "w": 33,
+  "h": 66,
+  "guess": "glowing yellow vending kiosk with a lit blue screen"
+ },
+ "townhouses_0": {
+  "w": 208,
+  "h": 167,
+  "guess": "row of three narrow two-storey townhouses (blue, red, grey) with pitched roofs, chimneys and lit windows on a dark pavement strip"
+ },
+ "warehouse_0": {
+  "w": 206,
+  "h": 144,
+  "guess": "red brick warehouse with a big grey roll-up loading door, side door, flat roof, concrete plot"
+ }
+}

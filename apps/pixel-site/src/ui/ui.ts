@@ -8,7 +8,15 @@ import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
 import { DEBUG_MAX_RATS } from '../config';
 import { now as clockNow } from '../now';
-import { STAGES } from '../floor/plan';
+import { STAGES, stageOf } from '../floor/plan';
+import { headlines, type NewsStats } from './news';
+import type { Growth } from '../floor/growth';
+import { sound } from './sound';
+
+type Progress = ReturnType<Growth['progress']>;
+
+/** Badges by the stage the company was in when a rat was hired. */
+const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
 import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
@@ -106,10 +114,19 @@ export class Ui {
   private milestoneTimer = 0;
   private selected: number | null = null;
   private marker = new Graphics();
+  /** the news ticker along the bottom */
+  private news = el('div', 'news');
+  private newsText = el('div', 'news-text');
+  /** find my rat: the room darkens round the rat you looked up */
+  private spot = el('div', 'spotlight');
+  private spotOn = false;
+  /** extra HUD buttons (timelapse) */
+  readonly tools = el('div', 'hud-tools');
 
   constructor(private readonly d: UiDeps) {
     document.body.appendChild(this.root);
-    this.root.append(this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.milestoneEl);
+    this.root.append(this.spot, this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.milestoneEl, this.news);
+    this.spot.hidden = true;
     this.milestoneEl.hidden = true;
     this.card.hidden = true;
     this.banner.hidden = true;
@@ -144,7 +161,20 @@ export class Ui {
   private buildHud(): HTMLElement {
     const hud = el('div', 'hud panel');
     const title = el('div', 'title');
-    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip);
+    const find = el('form', 'find');
+    const input = el('input', 'find-input');
+    input.placeholder = 'find my rat: wallet or #id';
+    input.setAttribute('aria-label', 'find my rat by wallet or rat number');
+    const go = el('button', 'find-go', 'FIND');
+    const note = el('span', 'find-note', '');
+    find.append(input, go, note);
+    find.onsubmit = (e) => {
+      e.preventDefault();
+      const id = this.find(input.value);
+      note.textContent = id === null ? 'no rat found' : '';
+      if (id !== null) this.spotlight(id);
+    };
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
@@ -244,6 +274,13 @@ export class Ui {
       if (pos && rec) {
         this.marker.visible = true;
         this.marker.position.set(pos.x, pos.y - 54 * TIER_SCALE[rec.view.tier] - 4 + Math.sin(performance.now() / 160) * 2);
+        if (this.spotOn) {
+          const cam = this.d.camera;
+          const sx = pos.x * cam.zoom + cam.x;
+          const sy = (pos.y - 24) * cam.zoom + cam.y;
+          const r = Math.max(40, 46 * cam.zoom);
+          this.spot.style.background = `radial-gradient(circle at ${sx.toFixed(0)}px ${sy.toFixed(0)}px, rgba(7,10,20,0) ${r.toFixed(0)}px, rgba(7,10,20,0.72) ${(r * 2.4).toFixed(0)}px)`;
+        }
       }
     }
   }
@@ -300,31 +337,98 @@ export class Ui {
   }
 
   // ------------------------------------------------------------------ idle game
-  /** Stage name and the bar to the next stage ("SMALL OFFICE: 12 / 25 rats"). */
-  setStage(name: string, rats: number): void {
-    const k = Math.max(0, STAGES.findIndex((s) => s.name === name));
-    const next = STAGES[k + 1];
-    const from = STAGES[k]!.min;
-    const fill = next ? Math.max(0, Math.min(1, (rats - from) / (next.min - from))) : 1;
-    const bar = el('div', 'stage-bar');
-    const inner = el('i', '');
-    inner.style.width = `${(fill * 100).toFixed(1)}%`;
-    bar.append(inner);
-    const label = next
-      ? `${next.name}: ${rats.toLocaleString('en-US')} / ${next.min.toLocaleString('en-US')} rats`
-      : `${name}: ${rats.toLocaleString('en-US')} rats, the top`;
-    this.stageChip.replaceChildren(el('span', 'stage-now', name), bar, el('span', 'stage-next', label));
+  /**
+   * Stage name and three nested bars: the desk room filling up, the next room to unlock, the next stage
+   * ("FULL FLOOR: 88 / 100 rats"). Bars that have nothing left to count hide.
+   */
+  setStage(name: string, rats: number, progress?: Progress): void {
+    const bars = el('div', 'stage-bars');
+    const row = (cls: string, fill: number, label: string): void => {
+      const r = el('div', `stage-row ${cls}`);
+      const bar = el('div', 'stage-bar');
+      const inner = el('i', '');
+      inner.style.width = `${(Math.max(0, Math.min(1, fill)) * 100).toFixed(1)}%`;
+      bar.append(inner);
+      r.append(bar, el('span', 'stage-next', label));
+      bars.append(r);
+    };
+    const n = (v: number): string => v.toLocaleString('en-US');
+    const p = progress;
+    if (p?.desk) row('desk', p.desk.filled / Math.max(1, p.desk.total), `${p.desk.label}: ${n(p.desk.filled)} / ${n(p.desk.total)} seats`);
+    if (p?.room) row('room', (rats - p.room.from) / Math.max(1, p.room.at - p.room.from), `${p.room.label}: ${n(rats)} / ${n(p.room.at)} rats`);
+    if (p?.stage) row('stage', (rats - p.stage.from) / Math.max(1, p.stage.at - p.stage.from), `${p.stage.label}: ${n(rats)} / ${n(p.stage.at)} rats`);
+    else if (!p) {
+      const k = Math.max(0, STAGES.findIndex((s) => s.name === name));
+      const next = STAGES[k + 1];
+      if (next) row('stage', (rats - STAGES[k]!.min) / (next.min - STAGES[k]!.min), `${next.name}: ${n(rats)} / ${n(next.min)} rats`);
+    } else row('stage', 1, `${name}: ${n(rats)} rats, the top`);
+    this.stageChip.replaceChildren(el('span', 'stage-now', name), bars, this.soundBtn);
   }
 
-  /** Big banner for a new stage; fades out on its own. */
-  milestone(title: string, sub: string): void {
-    this.milestoneEl.replaceChildren(el('div', 'ms-kicker', 'NEW STAGE UNLOCKED'), el('div', 'ms-title', title), el('div', 'ms-sub', sub));
+  private soundBtn = ((): HTMLButtonElement => {
+    const b = el('button', 'sound-toggle', sound.on ? 'SOUND ON' : 'SOUND OFF');
+    b.addEventListener('click', () => {
+      sound.set(!sound.on);
+      b.textContent = sound.on ? 'SOUND ON' : 'SOUND OFF';
+      if (sound.on) sound.room();
+    });
+    return b;
+  })();
+
+  /** New headlines for the ticker (the voice follows the stage). */
+  setNews(stats: NewsStats): void {
+    const lines = headlines(stats);
+    this.newsText.textContent = lines.join('   ///   ');
+    this.news.className = `news stage-${stats.stage}`;
+    if (!this.newsText.isConnected) this.news.append(el('span', 'news-tag', 'RAT NEWS'), this.newsText);
+    // speed: about 60 px a second whatever the length
+    this.newsText.style.animationDuration = `${Math.max(20, this.newsText.textContent.length * 0.14)}s`;
+  }
+
+  /** Find my rat: by wallet (whole or the start of it), by #id, or by name. */
+  find(query: string): number | null {
+    const q = query.trim();
+    if (!q) return null;
+    const idm = q.match(/^#?(\d+)$/);
+    if (idm) {
+      const id = Number(idm[1]);
+      return this.d.store.rats.has(id) ? id : null;
+    }
+    const low = q.toLowerCase();
+    for (const r of this.d.store.rats.values()) if (r.facts.wallet === q) return r.facts.id;
+    for (const r of this.d.store.rats.values()) if (q.length >= 4 && r.facts.wallet.startsWith(q)) return r.facts.id;
+    for (const r of this.d.store.rats.values()) if (r.facts.name.toLowerCase() === low) return r.facts.id;
+    return null;
+  }
+
+  /** Open a rat with the spotlight on it and put it in the address bar (a link you can share). */
+  spotlight(id: number): void {
+    this.open(id, true);
+    this.spotOn = true;
+    this.spot.hidden = false;
+    const url = new URL(location.href);
+    url.searchParams.set('rat', String(id));
+    history.replaceState(null, '', url.toString());
+  }
+
+  /** The era a rat was hired in, from its place in the hiring order: "FLOOR 1 OG". */
+  eraOf(id: number): string {
+    let before = 0;
+    for (const r of this.d.store.rats.keys()) if (r < id) before++;
+    return ERAS[stageOf(before + 1)] ?? '';
+  }
+
+  /** Big banner for a new stage (or a landmark: kicker 'UNLOCKED'); fades out on its own. */
+  milestone(title: string, sub: string, kicker = 'NEW STAGE UNLOCKED', ms?: number): void {
+    this.milestoneEl.replaceChildren(el('div', 'ms-kicker', kicker), el('div', 'ms-title', title), el('div', 'ms-sub', sub));
+    if (ms) this.milestoneEl.style.animationDuration = `${ms / 1000}s`;
+    else this.milestoneEl.style.animationDuration = '';
     this.milestoneEl.hidden = false;
     this.milestoneEl.classList.remove('show');
     void this.milestoneEl.offsetWidth;
     this.milestoneEl.classList.add('show');
     clearTimeout(this.milestoneTimer);
-    this.milestoneTimer = window.setTimeout(() => (this.milestoneEl.hidden = true), 4200);
+    this.milestoneTimer = window.setTimeout(() => (this.milestoneEl.hidden = true), ms ?? 4200);
   }
 
   setRats(rats: RatSystem): void {
@@ -416,6 +520,8 @@ export class Ui {
   }
 
   close(): void {
+    this.spotOn = false;
+    this.spot.hidden = true;
     this.selected = null;
     this.card.hidden = true;
     this.marker.visible = false;
@@ -457,7 +563,8 @@ export class Ui {
     const badge = el('span', 'badge', TIER_LABEL[look]);
     badge.style.background = TIER_COLOR[look];
     badge.dataset.tier = look;
-    who.append(el('div', 'card-name', v.name), badge);
+    const era = el('span', 'badge era', this.eraOf(id));
+    who.append(el('div', 'card-name', v.name), badge, era);
     head.append(this.sprite(look), who, close);
     const grid = el('dl', 'card-grid');
     const row = (k: string, val: string, cls = ''): void => {
@@ -473,6 +580,16 @@ export class Ui {
     if (this.d.simulated) links.append(el('span', 'card-note', 'simulated rat: made-up wallet, nothing on chain'));
     else links.append(link(v.solscanUrl, 'Wallet on Solscan'));
     if (rec.estimated) links.append(el('span', 'card-note', 'value estimated since hire; exact after reload'));
+    const share = el('button', 'card-share', 'COPY LINK');
+    share.onclick = () => {
+      const url = new URL(location.href);
+      url.searchParams.set('rat', String(id));
+      void navigator.clipboard?.writeText(url.toString()).then(
+        () => (share.textContent = 'LINK COPIED'),
+        () => (share.textContent = url.toString()),
+      );
+    };
+    links.append(share);
     this.card.replaceChildren(head, grid, links);
     this.card.hidden = false;
   }

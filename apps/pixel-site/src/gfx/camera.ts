@@ -34,7 +34,16 @@ export class Camera {
     el.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
   }
 
+  /** when the viewer last touched the camera (ms, performance.now) */
+  lastInput = -1e9;
+  /** true while the viewer drags or has just moved the camera: automatic flights stay out of the way */
+  get userBusy(): boolean {
+    return this.dragging || performance.now() - this.lastInput < 4000;
+  }
+  private flight = 0;
+
   private down(e: PointerEvent): void {
+    this.lastInput = performance.now();
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.dragging = true;
     this.moved = 0;
@@ -67,6 +76,8 @@ export class Camera {
     this.last = { x: e.clientX, y: e.clientY };
     this.x += dx;
     this.y += dy;
+    this.lastInput = performance.now();
+    if (this.moved > 5) this.flight++; // dragging stops any flight
     this.apply();
   }
 
@@ -82,6 +93,8 @@ export class Camera {
 
   private wheel(e: WheelEvent): void {
     e.preventDefault();
+    this.lastInput = performance.now();
+    this.flight++; // a wheel stops any flight
     const factor = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015));
     this.zoomAt(e.clientX, e.clientY, factor);
   }
@@ -105,11 +118,13 @@ export class Camera {
 
   /** Glide to centre a world point at a zoom level. */
   flyTo(wx: number, wy: number, zoom: number, ms = 450): void {
+    const id = ++this.flight;
     const from = { x: this.x, y: this.y, z: this.zoom };
     const z = Math.min(this.maxZoom, Math.max(this.minZoom, zoom));
     const to = { x: this.el.clientWidth / 2 - wx * z, y: this.el.clientHeight / 2 - wy * z, z };
     const t0 = performance.now();
     const step = (now: number): void => {
+      if (id !== this.flight) return; // a newer flight or the viewer took over
       const u = Math.min(1, (now - t0) / ms);
       const e = u * u * (3 - 2 * u);
       this.zoom = from.z + (to.z - from.z) * e;
@@ -119,6 +134,28 @@ export class Camera {
       if (u < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+  }
+
+  private shakeLeft = 0;
+  private shakePx = 0;
+
+  /** Screen shake (px on screen, seconds). */
+  shake(px: number, seconds: number): void {
+    this.shakePx = px;
+    this.shakeLeft = seconds;
+  }
+
+  /** Call every frame: runs the shake. */
+  tick(dt: number): void {
+    if (this.shakeLeft <= 0) return;
+    this.shakeLeft -= dt;
+    const s = this.shakeLeft > 0 ? this.shakePx : 0;
+    this.world.position.set(Math.round(this.x + (Math.random() * 2 - 1) * s), Math.round(this.y + (Math.random() * 2 - 1) * s));
+  }
+
+  /** The world point at the centre of the screen now. */
+  centre(): { x: number; y: number; zoom: number } {
+    return { x: (this.el.clientWidth / 2 - this.x) / this.zoom, y: (this.el.clientHeight / 2 - this.y) / this.zoom, zoom: this.zoom };
   }
 
   apply(): void {

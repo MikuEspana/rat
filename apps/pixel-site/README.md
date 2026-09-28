@@ -74,6 +74,25 @@ Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 7000, with
 
 Screenshots: `assets/preview/idle_stages_*.png` (every stage at zoom 0.4 and 0.9, and the whole building), `assets/preview/idle_milestone.png`.
 
+### Landmarks
+
+Each milestone unlocks one set piece. The camera flies to it, holds 3.6 s under an "UNLOCKED" banner and eases back (click or any key skips; never while you drag).
+
+| Rats | Landmark | Where |
+|---|---|---|
+| 10 | Espresso shrine | on the garage's furnace plaza |
+| 25 | Ping pong table | small office lobby |
+| 50 | Crypto trading pit | first open-plan room |
+| 100 | Glass elevator | up the office tower behind the back corner; the tower gains a floor every 30 rats |
+| 250 | Basement gym and nap pods | dug under a lot beside the office |
+| 500 | Rooftop helipad | on the tower, with the CEO's helicopter |
+| 1000 | Giant golden rat | corporate lobby |
+| 1500 | Rooftop pool party | on the second tower (megacorp), joined to the first by a sky bridge |
+| 2000 | Rat rocket launchpad | a big lot across the cross street |
+| 3000 | Evil throne room | the war room, with a laser beam into the sky |
+
+Each ring also opens one wing at a time (L or T shapes; closed wings stay city lots), and from the corporate floor an annex stands across the avenue, reached by a sky bridge. Reveals: `assets/preview/landmark_reveals.png`.
+
 ## Data
 
 Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB roster:
@@ -91,13 +110,16 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 | `src/floor/growth.ts` | The idle game: replays rats in id order, builds stages, amenities and desk rooms on demand, gives every rat a desk, and the walk mask of what stands. |
 | `src/floor/pack.ts` | Packs rooms into a rectangle with no gaps (a slicing floor plan), splits chosen for near-square rooms. |
 | `src/floor/furnish.ts` | Fills each room: desk pods facing each other and rows along the front walls, props along walls, activity spots, rugs, worn patches, clutter that never cuts off a chair, things hung on walls. |
+| `src/floor/city.ts` | The city round the office per stage: avenue, cross street and alley, irregular blocks split into lots with a purpose each, falloff and a dithered edge, street furniture by Poisson disk, street scenes, traffic, the landmark on the opposite diagonal. Pure, deterministic, tested. |
+| `src/floor/landmarks.ts`, `src/world/landmarks.ts` | The 10 landmark unlocks (thresholds, tower floors and footprints) and how each is drawn: interior set pieces in their kept-clear spots, the towers, helipad, pool, sky bridges, the annex, the basement gym and the rocket. |
+| `src/ui/news.ts`, `src/ui/sound.ts` | The RAT NEWS ticker (headlines from the live numbers, darker each stage) and the unlock chimes (WebAudio, off until switched on). |
 | `src/floor/vignettes.ts` | 18 authored scenes with posed extras, dropped whole into rooms that fit them, and the easter eggs. |
 | `src/floor/path.ts` | Walking routes: breadth-first distance fields (cached per target, windowed for short errands), walked with as few turns as possible. |
 | `src/world/build.ts` | What stands: floors per room type, blueprint lots with lock signs, thin cutaway walls, desk pods (or their building sites), props, vignette extras, wall pieces, the Vault (with its glow, sign and a flare when money lands) and light beam, glows, blinking server lights, wall tickers, room signs, the JOB FAIR sign, and the city round the building (per stage, with traffic). Rebuilt when something gets built; new rooms get scaffolding, a crane and a dust puff. |
 | `src/world/rats.ts` | One particle per rat (plus one for its accessory): fur and accessory from the avatar seed; seated facing the camera or its screen, sulking, cheering, napping, walking, frozen; errands to activity spots; box carrying; desk pools (CEO office for partners); chairs reappear when a rat gets up; the job-fair line outside: applicants (shown as interns; up to 2,000 drawn, the rest counted; the first 60 of a claim walk up from the subway) and hired rats with no desk; a hire takes the front applicant and walks it in, and the line moves up. |
 | `src/world/money.ts` | Bills flying in an arc into the Vault (at most 160 in the air) and the "+$X" popups. Display only. |
 | `src/world/effects.ts` | Dust puffs where something just got built. |
-| `tools/build_gen.py`, `tools/build_rats2.py`, `tools/build_props3.py` | Art drawn in code (floors, walls, desk_back, rugs, tape), every rat look (tiers x furs, seated poses, accessory overlays), and the round 2 PixelLab props. |
+| `tools/build_gen.py`, `tools/build_rats2.py`, `tools/build_props3.py` | Art drawn in code (floors, walls, desk_back, rugs, tape, tower storeys, sky bridge and pylon), every rat look (tiers x furs, seated poses, accessory overlays), and the PixelLab props (rounds 2 to 4). |
 | `src/gfx/sky.ts` | The night sky behind the building. |
 | `src/gfx/layer.ts` | Depth-sorted, culled `ParticleContainer`. |
 | `src/data/` | API client, store (roster once, state and events after), stress padding. |

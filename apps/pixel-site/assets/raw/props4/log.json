@@ -1,0 +1,514 @@
+{
+ "_gens_used": 26,
+ "townhouses": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "95cfa3a3-5c0e-4f00-a1a7-412598f16a67",
+    "args": {
+     "description": "a row of three narrow two-storey townhouses in different colours, lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 95cfa3a3-5c0e-4f00-a1a7-412598f16a67\ndescription: a row of three narrow two-storey townhouses in different colours, lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"95cfa3a3-5c0e-4f00-a1a7-412598f16a67\")",
+    "result_text": "status: completed\nid: 95cfa3a3-5c0e-4f00-a1a7-412598f16a67\ndescription: a row of three narrow two-storey townhouses in different colours, lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:25\ndownload: https://api.pixellab.ai/mcp/map-objects/95cfa3a3-5c0e-4f00-a1a7-412598f16a67/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"95cfa3a3-5c0e-4f00-a1a7-412598f16a67\")",
+    "file": "townhouses_reject1.png"
+   },
+   {
+    "id": "61c224df-e42b-4127-ad09-aa8c25167b70",
+    "args": {
+     "description": "a row of three narrow two-storey townhouses joined side by side in different colours, lit windows, pitched roofs, seen from above at an angle showing the roofs and two side walls, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 61c224df-e42b-4127-ad09-aa8c25167b70\ndescription: a row of three narrow two-storey townhouses joined side by side in different colours, lit windows, pitched roofs, seen from above at an angle showing the roofs and two side walls, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"61c224df-e42b ...",
+    "result_text": "status: completed\nid: 61c224df-e42b-4127-ad09-aa8c25167b70\ndescription: a row of three narrow two-storey townhouses joined side by side in different colours, lit windows, pitched roofs, seen from above at an angle showing the roofs and two side walls, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:33\ndownload: https://api.pixellab.ai/mcp/map-objects/61c224df-e42b-4127-ad09-aa8c25167b70/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"61c224df-e42b-4127-ad09-aa8c25167b70\")",
+    "file": "townhouses.png"
+   }
+  ],
+  "picked": "61c224df-e42b-4127-ad09-aa8c25167b70",
+  "note": "attempt 1 (townhouses_reject1.png) was a flat front view on an oval, not isometric; retry prompt added joined side by side, pitched roofs, seen from above at an angle. Pick has a solid textured background, removed in the crop"
+ },
+ "cottage": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "48e9c3a8-e04a-4627-b1fa-e663dede904c",
+    "args": {
+     "description": "small yellow one-storey cottage with a red door and a lit window, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 48e9c3a8-e04a-4627-b1fa-e663dede904c\ndescription: small yellow one-storey cottage with a red door and a lit window, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"48e9c3a8-e04a-4627-b1fa-e663dede904c\")",
+    "result_text": "status: completed\nid: 48e9c3a8-e04a-4627-b1fa-e663dede904c\ndescription: small yellow one-storey cottage with a red door and a lit window, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 160x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:26\ndownload: https://api.pixellab.ai/mcp/map-objects/48e9c3a8-e04a-4627-b1fa-e663dede904c/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"48e9c3a8-e04a-4627-b1fa-e663dede904c\")",
+    "file": "cottage.png"
+   }
+  ],
+  "picked": "48e9c3a8-e04a-4627-b1fa-e663dede904c",
+  "note": ""
+ },
+ "diner": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "54aa16e8-2f7f-42a9-8431-40de4aef3acf",
+    "args": {
+     "description": "retro chrome diner with a glowing neon DINER sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 54aa16e8-2f7f-42a9-8431-40de4aef3acf\ndescription: retro chrome diner with a glowing neon DINER sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"54aa16e8-2f7f-42a9-8431-40de4aef3acf\")",
+    "result_text": "status: completed\nid: 54aa16e8-2f7f-42a9-8431-40de4aef3acf\ndescription: retro chrome diner with a glowing neon DINER sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:26\ndownload: https://api.pixellab.ai/mcp/map-objects/54aa16e8-2f7f-42a9-8431-40de4aef3acf/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"54aa16e8-2f7f-42a9-8431-40de4aef3acf\")",
+    "file": "diner.png"
+   }
+  ],
+  "picked": "54aa16e8-2f7f-42a9-8431-40de4aef3acf",
+  "note": ""
+ },
+ "corner_store": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "5846ba4c-7fb0-4b54-837b-0653eb4e2735",
+    "args": {
+     "description": "small convenience store with a bright lit shop window and a sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 192,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 5846ba4c-7fb0-4b54-837b-0653eb4e2735\ndescription: small convenience store with a bright lit shop window and a sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 192x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"5846ba4c-7fb0-4b54-837b-0653eb4e2735\")",
+    "result_text": "status: completed\nid: 5846ba4c-7fb0-4b54-837b-0653eb4e2735\ndescription: small convenience store with a bright lit shop window and a sign, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 192x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:26\ndownload: https://api.pixellab.ai/mcp/map-objects/5846ba4c-7fb0-4b54-837b-0653eb4e2735/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"5846ba4c-7fb0-4b54-837b-0653eb4e2735\")",
+    "file": "corner_store.png"
+   }
+  ],
+  "picked": "5846ba4c-7fb0-4b54-837b-0653eb4e2735",
+  "note": "the generated roof sign read SHIT; repainted the last two letters to OP by hand (corner_store_signfix.png, free, no retry) and cropped from that"
+ },
+ "office_low": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "7d07ed81-0bb4-49b3-9959-e9830bb04f70",
+    "args": {
+     "description": "three-storey modern office block, white panels, rows of lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 7d07ed81-0bb4-49b3-9959-e9830bb04f70\ndescription: three-storey modern office block, white panels, rows of lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"7d07ed81-0bb4-49b3-9959-e9830bb04f70\")",
+    "result_text": "status: completed\nid: 7d07ed81-0bb4-49b3-9959-e9830bb04f70\ndescription: three-storey modern office block, white panels, rows of lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:26\ndownload: https://api.pixellab.ai/mcp/map-objects/7d07ed81-0bb4-49b3-9959-e9830bb04f70/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"7d07ed81-0bb4-49b3-9959-e9830bb04f70\")",
+    "file": "office_low_reject1.png"
+   },
+   {
+    "id": "8470d73f-926a-4927-a486-5963b6222d2a",
+    "args": {
+     "description": "short wide low-rise modern office building, only three floors tall, white panels, rows of lit windows, flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 8470d73f-926a-4927-a486-5963b6222d2a\ndescription: short wide low-rise modern office building, only three floors tall, white panels, rows of lit windows, flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x224px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"8470d73f-926a-4927-a486-5963b6222d2a\")",
+    "result_text": "status: completed\nid: 8470d73f-926a-4927-a486-5963b6222d2a\ndescription: short wide low-rise modern office building, only three floors tall, white panels, rows of lit windows, flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x224px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:33\ndownload: https://api.pixellab.ai/mcp/map-objects/8470d73f-926a-4927-a486-5963b6222d2a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"8470d73f-926a-4927-a486-5963b6222d2a\")",
+    "file": "office_low.png"
+   }
+  ],
+  "picked": "8470d73f-926a-4927-a486-5963b6222d2a",
+  "note": "attempt 1 (office_low_reject1.png) was about eight floors (not low) and its white walls matched the white background, so removal ate the facade; retry says short wide low-rise, only three floors (came out four). Pick had a dark blue background, cast shadow and glow ellipse, all removed in the crop"
+ },
+ "office_mid": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "e2c7fe7a-7e5c-42a7-90db-b0098173bb07",
+    "args": {
+     "description": "six-storey office building with blue glass bands and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 288,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: e2c7fe7a-7e5c-42a7-90db-b0098173bb07\ndescription: six-storey office building with blue glass bands and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x288px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"e2c7fe7a-7e5c-42a7-90db-b0098173bb07\")",
+    "result_text": "status: completed\nid: e2c7fe7a-7e5c-42a7-90db-b0098173bb07\ndescription: six-storey office building with blue glass bands and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x288px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:26\ndownload: https://api.pixellab.ai/mcp/map-objects/e2c7fe7a-7e5c-42a7-90db-b0098173bb07/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"e2c7fe7a-7e5c-42a7-90db-b0098173bb07\")",
+    "file": "office_mid.png"
+   }
+  ],
+  "picked": "e2c7fe7a-7e5c-42a7-90db-b0098173bb07",
+  "note": "about ten floors instead of six; solid light background removed in the crop"
+ },
+ "cat": {
+  "tool": "create_character",
+  "attempts": [
+   {
+    "id": "e2faaa7e-8e68-4ae7-80d1-a282bc4706b5",
+    "args": {
+     "description": "grey tabby cat inspector wearing a tiny brown detective hat, walking on four legs",
+     "name": "Cat Inspector",
+     "body_type": "quadruped",
+     "template": "cat",
+     "mode": "standard",
+     "n_directions": 8,
+     "size": 32,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\nname: Cat Inspector\nmode: standard (1 generation)\ndirections: 8\nbody: quadruped (cat)\nsize: 32x32px\nstyle: basic shading, selective outline, high detail\nstatus: processing (~3-5 minutes)\n\nhint: get_character(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\")",
+    "result_text": "status: completed\nid: e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\nname: Cat Inspector\nstate_name: Idle\ndirections: 8 (south, east, north, west, south-east, north-east, north-west, south-west)\nsize: 48x48px\nview: high top-down\nstyle: basic shading, selective outline, high detail\ngroup: cf03534e-2cdc-482c-9e6a-ef03435f58e3 (1 state)\n\nrotations:\n\nanimations (1 group, 2 total):\n  walk - 2 dir (north-east, south-east), 8f 2026-09-28 [type=walk-8-frames] [group: 0a1ce6d0-9468-45d9-a181-6cebdc12b51f]\n\ndownload: https://api.pixellab.ai/mcp/characters/e2faaa7e-8e68-4ae7-80d1-a282bc4706b5/download\nspritesheet: https://api.pixellab.ai/mcp/characters/e2faaa7e-8e68-4ae7-80d1-a282bc4706b5/spritesheet (this state only - one uniform-grid sheet PNG + layout JSON, zipped; cells pivot-centred)\n\navailable_animations: angry, drinking, eating, idle, jump, licking, running-4-frames, running-6-frames, running-8-frames, seated-on-belly-idle, sitting, sitting-on-belly, slow-run, standing, standing-from-belly, walk-4-frames, walk-6-frames, walk-8-frames, yawning\n\nactions: animate_character(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\", ...) | create_character_state(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc ...",
+    "file": "cat/download"
+   }
+  ],
+  "picked": "e2faaa7e-8e68-4ae7-80d1-a282bc4706b5",
+  "note": "quadruped template cat, size 32 (48x48 canvas). Frames in cat/: rot_<dir>, walk_se_0..7, walk_ne_0..7, all cropped to one 36x35 box (canvas box 6,7,42,42), centred on the canvas centre, bottom at the lowest foot",
+  "args_note": "body_type quadruped + template cat (standard mode, 1 generation)"
+ },
+ "pigeon": {
+  "tool": "create_character",
+  "attempts": [
+   {
+    "id": "fd1aa74d-df62-44df-bac6-47d6de421a2b",
+    "args": {
+     "description": "city pigeon, grey with a green and purple neck, small round bird with folded wings, orange eyes, pink feet",
+     "name": "City Pigeon",
+     "body_type": "humanoid",
+     "mode": "standard",
+     "n_directions": 8,
+     "size": 32,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: fd1aa74d-df62-44df-bac6-47d6de421a2b\nname: City Pigeon\nmode: standard (1 generation)\ndirections: 8\nbody: humanoid\nsize: 32x32px\nstyle: basic shading, selective outline, high detail\nstatus: processing (~3-5 minutes)\n\nhint: get_character(character_id=\"fd1aa74d-df62-44df-bac6-47d6de421a2b\")",
+    "file": "pigeon/download",
+    "result_text": "status: completed\nid: fd1aa74d-df62-44df-bac6-47d6de421a2b\nname: City Pigeon\nstate_name: Idle\ndirections: 8 (south, east, north, west, south-east, north-east, north-west, south-west)\nsize: 48x48px\nview: high top-down\nstyle: basic shading, selective outline, high detail\ngroup: b57f2d49-fae4-46b3-80db-b59de005918f (1 state)\n\nrotations:\n\nanimations (1 group, 2 total):\n  walk - 2 dir (north-east, south-east), 8f 2026-09-28 [type=walking-8-frames] [group: b17f27af-7efc-40ee-be74-0f3e731beaf7]\n\ndownload: https://api.pixellab.ai/mcp/characters/fd1aa74d-df62-44df-bac6-47d6de421a2b/download\nspritesheet: https://api.pixellab.ai/mcp/characters/fd1aa74d-df62-44df-bac6-47d6de421a2b/spritesheet (this state only - one uniform-grid sheet PNG + layout JSON, zipped; cells pivot-centred)\n\navailable_animations: backflip, breathing-idle, cross-punch, crouched-walking, crouching, drinking, falling-back-death, fight-stance-idle-8-frames, fireball, flying-kick, front-flip, getting-up, high-kick, hurricane-kick, jumping-1, jumping-2, lead-jab, leg-sweep, picking-up, pull-heavy-object, pushing, roundhouse-kick, running-4-frames, running-6-frames, running-8-frames, running-jump, running-slide, sad-walk, scar ..."
+   },
+   {
+    "id": "512db6e2-1f63-40bc-94ce-28c812f4ca4a",
+    "args": {
+     "description": "a real city pigeon bird, not a person: small head with a short beak, plump round grey feathered body, shiny green and purple neck, wings folded against its sides, no arms, no clothes, short thin pink legs",
+     "name": "City Pigeon 2",
+     "body_type": "humanoid",
+     "mode": "standard",
+     "n_directions": 8,
+     "size": 32,
+     "proportions": "{\"type\": \"custom\", \"head_size\": 1.3, \"arms_length\": 0.5, \"legs_length\": 0.5, \"shoulder_width\": 1.3, \"hip_width\": 1.4}",
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 512db6e2-1f63-40bc-94ce-28c812f4ca4a\nname: City Pigeon 2\nmode: standard (1 generation)\ndirections: 8\nbody: humanoid\nsize: 32x32px\nstyle: basic shading, selective outline, high detail\nstatus: processing (~3-5 minutes)\n\nhint: get_character(character_id=\"512db6e2-1f63-40bc-94ce-28c812f4ca4a\")",
+    "file": "pigeon/reject1_download",
+    "result_text": "status: completed\nid: 512db6e2-1f63-40bc-94ce-28c812f4ca4a\nname: City Pigeon 2\nstate_name: Idle\ndirections: 8 (south, east, north, west, south-east, north-east, north-west, south-west)\nsize: 48x48px\nview: high top-down\nstyle: basic shading, selective outline, high detail\ngroup: dc06f2bd-8626-43cb-9010-d46b21542409 (1 state)\n\nrotations:\n\nanimations: none\n\ndownload: https://api.pixellab.ai/mcp/characters/512db6e2-1f63-40bc-94ce-28c812f4ca4a/download\nspritesheet: https://api.pixellab.ai/mcp/characters/512db6e2-1f63-40bc-94ce-28c812f4ca4a/spritesheet (this state only - one uniform-grid sheet PNG + layout JSON, zipped; cells pivot-centred)\n\navailable_animations: backflip, breathing-idle, cross-punch, crouched-walking, crouching, drinking, falling-back-death, fight-stance-idle-8-frames, fireball, flying-kick, front-flip, getting-up, high-kick, hurricane-kick, jumping-1, jumping-2, lead-jab, leg-sweep, picking-up, pull-heavy-object, pushing, roundhouse-kick, running-4-frames, running-6-frames, running-8-frames, running-jump, running-slide, sad-walk, scary-walk, surprise-uppercut, taking-punch, throw-object, two-footed-jump, walk, walk-1, walk-2, walking, walking-10, walking-2, walking-3,  ..."
+   }
+  ],
+  "picked": "fd1aa74d-df62-44df-bac6-47d6de421a2b",
+  "note": "standard mode has no bird skeleton (humanoid or quadruped only, per agent_help); humanoid gave an upright pigeon-person (grey, green neck, beak, orange eyes, small hands). Retry with a real-bird description and custom squat proportions gave a chibi penguin-like bird in a green vest (pigeon/reject1_download, rotations only), so attempt 1 is the pick. A real bird body needs pro mode (20 to 40 generations), out of budget. Frames in pigeon/ cropped to one 20x35 box (canvas box 14,8,34,43)"
+ },
+ "apartment_tower": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "9fbb7225-5662-4940-b9be-0f934f40b9a6",
+    "args": {
+     "description": "ten-storey grey concrete apartment tower with balconies and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 192,
+     "height": 320,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9fbb7225-5662-4940-b9be-0f934f40b9a6\ndescription: ten-storey grey concrete apartment tower with balconies and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 192x320px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"9fbb7225-5662-4940-b9be-0f934f40b9a6\")",
+    "result_text": "status: completed\nid: 9fbb7225-5662-4940-b9be-0f934f40b9a6\ndescription: ten-storey grey concrete apartment tower with balconies and lit windows, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 192x320px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:28\ndownload: https://api.pixellab.ai/mcp/map-objects/9fbb7225-5662-4940-b9be-0f934f40b9a6/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9fbb7225-5662-4940-b9be-0f934f40b9a6\")",
+    "file": "apartment_tower.png"
+   }
+  ],
+  "picked": "9fbb7225-5662-4940-b9be-0f934f40b9a6",
+  "note": "no visible balconies; solid white background removed in the crop"
+ },
+ "parking_garage": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "1f83e11c-ad2a-4976-99b3-fdb632dc8107",
+    "args": {
+     "description": "three-level concrete parking garage with cars visible inside, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 192,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 1f83e11c-ad2a-4976-99b3-fdb632dc8107\ndescription: three-level concrete parking garage with cars visible inside, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"1f83e11c-ad2a-4976-99b3-fdb632dc8107\")",
+    "result_text": "status: completed\nid: 1f83e11c-ad2a-4976-99b3-fdb632dc8107\ndescription: three-level concrete parking garage with cars visible inside, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x192px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:28\ndownload: https://api.pixellab.ai/mcp/map-objects/1f83e11c-ad2a-4976-99b3-fdb632dc8107/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"1f83e11c-ad2a-4976-99b3-fdb632dc8107\")",
+    "file": "parking_garage.png"
+   }
+  ],
+  "picked": "1f83e11c-ad2a-4976-99b3-fdb632dc8107",
+  "note": "solid white background removed in the crop"
+ },
+ "warehouse": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a",
+    "args": {
+     "description": "red brick warehouse with a big roll-up loading door and a flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a\ndescription: red brick warehouse with a big roll-up loading door and a flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a\")",
+    "result_text": "status: completed\nid: f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a\ndescription: red brick warehouse with a big roll-up loading door and a flat roof, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:28\ndownload: https://api.pixellab.ai/mcp/map-objects/f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a\")",
+    "file": "warehouse.png"
+   }
+  ],
+  "picked": "f9da4ef3-c4dd-4dc9-aa43-759bfa82d30a",
+  "note": ""
+ },
+ "gas_station": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "8ae73296-f049-4b2b-af43-81be1a06bd9d",
+    "args": {
+     "description": "small gas station with a lit canopy over two pumps and a tiny shop, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 160,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 8ae73296-f049-4b2b-af43-81be1a06bd9d\ndescription: small gas station with a lit canopy over two pumps and a tiny shop, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"8ae73296-f049-4b2b-af43-81be1a06bd9d\")",
+    "result_text": "status: completed\nid: 8ae73296-f049-4b2b-af43-81be1a06bd9d\ndescription: small gas station with a lit canopy over two pumps and a tiny shop, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x160px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:28\ndownload: https://api.pixellab.ai/mcp/map-objects/8ae73296-f049-4b2b-af43-81be1a06bd9d/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"8ae73296-f049-4b2b-af43-81be1a06bd9d\")",
+    "file": "gas_station.png"
+   }
+  ],
+  "picked": "8ae73296-f049-4b2b-af43-81be1a06bd9d",
+  "note": "pumps and shop but no canopy over the pumps; kept (usable)"
+ },
+ "cat_walk": {
+  "tool": "animate_character",
+  "attempts": [
+   {
+    "id": "group 0a1ce6d0-9468-45d9-a181-6cebdc12b51f",
+    "args": {
+     "character_id": "e2faaa7e-8e68-4ae7-80d1-a282bc4706b5",
+     "template_animation_id": "walk-8-frames",
+     "animation_name": "walk",
+     "directions": [
+      "south-east",
+      "north-east"
+     ]
+    },
+    "submit_text": "character: e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\nanimation: walk-8-frames\ndirections: south-east, north-east (2 jobs)\ngroup: 0a1ce6d0-9468-45d9-a181-6cebdc12b51f\neta: ~2-4 min\nadd more directions to this group: animate_character(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\", template_animation_id=\"walk-8-frames\", animation_group_id=\"0a1ce6d0-9468-45d9-a181-6cebdc12b51f\", directions=[...])\n\nhint: get_character(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\")\nif poor: delete_animation(character_id=\"e2faaa7e-8e68-4ae7-80d1-a282bc4706b5\", animation_type=\"...\") then retry with mode=\"v3\"",
+    "result_text": "completed: walk, 2 directions (north-east, south-east), 8 frames each, in cat/download/Idle/animations/walk/"
+   }
+  ],
+  "picked": "group 0a1ce6d0-9468-45d9-a181-6cebdc12b51f",
+  "note": "template walk-8-frames, south-east and north-east, 8 frames each (2 generations)"
+ },
+ "evil_office": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189",
+    "args": {
+     "description": "black glass office block with glowing red window strips, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 288,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189\ndescription: black glass office block with glowing red window strips, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x288px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189\")",
+    "result_text": "status: completed\nid: 9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189\ndescription: black glass office block with glowing red window strips, a single building standing alone on its own small plot, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 224x288px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:30\ndownload: https://api.pixellab.ai/mcp/map-objects/9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189\")",
+    "file": "evil_office.png"
+   }
+  ],
+  "picked": "9d63b2cd-a1ce-4d6a-a4ce-148cf39ae189",
+  "note": "solid white background and a tiny watermark-like text speck at the bottom right removed in the crop"
+ },
+ "fountain": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "6a0e087e-8444-4c8f-846e-a4ea7952db78",
+    "args": {
+     "description": "small round stone park fountain with water, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 96,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 6a0e087e-8444-4c8f-846e-a4ea7952db78\ndescription: small round stone park fountain with water, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"6a0e087e-8444-4c8f-846e-a4ea7952db78\")",
+    "result_text": "status: completed\nid: 6a0e087e-8444-4c8f-846e-a4ea7952db78\ndescription: small round stone park fountain with water, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 96x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:30\ndownload: https://api.pixellab.ai/mcp/map-objects/6a0e087e-8444-4c8f-846e-a4ea7952db78/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"6a0e087e-8444-4c8f-846e-a4ea7952db78\")",
+    "file": "fountain.png"
+   }
+  ],
+  "picked": "6a0e087e-8444-4c8f-846e-a4ea7952db78",
+  "note": ""
+ },
+ "fences": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "2c5e12e3-a5ab-4395-b7d3-21da086911f8",
+    "args": {
+     "description": "sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate, wooden construction hoarding panel with a yellow stripe, KEEP OUT sign on a post, orange plastic construction fence section. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 2c5e12e3-a5ab-4395-b7d3-21da086911f8\ndescription: sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate, wooden construction hoarding panel with a yellow stripe, KEEP OUT sign on a post, orange plastic construction fence section. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_o ...",
+    "result_text": "status: completed\nid: 2c5e12e3-a5ab-4395-b7d3-21da086911f8\ndescription: sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate, wooden construction hoarding panel with a yellow stripe, KEEP OUT sign on a post, orange plastic construction fence section. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:30\ndownload: https://api.pixellab.ai/mcp/map-objects/2c5e12e3-a5ab-4395-b7d3-21da086911f8/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"2c5e12e3-a5ab-4395-b7d3-21da086911f8\")",
+    "file": "fences_reject1.png"
+   },
+   {
+    "id": "9c05bde0-4d4e-47f0-85d9-2318fb66cc06",
+    "args": {
+     "description": "sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate with a padlock, wooden construction hoarding panel with a yellow stripe, white KEEP OUT sign on a wooden post, orange plastic mesh construction fence section. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 9c05bde0-4d4e-47f0-85d9-2318fb66cc06\ndescription: sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate with a padlock, wooden construction hoarding panel with a yellow stripe, white KEEP OUT sign on a wooden post, orange plastic mesh construction fence section. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_ ...",
+    "result_text": "status: completed\nid: 9c05bde0-4d4e-47f0-85d9-2318fb66cc06\ndescription: sprite sheet of five separate fence and barrier props in one row with empty space between them, not touching, each standing on its own: grey chain-link fence section, chain-link fence gate with a padlock, wooden construction hoarding panel with a yellow stripe, white KEEP OUT sign on a wooden post, orange plastic mesh construction fence section. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:40\ndownload: https://api.pixellab.ai/mcp/map-objects/9c05bde0-4d4e-47f0-85d9-2318fb66cc06/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"9c05bde0-4d4e-47f0-85d9-2318fb66cc06\")",
+    "file": "fences.png"
+   }
+  ],
+  "picked": "9c05bde0-4d4e-47f0-85d9-2318fb66cc06",
+  "note": "attempt 1 (fences_reject1.png) had no gate and an arrow sign instead of KEEP OUT (darker outlines, closer to the alley and street2 sheets); retry asked for a gate with a padlock and a white KEEP OUT sign: got the gate, a blank sign board, an orange mesh fence and a striped barrier board. Picked the retry"
+ },
+ "alley": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "dae8d39f-7f5c-4157-af7e-db6eb56a0cd9",
+    "args": {
+     "description": "sprite sheet of five separate back alley props in one row with empty space between them, not touching, each standing on its own: green metal dumpster, stack of wooden pallets, pile of black garbage bags, orange and white traffic barrel, blue portable toilet. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: dae8d39f-7f5c-4157-af7e-db6eb56a0cd9\ndescription: sprite sheet of five separate back alley props in one row with empty space between them, not touching, each standing on its own: green metal dumpster, stack of wooden pallets, pile of black garbage bags, orange and white traffic barrel, blue portable toilet. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"dae8d39f-7f5c-4157-af7e-db6eb56a0cd9\")",
+    "result_text": "status: completed\nid: dae8d39f-7f5c-4157-af7e-db6eb56a0cd9\ndescription: sprite sheet of five separate back alley props in one row with empty space between them, not touching, each standing on its own: green metal dumpster, stack of wooden pallets, pile of black garbage bags, orange and white traffic barrel, blue portable toilet. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:30\ndownload: https://api.pixellab.ai/mcp/map-objects/dae8d39f-7f5c-4157-af7e-db6eb56a0cd9/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"dae8d39f-7f5c-4157-af7e-db6eb56a0cd9\")",
+    "file": "alley.png"
+   }
+  ],
+  "picked": "dae8d39f-7f5c-4157-af7e-db6eb56a0cd9",
+  "note": "5 separate props; the traffic barrel came out as two barrels lying down"
+ },
+ "street2": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "36b61bd0-75ce-46c6-adde-88626931dcf4",
+    "args": {
+     "description": "sprite sheet of five separate street props in one row with empty space between them, not touching, each standing on its own: red newspaper box, parking meter, concrete planter box with a small tree, street name sign on a pole, glowing vending kiosk. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: 36b61bd0-75ce-46c6-adde-88626931dcf4\ndescription: sprite sheet of five separate street props in one row with empty space between them, not touching, each standing on its own: red newspaper box, parking meter, concrete planter box with a small tree, street name sign on a pole, glowing vending kiosk. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"36b61bd0-75ce-46c6-adde-88626931dcf4\")",
+    "result_text": "status: completed\nid: 36b61bd0-75ce-46c6-adde-88626931dcf4\ndescription: sprite sheet of five separate street props in one row with empty space between them, not touching, each standing on its own: red newspaper box, parking meter, concrete planter box with a small tree, street name sign on a pole, glowing vending kiosk. Night city, clean bright corporate style, isometric three-quarter view\nsize: 400x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:33\ndownload: https://api.pixellab.ai/mcp/map-objects/36b61bd0-75ce-46c6-adde-88626931dcf4/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"36b61bd0-75ce-46c6-adde-88626931dcf4\")",
+    "file": "street2.png"
+   }
+  ],
+  "picked": "36b61bd0-75ce-46c6-adde-88626931dcf4",
+  "note": "5 separate props; street sign text is gibberish"
+ },
+ "food_truck": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "f0eb5a0d-1efb-4dfa-bfdd-279db03c180d",
+    "args": {
+     "description": "colourful food truck with an open serving window, awning and a menu board, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 128,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    },
+    "submit_text": "id: f0eb5a0d-1efb-4dfa-bfdd-279db03c180d\ndescription: colourful food truck with an open serving window, awning and a menu board, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x96px\nview: high top-down\nmode: basic\nstatus: processing (~30-90s)\n\nthe object is permanent - place it with place_map_object once ready\nhint: get_map_object(object_id=\"f0eb5a0d-1efb-4dfa-bfdd-279db03c180d\")",
+    "result_text": "status: completed\nid: f0eb5a0d-1efb-4dfa-bfdd-279db03c180d\ndescription: colourful food truck with an open serving window, awning and a menu board, a single object standing alone in the centre, transparent background. Night city, clean bright corporate style, isometric three-quarter view\nsize: 128x96px\nview: high top-down\nbackground: transparent\ncreated: 2026-09-28 08:33\ndownload: https://api.pixellab.ai/mcp/map-objects/f0eb5a0d-1efb-4dfa-bfdd-279db03c180d/download\n\nhint: place_map_object(map_id=\"<map>\", x=..., y=..., object_id=\"f0eb5a0d-1efb-4dfa-bfdd-279db03c180d\")",
+    "file": "food_truck.png"
+   }
+  ],
+  "picked": "f0eb5a0d-1efb-4dfa-bfdd-279db03c180d",
+  "note": "menu board not obvious"
+ },
+ "pigeon_walk": {
+  "tool": "animate_character",
+  "attempts": [
+   {
+    "id": "group b17f27af-7efc-40ee-be74-0f3e731beaf7",
+    "args": {
+     "character_id": "fd1aa74d-df62-44df-bac6-47d6de421a2b",
+     "template_animation_id": "walking-8-frames",
+     "animation_name": "walk",
+     "directions": [
+      "south-east",
+      "north-east"
+     ]
+    },
+    "submit_text": "character: fd1aa74d-df62-44df-bac6-47d6de421a2b\nanimation: walking-8-frames\ndirections: south-east, north-east (2 jobs)\ngroup: b17f27af-7efc-40ee-be74-0f3e731beaf7\neta: ~2-4 min\nadd more directions to this group: animate_character(character_id=\"fd1aa74d-df62-44df-bac6-47d6de421a2b\", template_animation_id=\"walking-8-frames\", animation_group_id=\"b17f27af-7efc-40ee-be74-0f3e731beaf7\", directions=[...])\n\nhint: get_character(character_id=\"fd1aa74d-df62-44df-bac6-47d6de421a2b\")\nif poor: delete_animation(character_id=\"fd1aa74d-df62-44df-bac6-47d6de421a2b\", animation_type=\"...\") then retry with mode=\"v3\"",
+    "result_text": "completed: walk, 2 directions (north-east, south-east), 8 frames each, in pigeon/download/Idle/animations/walk/"
+   }
+  ],
+  "picked": "group b17f27af-7efc-40ee-be74-0f3e731beaf7",
+  "note": "template walking-8-frames, south-east and north-east, 8 frames each (2 generations)"
+ },
+ "_note": "_gens_used counts accepted submits (1 per map object or character, 1 per animated direction); it matches the account counter (generations_used 31 before this round, 56 after 25 gens, 57 after the fences retry). One cottage submit hit a connection reset before reaching the server and was not charged. Em dashes in PixelLab's reply texts were replaced with hyphens. Characters downloaded from the api.pixellab.ai ZIP; backblaze.pixellab.ai URLs were not used."
+}

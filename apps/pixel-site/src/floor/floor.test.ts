@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Growth } from './growth';
 import { Paths } from './path';
 import { buildMaster, queueCells, STAGES, stageOf } from './plan';
+import { buildCity, CITY_KEY } from './city';
+import { LANDMARKS, towerFloors, towerSpots, unlocked } from './landmarks';
 import { idx, type FloorLayout } from './types';
 
 const SYMBOLS = ['TSLAx', 'MSTRx', 'COINx', 'AMDx', 'NVDAx', 'AAPLx', 'METAx', 'AMZNx', 'GOOGLx', 'SPYx'];
@@ -129,6 +131,104 @@ describe('growth (the idle game)', () => {
       checked++;
     }
     expect(checked).toBeGreaterThan(5);
+  });
+});
+
+describe('the city round the office', () => {
+  const plan = buildMaster();
+  const has = (): boolean => true;
+  const size = (): { w: number; h: number } => ({ w: 200, h: 240 });
+
+  it('is deterministic per stage', () => {
+    const a = buildCity(plan, 2, has, size);
+    const b = buildCity(plan, 2, has, size);
+    expect(b.lots).toEqual(a.lots);
+    expect(b.ground.size).toBe(a.ground.size);
+  });
+
+  it('has an avenue, a cross street and an alley, not a ring road, and every lot has a purpose', () => {
+    for (let stage = 0; stage < STAGES.length; stage++) {
+      const c = buildCity(plan, stage, has, size);
+      const ring = plan.rings[stage]!;
+      const styles = new Map<string, number>();
+      for (const g of c.ground.values()) styles.set(g.style, (styles.get(g.style) ?? 0) + 1);
+      expect(styles.get('asphalt') ?? 0).toBeGreaterThan(50);
+      // lots never overlap the office (and its 2-cell apron) or each other
+      const seen = new Set<number>();
+      let inOffice = 0;
+      let overlaps = 0;
+      for (const l of c.lots) {
+        expect(['building', 'park', 'parking', 'site', 'vacant', 'shell', 'basement', 'rocket', 'annex']).toContain(l.use);
+        for (let i = l.i0; i < l.i0 + l.w; i++) {
+          for (let j = l.j0; j < l.j0 + l.h; j++) {
+            if (i >= ring.i0 - 2 && i <= ring.i1 + 2 && j >= ring.j0 - 2 && j <= ring.j1 + 2) inOffice++;
+            const k = CITY_KEY(i, j);
+            if (seen.has(k)) overlaps++;
+            seen.add(k);
+          }
+        }
+      }
+      expect(inOffice).toBe(0);
+      expect(overlaps).toBe(0);
+      const uses = new Set(c.lots.map((l) => l.use));
+      for (const u of ['building', 'park']) expect(uses.has(u as never)).toBe(true);
+      // the next stage's lots show as shells; the last stage has none
+      expect(c.lots.some((l) => l.use === 'shell')).toBe(stage < STAGES.length - 1);
+      expect(c.landmark).not.toBeNull();
+    }
+  });
+
+  it('keeps the tower ground clear, digs the gym beside the office and puts the annex across the avenue', () => {
+    for (let stage = 2; stage < STAGES.length; stage++) {
+      const c = buildCity(plan, stage, has, size);
+      const ring = plan.rings[stage]!;
+      const t = towerSpots(ring, stage);
+      for (const spot of [t.a, t.b]) {
+        if (!spot) continue;
+        for (const l of c.lots) {
+          const hit = l.i0 <= spot.fi + 1 && l.i0 + l.w - 1 >= spot.fi - spot.n - 2 && l.j0 <= spot.fj + 1 && l.j0 + l.h - 1 >= spot.fj - spot.n - 2;
+          expect(hit).toBe(false);
+        }
+      }
+      const gym = c.lots.filter((l) => l.use === 'basement');
+      expect(gym.length).toBe(1);
+      expect(gym[0]!.far).toBeLessThan(0.65);
+      expect(gym[0]!.i0 + gym[0]!.w).toBeLessThanOrEqual(ring.i0);
+      const annex = c.lots.filter((l) => l.use === 'annex');
+      expect(annex.length).toBe(stage >= 3 ? 1 : 0);
+      if (annex[0]) expect(annex[0].j0).toBeGreaterThan(ring.j1 + 5); // past the avenue
+      expect(c.lots.filter((l) => l.use === 'rocket').length).toBe(stage >= 4 ? 1 : 0);
+    }
+  });
+});
+
+describe('landmarks', () => {
+  const plan = buildMaster();
+
+  it('unlock one by one at their milestones, and the tower only ever rises', () => {
+    expect(LANDMARKS.map((l) => l.at)).toEqual([10, 25, 50, 100, 250, 500, 1000, 1500, 2000, 3000]);
+    expect(unlocked(9).size).toBe(0);
+    expect(unlocked(10)).toEqual(new Set(['espresso']));
+    expect(unlocked(3000).size).toBe(10);
+    expect(towerFloors(99)).toBe(0);
+    let last = 0;
+    for (let n = 100; n <= 5000; n += 7) {
+      const f = towerFloors(n);
+      expect(f).toBeGreaterThanOrEqual(last);
+      last = f;
+    }
+    expect(last).toBeLessThanOrEqual(60);
+  });
+
+  it('keeps a clear space for every interior set piece in a room of the right stage', () => {
+    for (const [id, sp] of Object.entries(plan.landmarkSpots)) {
+      const def = LANDMARKS.find((l) => l.id === id)!;
+      const room = plan.rooms[sp.room]!;
+      expect(stageOf(def.at)).toBeGreaterThanOrEqual(room.ring);
+      for (let i = sp.i0; i < sp.i0 + sp.w; i++) {
+        for (let j = sp.j0; j < sp.j0 + sp.h; j++) expect(plan.blocked[idx(plan.W, i, j)]).toBe(0);
+      }
+    }
   });
 });
 

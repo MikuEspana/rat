@@ -1,0 +1,127 @@
+{
+ "espresso_shrine_0": {
+  "w": 97,
+  "h": 89,
+  "guess": "golden espresso machine on a stone altar with a lit candle, a coffee cup and scattered beans on a tiled plinth"
+ },
+ "trading_pit_0": {
+  "w": 200,
+  "h": 144,
+  "guess": "round sunken trading pit with stepped rings, a ring of small desks with orange chart screens, a gold coin in the centre and a big chart screen at the back"
+ },
+ "glass_elevator_0": {
+  "w": 44,
+  "h": 178,
+  "guess": "tall narrow glass elevator shaft with a steel frame and a lit warm yellow cab about halfway up"
+ },
+ "helipad_0": {
+  "w": 158,
+  "h": 102,
+  "guess": "square rooftop helipad, white H in a circle, cyan edge lights and red corner lights"
+ },
+ "helicopter_0": {
+  "w": 111,
+  "h": 80,
+  "guess": "black corporate helicopter with gold stripes, four rotor blades and skids"
+ },
+ "rooftop_pool_0": {
+  "w": 238,
+  "h": 144,
+  "guess": "square rooftop pool with glowing cyan water, underwater lights, dark tiled edge and a steel ladder"
+ },
+ "rocket_0": {
+  "w": 76,
+  "h": 228,
+  "guess": "tall white rocket with three grey fins and two round portholes, no flame (no rat ears or rat logo)"
+ },
+ "launchpad_0": {
+  "w": 184,
+  "h": 133,
+  "guess": "empty square concrete launch pad with yellow and black warning stripes, a round launch ring and a small steel lattice gantry tower"
+ },
+ "laser_cannon_0": {
+  "w": 104,
+  "h": 175,
+  "guess": "black laser cannon barrel pointing straight up with a glowing red core, on a stepped square base with red lights"
+ },
+ "giant_rat_statue_0": {
+  "w": 126,
+  "h": 210,
+  "guess": "golden rat statue standing on its hind legs on a tall white marble plinth with a stepped base"
+ },
+ "vault_door_0": {
+  "w": 97,
+  "h": 96,
+  "guess": "grey steel vault block with a round brass-rimmed vault door and an open arch showing gold bars"
+ },
+ "gym_0": {
+  "w": 63,
+  "h": 71,
+  "guess": "black treadmill"
+ },
+ "gym_1": {
+  "w": 70,
+  "h": 78,
+  "guess": "treadmill base with a squat rack frame and weight plates (the weight rack came out odd)"
+ },
+ "gym_2": {
+  "w": 57,
+  "h": 43,
+  "guess": "blue flat weight bench"
+ },
+ "gym_3": {
+  "w": 36,
+  "h": 80,
+  "guess": "red punching bag hanging on a steel stand"
+ },
+ "gym_4": {
+  "w": 65,
+  "h": 52,
+  "guess": "rowing machine or incline bench (reads as a rower)"
+ },
+ "nap_pods_0": {
+  "w": 67,
+  "h": 65,
+  "guess": "white sleep pod capsule with a glowing blue window"
+ },
+ "nap_pods_1": {
+  "w": 76,
+  "h": 62,
+  "guess": "white sleep pod capsule on its side with a round open hatch"
+ },
+ "nap_pods_2": {
+  "w": 74,
+  "h": 64,
+  "guess": "single bed with blue sheets and a white pillow (asked for a hammock)"
+ },
+ "nap_pods_3": {
+  "w": 74,
+  "h": 65,
+  "guess": "metal-frame single bed with pillows (asked for a pillow stack)"
+ },
+ "pool_party_0": {
+  "w": 66,
+  "h": 53,
+  "guess": "pink inflatable flamingo float"
+ },
+ "pool_party_1": {
+  "w": 62,
+  "h": 58,
+  "guess": "DJ booth with two big speakers and a mixer"
+ },
+ "pool_party_2": {
+  "w": 65,
+  "h": 53,
+  "guess": "pink inflatable flamingo float (second, mirrored)"
+ },
+ "pool_party_3": {
+  "w": 52,
+  "h": 50,
+  "guess": "lounge chair with pink and white stripes"
+ },
+ "pool_party_4": {
+  "w": 57,
+  "h": 59,
+  "guess": "white beach umbrella on a pole (not striped)"
+ }
+}

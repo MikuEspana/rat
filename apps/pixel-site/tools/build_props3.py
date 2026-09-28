@@ -37,13 +37,55 @@ NAMES = {
     "eggs_0": "disco_ball", "eggs_1": "phone_booth", "eggs_2": "treasure", "eggs_3": "ufo", "eggs_4": "rubber_duck",
 }
 
+# round 3 (assets/raw/props4): more buildings for the city, fences, alley and street props, the food truck, and
+# the two visitors' walk cycles. The street sign (gibberish text) is left out.
+CROPS4 = os.path.join(OUT, "raw", "props4", "crops")
+NAMES4 = {
+    "townhouses_0": "townhouses", "cottage_0": "cottage", "diner_0": "diner", "corner_store_0": "corner_store",
+    "office_low_0": "office_low", "office_mid_0": "office_mid", "apartment_tower_0": "apartment_tower",
+    "parking_garage_0": "parking_garage", "warehouse_0": "warehouse", "gas_station_0": "gas_station",
+    "evil_office_0": "evil_office", "fountain_0": "fountain", "food_truck_0": "food_truck",
+    "fences_0": "fence_chain", "fences_1": "barrier_board", "fences_2": "fence_gate", "fences_3": "hoarding",
+    "fences_4": "fence_orange",
+    "alley_0": "dumpster", "alley_1": "pallets", "alley_2": "garbage", "alley_3": "barrels", "alley_4": "portaloo",
+    "street2_0": "news_box", "street2_1": "planter", "street2_2": "parking_meter", "street2_4": "kiosk",
+}
+
+# round 4 (assets/raw/props5): the landmark set pieces
+CROPS5 = os.path.join(OUT, "raw", "props5", "crops")
+NAMES5 = {
+    "espresso_shrine_0": "espresso_shrine", "trading_pit_0": "trading_pit", "glass_elevator_0": "glass_elevator",
+    "helipad_0": "helipad", "helicopter_0": "helicopter", "rooftop_pool_0": "rooftop_pool", "rocket_0": "rocket",
+    "launchpad_0": "launchpad", "laser_cannon_0": "laser_cannon", "giant_rat_statue_0": "giant_rat_statue",
+    "vault_door_0": "vault_door",
+    "gym_0": "treadmill", "gym_1": "weight_rack", "gym_2": "bench_press", "gym_3": "punching_bag", "gym_4": "rowing",
+    "nap_pods_0": "nap_pod", "nap_pods_1": "nap_pod_closed", "nap_pods_2": "bed_a", "nap_pods_3": "bed_b",
+    "pool_party_0": "flamingo", "pool_party_1": "dj_booth", "pool_party_3": "lounge_chair", "pool_party_4": "umbrella",
+}
+
 items = []
+for src, name in NAMES5.items():
+    f = os.path.join(CROPS5, f"{src}.png")
+    if os.path.exists(f):
+        im = Image.open(f).convert("RGBA")
+        items.append((name, f"../props5/crops/{src}", im.crop(im.getbbox())))
 for src, name in NAMES.items():
     im = Image.open(os.path.join(CROPS, f"{src}.png")).convert("RGBA")
     im = im.crop(im.getbbox())
     items.append((name, src, im))
+for src, name in NAMES4.items():
+    im = Image.open(os.path.join(CROPS4, f"{src}.png")).convert("RGBA")
+    im = im.crop(im.getbbox())
+    items.append((name, f"../props4/crops/{src}", im))
+# visitors: walk cycles keep their shared frame box (feet at the bottom centre)
+for who in ("cat", "pigeon"):
+    for d in ("se", "ne"):
+        for k in range(8):
+            f = os.path.join(OUT, "raw", "props4", who, f"walk_{d}_{k}.png")
+            if os.path.exists(f):
+                items.append((f"{who}_walk_{d}_{k}", f"../props4/{who}/walk_{d}_{k}", Image.open(f).convert("RGBA")))
 
-W = 1024
+W = 1280
 x = y = row = 0
 pos = {}
 for name, _, im in sorted(items, key=lambda t: -t[2].height):
@@ -58,7 +100,7 @@ frames = {}
 for name, src, im in items:
     px, py = pos[name]
     sheet.alpha_composite(im, (px, py))
-    frames[name] = {"frame": {"x": px, "y": py, "w": im.width, "h": im.height}, "anchor": {"x": 0.5, "y": 1.0}, "source": f"raw/props3/crops/{src}.png"}
+    frames[name] = {"frame": {"x": px, "y": py, "w": im.width, "h": im.height}, "anchor": {"x": 0.5, "y": 1.0}, "source": f"raw/props3/crops/{src}.png".replace("props3/crops/../", "")}
 sheet.save(os.path.join(OUT, "props3.png"), optimize=True)
 json.dump({"frames": frames, "meta": {"app": "rat-race pixel-site tools/build_props3.py", "image": "props3.png", "size": {"w": W, "h": H}}},
           open(os.path.join(OUT, "props3.json"), "w"), indent=1)

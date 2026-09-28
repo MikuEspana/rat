@@ -3,13 +3,15 @@
 // walls, the subway stairs, the Vault in HQ (it grows with the company) and its light beam, lamp glows, blinking
 // server lights, wall tickers and big room signs for reading the building from far away.
 // Rebuilt from scratch whenever a room is built (rare); new rooms pop in.
-import { Container, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
 import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixelfont';
 import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
+import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
+import { type Focus, renderLandmarks } from './landmarks';
 import { TIER_SCALE } from './rats';
 import { CORRIDOR_TINT, ROOM_LOOK, STAGES } from '../floor/plan';
 import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room, type Seat } from '../floor/types';
@@ -31,7 +33,9 @@ export interface Ticker {
 
 export interface World {
   bounds: WorldBounds;
+  backdrop: Container;
   floor: Container;
+  under: Container;
   main: SortedLayer;
   overlay: Container; // tickers, drawn above the walls
   lights: Container; // additive glows and blinking lights
@@ -48,6 +52,12 @@ export interface World {
   /** call every frame: server lights blink, new rooms pop in, the beam pulses */
   update(dt: number): void;
   setChair(seatId: number, visible: boolean): void;
+  /** where a landmark stands and how tall it is (world px), for the camera */
+  landmarkFocus(id: string): Focus | null;
+  /** the top of the office tower (world px), null before it goes up */
+  crown: { x: number; y: number } | null;
+  /** within 10% of the next stage: scaffolding, a crane and a crew on the lots the office takes next */
+  setPrep(on: boolean): void;
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
@@ -57,6 +67,16 @@ export interface World {
 }
 
 export const FURNACE_SCALE = [1, 1, 2, 2, 2, 3];
+/** 4x4 ordered dither thresholds (0..1) for fading the city's edge */
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+
+function darken(tint: number, k: number): number {
+  const r = (tint >> 16) & 255;
+  const g = (tint >> 8) & 255;
+  const b = tint & 255;
+  const f = (v: number, to: number): number => Math.round(v + (to - v) * k);
+  return (f(r, 20) << 16) | (f(g, 24) << 8) | f(b, 48);
+}
 
 export function worldBounds(layout: FloorLayout): WorldBounds {
   // the city round the building reaches 22 cells past the street and its towers stand tall
@@ -186,7 +206,18 @@ interface Pop {
   item: LayerItem;
   sx: number;
   sy: number;
+  y: number;
   t: number;
+}
+
+/** Ease out with bounces: things drop in and land. */
+function bounceOut(u: number): number {
+  const n = 7.5625;
+  const d = 2.75;
+  if (u < 1 / d) return n * u * u;
+  if (u < 2 / d) return n * (u -= 1.5 / d) * u + 0.75;
+  if (u < 2.5 / d) return n * (u -= 2.25 / d) * u + 0.9375;
+  return n * (u -= 2.625 / d) * u + 0.984375;
 }
 
 export function buildWorld(
@@ -195,6 +226,7 @@ export function buildWorld(
   atlas: Atlas,
   stocks: Map<string, StockView>,
   popIn: ReadonlySet<number> = new Set(),
+  freshLandmarks: ReadonlySet<string> = new Set(),
 ): World {
   const bounds = worldBounds(plan);
   const { W } = plan;
@@ -207,12 +239,29 @@ export function buildWorld(
   const signs = new Container();
   const fx = new Container(); // cranes and scaffolding while something is being built
   overlay.addChild(fx);
+  const under = new Container(); // grey shells of lots to come, under everything that stands
+  const backdrop = new Container(); // the far skyline, behind the city
   const pops: Pop[] = [];
   const built = (r: Room): boolean => growth.isBuilt(r);
-  const M = 7;
-  const i0 = ring.i0 - M;
-  const i1 = ring.i1 + M;
-  const inStreet = (i: number, j: number): boolean => i >= i0 && i <= i1 && j >= i0 && j <= i1;
+  // the building and its 2-cell apron come from the plan; everything past it is the city of this stage
+  const APRON = 2;
+  // wings: a ring's strips open one at a time (plan.ts wingOrder); the ones still shut are city for now
+  const openStrip = new Set<string>();
+  for (const r of plan.rooms) if (r.ring >= 1 && r.ring <= stage && growth.built[r.id]) openStrip.add(`${r.ring}:${r.strip}`);
+  const closedRects: Array<{ i0: number; j0: number; w: number; h: number }> = [];
+  for (let k = 1; k <= stage; k++) plan.rings[k]!.strips.forEach((st, n) => !openStrip.has(`${k}:${n}`) && closedRects.push(st));
+  const inClosed = (i: number, j: number): boolean => closedRects.some((r) => i >= r.i0 && i < r.i0 + r.w && j >= r.j0 && j < r.j0 + r.h);
+  const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`), closedRects);
+  const a0 = ring.i0 - APRON;
+  const a1 = ring.i1 + APRON;
+  const inApron = (i: number, j: number): boolean => i >= a0 && i <= a1 && j >= a0 && j <= a1;
+  const i0 = Math.min(a0, city.i0, city.j0);
+  const i1 = Math.max(a1, city.i1, city.j1);
+  /** a cell next to (or on) something built: walls here bound the building, even beside a shut wing */
+  function nearBuiltCell(i: number, j: number): boolean {
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (isBuiltCell(idx(W, i + di, j + dj))) return true;
+    return false;
+  }
   function isBuiltCell(k: number): boolean {
     const t = plan.tile[k];
     if (plan.ringOf[k]! > stage) return false;
@@ -266,6 +315,16 @@ export function buildWorld(
   for (const r of plan.rooms) if (r.ticker && r.kind === 'stock' && built(r) && growth.symbolOf[r.id]) for (let n = 0; n < 7; n++) mounted.add(r.ticker.axis === 'i' ? idx(W, r.ticker.i + n, r.ticker.j) : idx(W, r.ticker.i, r.ticker.j + n));
   for (let j = i0; j <= i1; j++) {
     for (let i = i0; i <= i1; i++) {
+      if (!inApron(i, j) || (inClosed(i, j) && !nearBuiltCell(i, j))) {
+        // the city: dithered and darkened towards its edge, so it fades into the night instead of stopping
+        const g = city.ground.get(CITY_KEY(i, j));
+        if (!g || g.fade > BAYER[(i & 3) * 4 + (j & 3)]!) continue;
+        const p = cellToScreen(i, j);
+        const t = makeParticle(atlas.frame(styleFrame(g.style, i, j)), p.x, p.y);
+        t.tint = darken(g.tint, g.fade * 0.7);
+        floorLayer.add(t, i + j);
+        continue;
+      }
       const k = idx(W, i, j);
       const t = plan.tile[k];
       let cell = floorOfCell(i, j);
@@ -329,7 +388,7 @@ export function buildWorld(
     return !!r && popIn.has(r.id);
   };
   const addPop = (item: LayerItem, delay: number): void => {
-    pops.push({ item, sx: item.p.scaleX, sy: item.p.scaleY, t: -delay });
+    pops.push({ item, sx: item.p.scaleX, sy: item.p.scaleY, y: item.p.y, t: -delay });
     item.p.scaleX = 0;
     item.p.scaleY = 0;
   };
@@ -344,7 +403,7 @@ export function buildWorld(
   // lots of the current ring not built yet: blueprint floor, and a lock sign saying what comes and when
   const lockSigns: Sprite[] = [];
   // signs only on what comes next: the next few amenities by rat count and the next desk rooms in build order
-  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r));
+  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r) && openStrip.has(`${r.ring}:${r.strip}`));
   const nextAmenities = lots.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!).slice(0, 4);
   const nextDesks = lots.filter((r) => r.unlockAt === null).sort((a, b) => a.order - b.order).slice(0, 2);
   const signed = new Set([...nextAmenities, ...nextDesks].map((r) => r.id));
@@ -368,8 +427,10 @@ export function buildWorld(
     lockSigns.push(s);
   }
 
-  // the city round the building: it changes with the stage (suburb, downtown, towers, the evil empire)
-  const city = buildCity(plan, stage, atlas, main, floorLayer);
+  // the city round the building: lots, street furniture, street scenes, traffic, upcoming lots as grey shells
+  const cityView = renderCity(city, stage, atlas, main, floorLayer, under, signs, backdrop, lights);
+  lockSigns.push(...cityView.shells);
+
 
   const floor = floorLayer.container;
 
@@ -477,6 +538,7 @@ export function buildWorld(
   const fp = cellCentre(plan.furnace.i, plan.furnace.j);
   for (const pr of plan.props) {
     if (pr.flat || !propVisible(pr)) continue;
+    if (pr.kind === 'street_lamp' && pr.ring !== undefined) continue; // the city places its own lamps
     // the HQ centrepiece is the Vault (the plan still calls its spot the furnace)
     const f = atlas.frame(pr.kind === 'furnace' ? 'world:vault' : `world:${pr.kind}`);
     const pop = popping(pr);
@@ -558,6 +620,39 @@ export function buildWorld(
     }
   }
 
+  // never empty: applicants queue in the lobby, the founders hang about the garage at the start
+  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean): void => {
+    let frames: Frame[];
+    try {
+      frames = atlas.anim(`${look}/${anim}`);
+    } catch {
+      return;
+    }
+    const c = cellCentre(i, j);
+    const sc = TIER_SCALE[look.split('.')[0] as keyof typeof TIER_SCALE] ?? 1;
+    const p = makeParticle(frames[0]!, c.x, c.y, mirror, sc);
+    main.add(p, i + j + 1.25);
+    extras.push({ p, frames, k: Math.floor(Math.random() * frames.length), t: 0, fps: anim === 'cheer' ? 8 : 4, hold: false });
+  };
+  {
+    const lobby = plan.rooms[ring.lobby]!;
+    const door = ring.entrance[1] ?? ring.entrance[0]!;
+    const inI = door.i === ring.i1; // the door is in the +i wall: walk in towards -i
+    const queue = 2 + (growth.count % 4);
+    const looks = ['intern', 'intern.brown', 'analyst.white', 'intern.black', 'associate'];
+    for (let k = 0; k < queue; k++) {
+      const i = inI ? door.i - 2 - k : door.i + (k % 2 === 0 ? 0 : 1) - 1;
+      const j = inI ? door.j + (k % 2 === 0 ? 0 : 1) - 1 : door.j - 2 - k;
+      if (i < lobby.i0 || j < lobby.j0) break;
+      posed(looks[k % looks.length]!, 'idle_ne', i, j, inI);
+    }
+    if (stage === 0) {
+      const g = plan.garage;
+      posed('partner', 'idle_ne', g.i0 + 3, g.j0 + 2, false);
+      posed('vp.white', 'cheer', plan.furnace.i + 2, plan.furnace.j - 1, true);
+    }
+  }
+
   // blinking server lights
   const dot = document.createElement('canvas');
   dot.width = 2;
@@ -617,6 +712,7 @@ export function buildWorld(
 
   // signs: every built room gets one (stock rooms show their symbol), the building gets its stage name
   const roomSigns: Sprite[] = [];
+  const landmarkSigns: Sprite[] = [];
   for (const r of plan.rooms) {
     if (!built(r)) continue;
     // the garage's centrepiece has its own sign (THE VAULT)
@@ -634,6 +730,15 @@ export function buildWorld(
   name.anchor.set(0.5, 1);
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
+
+  // landmark set pieces (one per milestone) and the towers that grow the office upwards
+  const lm = renderLandmarks({
+    plan, stage, count: growth.count, built: (id) => growth.built[id] === 1, city, atlas, main, lights, signs, fresh: freshLandmarks,
+    addPop, posed, sign: (t, c) => signTexture(t, c, 2),
+  });
+  landmarkSigns.push(...lm.signs);
+  // with a tower the company name goes up on its roof, where the whole town can read it
+  if (lm.crown) name.position.set(lm.crown.x, lm.crown.y);
 
   // a new room goes up: scaffolding over it and a crane beside it, for a moment
   const builders: Array<{ s: Sprite; t: number; life: number; base: number }> = [];
@@ -666,7 +771,9 @@ export function buildWorld(
   let clock = 0;
   return {
     bounds,
+    backdrop,
     floor,
+    under,
     main,
     overlay,
     lights,
@@ -680,7 +787,7 @@ export function buildWorld(
     blocked,
     update(dt: number): void {
       clock += dt;
-      city.update(dt);
+      cityView.update(dt);
       for (let k = builders.length - 1; k >= 0; k--) {
         const b = builders[k]!;
         b.t += dt;
@@ -715,13 +822,13 @@ export function buildWorld(
           const p = pops[k]!;
           p.t += dt;
           if (p.t < 0) continue;
-          const u = Math.min(1, p.t / 0.35);
-          const e = 1 + 2.4 * (u - 1) ** 3 + 1.4 * (u - 1) ** 2; // ease out with a little overshoot
-          p.item.p.scaleX = p.sx * e;
-          p.item.p.scaleY = p.sy * e;
+          // drop in from above and bounce on landing
+          const u = Math.min(1, p.t / 0.5);
+          p.item.p.scaleX = p.sx;
+          p.item.p.scaleY = p.sy;
+          p.item.p.y = p.y - 46 * (1 - bounceOut(u));
           if (u >= 1) {
-            p.item.p.scaleX = p.sx;
-            p.item.p.scaleY = p.sy;
+            p.item.p.y = p.y;
             pops.splice(k, 1);
           }
         }
@@ -747,6 +854,13 @@ export function buildWorld(
         }
       } else if (item) main.remove(item);
     },
+    setPrep(on: boolean): void {
+      cityView.setPrep(on);
+    },
+    crown: lm.crown,
+    landmarkFocus(id: string): Focus | null {
+      return lm.focus.get(id) ?? null;
+    },
     activatePod(seatId: number): { x: number; y: number } | null {
       const s = plan.seats[seatId];
       if (!s) return null;
@@ -762,19 +876,24 @@ export function buildWorld(
       return { x: c.x, y: c.y };
     },
     setZoom(z: number): void {
-      // room signs fade in as you zoom out and grow so they stay readable; the stage sign always shows
-      const a = z <= 0.55 ? 1 : z >= 0.8 ? 0 : (0.8 - z) / 0.25;
-      const s = Math.max(1, Math.min(4, 0.9 / z));
+      // room labels only at mid zoom (hidden zoomed out, where only landmark names and the building name show;
+      // at close zoom the rooms speak for themselves)
+      const a = z >= 1.1 ? 0 : z >= 0.85 ? (1.1 - z) / 0.25 : z >= 0.55 ? 1 : z <= 0.42 ? 0 : (z - 0.42) / 0.13;
       for (const sg of roomSigns) {
         sg.alpha = a;
-        sg.scale.set(s);
+        sg.scale.set(1);
         sg.visible = a > 0.01;
       }
-      signScale = Math.max(1, Math.min(4, 0.6 / z));
+      // the building name and landmark names keep a readable size on screen: bigger zoomed out, smaller close up
+      signScale = Math.max(0.4, Math.min(4, 0.6 / z));
       name.scale.set(signScale);
-      vaultSign.scale.set(signScale);
-      fair?.scale.set(signScale);
-      for (const l of lockSigns) l.scale.set(Math.max(1, Math.min(5, 0.9 / z)));
+      vaultSign.scale.set(Math.max(1, signScale));
+      fair?.scale.set(Math.max(1, signScale));
+      for (const l of lockSigns) {
+        l.visible = z >= 0.42;
+        l.scale.set(1);
+      }
+      for (const l of landmarkSigns) l.scale.set(Math.max(0.45, Math.min(6, 0.9 / z)));
     },
     setJobFair(count: number, head: Cell | null): void {
       if (!head || count <= 0) {
@@ -798,11 +917,13 @@ export function buildWorld(
       fair.visible = true;
     },
     destroy(): void {
-      for (const c of [floor, main.container, overlay, lights, signs]) {
+      for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {
         c.parent?.removeChild(c);
       }
       (main.container as ParticleContainer).particleChildren.length = 0;
       floor.destroy({ children: true });
+      backdrop.destroy({ children: true, texture: true });
+      under.destroy({ children: true });
       main.container.destroy();
       overlay.destroy({ children: true, texture: true });
       lights.destroy({ children: true });
@@ -864,144 +985,322 @@ function lockTexture(what: string, when: string): Texture {
   return tex;
 }
 
-interface CityLook {
-  ground: string;
-  groundTint: number;
-  back: string[];
-  front: string[];
-  cars: string[];
-  scale: number;
-  tint: number;
+
+/** A faint far skyline: dark towers with a few lit windows, drawn once. */
+function skylineTexture(width: number, evil: boolean, seed: number): Texture {
+  const h = 260;
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = h;
+  const ctx = c.getContext('2d')!;
+  let s = seed >>> 0 || 1;
+  const rnd = (): number => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  for (const [shade, scale] of [[evil ? '#2a0c14' : '#141a30', 1], [evil ? '#3a1018' : '#1b2340', 0.7]] as const) {
+    let x = 0;
+    while (x < width) {
+      const w = 18 + Math.floor(rnd() * 46);
+      const bh = Math.floor((40 + rnd() * 180) * scale * (0.6 + 0.4 * Math.sin((x / width) * Math.PI)));
+      ctx.fillStyle = shade;
+      ctx.fillRect(x, h - bh, w, bh);
+      if (rnd() < 0.3) ctx.fillRect(x + w / 2 - 1, h - bh - 14, 2, 14);
+      ctx.fillStyle = evil ? 'rgba(255,90,90,0.55)' : 'rgba(255,214,140,0.5)';
+      for (let y = h - bh + 6; y < h - 4; y += 7) for (let wx = x + 3; wx < x + w - 3; wx += 5) if (rnd() < 0.12) ctx.fillRect(wx, y, 2, 2);
+      x += w + Math.floor(rnd() * 8);
+    }
+  }
+  // melt the bottom into the sky: no hard line where the skyline stops
+  const img = ctx.getImageData(0, 0, width, h);
+  for (let y = 0; y < h; y++) {
+    const k = y < h * 0.45 ? 1 : Math.max(0, 1 - (y - h * 0.45) / (h * 0.55));
+    for (let x = 0; x < width; x++) img.data[(y * width + x) * 4 + 3] = Math.round(img.data[(y * width + x) * 4 + 3]! * k);
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = Texture.from(c);
+  tex.source.scaleMode = 'nearest';
+  return tex;
 }
 
-const CITY: CityLook[] = [
-  { ground: 'grass', groundTint: 0xffffff, back: ['house_a', 'tree_round', 'house_b', 'tree_bushy', 'tree_pine'], front: ['tree_round', 'mailbox', 'tree_bushy', 'tree_pine'], cars: ['car_red', 'car_blue', 'van'], scale: 1, tint: 0xffffff },
-  { ground: 'sidewalk', groundTint: 0xffffff, back: ['shop', 'house_b', 'brick_block', 'shop', 'tree_square'], front: ['tree_square', 'bench', 'hydrant', 'trash_can', 'bus_stop'], cars: ['taxi', 'car_blue', 'van', 'car_red'], scale: 1, tint: 0xffffff },
-  { ground: 'sidewalk', groundTint: 0xffffff, back: ['brick_block', 'shop', 'glass_tower', 'brick_block', 'shop'], front: ['tree_square', 'bench', 'hydrant', 'bus_stop', 'trash_can'], cars: ['taxi', 'car_white', 'van', 'police', 'car_blue'], scale: 1.2, tint: 0xffffff },
-  { ground: 'sidewalk', groundTint: 0xe8ecf4, back: ['glass_tower', 'deco_tower', 'brick_block', 'glass_tower'], front: ['tree_square', 'bus_stop', 'hydrant', 'bench'], cars: ['taxi', 'limo', 'car_white', 'taxi'], scale: 1.5, tint: 0xffffff },
-  { ground: 'sidewalk', groundTint: 0xdfe4f0, back: ['deco_tower', 'glass_tower', 'glass_tower', 'deco_tower', 'crane'], front: ['tree_square', 'bus_stop', 'hydrant'], cars: ['limo', 'taxi', 'police', 'car_white'], scale: 1.9, tint: 0xffffff },
-  { ground: 'asphalt', groundTint: 0xd89090, back: ['evil_tower', 'evil_rat_tower', 'glass_tower', 'evil_tower', 'deco_tower'], front: ['skull_flag', 'barrier', 'cone'], cars: ['limo', 'car_gold', 'police', 'limo'], scale: 2.1, tint: 0xffb0b0 },
-];
-
-/** Ground, neighbour buildings, trees, benches and parked cars round the current building. */
-function buildCity(plan: FloorLayout, stage: number, atlas: Atlas, main: SortedLayer, floor: SortedLayer): { update(dt: number): void } {
-  const ring = plan.rings[stage]!;
-  const look = CITY[stage] ?? CITY[0]!;
-  const rng = (n: number): number => ((Math.imul(n + stage * 977, 2654435761) >>> 0) % 10000) / 10000;
-  const lo = ring.i0;
-  const hi = ring.i1;
-  const IN = 8; // the street square drawn by the floor pass
-  const OUT = 22;
-  // ground beyond the street
-  for (let j = lo - OUT; j <= hi + OUT; j++) {
-    for (let i = lo - OUT; i <= hi + OUT; i++) {
-      const d = Math.max(lo - i, i - hi, lo - j, j - hi);
-      if (d < IN) continue;
-      const v = ((Math.imul(i, 73856093) ^ Math.imul(j, 19349663)) >>> 0) % 4;
-      const style = d <= IN + 1 && look.ground === 'grass' ? 'sidewalk' : look.ground;
-      const p = cellToScreen(i, j);
-      const t = makeParticle(atlas.frame(`world:fl_${style}_${v}`), p.x, p.y);
-      t.tint = look.groundTint;
-      floor.add(t, i + j);
+/** Everything the city puts on screen, and the traffic and extras that move. */
+function renderCity(
+  city: City,
+  stage: number,
+  atlas: Atlas,
+  main: SortedLayer,
+  floor: SortedLayer,
+  under: Container,
+  signs: Container,
+  backdrop: Container,
+  lights?: Container,
+): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void } {
+  const fadeAt = (i: number, j: number): number => city.ground.get(CITY_KEY(Math.round(i), Math.round(j)))?.fade ?? 1;
+  const warm = glowTexture(255, 186, 102);
+  for (const it of city.items) {
+    const fade = fadeAt(it.i, it.j);
+    if (fade > 0.8) continue;
+    const c = cellCentre(it.i, it.j);
+    const f = atlas.frame(`world:${it.kind}`);
+    const p = makeParticle(f, c.x + (it.dx ?? 0), c.y + (it.dy ?? 0), it.mirror, it.scale);
+    p.tint = darken(it.tint ?? 0xffffff, fade * 0.8 + (stage >= 5 && !it.flat ? 0.12 : 0));
+    if (it.flat) floor.add(p, 1e6 + it.i + it.j);
+    else main.add(p, it.i + it.j + 1);
+    if (it.kind === 'street_lamp' && lights) {
+      const g = new Sprite(warm);
+      g.anchor.set(0.5);
+      g.position.set(c.x, c.y);
+      g.scale.set(1.5);
+      g.alpha = 0.45 * (1 - fade);
+      g.blendMode = 'add';
+      lights.addChild(g);
     }
   }
-  const put = (kind: string, i: number, j: number, mirror: boolean, scale = 1, tint = 0xffffff): void => {
-    if (!atlas.has(`world:${kind}`)) return;
-    const c = cellCentre(i, j);
-    const p = makeParticle(atlas.frame(`world:${kind}`), c.x, c.y, mirror, scale);
-    p.tint = tint;
-    main.add(p, i + j + 1);
+  // lots the office takes next: grey shells with a label
+  const shells: Sprite[] = [];
+  const g = new Graphics();
+  under.addChild(g);
+  const next = STAGES[stage + 1];
+  for (const l of city.lots) {
+    if (l.use !== 'shell') continue;
+    const H = 34;
+    const P = (i: number, j: number): { x: number; y: number } => cellToScreen(i, j);
+    const t0 = P(l.i0, l.j0);
+    const t1 = P(l.i0 + l.w, l.j0);
+    const t2 = P(l.i0 + l.w, l.j0 + l.h);
+    const t3 = P(l.i0, l.j0 + l.h);
+    const up = (p: { x: number; y: number }): { x: number; y: number } => ({ x: p.x, y: p.y - H });
+    g.poly([t3.x, t3.y, t2.x, t2.y, up(t2).x, up(t2).y, up(t3).x, up(t3).y]).fill({ color: 0x8a93aa, alpha: 0.28 }).stroke({ color: 0xb8c6ee, width: 1, alpha: 0.7 });
+    g.poly([t2.x, t2.y, t1.x, t1.y, up(t1).x, up(t1).y, up(t2).x, up(t2).y]).fill({ color: 0x6a7390, alpha: 0.28 }).stroke({ color: 0xb8c6ee, width: 1, alpha: 0.7 });
+    g.poly([up(t0).x, up(t0).y, up(t1).x, up(t1).y, up(t2).x, up(t2).y, up(t3).x, up(t3).y]).fill({ color: 0xaab4cc, alpha: 0.22 }).stroke({ color: 0xd8e2ff, width: 1, alpha: 0.8 });
+    if (next) {
+      const s = new Sprite(lockTexture('NEXT FLOOR', `AT ${next.min.toLocaleString('en-US')} RATS`));
+      const c = up(P(l.i0 + l.w / 2, l.j0 + l.h / 2));
+      s.anchor.set(0.5, 1);
+      s.position.set(c.x, c.y - 4);
+      signs.addChild(s);
+      shells.push(s);
+    }
+  }
+  // at 90% of the next stage the shells get scaffolding, a crane and a crew (hidden until then)
+  const prep: Array<{ p: Particle; sx: number; sy: number }> = [];
+  const prepAdd = (p: Particle, depth: number): void => {
+    main.add(p, depth);
+    prep.push({ p, sx: p.scaleX, sy: p.scaleY });
+    p.scaleX = 0;
+    p.scaleY = 0;
   };
-  // neighbour buildings along the two back sides (they never hide the office), a landmark on the back corner
-  const big = (k: string): boolean => k.includes('tower') || k === 'brick_block' || k === 'crane' || k === 'shop' || k.startsWith('house');
-  let n = 0;
-  const step = Math.round(7 * look.scale);
-  for (let s = lo - 4; s <= hi + 6; s += step) {
-    const kind = look.back[n++ % look.back.length]!;
-    const sc = big(kind) ? look.scale : 1;
-    const tint = kind === 'glass_tower' ? look.tint : 0xffffff;
-    put(kind, s, lo - IN - 3 - Math.round(rng(n) * 2), rng(n + 7) < 0.5, sc, tint);
-    const kind2 = look.back[(n + 2) % look.back.length]!;
-    put(kind2, lo - IN - 3 - Math.round(rng(n + 3) * 2), s, rng(n + 9) < 0.5, big(kind2) ? look.scale : 1, kind2 === 'glass_tower' ? look.tint : 0xffffff);
-  }
-  put(look.back[0]!, lo - IN - 6, lo - IN - 6, false, look.scale * 1.15, look.back[0] === 'glass_tower' ? look.tint : 0xffffff);
-  // a second row further back, dimmer (distance), and a few on the far left and right corners
-  const far = stage >= 5 ? 0xb07070 : 0x9098b0;
-  for (let s = lo - 8 + Math.round(step / 2); s <= hi + 8; s += step) {
-    const kind = look.back[(n + 3) % look.back.length]!;
-    n++;
-    if (!big(kind)) continue;
-    put(kind, s, lo - IN - 3 - step, rng(n + 11) < 0.5, look.scale, far);
-    put(look.back[(n + 1) % look.back.length]!, lo - IN - 3 - step, s, rng(n + 17) < 0.5, look.scale, far);
-  }
-  for (let k = 0; k < 3; k++) {
-    const kind = look.back[(k + 1) % look.back.length]!;
-    if (!big(kind)) continue;
-    put(kind, hi + IN + 3 + k * step, lo - IN - 2 - k * 2, k % 2 === 1, look.scale, 0xffffff);
-    put(look.back[(k + 2) % look.back.length]!, lo - IN - 2 - k * 2, hi + IN + 3 + k * step, k % 2 === 0, look.scale, 0xffffff);
-  }
-  // low things along the two front sides, in the band past the road
-  n = 0;
-  for (let s = lo - 2; s <= hi + 4; s += 5) {
-    const a = look.front[n++ % look.front.length]!;
-    const b = look.front[(n + 1) % look.front.length]!;
-    put(a, s, hi + IN + 1, rng(n) < 0.5);
-    put(b, hi + IN + 1, s, rng(n + 5) < 0.5);
-  }
-  // parked cars on the road ring (sprites run along j; mirrored along i)
-  n = 0;
-  for (let s = lo - 3; s <= hi + 3; s += 6) {
-    for (const [i, j, mirror] of [[s, lo - 5, true], [lo - 5, s, false], [s, hi + 5, true], [hi + 5, s, false]] as const) {
-      if (rng(n * 13 + i + j) < 0.45) continue;
-      const near = Math.abs(i - ring.spawn.i) + Math.abs(j - ring.spawn.j) < 6;
-      if (near) continue;
-      put(look.cars[n++ % look.cars.length]!, i, j, mirror);
+  city.lots.filter((l) => l.use === 'shell').forEach((l, n) => {
+    const ci = l.i0 + l.w / 2 - 0.5;
+    const cj = l.j0 + l.h / 2 - 0.5;
+    const c = cellCentre(ci, cj);
+    if (atlas.has('world:scaffold')) prepAdd(makeParticle(atlas.frame('world:scaffold'), c.x, c.y + 10, n % 2 === 1, 0.9), ci + cj + 1);
+    if (n === 0 && atlas.has('world:crane')) {
+      const cc = cellCentre(l.i0, l.j0);
+      prepAdd(makeParticle(atlas.frame('world:crane'), cc.x, cc.y, false, 0.9 + stage * 0.1), l.i0 + l.j0 + 1);
     }
-  }
-  // the suburb: a driveway up to the garage door, the family car on it
-  if (stage === 0) {
-    const d = ring.entrance[0]!;
-    for (let j = d.j + 1; j <= d.j + 3; j++) {
-      for (let i = d.i - 4; i <= d.i - 2; i++) {
-        const p = cellToScreen(i, j);
-        floor.add(makeParticle(atlas.frame(`world:fl_driveway_${(i + j) & 3}`), p.x, p.y), 2e5 + i + j);
+    for (const [di, dj, anim, mirror] of [[l.w - 1, 0, 'idle_se', false], [0, l.h - 1, 'cheer', true]] as const) {
+      try {
+        const frames = atlas.anim(`intern/${anim}`);
+        const hat = atlas.anim(`acc/hat_hard/${anim}`);
+        const cp = cellCentre(l.i0 + di, l.j0 + dj);
+        prepAdd(makeParticle(frames[0]!, cp.x, cp.y, mirror, 0.9), l.i0 + di + l.j0 + dj + 1.25);
+        prepAdd(makeParticle(hat[0]!, cp.x, cp.y, mirror, 0.9), l.i0 + di + l.j0 + dj + 1.26);
+      } catch {
+        /* no such frames: skip the crew */
       }
     }
-    put('car_red', d.i - 3, d.j + 2, true);
-    put('mailbox', d.i - 5, d.j + 3, false);
-  }
-  // traffic: cars drive down the four roads (sprites only point down-right or down-left, so every road runs that way)
-  const NOSE_RIGHT = new Set(['car_red', 'car_blue', 'taxi']);
-  const movers: Array<{ item: LayerItem; axis: 'i' | 'j'; fixed: number; pos: number; from: number; to: number; speed: number }> = [];
-  const roads: Array<[axis: 'i' | 'j', fixed: number]> = [['i', lo - 4], ['j', lo - 4], ['i', hi + 4], ['j', hi + 4]];
-  const perRoad = stage === 0 ? 1 : 2;
-  n = 0;
-  for (const [axis, fixed] of roads) {
-    for (let k = 0; k < perRoad; k++) {
-      const kind = look.cars[(n + k) % look.cars.length]!;
-      n++;
-      if (!atlas.has(`world:${kind}`)) continue;
-      // down-right (+i) wants the nose on the right; down-left (+j) on the left
-      const mirror = axis === 'i' ? !NOSE_RIGHT.has(kind) : NOSE_RIGHT.has(kind);
-      const from = lo - 10;
-      const to = hi + 10;
-      const pos = from + rng(n * 31 + k) * (to - from);
-      const c = axis === 'i' ? cellCentre(pos, fixed) : cellCentre(fixed, pos);
-      const p = makeParticle(atlas.frame(`world:${kind}`), c.x, c.y, mirror);
-      const item = main.add(p, pos + fixed + 1);
-      movers.push({ item, axis, fixed, pos, from, to, speed: 3 + rng(n * 7) * 3 });
+  });
+
+  // the far skyline behind the back corner of the city
+  const top = cellToScreen(city.i0, city.j0);
+  const span = (city.i1 - city.i0 + city.j1 - city.j0) * 16;
+  const sky = new Sprite(skylineTexture(Math.min(4000, Math.max(800, Math.round(span * 0.9))), stage >= 5, 97 + stage));
+  sky.anchor.set(0.5, 1);
+  sky.position.set(top.x, top.y + span * 0.08);
+  sky.scale.set(Math.max(1, span / 1800));
+  sky.alpha = 0.6;
+  backdrop.addChild(sky);
+  // extras: street scenes (food truck queue, the smoker, the delivery, the crew)
+  const extras: Array<{ p: Particle; acc: Particle | null; frames: Frame[]; accFrames: Frame[]; k: number; t: number; fps: number }> = [];
+  const puffs: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
+  for (const x of city.extras) {
+    if (fadeAt(x.i, x.j) > 0.5) continue;
+    let frames: Frame[];
+    try {
+      frames = atlas.anim(`${x.look}/${x.anim}`);
+    } catch {
+      continue;
     }
+    const c = cellCentre(x.i, x.j);
+    const tier = x.look.split('.')[0] as keyof typeof TIER_SCALE;
+    const sc = TIER_SCALE[tier] ?? 1;
+    const p = makeParticle(frames[0]!, c.x, c.y, x.mirror, sc);
+    main.add(p, x.i + x.j + 1.25);
+    let acc: Particle | null = null;
+    let accFrames: Frame[] = [];
+    if (x.acc) {
+      try {
+        accFrames = atlas.anim(`acc/${x.acc}/${x.anim}`);
+        acc = makeParticle(accFrames[0]!, c.x, c.y, x.mirror, sc);
+        main.add(acc, x.i + x.j + 1.26);
+      } catch {
+        acc = null;
+      }
+    }
+    if (x.carry === 'box_s') main.add(makeParticle(atlas.frame('world:box_s'), c.x + (x.mirror ? -5 : 5), c.y - 14 * sc), x.i + x.j + 1.27);
+    if (x.carry === 'smoke') {
+      for (let n = 0; n < 2; n++) {
+        const s = new Sprite(puffTex());
+        s.position.set(c.x + (x.mirror ? -8 : 8), c.y - 34 * sc);
+        s.alpha = 0.6;
+        signs.addChild(s);
+        puffs.push({ s, x: s.x, y: s.y, t: n * 0.9 });
+      }
+    }
+    extras.push({ p, acc, frames, accFrames, k: 0, t: Math.random(), fps: x.anim === 'cheer' ? 8 : x.anim.startsWith('walk') ? 8 : 4 });
   }
+  // visitors every few minutes: a pizza delivery, the inspector cat, a pigeon (when their art is in the atlas)
+  type Visitor = { item: LayerItem; extra: LayerItem | null; kind: string; path: Array<{ i: number; j: number }>; seg: number; pos: { i: number; j: number }; wait: number; t: number; k: number };
+  let visitor: Visitor | null = null;
+  let nextVisit = 12 + Math.random() * 20;
+  let visits = 0;
+  const kinds = ['pizza', ...(atlas.has('world:cat_walk_se_0') ? ['cat'] : []), ...(atlas.has('world:pigeon_walk_se_0') ? ['pigeon'] : [])];
+  const walkFrames = (kind: string, dir: 'se' | 'ne'): Frame[] => {
+    if (kind === 'pizza') return atlas.anim(`intern.brown/walk_${dir}`);
+    const out: Frame[] = [];
+    for (let n = 0; atlas.has(`world:${kind}_walk_${dir}_${n}`); n++) out.push(atlas.frame(`world:${kind}_walk_${dir}_${n}`));
+    return out;
+  };
+  const spawnVisitor = (): void => {
+    const kind = kinds[visits++ % kinds.length]!;
+    const there = city.visitorPath;
+    if (there.length < 2) return;
+    const path = [...there, ...[...there].reverse().slice(1)];
+    const c = cellCentre(path[0]!.i, path[0]!.j);
+    const f = walkFrames(kind, 'se')[0];
+    if (!f) return;
+    const item = main.add(makeParticle(f, c.x, c.y), path[0]!.i + path[0]!.j + 1.25);
+    const extra = kind === 'pizza' && atlas.has('world:pizza_boxes') ? main.add(makeParticle(atlas.frame('world:pizza_boxes'), c.x, c.y - 16, false, 0.45), path[0]!.i + path[0]!.j + 1.3) : null;
+    visitor = { item, extra, kind, path, seg: 1, pos: { ...path[0]! }, wait: 0, t: 0, k: 0 };
+  };
+  const moveVisitor = (dt: number): void => {
+    const v = visitor;
+    if (!v) {
+      nextVisit -= dt;
+      if (nextVisit <= 0) spawnVisitor();
+      return;
+    }
+    if (v.wait > 0) {
+      v.wait -= dt;
+      return;
+    }
+    const to = v.path[v.seg];
+    if (!to) {
+      main.remove(v.item);
+      if (v.extra) main.remove(v.extra);
+      visitor = null;
+      nextVisit = 70 + Math.random() * 110;
+      return;
+    }
+    const di = to.i - v.pos.i;
+    const dj = to.j - v.pos.j;
+    const d = Math.abs(di) + Math.abs(dj);
+    const step = (v.kind === 'pigeon' ? 1.2 : v.kind === 'cat' ? 1.8 : 2.4) * dt;
+    if (d <= step) {
+      v.pos = { ...to };
+      v.seg++;
+      if (v.seg === Math.ceil(v.path.length / 2)) v.wait = 2.5; // at the door for a moment
+    } else {
+      v.pos = { i: v.pos.i + (di / d) * step, j: v.pos.j + (dj / d) * step };
+    }
+    const dir = Math.abs(di) >= Math.abs(dj) ? (di >= 0 ? 'se' : 'nw') : dj >= 0 ? 'sw' : 'ne';
+    const frames = walkFrames(v.kind, dir === 'se' || dir === 'sw' ? 'se' : 'ne');
+    v.t += dt;
+    if (v.t > 0.1) {
+      v.t = 0;
+      v.k = (v.k + 1) % Math.max(1, frames.length);
+    }
+    const f = frames[v.k] ?? frames[0];
+    const c = cellCentre(v.pos.i, v.pos.j);
+    const p = v.item.p;
+    if (f) {
+      p.texture = f.texture;
+      p.anchorX = f.anchorX;
+      p.anchorY = f.anchorY;
+    }
+    p.x = c.x;
+    p.y = c.y;
+    p.scaleX = dir === 'sw' || dir === 'nw' ? -1 : 1;
+    main.moved(v.item, v.pos.i + v.pos.j + 1.25);
+    if (v.extra) {
+      v.extra.p.x = c.x;
+      v.extra.p.y = c.y - 30;
+      main.moved(v.extra, v.pos.i + v.pos.j + 1.3);
+    }
+  };
+
+  // traffic
+  const movers = city.movers.map((m) => {
+    const pos = m.from + m.phase * (m.to - m.from);
+    const c = m.axis === 'i' ? cellCentre(pos, m.fixed) : cellCentre(m.fixed, pos);
+    const item = main.add(makeParticle(atlas.frame(`world:${m.kind}`), c.x, c.y, m.mirror), pos + m.fixed + 1);
+    return { m, item, pos };
+  });
   return {
+    shells,
+    setPrep(on: boolean): void {
+      for (const x of prep) {
+        x.p.scaleX = on ? x.sx : 0;
+        x.p.scaleY = on ? x.sy : 0;
+      }
+    },
     update(dt: number): void {
-      for (const m of movers) {
-        m.pos += m.speed * dt;
-        if (m.pos > m.to) m.pos = m.from;
-        const c = m.axis === 'i' ? cellCentre(m.pos, m.fixed) : cellCentre(m.fixed, m.pos);
-        m.item.p.x = c.x;
-        m.item.p.y = c.y;
-        main.moved(m.item, m.pos + m.fixed + 1);
+      moveVisitor(dt);
+      for (const v of movers) {
+        v.pos += v.m.speed * dt;
+        if (v.pos > v.m.to) v.pos = v.m.from;
+        const c = v.m.axis === 'i' ? cellCentre(v.pos, v.m.fixed) : cellCentre(v.m.fixed, v.pos);
+        v.item.p.x = c.x;
+        v.item.p.y = c.y;
+        const fade = fadeAt(v.m.axis === 'i' ? v.pos : v.m.fixed, v.m.axis === 'i' ? v.m.fixed : v.pos);
+        v.item.p.scaleY = fade > 0.7 ? 0 : 1;
+        v.item.p.scaleX = fade > 0.7 ? 0 : v.m.mirror ? -1 : 1;
+        main.moved(v.item, v.pos + v.m.fixed + 1);
+      }
+      for (const e of extras) {
+        e.t += dt;
+        if (e.t < 1 / e.fps) continue;
+        e.t = 0;
+        e.k = (e.k + 1) % e.frames.length;
+        const f = e.frames[e.k]!;
+        e.p.texture = f.texture;
+        e.p.anchorX = f.anchorX;
+        e.p.anchorY = f.anchorY;
+        const a = e.accFrames[e.k];
+        if (e.acc && a) {
+          e.acc.texture = a.texture;
+          e.acc.anchorX = a.anchorX;
+          e.acc.anchorY = a.anchorY;
+        }
+      }
+      for (const p of puffs) {
+        p.t = (p.t + dt) % 1.8;
+        p.s.y = p.y - p.t * 10;
+        p.s.alpha = 0.6 * (1 - p.t / 1.8);
       }
     },
   };
+}
+
+let puffTexCache: Texture | null = null;
+function puffTex(): Texture {
+  if (puffTexCache) return puffTexCache;
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 4;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#d8dce8';
+  ctx.fillRect(1, 0, 2, 4);
+  ctx.fillRect(0, 1, 4, 2);
+  puffTexCache = Texture.from(c);
+  puffTexCache.source.scaleMode = 'nearest';
+  return puffTexCache;
 }

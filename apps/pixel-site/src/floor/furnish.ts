@@ -29,7 +29,7 @@ const SQ2: Off = [[0, 0], [-1, 0], [0, -1], [-1, -1]];
 export const FOOTPRINT: Record<string, Off> = {
   coffee_counter: I2, whiteboard: I2, filing: I2, filing_printer: I2, filing_plant: I2, sofa: I2, sofa_navy: I2,
   sofa_green: I2, bookshelf: I2, tv_stand: I2, copier: SQ2, exec_desk: SQ2, exec_desk_gold: SQ2, round_table: SQ2,
-  box_pile2: SQ2, furnace: SQ2, ping_pong: SQ2, shark_tank: SQ2, foosball: I2, aquarium: I2, copier_jam: I2,
+  box_pile2: SQ2, furnace: SQ2, ping_pong: SQ2, shark_tank: SQ2, foosball: I2, aquarium: I2, copier_jam: I2, vault_door: SQ2,
 };
 
 function footprint(kind: string, mirror: boolean): Array<[number, number]> {
@@ -742,6 +742,8 @@ export function warRoom(f: Fit): void {
 /** The vault: piles of cash bags and boxes. */
 export function vaultRoom(f: Fit): void {
   const { w, h } = f.r;
+  // the round steel door in the back corner, left ajar
+  f.put('vault_door', f.r.i0 + 1, f.r.j0 + 1, false, { scale: 0.7 });
   f.spot('boxes', f.r.i0 + Math.floor(w / 2), f.r.j0 + Math.floor(h / 2), 'ne');
   f.settle();
   f.clutter(['cashbag', 'cashbag', 'cashbag', 'box_pile', 'box_half', 'filing'], Math.round((w * h) / 3), 0.3);
