@@ -214,3 +214,64 @@ After legal advice: hold, never burn, never pay dividends; keep buy and burn as 
 - **Tests.** Test worlds (`createSimWorld`) keep a 50/50 split so every burn test (chaos, red team, property, launch hour) keeps covering that path. New `tests/e2e/launch-hour.test.ts` D runs the production default live on SimChain: all 12 SOL claimed go to hires, 405 rats, the fund wallet untouched, 0 burns, coin supply unchanged, every claim event shows 0 to the fund.
 - **Site and simulator.** The HUD shows **Fund value** (what all the rats' stocks are worth, top positions under it) instead of Total burned; claim lines read "all of it hires rats"; the simulator runs the new split (Normal about 4,900 rats and a $23K fund; Mega ends at 5 hours with about 4,900 rats and 45 SOL still waiting under the hourly cap).
 - **Limit found.** The site's building is drawn for about 5,200 rats (`PLAN_RATS`). With every fee hiring, a big launch passes that after about 5 hours at the cap; rats beyond it stand in HQ. Follow-up: a bigger final ring or a stage after the evil empire.
+
+## Miguel's decision: buy and burn removed, every fee hires rats (2026-09-28)
+
+After legal advice: hold, never burn, never pay dividends. Buy and burn is gone completely (not just off).
+
+**What changed**
+- **Backend.** Removed:
+  - the burn step and its tests;
+  - the fund wallet (config, key import, preflight, wallet watch);
+  - the direct pump.fun buy (and `@pump-fun/pump-sdk`);
+  - the Jito route;
+  - the `burn` ledger bucket and the claims' fund columns (migration `0002` drops the `burns` table and 2 columns).
+- **Only transactions left:** claim and hire (plus the owner's manual sweep). Every claimed lamport is credited to the hire bucket.
+- **New defaults:** `MAX_HIRES_PER_LOOP=20` (was 10), `SPEND_CAP_SOL_PER_HOUR_HIRE=60` (was 30). That is about 34 rats a minute, just over the cap's 33.
+- **Contract v2 (`schemaVersion` 2):**
+  - no `burn` event;
+  - claim data is `{ amountSol, source }`;
+  - no `bot.nextBurnAt`, `coin.burnedTokens` or `wallets.fund`;
+  - treasury is `{ totalClaimedSol, totalHiredSol, waitingSol }`;
+  - new `portfolio.positionCount`.
+  - Mock files, the live mock API, the state API and the admin page follow it.
+- **Site:**
+  - "Fund value" is now **"Portfolio value"** everywhere (HUD, simulator, docs), so nobody reads it as holders' money.
+  - The furnace cash-bag effect is gone.
+  - New **job-fair line**: rats with no desk queue on the street from the lobby door, around the block, under a "JOB FAIR: N IN LINE" sign. When a desk is built for them they walk in and the rest of the line moves up. Feed lines when the line forms and when it clears.
+  - `?rats=` now goes up to 7,000 to show it.
+- **Simulator:**
+  - no split or burns; 20 per loop, 60 SOL/h.
+  - Normal: 4,845 rats, all seated.
+  - Mega: 6,373 rats, about 530 in the line.
+  - Rug: 816.
+  - A 3x Mega test checks that the 60 SOL/h cap binds.
+- **CI guard:** token burn code (`createBurn*Instruction`, `buildBurnInstruction`, `burnIx`) is refused in production source.
+
+**Tests**
+- Burn-only tests deleted:
+  - burn config;
+  - burn totals;
+  - the Jito route (5, replaced by 2 plain RPC send tests);
+  - burn step;
+  - burn drain;
+  - chaos burn rows;
+  - kill-burn.
+- Converted: the red-team burn kill-mid-send is now a hire version, and the property regression is now a fixed hire scenario.
+- `checkMoney` now also asserts that the whole claim goes to hires and that nothing is booked outside the hire bucket.
+- Launch hour B scans every hire ledger row for the rolling-hour maximum: exactly 60 SOL, 20 per loop, 44 Jupiter calls a minute at most.
+- No safety check was weakened. Some timeouts were raised, because hires doubled.
+
+**3-hour simulation** (`SIMULATION.md`)
+- 180 SOL of fees became 6,084 rats.
+- The hire budget was fully spent by minute 180 (359 with the old limits).
+- The busiest hour spent exactly 60 SOL, and hiring never paused for more than 1 minute.
+- At most 44 Jupiter calls in any minute; the limiter allows 55 and the Free tier 60.
+- The ledger equals the chain to the lamport.
+
+**Jupiter tier for launch day**
+- **Developer** (10 RPS, $25/month).
+- Free (1 RPS, 60 a minute) fits on paper, but leaves about 25% headroom. That headroom is shared per organisation with every other use of the key (preflight, scripts) and with hire retries.
+- Going over never loses money. It only slows hiring.
+- Source: jup-ag/docs `portal/rate-limits.mdx` and `portal/plans.mdx`.
+

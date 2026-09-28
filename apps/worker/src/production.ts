@@ -1,17 +1,17 @@
 // Production wiring (RPC, Jupiter, Postgres, encrypted keys, Telegram). Shared by main.ts and the smoke test.
-import { JitoTipAccounts, RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
+import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, openDatabase } from '@rat/db';
 import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimiter } from '@rat/jupiter';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
-import { PumpDirectBuyBuilder, PumpFunClient, sdkBuyApi } from '@rat/pump';
+import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
 
 export const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
 
 export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise<{ deps: WorkerDeps; handle: DbHandle }> {
-  requireConfig(cfg, ['databaseUrl', 'keyEncryptionKey', 'rpcUrl', 'creatorPubkey', 'fundPubkey']);
+  requireConfig(cfg, ['databaseUrl', 'keyEncryptionKey', 'rpcUrl', 'creatorPubkey']);
   if (!cfg.jupiter.apiKey) throw new Error('JUPITER_API_KEY is required (free key at portal.jup.ag)');
 
   const handle = await openDatabase(cfg.databaseUrl!);
@@ -32,26 +32,24 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
       liveConfirmed: cfg.liveConfirmed,
       priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax,
       log,
-      jito: cfg.burn.sendVia === 'jito' ? { url: cfg.burn.jitoUrl, kinds: ['burn'] } : undefined,
     }),
     { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log, alerts },
   );
   const guard = new SpendGuard(
-    { ledger: store.ledger, killSwitch, alerts, clock: systemClock, chain, pendingFundTransfer: () => store.claims.pendingFundTransfer() },
+    { ledger: store.ledger, killSwitch, alerts, clock: systemClock, chain },
     {
       capPerHour: cfg.spendCapLamportsPerHour,
       alertPct: cfg.spendAlertPct,
-      wallets: { hire: cfg.creatorPubkey, burn: cfg.fundPubkey },
-      reserves: { hire: cfg.creatorReserveLamports, burn: cfg.fundReserveLamports },
+      wallets: { hire: cfg.creatorPubkey },
+      reserves: { hire: cfg.creatorReserveLamports },
       smokeMode: cfg.smokeMode,
       smokeCap: cfg.smokeCapLamports,
       checkWallets: !cfg.dryRun,
     },
   );
   const ring = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
-  const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey, expectedFund: cfg.fundPubkey });
+  const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey });
   await keys.creator();
-  await keys.fund();
 
   const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm) });
   const deps: WorkerDeps = {
@@ -67,13 +65,10 @@ export async function createProductionDeps(cfg: AppConfig, log: Logger): Promise
     pump: new PumpFunClient(chain),
     prices: new JupiterPriceSource(http),
     swap: new JupiterSwapBuilder(http),
-    fallbackSwap: (coin) => new PumpDirectBuyBuilder(sdkBuyApi(conn), coin),
     alerts,
     killSwitch,
     stocks,
     creator: cfg.creatorPubkey!,
-    fund: cfg.fundPubkey!,
-    jitoTipAccounts: cfg.burn.sendVia === 'jito' ? ((tips) => () => tips.get())(new JitoTipAccounts(cfg.burn.jitoUrl)) : undefined,
   };
   return { deps, handle };
 }

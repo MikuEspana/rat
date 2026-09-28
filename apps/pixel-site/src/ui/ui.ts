@@ -6,8 +6,9 @@ import type { Atlas } from '../gfx/atlas';
 import type { Camera } from '../gfx/camera';
 import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
+import { DEBUG_MAX_RATS } from '../config';
 import { now as clockNow } from '../now';
-import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, tokens, usd } from './format';
+import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
 
@@ -96,7 +97,7 @@ export class Ui {
     for (const [key, label] of [
       ['mcap', 'Market cap'],
       ['rats', 'Rats hired'],
-      ['fund', 'Fund value'],
+      ['portfolio', 'Portfolio value'],
       ['pnl', 'Portfolio PnL'],
     ] as const) {
       const box = el('div', 'stat');
@@ -142,12 +143,12 @@ export class Ui {
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
-    set('fund', usd(s.portfolio.valueUsd), s.treasury.burnCount > 0 ? `${tokens(s.coin.burnedTokens)} RAT burned` : holdings || 'no positions yet');
+    set('portfolio', usd(s.portfolio.valueUsd), holdings || 'no positions yet');
     set('pnl', usd(s.portfolio.pnlUsd), pct(s.portfolio.pnlPct), signClass(s.portfolio.pnlUsd));
     const mode = s.bot.mode;
     this.banner.hidden = mode === 'live';
     this.banner.textContent =
-      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No hires, no burns.' : '';
+      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No claims, no hires.' : '';
     this.banner.className = `banner ${mode}`;
     this.renderBoard();
     if (this.selected !== null) this.renderCard();
@@ -253,7 +254,7 @@ export class Ui {
     const input = el('input');
     input.type = 'range';
     input.min = '1';
-    input.max = '5000';
+    input.max = String(DEBUG_MAX_RATS);
     input.value = String(n);
     input.oninput = () => (label.textContent = `rats: ${input.value}`);
     input.onchange = () => onChange(Number(input.value));

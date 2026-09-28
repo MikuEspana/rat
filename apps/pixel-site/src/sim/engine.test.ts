@@ -1,6 +1,7 @@
 import { EventsResponseSchema, RatsResponseSchema, StateResponseSchema, type RatEvent } from '@rat/contract';
 import { describe, expect, it } from 'vitest';
-import { PLAN_RATS, STAGES } from '../floor/plan';
+import { Growth } from '../floor/growth';
+import { buildMaster, PLAN_RATS, STAGES } from '../floor/plan';
 import { LaunchSim } from './engine';
 import { RULES } from './rules';
 import { SCENARIOS, type ScenarioId } from './scenarios';
@@ -14,8 +15,8 @@ function stageOf(rats: number): string {
 }
 
 /** Runs a scenario to its end, checking the contract shapes along the way. */
-function run(id: ScenarioId, hireSplitBps?: number): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
-  const sim = new LaunchSim(SCENARIOS[id], EPOCH, { hireSplitBps });
+function run(id: ScenarioId): { sim: LaunchSim; events: RatEvent[]; peak: number; mcapAt: (min: number) => number } {
+  const sim = new LaunchSim(SCENARIOS[id], EPOCH);
   const pre = sim.stateResponse();
   expect(StateResponseSchema.parse(pre).coin.marketCapUsd).toBeNull();
   sim.launch();
@@ -40,66 +41,48 @@ function run(id: ScenarioId, hireSplitBps?: number): { sim: LaunchSim; events: R
   return { sim, events, peak, mcapAt: (m) => mcaps.get(m) ?? 0 };
 }
 
-const results = new Map<string, ReturnType<typeof run>>();
-const get = (id: ScenarioId, hireSplitBps?: number): ReturnType<typeof run> => {
-  const key = `${id}:${hireSplitBps ?? 'default'}`;
-  if (!results.has(key)) results.set(key, run(id, hireSplitBps));
-  return results.get(key)!;
+const results = new Map<ScenarioId, ReturnType<typeof run>>();
+const get = (id: ScenarioId): ReturnType<typeof run> => {
+  if (!results.has(id)) results.set(id, run(id));
+  return results.get(id)!;
 };
 
 describe('launch simulator', () => {
-  // the default (every fee to hires, nothing burned) for every scenario, and the burn path with a 50/50 split
-  const runs: Array<[ScenarioId, number | undefined]> = [['normal', undefined], ['mega', undefined], ['rug', undefined], ['normal', 5000]];
-  for (const [id, split] of runs) {
-    it(`${id}${split ? ` with a ${split / 100}% hire split` : ''}: runs the backend rules (split, per-loop limit, hourly caps, burn chunks and rounds)`, () => {
-      const { sim, events } = get(id, split);
-      const hireSplitBps = split ?? RULES.hireSplitBps;
+  for (const id of ['normal', 'mega', 'rug'] as const) {
+    it(`${id}: runs the backend rules (every claim to hires, per-loop limit, hourly cap)`, () => {
+      const { sim, events } = get(id);
       const st = sim.stateResponse();
       const hires = events.filter((e) => e.type === 'hire');
-      const burns = events.filter((e) => e.type === 'burn');
       const claims = events.filter((e) => e.type === 'claim');
       const t = (e: RatEvent): number => Date.parse(e.at) - EPOCH;
 
-      // the split of every claim
-      for (const c of claims) {
-        if (c.type !== 'claim') continue;
-        expect(Math.abs(c.data.toHiresSol - (c.data.amountSol * hireSplitBps) / 10_000)).toBeLessThanOrEqual(2e-6);
-        expect(Math.abs(c.data.toHiresSol + c.data.toFundSol - c.data.amountSol)).toBeLessThanOrEqual(2e-6);
-      }
-      // all to hires: nothing goes to the fund, nothing is burned
-      if (hireSplitBps === 10_000) {
-        expect(burns).toHaveLength(0);
-        expect(st.treasury.totalToFundSol).toBe(0);
-      } else expect(burns.length).toBeGreaterThan(0);
-      // never spends more than was claimed into each bucket
-      expect(hires.length * RULES.salarySol).toBeLessThanOrEqual(st.treasury.totalToHiresSol + 1e-6);
-      expect(st.treasury.totalBurnSpentSol).toBeLessThanOrEqual(st.treasury.totalToFundSol + 1e-6);
-      // at most 10 hires per 35 s loop
+      // only claims and hires: nothing is bought back or burned
+      expect(events.every((e) => e.type === 'claim' || e.type === 'hire')).toBe(true);
+      // every claimed SOL goes to hires: spent on hires plus still waiting is exactly what was claimed
+      const claimed = claims.reduce((a, c) => a + (c.type === 'claim' ? c.data.amountSol : 0), 0);
+      expect(Math.abs(claimed - st.treasury.totalClaimedSol)).toBeLessThanOrEqual(1e-4);
+      expect(Math.abs(st.treasury.totalHiredSol + st.treasury.waitingSol - st.treasury.totalClaimedSol)).toBeLessThanOrEqual(1e-4);
+      // never spends more than was claimed (hired counts salaries when reserved, so the last loop's hires may still be on their way)
+      expect(st.treasury.totalHiredSol).toBeLessThanOrEqual(st.treasury.totalClaimedSol + 1e-6);
+      expect(st.treasury.totalHiredSol).toBeGreaterThanOrEqual(hires.length * RULES.salarySol - 1e-6);
+      expect(st.treasury.totalHiredSol).toBeLessThanOrEqual((hires.length + RULES.maxHiresPerLoop) * RULES.salarySol + 1e-6);
+      // at most 20 hires per 35 s loop
       const perLoop = new Map<number, number>();
       for (const h of hires) perLoop.set(Math.floor(t(h) / 35_000), (perLoop.get(Math.floor(t(h) / 35_000)) ?? 0) + 1);
       expect(Math.max(0, ...perLoop.values())).toBeLessThanOrEqual(RULES.maxHiresPerLoop);
       // hourly hire cap, counted at the loop that reserved the salary
       const loops = hires.map((h) => Math.floor(t(h) / 35_000) * 35_000);
+      let maxHour = 0;
       for (let a = 0, b = 0; b < loops.length; b++) {
         while (loops[a]! <= loops[b]! - 3_600_000) a++;
+        maxHour = Math.max(maxHour, (b - a + 1) * RULES.salarySol);
         expect((b - a + 1) * RULES.salarySol).toBeLessThanOrEqual(RULES.capHireSolPerHour + 1e-6);
       }
-      // burns: chunks of at most 1 SOL; rounds of at most 5 SOL, 8 to 12 minutes apart
-      const rounds: Array<{ at: number; sol: number }> = [];
-      for (const b of burns) {
-        if (b.type !== 'burn') continue;
-        expect(b.data.solSpent).toBeLessThanOrEqual(RULES.burnChunkMaxSol + 1e-9);
-        const last = rounds[rounds.length - 1];
-        if (last && t(b) - last.at < 120_000) last.sol += b.data.solSpent;
-        else rounds.push({ at: t(b), sol: b.data.solSpent });
-      }
-      for (const r of rounds) expect(r.sol).toBeLessThanOrEqual(RULES.burnRoundMaxSol + 1e-6);
-      for (let k = 1; k < rounds.length; k++) expect(rounds[k]!.at - rounds[k - 1]!.at).toBeGreaterThanOrEqual(RULES.burnMinSec * 1000 - 1);
       // events carry no transaction: nothing was sent
       for (const e of events) expect(e.txSig).toBeNull();
       const s = sim.stats();
       console.log(
-        `${id}${split ? ` (split ${split})` : ''}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, fund $${Math.round(s.fundValueUsd)}, claimed ${s.claimedSol.toFixed(1)}, burned ${s.burnSpentSol.toFixed(1)} SOL in ${s.burnCount} chunks, waiting hire ${s.hireWaitingSol.toFixed(1)} burn ${s.burnWaitingSol.toFixed(1)}`,
+        `${id}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, claimed ${s.claimedSol.toFixed(1)}, hired ${s.hiredSol.toFixed(1)}, waiting ${s.hireWaitingSol.toFixed(1)}, portfolio $${Math.round(s.portfolioValueUsd)}, max ${maxHour.toFixed(2)} SOL in an hour, max ${Math.max(0, ...perLoop.values())} per loop`,
       );
     });
   }
@@ -110,16 +93,41 @@ describe('launch simulator', () => {
     expect(peak).toBeLessThan(2_300_000);
     expect(mcapAt(180)).toBeGreaterThan(mcapAt(360));
     expect(stageOf(sim.stats().rats)).toBe('EVIL EMPIRE');
-    expect(sim.stats().rats).toBeLessThanOrEqual(PLAN_RATS);
+    expect(sim.stats().rats).toBeLessThanOrEqual(PLAN_RATS); // everyone gets a desk, no line outside
   });
 
-  it('mega: runs to about $10M; hiring maxes out at the hourly cap and the rest waits', () => {
+  it('mega: runs to about $10M; the building fills up and the rest line up outside', () => {
     const { sim, peak } = get('mega');
     const s = sim.stats();
     expect(peak).toBeGreaterThan(8_000_000);
     expect(stageOf(s.rats)).toBe('EVIL EMPIRE');
-    expect(s.rats).toBeLessThanOrEqual(PLAN_RATS); // stays inside the building the site draws
-    expect(s.hireWaitingSol).toBeGreaterThan(1);
+    // replay the roster through the site's idle game: every desk taken, a few hundred in the job-fair line
+    const growth = new Growth(buildMaster());
+    for (const r of sim.ratsResponse().rats) growth.add(r.id, r.stock);
+    expect(growth.waitingCount).toBeGreaterThan(100);
+    expect(growth.waitingCount).toBeLessThan(1500);
+    console.log(`mega: ${growth.waitingCount} rats in the job-fair line at the end`);
+  });
+
+  it('a bigger run hits the 60 SOL/h hire cap: the rest of the fees wait and are spent later', () => {
+    const big = { ...SCENARIOS.mega, curve: SCENARIOS.mega.curve.map(([m, v]) => [m, v * 3] as const), minutes: 150 };
+    const sim = new LaunchSim(big, EPOCH);
+    sim.launch();
+    let maxWaiting = 0;
+    for (let min = 1; min <= big.minutes; min++) {
+      sim.advanceTo(min * 60_000);
+      maxWaiting = Math.max(maxWaiting, sim.stats().hireWaitingSol);
+    }
+    const hires = sim.eventsResponse(0, 1_000_000).events.filter((e) => e.type === 'hire');
+    const t = (e: RatEvent): number => Math.floor((Date.parse(e.at) - EPOCH) / 35_000) * 35_000;
+    let maxHour = 0;
+    for (let a = 0, b = 0; b < hires.length; b++) {
+      while (t(hires[a]!) <= t(hires[b]!) - 3_600_000) a++;
+      maxHour = Math.max(maxHour, (b - a + 1) * RULES.salarySol);
+    }
+    expect(maxHour).toBeLessThanOrEqual(RULES.capHireSolPerHour + 1e-6);
+    expect(maxHour).toBeGreaterThan(RULES.capHireSolPerHour - 0.5);
+    expect(maxWaiting).toBeGreaterThan(5);
   });
 
   it('rug: pumps to about $300K, then loses about 80%', () => {
@@ -130,10 +138,9 @@ describe('launch simulator', () => {
     expect(sim.stats().rats).toBeLessThan(1500);
   });
 
-  it('with the default split every fee hires rats: the fund is worth about what they paid for their stocks', () => {
+  it('every fee hires rats: the portfolio is worth about what they paid for their stocks', () => {
     const s = get('normal').sim.stats();
-    expect(s.burnCount).toBe(0);
-    expect(s.fundValueUsd).toBeGreaterThan(s.rats * 4);
+    expect(s.portfolioValueUsd).toBeGreaterThan(s.rats * 4);
   });
 
   it('is deterministic for a scenario', () => {

@@ -1,6 +1,6 @@
 # RAT RACE pixel site
 
-An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, an evil empire. Pan around and click into it. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Burns send cash bags flying into the HQ furnace.
+An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, an evil empire. Pan around and click into it. Creator fees hire rats; each rat comes up the subway stairs, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. When every desk is taken (about 5,800 rats), new hires line up outside the lobby in a job-fair line around the block, under a "JOB FAIR: N IN LINE" sign, and walk in as soon as a desk is built for them.
 
 ## Run it
 
@@ -20,7 +20,7 @@ Controls: drag to pan, mouse wheel or pinch to zoom, click a rat for its card (E
 
 ## Launch simulator (no server)
 
-A whole launch, simulated in the browser: the coin goes live, the market cap climbs, volume makes creator fees, and the bot's rules turn every fee into rats holding stocks. The site reads it through the same interface as the API, in the same response shapes, so every piece on screen (hires walking in, stage banners, rooms being built, BUILD lines, burns into the furnace) is the real rendering code.
+A whole launch, simulated in the browser: the coin goes live, the market cap climbs, volume makes creator fees, and the bot's rules turn every fee into rats holding stocks. The site reads it through the same interface as the API, in the same response shapes, so every piece on screen (hires walking in, stage banners, rooms being built, BUILD lines, the job-fair line) is the real rendering code.
 
 ```sh
 pnpm --filter @rat/pixel-site dev                           # then open http://localhost:5173/?sim
@@ -28,14 +28,14 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 ```
 
 - "Simulate launch", then Start / Pause / Reset, speed 1x, 10x, 60x or 300x, and a scenario:
-  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,900 rats (evil empire), a fund worth about $23K.
-  - **Mega**: runs to about $10M in 4 hours. Hiring maxes out at the 30 SOL/h cap: about 4,900 rats after 5 hours, with about 45 SOL still waiting.
-  - **Rug**: pumps to about $300K, then dumps 80%. About 720 rats (corporate floor).
+  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 4,800 rats (evil empire), a portfolio worth about $23K. Everyone gets a desk.
+  - **Mega**: runs to about $10M in 4 hours. About 6,400 rats after 5 hours: every desk is taken and about 530 line up outside.
+  - **Rug**: pumps to about $300K, then dumps 80%. About 820 rats (corporate floor).
 - Page flags: `?sim&scenario=mega&speed=300&autostart=1`. `?api=<url>` always uses a real API.
 - A yellow SIMULATION banner stays on screen the whole time. Events carry no transaction signature and link to nothing.
-- `src/sim/rules.ts` holds the bot's rules (every fee to hires, 0.03 SOL per rat, at most 10 hires per 35 s loop, 30 SOL per hour; with a lower split, burn rounds 8 to 12 minutes apart, chunks of at most 1 SOL, at most 5 SOL per round). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
-- `src/sim/scenarios.ts`: the market cap curves, the volume model and the creator fee tiers. Volume and fee rates are rough models (the fee tiers approximate pump.fun's, which are set on-chain and can change), tuned so Normal pays about 145 SOL of fees. The building is drawn for about 5,200 rats (`PLAN_RATS`); rats beyond that stand in HQ.
-- `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (split, per-loop limit, hourly cap, chunk and round sizes, round spacing, never spending more than was claimed).
+- `src/sim/rules.ts` holds the bot's rules (every fee to hires, 0.03 SOL per rat, at most 20 hires per 35 s loop, 60 SOL per hour; nothing is bought back or burned). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
+- `src/sim/scenarios.ts`: the market cap curves, the volume model and the creator fee tiers. Volume and fee rates are rough models (the fee tiers approximate pump.fun's, which are set on-chain and can change), tuned so Normal pays about 145 SOL of fees. The building has desks for about 5,800 rats; the rest line up outside (`queueCells` in `src/floor/plan.ts`).
+- `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (every claim to hires, per-loop limit, hourly cap, never spending more than was claimed). A 3x Mega run checks that the 60 SOL/h cap binds and the rest waits.
 - Live demo: https://mikuespana.github.io/rat/ . `.github/workflows/pages.yml` rebuilds it on every push to `main` and publishes it to the `gh-pages` branch, which GitHub Pages serves. The same folder is kept as the `rat-race-demo` workflow artifact (drag it onto Netlify Drop or Vercel).
 
 ## What is on screen
@@ -44,17 +44,17 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 |---|---|
 | Market cap | `coin.marketCapUsd` (shows "pre-launch" while null), price per RAT under it |
 | Rats hired | `portfolio.ratCount`, frozen count under it |
-| Fund value | `portfolio.valueUsd` (what all the rats' stocks are worth), the two biggest positions under it (for example `AMZNx 312`); RAT burned instead, if burns are ever turned on |
+| Portfolio value | `portfolio.valueUsd` (what all the rats' stocks are worth; not holders' money), the two biggest positions under it (for example `AMZNx 312`) |
 | Portfolio PnL | `portfolio.pnlUsd` and `pnlPct`, green or red |
 | Next hire ring | fills from `bot.lastClaimAt` to `bot.nextClaimAt` (each claim pays for the next hires), with a countdown |
-| Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), burns, claims, freezes, thaws, each with its Solscan tx link |
+| Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), claims, freezes, thaws, each with its Solscan tx link |
 | Rat card | name, tier badge, stock, PnL %, value and cost, rank, status, hired, Solscan wallet link; a gold marker bobs over the rat |
 | Leaderboard | `leaderboard.top` (best 10) and `leaderboard.bottom` (worst 10) |
 | Banner | `bot.mode`: DRY RUN (yellow) or PAUSED (red); hidden when live |
 
 Under 900 px wide the HUD compacts, the leaderboard starts folded and the card becomes a bottom sheet.
 
-Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 5000, with a slider and stage buttons), `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
+Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 7000, with a slider and stage buttons; 6500 shows the job-fair line; needs the API, for example `pnpm mock:api`), `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
 
 ### Stages
 
@@ -75,8 +75,8 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 
 - `/api/rats` is fetched **once** on page open.
 - `/api/state` every 5 s: stocks, prices, bot. Every rat's PnL and tier are recomputed in the browser with `@rat/contract` (`computeRatView`), so the roster never needs a re-poll.
-- `/api/events?afterId=` every 5 s: `hire` spawns a walker (its value is estimated from cost and today's price, exact again after a reload), `freeze`/`unfreeze` greys rats, `burn` fires the furnace.
-- Responses are checked for `schemaVersion: 1`; unknown fields are ignored (the contract may add optional fields).
+- `/api/events?afterId=` every 5 s: `hire` spawns a walker (its value is estimated from cost and today's price, exact again after a reload), `freeze`/`unfreeze` greys rats.
+- Responses are checked for `schemaVersion: 2`; unknown fields are ignored (the contract may add optional fields).
 
 ## How it is built
 
@@ -88,9 +88,8 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 | `src/floor/furnish.ts` | Fills each room: desk clusters in six layouts with jitter and mirrored orientations, props along walls, activity spots, clutter that never cuts off a chair, things hung on walls. |
 | `src/floor/path.ts` | Walking routes: breadth-first distance fields (cached per target, windowed for short errands), walked with as few turns as possible. |
 | `src/world/build.ts` | What stands: tiles in room-type colours, empty lots, the street, walls, desks, props, wall pieces, furnace and light beam, glows, blinking server lights, wall tickers, room signs. Rebuilt when something gets built; new rooms pop in. |
-| `src/world/rats.ts` | One particle per rat: walk, type, slump, cheer, nap, stand, sit, frozen; errands to activity spots; box carrying; desk pools (CEO office for partners); chairs reappear when a rat gets up. |
+| `src/world/rats.ts` | One particle per rat: walk, type, slump, cheer, nap, stand, sit, frozen; errands to activity spots; box carrying; desk pools (CEO office for partners); chairs reappear when a rat gets up; the job-fair line outside (the line moves up as rats get desks). |
 | `src/gfx/sky.ts` | The night sky behind the building. |
-| `src/world/effects.ts` | Burn: cash bags arc from desks into the furnace, furnace flares. |
 | `src/gfx/layer.ts` | Depth-sorted, culled `ParticleContainer`. |
 | `src/data/` | API client, store (roster once, state and events after), stress padding. |
 | `src/ui/` | HUD, ring, feed, rat card, leaderboard, banner (DOM over the canvas; API text always set with `textContent`). |

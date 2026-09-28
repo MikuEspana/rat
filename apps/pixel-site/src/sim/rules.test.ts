@@ -9,23 +9,13 @@ describe('launch simulator rules', () => {
   it('match the worker defaults exactly', () => {
     const c = loadConfig({});
     expect(RULES.loopSec).toBe(c.intervals.claimSec);
-    expect(RULES.hireSplitBps).toBe(c.hireSplitBps);
     expect(RULES.salarySol).toBe(sol(c.salaryLamports));
     expect(RULES.hireOverheadSol).toBe(sol(c.hireOverheadEstLamports));
     expect(RULES.ratBufferSol).toBe(sol(c.ratBufferLamports));
     expect(RULES.maxHiresPerLoop).toBe(c.maxHiresPerLoop);
     expect(RULES.minClaimSol).toBe(sol(c.minClaimLamports));
-    expect(RULES.minBurnSol).toBe(sol(c.minBurnLamports));
     expect(RULES.minStockWeightBps).toBe(c.minStockWeightBps);
     expect(RULES.capHireSolPerHour).toBe(sol(c.spendCapLamportsPerHour.hire));
-    expect(RULES.capBurnSolPerHour).toBe(sol(c.spendCapLamportsPerHour.burn));
-    expect(RULES.burnMinSec).toBe(c.intervals.burnMinSec);
-    expect(RULES.burnMaxSec).toBe(c.intervals.burnMaxSec);
-    expect(RULES.burnChunkMaxSol).toBe(sol(c.burn.chunkMaxLamports));
-    expect(RULES.burnRoundMaxSol).toBe(sol(c.burn.roundMaxLamports));
-    expect(RULES.chunkGapMinSec).toBe(c.burn.chunkGapMinSec);
-    expect(RULES.chunkGapMaxSec).toBe(c.burn.chunkGapMaxSec);
     expect(RULES.priceSec).toBe(c.intervals.priceSec);
-    expect(RULES.slippageBpsCoin).toBe(c.slippageBpsCoin);
   });
 });

@@ -91,15 +91,14 @@ const envSchema = z.object({
   }),
   KEY_VERSION: intStr(1, 1),
   CREATOR_PUBKEY: optPubkey,
-  FUND_PUBKEY: optPubkey,
 
   RPC_URL: optStr,
   RPC_URL_BACKUP: optStr,
   COIN_MINT: optPubkey,
-  // Wallet watch: transactions of the creator/fund wallets before this slot are never looked at (set it to the
+  // Wallet watch: transactions of the creator wallet before this slot are never looked at (set it to the
   // slot right after the coin launch). 0 = the slot of the worker's first live run.
   WATCH_FROM_SLOT: intStr(0),
-  // Comma-separated signatures of transactions YOU signed with the creator or fund wallet (the coin launch, a
+  // Comma-separated signatures of transactions YOU signed with the creator wallet (the coin launch, a
   // manual transfer). The wallet watch accepts them instead of engaging the kill switch.
   KNOWN_OWNER_TX_SIGS: z
     .string()
@@ -124,45 +123,25 @@ const envSchema = z.object({
   JUPITER_BASE_URL: z.string().trim().url().default('https://api.jup.ag'),
   JUPITER_MAX_RPM: intStr(55, 1, 100_000),
 
-  // Share of every claim that pays for rats. 10000 = all of it: the fund only holds stocks, nothing is burned.
-  // Lower it (for example 5000) to send the rest to the buy-and-burn fund again.
-  HIRE_SPLIT_BPS: intStr(10_000, 0, 10_000),
   SALARY_SOL: solStr('0.03'),
   HIRE_OVERHEAD_EST_SOL: solStr('0.0025'),
   RAT_BUFFER_SOL: solStr('0.003'),
   HIRE_MODE: z.enum(['single', 'two_step']).default('single'),
   MIN_CLAIM_SOL: solStr('0.005'),
-  MIN_BURN_SOL: solStr('0.01'),
   CREATOR_RESERVE_SOL: solStr('0.05'),
-  FUND_RESERVE_SOL: solStr('0.01'),
-  // 10 per 35 s loop = about 17 rats a minute, just under the 30 SOL/h cap: steady hiring, no mid-launch pause
-  MAX_HIRES_PER_LOOP: intStr(10, 0, 200),
+  // 20 per 35 s loop = about 34 rats a minute, just over the 60 SOL/h cap: steady hiring, no mid-launch pause
+  MAX_HIRES_PER_LOOP: intStr(20, 0, 200),
   MIN_STOCK_WEIGHT_BPS: intStr(500, 0, 10_000),
   SLIPPAGE_BPS_STOCK: intStr(100, 1, 5_000),
-  SLIPPAGE_BPS_COIN: intStr(150, 1, 5_000),
   MAX_PRICE_IMPACT_PCT: numStr(2),
   // Alert when no rat was hired for HIRE_IDLE_ALERT_MIN minutes while more than HIRE_IDLE_ALERT_SOL waits in the hire budget.
   HIRE_IDLE_ALERT_MIN: intStr(30, 1),
   HIRE_IDLE_ALERT_SOL: solStr('0.1'),
-  SPEND_CAP_SOL_PER_HOUR_HIRE: solStr('30'),
-  SPEND_CAP_SOL_PER_HOUR_BURN: solStr('30'),
+  // Every claimed lamport hires rats (there is no other spending). 60 SOL/h = about 2,000 rats an hour.
+  SPEND_CAP_SOL_PER_HOUR_HIRE: solStr('60'),
   SPEND_ALERT_PCT: intStr(50, 1, 100),
 
   CLAIM_INTERVAL_SEC: intStr(35, 1),
-  // Burns: a random time 8 to 12 minutes after the last round (never a fixed public schedule), split into
-  // chunks of at most BURN_CHUNK_MAX_SOL sent 3 to 8 seconds apart.
-  BURN_INTERVAL_MIN_SEC: intStr(480, 1),
-  BURN_INTERVAL_MAX_SEC: intStr(720, 1),
-  BURN_CHUNK_MAX_SOL: solStr('1'),
-  // At most this much per burn round (0 = no limit: a round burns everything the caps allow). 5 = about
-  // SPEND_CAP_SOL_PER_HOUR_BURN / 6, which spreads burns evenly over the hour instead of hitting the cap early.
-  BURN_ROUND_MAX_SOL: solStr('5'),
-  BURN_CHUNK_GAP_MIN_SEC: intStr(3, 1, 3600),
-  BURN_CHUNK_GAP_MAX_SEC: intStr(8, 1, 3600),
-  // rpc = normal send. jito = burns go to the Jito block engine as bundle-only transactions with a tip.
-  BURN_SEND_VIA: z.enum(['rpc', 'jito']).default('rpc'),
-  JITO_BLOCK_ENGINE_URL: z.string().trim().url().default('https://mainnet.block-engine.jito.wtf/api/v1'),
-  JITO_TIP_SOL: solStr('0.0001'),
   PRICE_INTERVAL_SEC: intStr(15, 1),
   FREEZE_INTERVAL_SEC: intStr(35, 1),
   PRICE_STALE_SEC: intStr(900, 1),
@@ -196,7 +175,6 @@ export interface AppConfig {
   keyEncryptionKey?: string;
   keyVersion: number;
   creatorPubkey?: string;
-  fundPubkey?: string;
 
   rpcUrl?: string;
   rpcUrlBackup?: string;
@@ -212,27 +190,21 @@ export interface AppConfig {
 
   jupiter: { apiKey?: string; baseUrl: string; maxRpm: number };
 
-  hireSplitBps: number;
   salaryLamports: bigint;
   hireOverheadEstLamports: bigint;
   ratBufferLamports: bigint;
   hireMode: HireMode;
   minClaimLamports: bigint;
-  minBurnLamports: bigint;
   creatorReserveLamports: bigint;
-  fundReserveLamports: bigint;
   maxHiresPerLoop: number;
   minStockWeightBps: number;
   slippageBpsStock: number;
-  slippageBpsCoin: number;
   maxPriceImpactPct: number;
   hireIdleAlert: { minutes: number; lamports: bigint };
-  spendCapLamportsPerHour: { hire: bigint; burn: bigint };
+  spendCapLamportsPerHour: { hire: bigint };
   spendAlertPct: number;
 
-  /** burnMinSec..burnMaxSec: random delay between burn rounds */
-  intervals: { claimSec: number; burnMinSec: number; burnMaxSec: number; priceSec: number; freezeSec: number };
-  burn: BurnConfig;
+  intervals: { claimSec: number; priceSec: number; freezeSec: number };
   priceStaleSec: number;
   reconcileBatch: number;
   dryRunFakeClaimLamportsPerHour: bigint;
@@ -240,19 +212,6 @@ export interface AppConfig {
   telegram: { botToken?: string; chatId?: string };
   api: { port: number; cacheSec: number; corsOrigin: string };
   stocksFile: string;
-}
-
-export interface BurnConfig {
-  /** burns above this are split into chunks of (almost) equal size */
-  chunkMaxLamports: bigint;
-  /** at most this much per round; 0 = no limit */
-  roundMaxLamports: bigint;
-  chunkGapMinSec: number;
-  chunkGapMaxSec: number;
-  sendVia: 'rpc' | 'jito';
-  jitoUrl: string;
-  /** Jito tip per burn transaction, paid from the burn budget (0 when sendVia = rpc) */
-  jitoTipLamports: bigint;
 }
 
 export type ConfigKey = keyof AppConfig;
@@ -273,25 +232,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.SALARY_SOL <= e.HIRE_OVERHEAD_EST_SOL + e.RAT_BUFFER_SOL) {
     throw new ConfigError('SALARY_SOL must be larger than HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL');
   }
-  if (e.BURN_INTERVAL_MIN_SEC > e.BURN_INTERVAL_MAX_SEC) {
-    throw new ConfigError('BURN_INTERVAL_MIN_SEC must be <= BURN_INTERVAL_MAX_SEC');
-  }
-  if (e.BURN_CHUNK_GAP_MIN_SEC > e.BURN_CHUNK_GAP_MAX_SEC) {
-    throw new ConfigError('BURN_CHUNK_GAP_MIN_SEC must be <= BURN_CHUNK_GAP_MAX_SEC');
-  }
-  if (e.BURN_CHUNK_MAX_SOL < e.MIN_BURN_SOL) {
-    throw new ConfigError('BURN_CHUNK_MAX_SOL must be >= MIN_BURN_SOL');
-  }
-  if (e.BURN_ROUND_MAX_SOL > 0n && e.BURN_ROUND_MAX_SOL < e.MIN_BURN_SOL) {
-    throw new ConfigError('BURN_ROUND_MAX_SOL must be 0 (no limit) or >= MIN_BURN_SOL');
-  }
-  const jitoTip = e.BURN_SEND_VIA === 'jito' ? e.JITO_TIP_SOL : 0n;
-  if (e.BURN_SEND_VIA === 'jito' && (jitoTip <= 0n || jitoTip > solToLamports('0.01'))) {
-    throw new ConfigError('JITO_TIP_SOL must be above 0 and at most 0.01 when BURN_SEND_VIA=jito');
-  }
-  if (e.MIN_BURN_SOL <= e.HIRE_OVERHEAD_EST_SOL + jitoTip) {
-    throw new ConfigError('MIN_BURN_SOL must be larger than HIRE_OVERHEAD_EST_SOL (+ JITO_TIP_SOL)');
-  }
   return {
     nodeEnv: e.NODE_ENV,
     logLevel: e.LOG_LEVEL,
@@ -305,7 +245,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     keyEncryptionKey: e.KEY_ENCRYPTION_KEY,
     keyVersion: e.KEY_VERSION,
     creatorPubkey: e.CREATOR_PUBKEY,
-    fundPubkey: e.FUND_PUBKEY,
     rpcUrl: e.RPC_URL,
     rpcUrlBackup: e.RPC_URL_BACKUP,
     coinMint: e.COIN_MINT,
@@ -316,38 +255,23 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     computeUnitLimitClaim: e.COMPUTE_UNIT_LIMIT_CLAIM,
     xstocksMintAuthority: e.XSTOCKS_MINT_AUTHORITY,
     jupiter: { apiKey: e.JUPITER_API_KEY, baseUrl: e.JUPITER_BASE_URL.replace(/\/+$/, ''), maxRpm: e.JUPITER_MAX_RPM },
-    hireSplitBps: e.HIRE_SPLIT_BPS,
     salaryLamports: e.SALARY_SOL,
     hireOverheadEstLamports: e.HIRE_OVERHEAD_EST_SOL,
     ratBufferLamports: e.RAT_BUFFER_SOL,
     hireMode: e.HIRE_MODE,
     minClaimLamports: e.MIN_CLAIM_SOL,
-    minBurnLamports: e.MIN_BURN_SOL,
     creatorReserveLamports: e.CREATOR_RESERVE_SOL,
-    fundReserveLamports: e.FUND_RESERVE_SOL,
     maxHiresPerLoop: e.MAX_HIRES_PER_LOOP,
     minStockWeightBps: e.MIN_STOCK_WEIGHT_BPS,
     slippageBpsStock: e.SLIPPAGE_BPS_STOCK,
-    slippageBpsCoin: e.SLIPPAGE_BPS_COIN,
     maxPriceImpactPct: e.MAX_PRICE_IMPACT_PCT,
     hireIdleAlert: { minutes: e.HIRE_IDLE_ALERT_MIN, lamports: e.HIRE_IDLE_ALERT_SOL },
-    spendCapLamportsPerHour: { hire: e.SPEND_CAP_SOL_PER_HOUR_HIRE, burn: e.SPEND_CAP_SOL_PER_HOUR_BURN },
+    spendCapLamportsPerHour: { hire: e.SPEND_CAP_SOL_PER_HOUR_HIRE },
     spendAlertPct: e.SPEND_ALERT_PCT,
     intervals: {
       claimSec: e.CLAIM_INTERVAL_SEC,
-      burnMinSec: e.BURN_INTERVAL_MIN_SEC,
-      burnMaxSec: e.BURN_INTERVAL_MAX_SEC,
       priceSec: e.PRICE_INTERVAL_SEC,
       freezeSec: e.FREEZE_INTERVAL_SEC,
-    },
-    burn: {
-      chunkMaxLamports: e.BURN_CHUNK_MAX_SOL,
-      roundMaxLamports: e.BURN_ROUND_MAX_SOL,
-      chunkGapMinSec: e.BURN_CHUNK_GAP_MIN_SEC,
-      chunkGapMaxSec: e.BURN_CHUNK_GAP_MAX_SEC,
-      sendVia: e.BURN_SEND_VIA,
-      jitoUrl: e.JITO_BLOCK_ENGINE_URL.replace(/\/+$/, ''),
-      jitoTipLamports: jitoTip,
     },
     priceStaleSec: e.PRICE_STALE_SEC,
     reconcileBatch: e.RECONCILE_BATCH,
@@ -379,16 +303,10 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
     watchFromSlot: cfg.watchFromSlot || 'first live run',
     knownOwnerTxSigs: cfg.knownOwnerTxSigs.length,
     creatorPubkey: cfg.creatorPubkey ?? null,
-    fundPubkey: cfg.fundPubkey ?? null,
     hireMode: cfg.hireMode,
     salarySol: cfg.salaryLamports.toString(),
-    hireSplitBps: cfg.hireSplitBps,
-    spendCapLamportsPerHour: {
-      hire: cfg.spendCapLamportsPerHour.hire.toString(),
-      burn: cfg.spendCapLamportsPerHour.burn.toString(),
-    },
+    spendCapLamportsPerHour: { hire: cfg.spendCapLamportsPerHour.hire.toString() },
     maxHiresPerLoop: cfg.maxHiresPerLoop,
-    burnSendVia: cfg.burn.sendVia,
     jupiterMaxRpm: cfg.jupiter.maxRpm,
     hasRpc: Boolean(cfg.rpcUrl),
     hasJupiterKey: Boolean(cfg.jupiter.apiKey),

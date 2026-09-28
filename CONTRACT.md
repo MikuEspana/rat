@@ -1,4 +1,4 @@
-# Frontend Contract (schemaVersion 1)
+# Frontend Contract (schemaVersion 2)
 
 This is the exact JSON the website reads. Animate against the mock files now, then switch the base URL to the live API.
 
@@ -6,18 +6,18 @@ This is the exact JSON the website reads. Animate against the mock files now, th
 - **Live mock API**: `pnpm install` once, then `pnpm mock:api` serves the same 4 endpoints on `http://localhost:8787`, starting from the mock files and changing like the real bot:
   - a new rat every 2 to 6 seconds (hire events, `/api/rats?afterId=` picks them up)
   - stock prices drift every second in trends that flip (exaggerated so ranks, tiers and sizes visibly change)
-  - a claim every 35 seconds, a burn round every minute (1 to 3 `burn` events a few seconds apart)
+  - a claim every 35 seconds (every claimed SOL goes to hiring rats)
   - COINx pauses (its rats freeze, `freeze` event) and resumes (`unfreeze` event) every couple of minutes
   - options: `MOCK_API_PORT=9000`, `MOCK_SPEED=3` (three times as busy), `MOCK_SEED=42` (the same run every time)
-  - same JSON, schemaVersion 1, CORS open. No database, no chain, nothing real.
+  - same JSON, schemaVersion 2, CORS open. No database, no chain, nothing real.
 - TypeScript types + zod schemas + display math: `packages/contract` (`@rat/contract`). Browser safe: no Node APIs, only `zod`.
 
 ## Endpoints
 
 | Endpoint | Poll | Size | Purpose |
 |---|---|---|---|
-| `GET /api/state` | every 5s | small (~30-50KB) | bot status, coin, treasury, portfolio, stocks, leaderboard, last 50 events |
-| `GET /api/rats` | every 30s | large (3,000 rats: about 1.7 MB, about 410 KB gzipped, measured in `SIMULATION.md`) | full roster with live PnL. `?afterId=N` returns only rats with id > N. Fetch the full list once, then add new rats from `hire` events / `afterId` |
+| `GET /api/state` | every 5s | small (~30-50KB) | bot status, coin, treasury (fees claimed, spent on hires, waiting), portfolio, stocks, leaderboard, last 50 events |
+| `GET /api/rats` | every 30s | large (6,000 rats: about 3.3 MB, about 820 KB gzipped, measured in `SIMULATION.md`) | full roster with live PnL. `?afterId=N` returns only rats with id > N. Fetch the full list once, then add new rats from `hire` events / `afterId` |
 | `GET /api/events?afterId=N&limit=100` | every 5s | small | event feed, oldest first after `afterId` (limit max 500) |
 | `GET /health` | n/a | tiny | `{ ok, mode, heartbeatAgeSec }` |
 
@@ -25,7 +25,7 @@ All responses: `Content-Type: application/json`, gzip, CORS open, cached 3s (`Ca
 
 ## Rules
 
-- Every response has `schemaVersion: 1` and `generatedAt`.
+- Every response has `schemaVersion: 2` and `generatedAt`.
 - SOL and USD values are JSON **numbers** (display only). Token amounts are **strings** (decimal, UI units).
 - Times are ISO 8601 UTC strings.
 - `wallet` is a normal Solana address: every rat gets a fresh keypair at hire time. There is no vanity suffix; do not rely on any pattern in it.
@@ -57,47 +57,41 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 | `stock.status` | `active`, `paused` |
 | `rat.status` | `active`, `frozen` |
 | `rat.tier` | `intern`, `analyst`, `associate`, `vp`, `partner` |
-| `event.type` | `claim`, `hire`, `burn`, `freeze`, `unfreeze` |
-| `claim.data.source` | `bot` (our claim), `external` (someone else triggered our claim, auto split the same way) |
+| `event.type` | `claim`, `hire`, `freeze`, `unfreeze` |
+| `claim.data.source` | `bot` (our claim), `external` (someone else triggered our claim; it goes to hires the same way) |
 | `freeze.data.scope` | `stock` (issuer paused the whole stock), `rat` (one rat's account frozen or mismatched) |
 
 ## `GET /api/state`
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedAt": "2026-10-01T18:00:05Z",
   "bot": {
     "mode": "live",
     "lastClaimAt": "2026-10-01T17:59:50Z",
-    "nextClaimAt": "2026-10-01T18:00:25Z",
-    "nextBurnAt": "2026-10-01T18:08:00Z"
+    "nextClaimAt": "2026-10-01T18:00:25Z"
   },
   "coin": {
     "mint": "COINMINTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxpump",
     "symbol": "RAT",
     "priceUsd": 0.00182,
     "supply": "987654321.12",
-    "marketCapUsd": 1797531,
-    "burnedTokens": "12345678.90"
+    "marketCapUsd": 1797531
   },
   "wallets": {
-    "creator": "CREATORxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "fund": "FUNDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    "creator": "CREATORxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   },
   "treasury": {
-    "totalClaimedSol": 182.4,
-    "totalToHiresSol": 91.2,
-    "totalToFundSol": 91.2,
-    "fundWalletSol": 2.31,
-    "totalBurnSpentSol": 88.89,
-    "burnCount": 41,
-    "lastBurnAt": "2026-10-01T17:58:00Z"
+    "totalClaimedSol": 91.4,
+    "totalHiredSol": 89.61,
+    "waitingSol": 1.79
   },
   "portfolio": {
     "ratCount": 2987,
     "activeCount": 2950,
     "frozenCount": 37,
+    "positionCount": 10,
     "costUsd": 16420.5,
     "valueUsd": 17102.9,
     "pnlUsd": 682.4,
@@ -125,9 +119,11 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 }
 ```
 
-- `coin.*` fields are `null` before launch (no `COIN_MINT` yet), except `symbol` and `burnedTokens`.
-- `bot.lastClaimAt`, `treasury.lastBurnAt`, `bot.nextBurnAt` can be `null`.
-- `bot.nextBurnAt` is the **earliest** the next burn round can start. The real start is a random moment up to 4 minutes later (anti front-running), so show it as "next burn soon after", not a countdown to the second. A round with more than 1 SOL arrives as several `burn` events a few seconds apart.
+- `coin.*` fields are `null` before launch (no `COIN_MINT` yet), except `symbol`.
+- `bot.lastClaimAt` can be `null`.
+- Every claimed SOL goes to hiring rats. Nothing is bought back or burned, and nothing is paid to holders.
+- `treasury.totalClaimedSol`: creator fees claimed so far. `treasury.totalHiredSol`: SOL spent on hires (salaries plus fees, rent and tips). `treasury.waitingSol`: claimed SOL not spent yet, usually waiting under the hourly hire cap.
+- `portfolio` is what all the rats hold together: `ratCount`, `positionCount` (how many different stocks they hold), `costUsd`, `valueUsd` (show it as "Portfolio value"; it is the rats' stocks, not holders' money), `pnlUsd`, `pnlPct`.
 - `stock.priceUsd` and `stock.change24hPct` can be `null` if Jupiter has no fresh price.
 - `leaderboard.top` = 10 best `RatView`, `leaderboard.bottom` = 10 worst (worst first).
 - `events` = last 50 events, newest first.
@@ -162,7 +158,7 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 ## `GET /api/rats`
 
 ```json
-{ "schemaVersion": 1, "generatedAt": "2026-10-01T18:00:05Z", "total": 2987, "rats": [ "RatView..." ] }
+{ "schemaVersion": 2, "generatedAt": "2026-10-01T18:00:05Z", "total": 2987, "rats": [ "RatView..." ] }
 ```
 
 Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
@@ -170,7 +166,7 @@ Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
 ## `GET /api/events`
 
 ```json
-{ "schemaVersion": 1, "generatedAt": "2026-10-01T18:00:05Z", "lastId": 90213, "events": [ "Event..." ] }
+{ "schemaVersion": 2, "generatedAt": "2026-10-01T18:00:05Z", "lastId": 90213, "events": [ "Event..." ] }
 ```
 
 ## Event shapes
@@ -178,11 +174,9 @@ Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
 ```json
 [
   { "id": 90210, "type": "claim", "at": "2026-10-01T17:59:50Z", "txSig": "3cL...", "txUrl": "https://solscan.io/tx/3cL...", "dryRun": false,
-    "data": { "amountSol": 1.284, "toHiresSol": 0.642, "toFundSol": 0.642, "source": "bot" } },
+    "data": { "amountSol": 1.284, "source": "bot" } },
   { "id": 90211, "type": "hire", "at": "2026-10-01T17:59:58Z", "txSig": "5hT...", "txUrl": "https://solscan.io/tx/5hT...", "dryRun": false,
     "data": { "ratId": 1042, "ratName": "Rat #1042", "wallet": "7xKp...yW5n", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
-  { "id": 90212, "type": "burn", "at": "2026-10-01T18:00:01Z", "txSig": "4bR...", "txUrl": "https://solscan.io/tx/4bR...", "dryRun": false,
-    "data": { "solSpent": 2.4, "tokensBurned": "7123456.12" } },
   { "id": 90213, "type": "freeze", "at": "2026-10-01T18:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
     "data": { "scope": "stock", "stock": "COINx", "ratId": null, "ratCount": 37, "reason": "stock_paused" } },
   { "id": 90214, "type": "unfreeze", "at": "2026-10-01T19:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
@@ -195,3 +189,5 @@ Freeze reasons: `stock_paused`, `account_frozen`, `balance_mismatch`. Unfreeze r
 ## Versioning
 
 Any breaking change bumps `schemaVersion`. New optional fields can be added without a bump, so ignore unknown fields.
+
+- v2 (buy and burn removed): no `burn` event, claim data is `{ amountSol, source }`, no `bot.nextBurnAt`, `coin.burnedTokens` or `wallets.fund`, treasury is `{ totalClaimedSol, totalHiredSol, waitingSol }`, and `portfolio.positionCount` is new.

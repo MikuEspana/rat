@@ -2,7 +2,6 @@
 import { ASSOCIATED_TOKEN_PROGRAM, NATIVE_SOL_MINT, SYSTEM_PROGRAM, TOKEN_PROGRAM } from '@rat/core';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
-  createBurnCheckedInstruction,
   createCloseAccountInstruction,
   getAssociatedTokenAddressSync,
 } from '@solana/spl-token';
@@ -71,11 +70,4 @@ export function createCreatorWsolAtaIx(creator: string): TransactionInstruction 
 export function unwrapCreatorWsolIx(creator: string): TransactionInstruction {
   const a = creatorAccounts(creator);
   return createCloseAccountInstruction(pk(a.creatorWsolAta), pk(creator), pk(creator), [], pk(TOKEN_PROGRAM));
-}
-
-/** BurnChecked from the owner's ATA, with the coin's own token program (SPL Token or Token-2022). */
-export function burnIx(args: { owner: string; mint: string; amount: bigint; decimals: number; tokenProgram: string }): TransactionInstruction {
-  const program = pk(args.tokenProgram);
-  const ata = getAssociatedTokenAddressSync(pk(args.mint), pk(args.owner), true, program);
-  return createBurnCheckedInstruction(ata, pk(args.mint), pk(args.owner), args.amount, args.decimals, [], program);
 }

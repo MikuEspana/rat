@@ -28,10 +28,10 @@ function guard(over: Partial<SpendGuardConfig> = {}, deps: Partial<ConstructorPa
   return new SpendGuard(
     { ledger: store.ledger, killSwitch: new DbKillSwitch(store.settings, false), alerts, clock, ...deps },
     {
-      capPerHour: { hire: 1n * SOL, burn: 1n * SOL },
+      capPerHour: { hire: 1n * SOL },
       alertPct: 50,
-      wallets: { hire: undefined, burn: undefined },
-      reserves: { hire: SOL / 20n, burn: SOL / 100n },
+      wallets: { hire: undefined },
+      reserves: { hire: SOL / 20n },
       smokeMode: false,
       smokeCap: SOL / 10n,
       checkWallets: false,
@@ -40,14 +40,14 @@ function guard(over: Partial<SpendGuardConfig> = {}, deps: Partial<ConstructorPa
   );
 }
 
-const credit = (bucket: 'hire' | 'burn', lamports: bigint) => store.ledger.append({ bucket, deltaLamports: lamports, reason: 'claim_credit' });
+const credit = (bucket: 'hire', lamports: bigint) => store.ledger.append({ bucket, deltaLamports: lamports, reason: 'claim_credit' });
 
 describe('SpendGuard', () => {
   it('only spends claimed fees: the wallet balance never counts', async () => {
     const chain = new SimChain();
     const creator = Keypair.generate().publicKey.toBase58();
     chain.fundAccount(creator, 1_000n * SOL);
-    const g = guard({ checkWallets: true, wallets: { hire: creator, burn: undefined } }, { chain: new SimChainReader(chain) });
+    const g = guard({ checkWallets: true, wallets: { hire: creator } }, { chain: new SimChainReader(chain) });
     const r = await g.authorize({ bucket: 'hire', lamports: SOL / 100n, refType: 'rat', refId: '1' });
     expect(r).toMatchObject({ ok: false, reason: 'insufficient_budget' });
     await credit('hire', SOL / 100n);
@@ -55,33 +55,32 @@ describe('SpendGuard', () => {
     expect(await store.ledger.balance('hire')).toBe(0n);
   });
 
-  it('enforces the hourly cap exactly, per bucket, on a rolling window', async () => {
+  it('enforces the hourly hire cap exactly, on a rolling window', async () => {
     await credit('hire', 10n * SOL);
-    await credit('burn', 10n * SOL);
     const g = guard();
     expect((await g.authorize({ bucket: 'hire', lamports: (6n * SOL) / 10n, refType: 'rat', refId: '1' })).ok).toBe(true);
     expect((await g.authorize({ bucket: 'hire', lamports: (4n * SOL) / 10n, refType: 'rat', refId: '2' })).ok).toBe(true);
     const over = await g.authorize({ bucket: 'hire', lamports: 1n, refType: 'rat', refId: '3' });
     expect(over).toMatchObject({ ok: false, reason: 'hourly_cap' });
     expect(alerts.keys()).toContain('cap_reached_hire');
-    // the burn bucket has its own cap
-    expect((await g.authorize({ bucket: 'burn', lamports: SOL, refType: 'burn', refId: '1' })).ok).toBe(true);
+    // the refused request reserved nothing: the budget still holds everything but the 1 SOL spent
+    expect(await store.ledger.balance('hire')).toBe(9n * SOL);
     // an hour later the window has rolled
     clock.advanceSeconds(3601);
     expect((await g.authorize({ bucket: 'hire', lamports: SOL, refType: 'rat', refId: '4' })).ok).toBe(true);
   });
 
   it('reports the room left under the cap', async () => {
-    await credit('burn', 5n * SOL);
+    await credit('hire', 5n * SOL);
     const g = guard();
-    expect(await g.remainingCap('burn')).toBe(SOL);
-    await g.authorize({ bucket: 'burn', lamports: (SOL * 3n) / 10n, refType: 'burn', refId: '1' });
-    expect(await g.remainingCap('burn')).toBe((SOL * 7n) / 10n);
+    expect(await g.remainingCap('hire')).toBe(SOL);
+    await g.authorize({ bucket: 'hire', lamports: (SOL * 3n) / 10n, refType: 'rat', refId: '1' });
+    expect(await g.remainingCap('hire')).toBe((SOL * 7n) / 10n);
     clock.advanceSeconds(3601);
-    expect(await g.remainingCap('burn')).toBe(SOL);
+    expect(await g.remainingCap('hire')).toBe(SOL);
   });
 
-  it('alerts once when a bucket crosses 50% of its cap', async () => {
+  it('alerts once when hiring crosses 50% of the cap', async () => {
     await credit('hire', 10n * SOL);
     const g = guard();
     for (let i = 0; i < 10; i++) await g.authorize({ bucket: 'hire', lamports: SOL / 10n, refType: 'rat', refId: String(i) });
@@ -115,18 +114,19 @@ describe('SpendGuard', () => {
     expect(await envKilled.authorize({ bucket: 'hire', lamports: 1n, refType: 'rat', refId: '3' })).toMatchObject({ ok: false, reason: 'kill_switch' });
   });
 
-  it('live wallet check keeps the reserve and the fund share owed', async () => {
+  it('live wallet check keeps the creator reserve', async () => {
     const chain = new SimChain();
     const creator = Keypair.generate().publicKey.toBase58();
     chain.fundAccount(creator, SOL / 10n);
     await credit('hire', SOL);
-    const g = guard(
-      { checkWallets: true, wallets: { hire: creator, burn: undefined }, reserves: { hire: SOL / 20n, burn: 0n } },
-      { chain: new SimChainReader(chain), pendingFundTransfer: async () => SOL / 50n },
-    );
-    // 0.1 SOL wallet: 0.03 + 0.05 reserve + 0.02 owed = 0.1 -> ok; 0.031 -> not
-    expect((await g.authorize({ bucket: 'hire', lamports: (SOL * 3n) / 100n, refType: 'rat', refId: '1' })).ok).toBe(true);
-    expect(await g.authorize({ bucket: 'hire', lamports: (SOL * 31n) / 1000n, refType: 'rat', refId: '2' })).toMatchObject({ ok: false, reason: 'wallet_low' });
+    const g = guard({ checkWallets: true, wallets: { hire: creator }, reserves: { hire: SOL / 20n } }, { chain: new SimChainReader(chain) });
+    // 0.1 SOL wallet: 0.051 + 0.05 reserve = 0.101 -> not; 0.05 + 0.05 reserve = 0.1 -> ok
+    expect(await g.authorize({ bucket: 'hire', lamports: (SOL * 51n) / 1000n, refType: 'rat', refId: '1' })).toMatchObject({ ok: false, reason: 'wallet_low' });
+    expect(alerts.keys()).toContain('wallet_low_hire');
+    expect((await g.authorize({ bucket: 'hire', lamports: SOL / 20n, refType: 'rat', refId: '2' })).ok).toBe(true);
+    // no wallet configured: refuse instead of spending blind
+    const blind = guard({ checkWallets: true, wallets: { hire: undefined } }, { chain: new SimChainReader(chain) });
+    expect(await blind.authorize({ bucket: 'hire', lamports: 1n, refType: 'rat', refId: '3' })).toMatchObject({ ok: false, reason: 'wallet_unknown' });
   });
 });
 
@@ -288,9 +288,14 @@ describe('red team: GuardedSender live checks', () => {
     expect(sim.submitted).toBe(1);
   });
 
-  it('a live claim, hire or burn without limits is refused (fail closed); sweep needs none', async () => {
+  it('a live claim or hire without limits is refused (fail closed); sweep needs none', async () => {
     const { sim, gs, req } = setup();
     expect(await gs.execute({ request: req({ limits: undefined }), ref })).toMatchObject({ status: 'blocked', reason: expect.stringMatching(/needs spend limits/) });
+    const reservation = { ledgerId: 0, bucket: 'hire' as const, lamports: 10_000_000n, refType: 'rat', refId: '1' };
+    expect(await gs.execute({ request: req({ kind: 'hire', label: 'hire', limits: undefined }), reservation, ref: { type: 'rat', id: '1' } })).toMatchObject({
+      status: 'blocked',
+      reason: expect.stringMatching(/live hire transaction needs spend limits/),
+    });
     expect((await gs.execute({ request: req({ kind: 'sweep', limits: undefined }), ref: { type: 'sweep', id: '1' } })).status).toBe('done');
     expect(sim.submitted).toBe(1);
   });
@@ -372,15 +377,16 @@ describe('red team: SpendGuard races and overspend', () => {
   });
 
   it('a spend that cost more than reserved is booked in full and raises a critical alert', async () => {
-    await store.ledger.append({ bucket: 'burn', deltaLamports: SOL, reason: 'claim_credit' });
+    await store.ledger.append({ bucket: 'hire', deltaLamports: SOL, reason: 'claim_credit' });
     const g = guard();
-    const r = await g.authorize({ bucket: 'burn', lamports: SOL / 10n, refType: 'burn', refId: '1' });
+    const r = await g.authorize({ bucket: 'hire', lamports: SOL / 10n, refType: 'rat', refId: '1' });
     if (!r.ok) throw new Error(r.reason);
     await g.settle(r.reservation, SOL / 10n + 7_000n);
-    expect(await store.ledger.balance('burn')).toBe(SOL - SOL / 10n - 7_000n);
-    expect(alerts.sent.find((a) => a.key === 'overspend_burn')?.level).toBe('critical');
-    await g.settle(r.reservation, SOL / 20n); // cheaper than reserved: no alert
-    expect(alerts.sent.filter((a) => a.key === 'overspend_burn').length).toBe(1);
+    expect(await store.ledger.balance('hire')).toBe(SOL - SOL / 10n - 7_000n);
+    expect(alerts.sent.find((a) => a.key === 'overspend_hire')?.level).toBe('critical');
+    await g.settle(r.reservation, SOL / 20n); // a second settle of the same reservation books nothing, no alert
+    expect(await store.ledger.balance('hire')).toBe(SOL - SOL / 10n - 7_000n);
+    expect(alerts.sent.filter((a) => a.key === 'overspend_hire').length).toBe(1);
   });
 });
 

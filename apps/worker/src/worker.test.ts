@@ -1,9 +1,8 @@
-import { NATIVE_SOL_MINT, TOKEN_2022_PROGRAM, formatSol, lamportsToSol, sumBig } from '@rat/core';
+import { NATIVE_SOL_MINT, TOKEN_2022_PROGRAM, lamportsToSol, sumBig } from '@rat/core';
 import { collectCreatorFeeV2Ix } from '@rat/pump';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SOL, type SimWorld, createSimWorld } from './sim-world';
-import { runBurnStep } from './steps/burn';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
 import { runMintStep } from './steps/mints';
@@ -20,20 +19,23 @@ async function prime(world: SimWorld) {
 }
 
 describe('live mode on SimChain (in-memory only)', () => {
-  it('claims both vaults, splits 50/50 exactly, forwards the fund share in the same tx', async () => {
+  it('claims both vaults and credits the whole claim to hires: no SOL leaves the creator', async () => {
     w = await createSimWorld({ dryRun: false });
     await prime(w);
     w.accrue({ bondingLamports: SOL, ammLamports: SOL / 2n });
-    const fundBefore = w.chain.sol(w.fund.publicKey.toBase58());
+    const creatorBefore = w.chain.sol(w.creator.publicKey.toBase58());
     const r = await runClaimStep(w.deps, w.worker.state);
     expect(r).toMatchObject({ status: 'claimed', claimedLamports: (3n * SOL) / 2n });
-    expect(w.chain.sol(w.fund.publicKey.toBase58()) - fundBefore).toBe((3n * SOL) / 4n);
-    const claimTx = (await w.store.claims.totals());
+    const claimTx = await w.store.claims.totals();
     expect(claimTx.claimed).toBe((3n * SOL) / 2n);
-    expect(await w.store.ledger.balance('burn')).toBe((3n * SOL) / 4n);
-    expect(await w.store.ledger.balance('hire')).toBe((3n * SOL) / 4n - claimTx.fee);
-    expect(await w.store.claims.pendingFundTransfer()).toBe(0n);
-    expect((await w.store.events.latest(5))[0]?.type).toBe('claim');
+    expect(claimTx.hireShare).toBe(claimTx.claimed);
+    expect(claimTx.fee).toBeGreaterThan(0n);
+    // the claim tx only pays in: the creator gains exactly the claim minus the network fee
+    expect(w.chain.sol(w.creator.publicKey.toBase58()) - creatorBefore).toBe(claimTx.claimed - claimTx.fee);
+    expect(await w.store.ledger.balance('hire')).toBe((3n * SOL) / 2n - claimTx.fee);
+    const ev = (await w.store.events.latest(5))[0];
+    expect(ev?.type).toBe('claim');
+    expect(ev?.data).toEqual({ amountSol: 1.5, source: 'bot' });
   });
 
   it('hires rats with the hire bucket only, each rat holds its stock on-chain', async () => {
@@ -58,35 +60,10 @@ describe('live mode on SimChain (in-memory only)', () => {
     expect(await w.store.ledger.balance('hire')).toBeGreaterThanOrEqual(0n);
     expect(await w.store.ledger.balance('hire')).toBeLessThan(w.deps.config.salaryLamports);
   });
-
-  it('buys and burns with the burn bucket, skips under 0.01 SOL', async () => {
-    w = await createSimWorld({ dryRun: false });
-    await prime(w);
-    expect((await runBurnStep(w.deps, w.worker.state)).status).toBe('skipped');
-    w.accrue({ bondingLamports: SOL });
-    await runClaimStep(w.deps, w.worker.state);
-    const supplyBefore = w.chain.mintState(w.coinMint)!.supply;
-    const r = await runBurnStep(w.deps, w.worker.state);
-    expect(r.status).toBe('burned');
-    // the mock swap mints what it sells; the fund keeps (out - minOut) for the next burn
-    const leftover = w.chain.tokenBalance(w.fund.publicKey.toBase58(), w.coinMint, TOKEN_2022_PROGRAM);
-    expect(w.chain.mintState(w.coinMint)!.supply).toBe(supplyBefore + leftover);
-    expect(r.burnedRaw).toBeGreaterThan(0n);
-    expect(leftover).toBeLessThan(r.burnedRaw / 60n); // 1.5% slippage buffer
-    // next burn burns the leftover too
-    w.accrue({ bondingLamports: SOL });
-    await runClaimStep(w.deps, w.worker.state);
-    const r2 = await runBurnStep(w.deps, w.worker.state);
-    expect(r2.burnedRaw).toBeGreaterThan(leftover);
-    const left = await w.store.ledger.balance('burn');
-    expect(left).toBeGreaterThanOrEqual(0n);
-    expect(left).toBeLessThan(w.deps.config.hireOverheadEstLamports);
-    console.log(`burned ${r.burnedRaw} raw coin for ${formatSol(r.spentLamports)} SOL`);
-  });
 });
 
 describe('wallet watch (owner decision #7)', () => {
-  it('books an external claim of our vault 50/50, forwards the fund share on our next claim, alerts on other inflows', async () => {
+  it('books an external claim of our vault for hires, alerts on other inflows, never credits them', async () => {
     w = await createSimWorld({ dryRun: false });
     await prime(w);
     await runWatchStep(w.deps); // first run sets the cursor
@@ -102,20 +79,22 @@ describe('wallet watch (owner decision #7)', () => {
 
     const res = await runWatchStep(w.deps);
     expect(res).toMatchObject({ externalClaims: 1, unexplainedInflows: 1, unknownSigned: 0 });
-    expect(await w.store.ledger.balance('hire')).toBe(SOL);
-    expect(await w.store.ledger.balance('burn')).toBe(SOL);
-    expect(await w.store.claims.pendingFundTransfer()).toBe(SOL);
+    // the whole external claim hires rats; the unexplained 0.005 SOL was never credited
+    expect(await w.store.ledger.balance('hire')).toBe(2n * SOL);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: 2n * SOL, hireShare: 2n * SOL, fee: 0n, count: 1 });
     expect(w.alerts.keys().some((k) => k.startsWith('inflow_'))).toBe(true);
     // running the watch again books nothing twice
     expect(await runWatchStep(w.deps)).toMatchObject({ externalClaims: 0, unexplainedInflows: 0 });
+    expect(await w.store.ledger.balance('hire')).toBe(2n * SOL);
 
-    const fundBefore = w.chain.sol(w.fund.publicKey.toBase58());
-    const claim = await runClaimStep(w.deps, w.worker.state);
-    expect(claim.status).toBe('claimed');
-    expect(w.chain.sol(w.fund.publicKey.toBase58()) - fundBefore).toBe(SOL);
-    expect(await w.store.claims.pendingFundTransfer()).toBe(0n);
-    // the unexplained 0.005 SOL was never credited
-    expect(await w.store.ledger.balance('hire')).toBeLessThan(SOL);
+    // our next claim finds the vault empty: nothing is sent, nothing leaves the creator
+    const creatorBefore = w.chain.sol(w.creator.publicKey.toBase58());
+    const sentBefore = w.simSender.submitted;
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
+    expect(w.simSender.submitted).toBe(sentBefore);
+    expect(w.chain.sol(w.creator.publicKey.toBase58())).toBe(creatorBefore);
+    expect(await w.store.ledger.balance('hire')).toBe(2n * SOL);
   });
 
   it('a transaction signed by our creator that the bot did not send trips the kill switch', async () => {
@@ -150,7 +129,7 @@ describe('wallet watch with RPC indexing lag', () => {
     lag = false;
     expect((await runWatchStep(w.deps)).externalClaims).toBe(1);
     expect((await runWatchStep(w.deps)).externalClaims).toBe(0);
-    expect(await w.store.ledger.balance('hire')).toBe(SOL / 2n);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL);
   });
 });
 
@@ -291,7 +270,8 @@ describe('hire state machine', () => {
     await engageKillSwitch(w.store.settings, 'test');
     const before = w.simSender.submitted;
     expect((await runHireStep(w.deps, w.worker.state)).skipped).toBe('kill_switch');
-    expect((await runBurnStep(w.deps, w.worker.state)).status).toBe('skipped');
+    w.accrue({ bondingLamports: SOL });
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
     expect(w.simSender.submitted).toBe(before);
   });
 
@@ -309,29 +289,28 @@ describe('hire state machine', () => {
 });
 
 describe('DRY RUN (paper)', () => {
-  it('claims, hires and burns on paper: nothing on-chain changes except what the world did', async () => {
+  it('claims and hires on paper: nothing on-chain changes except what the world did', async () => {
     w = await createSimWorld({ dryRun: true });
     await prime(w);
     w.accrue({ bondingLamports: SOL });
     const creatorBefore = w.chain.sol(w.creator.publicKey.toBase58());
-    const fundBefore = w.chain.sol(w.fund.publicKey.toBase58());
     const c = await runClaimStep(w.deps, w.worker.state);
     expect(c).toMatchObject({ status: 'paper', claimedLamports: SOL });
+    // the whole paper claim is hire budget
+    expect(await w.store.ledger.balance('hire')).toBe(SOL);
     // the same fees are not counted twice on the next loop
     expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
     const h = await runHireStep(w.deps, w.worker.state);
-    // the 0.5 SOL budget covers 16 salaries; one loop hires up to MAX_HIRES_PER_LOOP of them
+    // the 1 SOL budget covers 33 salaries; one loop hires up to MAX_HIRES_PER_LOOP (20) of them
+    expect(w.deps.config.maxHiresPerLoop).toBe(20);
     expect(h.hired).toBe(w.deps.config.maxHiresPerLoop);
-    const b = await runBurnStep(w.deps, w.worker.state);
-    expect(b.status).toBe('paper');
     expect(w.simSender.submitted).toBe(0);
     expect(w.chain.sol(w.creator.publicKey.toBase58())).toBe(creatorBefore);
-    expect(w.chain.sol(w.fund.publicKey.toBase58())).toBe(fundBefore);
     const rats = await w.store.rats.listByStatus(['active']);
     for (const r of rats) expect(w.chain.tokenBalance(r.wallet, r.stockMint, TOKEN_2022_PROGRAM)).toBe(0n);
     expect(await w.store.forMode('live').ledger.balance('hire')).toBe(0n);
     const types = await w.store.events.countByType();
-    expect(types).toMatchObject({ claim: 1, hire: w.deps.config.maxHiresPerLoop, burn: 1 });
+    expect(types).toEqual({ claim: 1, hire: w.deps.config.maxHiresPerLoop });
     // fees that keep accruing are counted once more
     w.accrue({ bondingLamports: SOL / 10n });
     expect((await runClaimStep(w.deps, w.worker.state)).claimedLamports).toBe(SOL / 10n);
@@ -350,9 +329,9 @@ describe('scheduler and single worker', () => {
     }
     expect(counts.get('prices')).toBe(80);
     expect(counts.get('claim')).toBe(Math.ceil(1200 / 35));
-    expect(counts.get('burn')).toBe(2);
+    expect(counts.get('reconcile')).toBe(Math.ceil(1200 / 35));
     const beats = await w.store.heartbeats.all();
-    expect(beats.map((b) => b.loop).sort()).toEqual(['burn', 'claim', 'mints', 'prices', 'reconcile']);
+    expect(beats.map((b) => b.loop).sort()).toEqual(['claim', 'mints', 'prices', 'reconcile']);
     expect(beats.every((b) => b.lastError === null)).toBe(true);
   });
 
@@ -382,9 +361,12 @@ describe('claim reconciliation', () => {
     expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('pending');
     expect(await w.store.ledger.balance('hire')).toBe(0n);
     await runClaimStep(w.deps, w.worker.state);
-    expect(await w.store.ledger.balance('burn')).toBe(SOL / 2n);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: SOL, hireShare: SOL, count: 1 });
+    expect(t.fee).toBeGreaterThan(0n);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
     await runClaimStep(w.deps, w.worker.state);
-    expect(await w.store.ledger.balance('burn')).toBe(SOL / 2n);
-    expect((await w.store.claims.totals()).claimed).toBe(SOL);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
+    expect(await w.store.claims.totals()).toEqual(t);
   });
 });

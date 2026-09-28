@@ -61,9 +61,8 @@ export interface SimWorldOptions {
   solUsd?: number;
   coinUsd?: number;
   seed?: number;
-  /** starting SOL of the creator and fund wallets (their own money, never spent by the bot) */
+  /** starting SOL of the creator wallet (its own money, never spent by the bot) */
   creatorSol?: bigint;
-  fundSol?: bigint;
   spreadBps?: number;
 }
 
@@ -90,7 +89,6 @@ export interface SimWorld {
   prices: MockPriceSource;
   swap: MockSwapBuilder;
   creator: Keypair;
-  fund: Keypair;
   /** the master key ring (a restarted process builds a new DbKeyStore from it) */
   ring: MasterKeyRing;
   xstocksAuthority: Keypair;
@@ -117,7 +115,6 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
   const simSender = new SimTxSender(chain);
 
   const creator = Keypair.generate();
-  const fund = Keypair.generate();
   const xstocksAuthority = Keypair.generate();
   const coinMint = Keypair.generate().publicKey.toBase58();
   const masterKey = randomBytes(32).toString('base64');
@@ -127,20 +124,14 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     LIVE_CONFIRM: dryRun ? '' : LIVE_CONFIRM_PHRASE,
     COIN_MINT: coinMint,
     CREATOR_PUBKEY: creator.publicKey.toBase58(),
-    FUND_PUBKEY: fund.publicKey.toBase58(),
     KEY_ENCRYPTION_KEY: masterKey,
-    // Test worlds run a 50/50 split so the buy-and-burn path (off in production, kept for a possible buyback)
-    // stays covered by every test. Tests of the production default (every fee to hires) pass HIRE_SPLIT_BPS=10000.
-    HIRE_SPLIT_BPS: '5000',
     ...opts.env,
   });
 
   const store = new Store(handle.db, dryRun ? 'paper' : 'live', clock);
   const ring = new MasterKeyRing({ version: 1, base64: masterKey });
   await store.keys.setRoleKey(encryptRoleKey(creator, ring, 'creator'));
-  await store.keys.setRoleKey(encryptRoleKey(fund, ring, 'fund'));
   chain.fundAccount(creator.publicKey.toBase58(), opts.creatorSol ?? SOL / 10n);
-  chain.fundAccount(fund.publicKey.toBase58(), opts.fundSol ?? SOL / 50n);
 
   const prices = new MockPriceSource();
   prices.set(NATIVE_SOL_MINT, opts.solUsd ?? 185.4, { vol: 0.002, change24hPct: 1.2 });
@@ -177,12 +168,12 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     const killSwitch = new DbKillSwitch(st.settings, config.killSwitch);
     const sender = new GuardedSender(o.sender ?? simSender, { attempts: st.attempts, killSwitch, dryRun: config.dryRun, alerts });
     const guard = new SpendGuard(
-      { ledger: st.ledger, killSwitch, alerts, clock, chain, pendingFundTransfer: () => st.claims.pendingFundTransfer() },
+      { ledger: st.ledger, killSwitch, alerts, clock, chain },
       {
         capPerHour: config.spendCapLamportsPerHour,
         alertPct: config.spendAlertPct,
-        wallets: { hire: creator.publicKey.toBase58(), burn: fund.publicKey.toBase58() },
-        reserves: { hire: config.creatorReserveLamports, burn: config.fundReserveLamports },
+        wallets: { hire: creator.publicKey.toBase58() },
+        reserves: { hire: config.creatorReserveLamports },
         smokeMode: config.smokeMode,
         smokeCap: config.smokeCapLamports,
         checkWallets: !config.dryRun,
@@ -197,7 +188,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
       chain,
       sender,
       guard,
-      keys: new DbKeyStore(st.keys, ring, { expectedCreator: config.creatorPubkey, expectedFund: config.fundPubkey }),
+      keys: new DbKeyStore(st.keys, ring, { expectedCreator: config.creatorPubkey }),
       pump: new PumpFunClient(chain),
       prices: o.prices ?? prices,
       swap: o.swap ?? swap,
@@ -205,7 +196,6 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
       killSwitch,
       stocks: entries,
       creator: creator.publicKey.toBase58(),
-      fund: fund.publicKey.toBase58(),
     };
   };
   const deps = assemble();
@@ -225,7 +215,6 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     prices,
     swap,
     creator,
-    fund,
     ring,
     xstocksAuthority,
     stockMints,

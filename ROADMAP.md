@@ -1,6 +1,6 @@
 # RAT RACE v1 Roadmap (approved)
 
-> Update after the owner review: rat wallets are plain fresh keypairs made at hire time (no vanity suffix, no key pool, no grinder), and burns run in random 8 to 12 minute rounds. Lines below that say otherwise are the original plan. Current state: `STATUS.md`.
+> Update after the owner review: rat wallets are plain fresh keypairs made at hire time (no vanity suffix, no key pool, no grinder), and (2026-09-28) buy and burn was removed: every claimed fee hires rats, at most 20 per loop and 60 SOL per hour, and there is no fund wallet. Lines below that say otherwise are the original plan. Current state: `STATUS.md`.
 
 Approved by the owner on 2026-09-27 with the answers below. Mechanics are in `README.md`, the website JSON is in `CONTRACT.md`.
 
@@ -62,11 +62,11 @@ config/stocks.json
 
 **Claim (every 35s)**
 1. Read claimable from both vaults: bonding curve `creator_vault` PDA (`["creator-vault", creator]`, pump program) and PumpSwap `coin_creator_vault_ata` (authority PDA `["creator_vault", creator]`, pump_amm program). VERIFIED [1][4].
-2. Skip if under `MIN_CLAIM_SOL` and nothing is owed to the fund.
-3. One tx signed by the creator: `collect_creator_fee_v2` (pays native SOL for SOL-paired coins) and/or `collect_coin_creator_fee` (pays WSOL, then we close the WSOL account to unwrap) + a transfer of the fund's share to the fund wallet. VERIFIED [1].
-4. Claimed amount = what left **our vaults** in that tx (vault balance deltas), not the creator wallet delta. Ledger: hire += claimed - fund share - tx fee, burn += fund share.
+2. Skip if under `MIN_CLAIM_SOL`.
+3. One tx signed by the creator: `collect_creator_fee_v2` (pays native SOL for SOL-paired coins) and/or `collect_coin_creator_fee` (pays WSOL, then we close the WSOL account to unwrap). VERIFIED [1].
+4. Claimed amount = what left **our vaults** in that tx (vault balance deltas), not the creator wallet delta. Ledger: hire += claimed - tx fee (all of it; since 2026-09-28 there is no fund share).
 
-**Creator watch (every 35s)**: new signatures on the creator wallet that are not ours are parsed. A pump.fun claim instruction for our creator (claims are permissionless, VERIFIED [1]) is credited and split 50/50; its fund share rides in our next claim tx. Anything else is alerted and left unspent. An unknown tx signed BY our creator trips the kill switch.
+**Creator watch (every 35s)**: new signatures on the creator wallet that are not ours are parsed. A pump.fun claim instruction for our creator (claims are permissionless, VERIFIED [1]) is credited to hires like our own. Anything else is alerted and left unspent. An unknown tx signed BY our creator trips the kill switch.
 
 **Hire (after each claim)**
 1. `n = min(hire bucket / salary, MAX_HIRES_PER_LOOP, cap room, key pool)`.
@@ -74,7 +74,7 @@ config/stocks.json
 3. Jupiter Swap v2 `GET /swap/v2/build` with `taker` = rat, `payer` = creator (VERIFIED [6]). One tx: creator transfers salary minus overhead to the rat, rat swaps salary minus buffer. Both sign.
 4. Attempt recorded before send. Never retry while an attempt can still land. Before a retry, read the rat wallet: if it holds the stock, it is active.
 
-**Burn (random 8 to 12 min, chunks of at most 1 SOL, 1.5% slippage; updated after the owner review)**: `min(burn bucket, fund balance - reserve)`, skip under 0.01 SOL. `/build` SOL to coin with `taker` = fund, burn in the same tx (min out + leftovers). Fallback: direct pump.fun buy (`sharing_config` account is mandatory for buys, VERIFIED [3]). Burn uses the coin's token program (pump `create_v2` coins are Token-2022, VERIFIED [2]).
+**Burn: removed 2026-09-28** (every fee hires rats; the original plan follows). `min(burn bucket, fund balance - reserve)`, skip under 0.01 SOL. `/build` SOL to coin with `taker` = fund, burn in the same tx (min out + leftovers). Fallback: direct pump.fun buy (`sharing_config` account is mandatory for buys, VERIFIED [3]). Burn uses the coin's token program (pump `create_v2` coins are Token-2022, VERIFIED [2]).
 
 **Prices (every 15s)**: one Jupiter Price v3 call for all stocks + SOL + coin (max 50 ids per call, `x-api-key` header, VERIFIED [5]). Missing tokens are marked stale, never zero.
 
@@ -84,9 +84,9 @@ config/stocks.json
 
 ## 5. Capacity
 
-- At swarmed-like volume (180 SOL of fees in 7h) about 90 SOL goes to hires = about 3,000 rats. Built for 6,000.
-- Peak 50 SOL/h claimed: about 25 SOL/h per bucket, under the 30 SOL/h per bucket cap.
-- Jupiter: 1 `/build` per hire + 1 per burn + 4 price calls/min. At 20 hires per 35s loop that is about 38/min, under 55/min.
+- At swarmed-like volume (180 SOL of fees) all of it goes to hires = about 6,000 rats (since 2026-09-28; SIMULATION.md).
+- Peak claims above 60 SOL/h wait under the 60 SOL/h hire cap and are spent later.
+- Jupiter: 1 `/build` per hire + 4 price calls/min. At 20 hires per 35s loop that is about 38/min, under 55/min (measured in SIMULATION.md).
 
 ## 6. Workstreams
 
@@ -172,8 +172,8 @@ Conflict rules: write only inside owned folders; root files and `packages/core` 
 ## 7. Safety
 
 - **Keys**: AES-256-GCM in the database. Env holds only the master key. Keys decrypted in memory only to sign.
-- **Ledger-only spending**: hires spend only the hire bucket, burns only the burn bucket, the creator reserve and the fund's pending share are never spent. Unexplained SOL is never spent.
-- **Caps**: 30 SOL per rolling hour per bucket. At the cap, spending pauses (budget carries over). Alerts at 50% and 100%.
+- **Ledger-only spending**: hires spend only the hire bucket (every claimed lamport), the creator reserve is never spent. Unexplained SOL is never spent.
+- **Caps**: 60 SOL per rolling hour on hires (30 per bucket in the original plan). At the cap, spending pauses (budget carries over). Alerts at 50% and 100%.
 - **Kill switch**: env, database flag or CLI. Checked in the guarded sender before every send.
 - **DRY RUN** default on. Live needs `DRY_RUN=false` and the exact `LIVE_CONFIRM` phrase. The RPC sender refuses to send otherwise.
 - **One worker**: Postgres advisory lock.

@@ -1,8 +1,8 @@
-// Public API client (CONTRACT.md, schemaVersion 1). Unknown fields are ignored on purpose: the contract may add
+// Public API client (CONTRACT.md, schemaVersion 2). Unknown fields are ignored on purpose: the contract may add
 // optional fields without a version bump, so responses are not parsed strictly.
 import type { EventsResponse, RatsResponse, StateResponse } from '@rat/contract';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export class ApiError extends Error {}
 

@@ -1,19 +1,28 @@
 // End-to-end simulations of a launch hour. Everything runs in memory: PGlite + SimChain + mock Jupiter +
 // FakeClock. DRY RUN scenarios never submit anything; "live" scenarios execute only against SimChain.
+// Every claimed lamport hires rats: the hire bucket is the only spending, capped at 60 SOL per rolling hour.
 import { createApp, StateService } from '@rat/api';
 import { StateResponseSchema } from '@rat/contract';
 import { TOKEN_2022_PROGRAM, formatSol } from '@rat/core';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { afterEach, describe, expect, it } from 'vitest';
-import { burnRounds, runLaunch } from './helpers';
+import { type CallSample, jupiterSample, maxAtOneInstant, maxCallsPerMinute, maxRollingOutflow, runLaunch, yieldToEventLoop } from './helpers';
 
 let w: SimWorld;
 afterEach(async () => w?.close());
 
 const HOUR = 3600;
+const HIRE_SPEND_REASONS = ['hire_reserve', 'hire_settle', 'hire_release'];
 
-async function drain(world: SimWorld, seconds: number) {
-  await world.run(seconds, { stepSec: 5 });
+async function drain(world: SimWorld, seconds: number, onTick?: () => void) {
+  let ticks = 0;
+  await world.run(seconds, {
+    stepSec: 5,
+    onTick: async () => {
+      onTick?.();
+      if (++ticks % 60 === 0) await yieldToEventLoop();
+    },
+  });
 }
 
 async function ledgerTotals(world: SimWorld) {
@@ -21,128 +30,132 @@ async function ledgerTotals(world: SimWorld) {
   const g = (k: string) => sums.get(k) ?? 0n;
   return {
     hireCredited: g('hire:claim_credit'),
-    burnCredited: g('burn:claim_credit'),
     hireSpent: -(g('hire:hire_reserve') + g('hire:hire_settle') + g('hire:hire_release')),
-    burnSpent: -(g('burn:burn_reserve') + g('burn:burn_settle') + g('burn:burn_release')),
     claimFees: -g('hire:claim_fee'),
+    /** anything booked outside the hire bucket (there must be nothing) */
+    otherBuckets: [...sums.keys()].filter((k) => !k.startsWith('hire:')),
   };
 }
 
+/** Every hire spend row of this world's mode (reservations, settles, releases), for the rolling-hour checks. */
+async function hireSpendRows(world: SimWorld) {
+  return world.store.db.query.ledgerEntries.findMany({
+    where: (e, { and, eq, inArray }) => and(eq(e.mode, world.store.mode), eq(e.bucket, 'hire'), inArray(e.reason, HIRE_SPEND_REASONS)),
+  });
+}
+
 describe('A. DRY RUN launch hour: 50 SOL of creator fees', () => {
-  it('claims every lamport once, splits 50/50, hires and burns within caps, sends nothing', async () => {
+  it('claims every lamport once, all of it for hires, hires within the cap, sends nothing', async () => {
     w = await createSimWorld({ dryRun: true });
+    const cfg = w.deps.config;
     const creatorStart = w.chain.sol(w.creator.publicKey.toBase58());
-    const fundStart = w.chain.sol(w.fund.publicKey.toBase58());
     const t0 = performance.now();
     const meter = await runLaunch(w, { seconds: HOUR, totalFees: 50n * SOL, graduateAtSec: 20 * 60 });
-    // fees claimed after the last burn wait for the next round (random 8 to 12 min): drain past one more round
-    await drain(w, 14 * 60);
+    // fees claimed in the last loops are hired in the next ones
+    await drain(w, 5 * 60);
     const elapsed = (performance.now() - t0) / 1000;
 
     const claims = await w.store.claims.totals();
     const l = await ledgerTotals(w);
     const rats = await w.store.rats.listByStatus(['active', 'frozen']);
-    const burns = await w.store.burns.totals();
-    const salary = w.deps.config.salaryLamports;
+    const salary = cfg.salaryLamports;
 
-    // every lamport of fees counted exactly once, split 50/50 (the fund gets floor(50%), so an odd lamport
-    // of a claim goes to hires: at most 1 lamport per claim)
+    // every lamport of fees counted exactly once, and every one of them credited to hires
     expect(claims.claimed).toBe(50n * SOL);
-    expect(l.hireCredited + l.burnCredited).toBe(50n * SOL);
-    expect(l.hireCredited - 25n * SOL).toBeGreaterThanOrEqual(0n);
-    expect(l.hireCredited - 25n * SOL).toBeLessThanOrEqual(BigInt(claims.count));
+    expect(claims.hireShare).toBe(claims.claimed);
+    expect(l.hireCredited).toBe(50n * SOL);
+    expect(l.otherBuckets).toEqual([]);
     // hires: paper hires cost exactly the salary; the whole hire budget is used
     expect(l.hireSpent).toBe(BigInt(rats.length) * salary);
     expect(await w.store.ledger.balance('hire')).toBeLessThan(salary);
     expect(await w.store.ledger.balance('hire')).toBeGreaterThanOrEqual(0n);
     expect(rats.length).toBe(Number(l.hireCredited / salary));
-    // burn rounds a random 8 to 12 minutes apart, each split into chunks of at most 1 SOL a few seconds apart;
-    // the whole burn bucket is spent
-    const r = burnRounds(await w.store.burns.listByStatus(['simulated']));
-    expect(r.txs).toBe(burns.count);
-    expect(r.rounds).toBeGreaterThanOrEqual(6);
-    expect(r.rounds).toBeLessThanOrEqual(10);
-    expect(r.maxChunk).toBeLessThanOrEqual(w.deps.config.burn.chunkMaxLamports);
-    for (const g of r.roundGaps) {
-      expect(g).toBeGreaterThanOrEqual(480);
-      expect(g).toBeLessThanOrEqual(725);
-    }
-    for (const g of r.chunkGaps) {
-      expect(g).toBeGreaterThanOrEqual(3);
-      expect(g).toBeLessThanOrEqual(13);
-    }
-    expect(new Set(r.roundGaps).size).toBeGreaterThan(1);
-    expect(burns.spent).toBe(l.burnCredited);
-    expect(await w.store.ledger.balance('burn')).toBe(0n);
-    // caps: 25 SOL per bucket is under the 30 SOL/h cap; the 50% alert fired once per bucket
-    const hourAgo = new Date(w.clock.now().getTime() - HOUR * 1000);
-    expect(await w.store.ledger.netOutflowSince('hire', hourAgo)).toBeLessThanOrEqual(30n * SOL);
-    expect(await w.store.ledger.netOutflowSince('burn', hourAgo)).toBeLessThanOrEqual(30n * SOL);
+    // cap: 50 SOL is under the 60 SOL/h hire cap in every rolling hour; the 50% alert fired once
+    expect(cfg.spendCapLamportsPerHour.hire).toBe(60n * SOL);
+    const rolling = maxRollingOutflow(await hireSpendRows(w), HOUR * 1000);
+    expect(rolling.lamports).toBeLessThanOrEqual(50n * SOL);
     expect(w.alerts.keys().filter((k) => k === 'cap_alert_hire').length).toBe(1);
-    expect(w.alerts.keys().filter((k) => k === 'cap_alert_burn').length).toBe(1);
     expect(w.alerts.keys()).not.toContain('cap_reached_hire');
     // limits
-    expect(meter.maxHiresPerLoop).toBeLessThanOrEqual(20);
-    expect(meter.maxJupiterPerMinute).toBeLessThanOrEqual(55);
-    // DRY RUN: nothing sent, wallets untouched
+    expect(meter.maxHiresPerLoop).toBeLessThanOrEqual(cfg.maxHiresPerLoop);
+    expect(meter.maxJupiterPerMinute).toBeLessThanOrEqual(cfg.jupiter.maxRpm);
+    // DRY RUN: nothing sent, the creator wallet untouched
     expect(w.simSender.submitted).toBe(0);
     expect(w.chain.sol(w.creator.publicKey.toBase58())).toBe(creatorStart);
-    expect(w.chain.sol(w.fund.publicKey.toBase58())).toBe(fundStart);
     // the website sees the same numbers
-    const app = createApp({ service: new StateService(w.store, w.deps.config, w.clock), clock: w.clock, cacheSec: 0, corsOrigin: '*' });
+    const app = createApp({ service: new StateService(w.store, cfg, w.clock), clock: w.clock, cacheSec: 0, corsOrigin: '*' });
     const state = StateResponseSchema.parse(await (await app.request('/api/state')).json());
     expect(state.bot.mode).toBe('dry_run');
     expect(state.treasury.totalClaimedSol).toBe(50);
-    expect(state.treasury.totalBurnSpentSol).toBeCloseTo(25, 6);
+    expect(state.treasury.totalHiredSol).toBeCloseTo(Number(l.hireSpent) / 1e9, 6);
+    expect(state.treasury.waitingSol).toBeLessThan(Number(salary) / 1e9);
     expect(state.portfolio.ratCount).toBe(rats.length);
     const events = await w.store.events.countByType();
     expect(events.hire).toBe(rats.length);
-    expect(events.burn).toBe(burns.count);
+    expect(Object.keys(events).sort()).toEqual(['claim', 'hire']);
 
     console.log(
-      `[A] 50 SOL hour (DRY RUN): ${rats.length} rats, ${r.rounds} burn rounds in ${burns.count} txs (max ${formatSol(r.maxChunk)} SOL each), hire spent ${formatSol(l.hireSpent)} SOL, ` +
-        `burn spent ${formatSol(burns.spent)} SOL, max ${meter.maxHiresPerLoop} hires/loop, max ${meter.maxJupiterPerMinute} Jupiter calls/min, ` +
-        `0 txs sent, ran in ${elapsed.toFixed(1)}s`,
+      `[A] 50 SOL hour (DRY RUN): ${rats.length} rats, hire spent ${formatSol(l.hireSpent)} SOL, max ${formatSol(rolling.lamports)} SOL in any rolling hour (cap 60), ` +
+        `max ${meter.maxHiresPerLoop} hires/loop, max ${meter.maxJupiterPerMinute} Jupiter calls/min, 0 txs sent, ran in ${elapsed.toFixed(1)}s`,
     );
-  });
+    // about 1,700 paper hires: 70 s alone, over 130 s when the whole suite shares the machine
+  }, 360_000);
 });
 
-describe('B. DRY RUN double volume: 100 SOL in one hour hits the caps', () => {
-  it('stops each bucket at 30 SOL/h, alerts, and spends the carried budget in the next hour', async () => {
-    // burn round pacing off: this test is about the hourly cap itself (pacing is covered by tests/sim)
-    w = await createSimWorld({ dryRun: true, env: { BURN_ROUND_MAX_SOL: '0' } });
-    await runLaunch(w, { seconds: HOUR, totalFees: 100n * SOL });
+describe('B. DRY RUN double volume: 100 SOL in one hour hits the hire cap', () => {
+  it('with the defaults (20 hires per 35 s loop) hiring stops at 60 SOL/h, alerts, and spends the carried budget in the next hour', async () => {
+    w = await createSimWorld({ dryRun: true });
+    const cfg = w.deps.config;
+    // the production defaults, not a test override
+    expect(cfg.maxHiresPerLoop).toBe(20);
+    expect(cfg.intervals.claimSec).toBe(35);
+    expect(cfg.spendCapLamportsPerHour.hire).toBe(60n * SOL);
+    const calls: CallSample[] = [];
+    const sample = () => void calls.push(jupiterSample(w));
+    const t0 = performance.now();
+    const meter = await runLaunch(w, { seconds: HOUR, totalFees: 100n * SOL, onTick: sample });
     const hourAgo = () => new Date(w.clock.now().getTime() - HOUR * 1000);
     const hireOut = await w.store.ledger.netOutflowSince('hire', hourAgo());
-    const burnOut = await w.store.ledger.netOutflowSince('burn', hourAgo());
-    expect(hireOut).toBeLessThanOrEqual(30n * SOL);
-    expect(burnOut).toBeLessThanOrEqual(30n * SOL);
-    expect(hireOut).toBeGreaterThan(29n * SOL);
-    // burns use the room left under the cap instead of skipping (a burn every 10 minutes)
-    expect(burnOut).toBeGreaterThan(29n * SOL);
+    expect(hireOut).toBeLessThanOrEqual(60n * SOL);
+    // the cap is really what stopped hiring: less than one salary of room was left
+    expect(hireOut).toBeGreaterThan(60n * SOL - cfg.salaryLamports);
     expect(w.alerts.keys()).toContain('cap_reached_hire');
-    expect(w.alerts.keys()).toContain('cap_reached_burn');
+    // everything spent so far falls in this first hour: what was claimed and not hired carries over
     const carried = await w.store.ledger.balance('hire');
-    expect(carried).toBeGreaterThan(19n * SOL);
+    expect(carried).toBe((await w.store.claims.totals()).claimed - hireOut);
+    expect(carried).toBeGreaterThan(39n * SOL);
     // the next hour: no new fees, the carried budget gets spent as the window rolls
-    await drain(w, HOUR + 120);
-    expect(await w.store.ledger.balance('hire')).toBeLessThan(w.deps.config.salaryLamports);
-    expect(await w.store.ledger.balance('burn')).toBe(0n);
-    // at no point did any rolling hour exceed the cap (check at the end of each 10-minute block)
+    await drain(w, HOUR + 120, sample);
+    const elapsed = (performance.now() - t0) / 1000;
+    expect(await w.store.ledger.balance('hire')).toBeLessThan(cfg.salaryLamports);
     const rats = await w.store.rats.listByStatus(['active']);
-    expect(rats.length).toBe(Number((50n * SOL) / w.deps.config.salaryLamports));
-    console.log(`[B] 100 SOL hour: hire outflow first hour ${formatSol(hireOut)} SOL (cap 30), carried ${formatSol(carried)} SOL, ${rats.length} rats after 2h`);
-    // two simulated hours and about 1,700 hires: 45 to 75 s on a CI runner, too close to the 60 s default
-  }, 180_000);
+    expect(rats.length).toBe(Number((100n * SOL) / cfg.salaryLamports));
+    // at no point, in either hour, did any rolling hour exceed the cap (checked independently of the guard)
+    const rows = await hireSpendRows(w);
+    const rolling = maxRollingOutflow(rows, HOUR * 1000);
+    expect(rolling.lamports).toBeLessThanOrEqual(60n * SOL);
+    expect(rolling.lamports).toBeGreaterThan(60n * SOL - cfg.salaryLamports);
+    // never more than 20 hires in one loop, and the loop limit was reached
+    const hiresPerLoop = maxAtOneInstant(rows.filter((r) => r.reason === 'hire_reserve'));
+    expect(hiresPerLoop).toBe(cfg.maxHiresPerLoop);
+    expect(meter.maxHiresPerLoop).toBe(cfg.maxHiresPerLoop);
+    // Jupiter stays under its rate limit even at 20 hires per loop
+    const jupiterPerMinute = maxCallsPerMinute(calls);
+    expect(jupiterPerMinute).toBeLessThanOrEqual(cfg.jupiter.maxRpm);
+    expect(w.simSender.submitted).toBe(0);
+    console.log(
+      `[B] 100 SOL hour: hire outflow first hour ${formatSol(hireOut)} SOL (cap 60), max ${formatSol(rolling.lamports)} SOL in any rolling hour over 2h, ` +
+        `carried ${formatSol(carried)} SOL, ${rats.length} rats after 2h, max ${hiresPerLoop} hires/loop, max ${jupiterPerMinute} Jupiter calls/min, ran in ${elapsed.toFixed(1)}s`,
+    );
+    // two simulated hours and about 3,300 hires (twice as many as with the 50/50 split)
+  }, 600_000);
 });
 
 describe('C. LIVE on SimChain (in-memory): 50 SOL hour with exact conservation', () => {
-  it('real balances match the ledger to the lamport; rats hold exactly what the database says', async () => {
+  it('every claimed lamport hires rats; real balances match the ledger to the lamport; rats hold exactly what the database says', async () => {
     w = await createSimWorld({ dryRun: false });
     const creator = w.creator.publicKey.toBase58();
-    const fund = w.fund.publicKey.toBase58();
     const creatorStart = w.chain.sol(creator);
-    const fundStart = w.chain.sol(fund);
     const supplyStart = w.chain.mintState(w.coinMint)!.supply;
     let creatorMin = creatorStart;
     const meter = await runLaunch(w, {
@@ -155,73 +168,38 @@ describe('C. LIVE on SimChain (in-memory): 50 SOL hour with exact conservation',
     });
     await drain(w, 60);
 
+    const claims = await w.store.claims.totals();
+    const l = await ledgerTotals(w);
+    expect(claims.claimed).toBe(50n * SOL);
+    expect(claims.hireShare).toBe(claims.claimed);
+    expect(l.hireCredited).toBe(50n * SOL);
+    expect(l.otherBuckets).toEqual([]);
+    // conservation: the creator changed by exactly what the ledger says
     const hire = await w.store.ledger.balance('hire');
-    const burn = await w.store.ledger.balance('burn');
-    const owed = await w.store.claims.pendingFundTransfer();
-    // conservation: each wallet changed by exactly what the ledger says
-    expect(w.chain.sol(creator) - creatorStart).toBe(hire + owed);
-    expect(w.chain.sol(fund) - fundStart).toBe(burn - owed);
+    expect(w.chain.sol(creator) - creatorStart).toBe(hire);
     // the creator's own money (its reserve) was never spent
     expect(creatorMin).toBeGreaterThanOrEqual(w.deps.config.creatorReserveLamports);
     // every rat on-chain matches the database, and got exactly one salary
     const rats = await w.store.rats.listByStatus(['active', 'frozen']);
-    expect(rats.length).toBeGreaterThan(700);
+    expect(rats.length).toBeGreaterThan(1400); // 50 SOL / ~0.03 SOL per rat
     for (const r of rats) {
       expect(w.chain.tokenBalance(r.wallet, r.stockMint, TOKEN_2022_PROGRAM)).toBe(r.tokenAmountRaw);
       expect(w.chain.sol(r.wallet)).toBe(w.deps.config.ratBufferLamports);
     }
-    // burns reduced the coin supply by what they burned (the fund keeps only the slippage buffer)
-    const burns = await w.store.burns.totals();
-    const fundCoin = w.chain.tokenBalance(fund, w.coinMint, TOKEN_2022_PROGRAM);
-    expect(w.chain.mintState(w.coinMint)!.supply).toBe(supplyStart + (await boughtTotal(w)) - burns.burnedRaw);
-    expect(burns.count).toBeGreaterThanOrEqual(6);
-    expect(meter.maxHiresPerLoop).toBeLessThanOrEqual(20);
-    const l = await ledgerTotals(w);
-    console.log(
-      `[C] LIVE SimChain 50 SOL hour: ${rats.length} rats, real cost per rat ${formatSol(l.hireSpent / BigInt(rats.length))} SOL, ` +
-        `claim fees ${formatSol(l.claimFees)} SOL, ${burns.count} burns, fund keeps ${fundCoin} raw coin for the next burn, conservation exact`,
-    );
-  });
-});
-
-/** Coin bought by the fund over the run = burned + what the fund still holds. */
-async function boughtTotal(world: SimWorld): Promise<bigint> {
-  const burns = await world.store.burns.totals();
-  return burns.burnedRaw + world.chain.tokenBalance(world.fund.publicKey.toBase58(), world.coinMint, TOKEN_2022_PROGRAM);
-}
-
-describe('D. LIVE on SimChain with the production default: every fee hires rats', () => {
-  it('HIRE_SPLIT_BPS=10000: nothing reaches the fund wallet, nothing is burned, every claimed lamport is for hires', async () => {
-    w = await createSimWorld({ dryRun: false, env: { HIRE_SPLIT_BPS: '10000' } });
-    expect(w.deps.config.hireSplitBps).toBe(10_000);
-    const creator = w.creator.publicKey.toBase58();
-    const fund = w.fund.publicKey.toBase58();
-    const creatorStart = w.chain.sol(creator);
-    const fundStart = w.chain.sol(fund);
-    const supplyStart = w.chain.mintState(w.coinMint)!.supply;
-    await runLaunch(w, { seconds: HOUR / 2, totalFees: 12n * SOL, graduateAtSec: 10 * 60 });
-    await drain(w, 15 * 60); // past at least one burn window: still no burn
-
-    const claims = await w.store.claims.totals();
-    const l = await ledgerTotals(w);
-    expect(claims.claimed).toBe(12n * SOL);
-    expect(l.hireCredited).toBe(12n * SOL);
-    expect(l.burnCredited).toBe(0n);
-    expect(await w.store.claims.pendingFundTransfer()).toBe(0n);
-    // the fund wallet is never touched and the coin supply never shrinks
-    expect(w.chain.sol(fund)).toBe(fundStart);
-    expect((await w.store.burns.totals()).count).toBe(0);
+    // nothing buys or burns the coin: its supply never changes
     expect(w.chain.mintState(w.coinMint)!.supply).toBe(supplyStart);
-    // conservation: the creator changed by exactly the hire bucket; every rat holds its stock
-    expect(w.chain.sol(creator) - creatorStart).toBe(await w.store.ledger.balance('hire'));
-    const rats = await w.store.rats.listByStatus(['active', 'frozen']);
-    expect(rats.length).toBeGreaterThan(350); // 12 SOL / ~0.03 SOL per rat, twice the 50/50 count
-    for (const r of rats) expect(w.chain.tokenBalance(r.wallet, r.stockMint, TOKEN_2022_PROGRAM)).toBe(r.tokenAmountRaw);
-    // the feed says so: claims carry nothing for the fund
+    // the hire cap held in every rolling hour
+    expect(maxRollingOutflow(await hireSpendRows(w), HOUR * 1000).lamports).toBeLessThanOrEqual(w.deps.config.spendCapLamportsPerHour.hire);
+    expect(meter.maxHiresPerLoop).toBeLessThanOrEqual(w.deps.config.maxHiresPerLoop);
+    // the feed: claim events carry the amount and source only
     const events = await w.store.events.after(0, 10_000);
     const claimEvents = events.filter((e) => e.type === 'claim');
     expect(claimEvents.length).toBeGreaterThan(0);
-    for (const e of claimEvents) expect((e.data as { toFundSol: number }).toFundSol).toBe(0);
-    console.log(`[D] production default: 12 SOL claimed, ${rats.length} rats, fund wallet untouched, 0 burns`);
-  }, 180_000);
+    for (const e of claimEvents) expect(Object.keys(e.data as object).sort()).toEqual(['amountSol', 'source']);
+    console.log(
+      `[C] LIVE SimChain 50 SOL hour: ${rats.length} rats, real cost per rat ${formatSol(l.hireSpent / BigInt(rats.length))} SOL, ` +
+        `claim fees ${formatSol(l.claimFees)} SOL, coin supply unchanged, conservation exact`,
+    );
+    // about 1,700 hires executed on SimChain: 90 s alone, near 180 s when the whole suite shares the machine
+  }, 480_000);
 });

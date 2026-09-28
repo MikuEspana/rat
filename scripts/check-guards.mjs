@@ -7,6 +7,7 @@
 // 4. @rat/contract stays browser safe (no Node built-ins).
 // 5. No holder payout code paths.
 // 6. No em dashes in authored text (owner preference).
+// 7. No token burn code outside tests: buy and burn was removed, every claimed fee hires rats.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -20,6 +21,7 @@ const SEND_PATTERN = /\b(sendRawTransaction|sendTransaction|sendAndConfirmTransa
 const KEYPAIR_ARRAY = /\[\s*(?:\d{1,3}\s*,\s*){63}\d{1,3}\s*\]/;
 const NODE_IMPORT = /from\s+['"](node:[^'"]+|fs|path|crypto|os|child_process|worker_threads|net|http|https)['"]/;
 const PAYOUT_PATTERN = /\b(airdrop\w*|payout\w*|distributeToHolders|holderReward\w*|payHolders)\b/i;
+const BURN_PATTERN = /\b(createBurn\w*Instruction|buildBurnInstruction|burnIx)\b/;
 const SECRET_ENV_KEYS = [
   'KEY_ENCRYPTION_KEY',
   'DATABASE_URL',
@@ -62,6 +64,9 @@ for (const { full, rel } of files) {
   }
   if (/^(packages|apps)\/[^/]+\/src\//.test(rel) && /\.ts$/.test(rel) && PAYOUT_PATTERN.test(text)) {
     failures.push(`${rel}: holder payout code is forbidden (profits never go to holders)`);
+  }
+  if (/^(packages|apps)\/[^/]+\/src\//.test(rel) && /\.ts$/.test(rel) && !/\.test\.ts$/.test(rel) && BURN_PATTERN.test(text)) {
+    failures.push(`${rel}: token burn code is forbidden (buy and burn was removed; every claimed fee hires rats)`);
   }
   if (text.includes('—')) {
     failures.push(`${rel}: contains an em dash`);

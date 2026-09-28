@@ -1,6 +1,6 @@
 // Launch scenarios for the simulator: a market cap curve per scenario, trading volume from that curve, and
-// creator fees from the volume. Everything after the fees (claims, the 50/50 split, hires, burns, caps) is the
-// backend's rules (rules.ts), run by engine.ts.
+// creator fees from the volume. Everything after the fees (claims, hires, the per-loop limit and the hourly cap) is
+// the backend's rules (rules.ts), run by engine.ts.
 
 export type ScenarioId = 'normal' | 'mega' | 'rug';
 
@@ -40,7 +40,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   mega: {
     id: 'mega',
     label: 'Mega',
-    blurb: 'Runs to about $10M in 4 hours. Hiring maxes out at the hourly cap.',
+    blurb: 'Runs to about $10M in 4 hours. The building fills up and new hires line up outside.',
     curve: [
       [0, 6_000],
       [4, 30_000],
@@ -55,7 +55,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       [360, 7_000_000],
       [480, 6_000_000],
     ],
-    // ends while money still waits under the hourly cap: about 5,000 rats, what the building is drawn for
+    // about 6,400 rats: every desk taken, a few hundred in the job-fair line outside
     minutes: 300,
     seed: 'mega-1',
   },
@@ -105,8 +105,8 @@ export function curveAt(s: Scenario, minutes: number): { mcap: number; slopePerH
 /**
  * Trading volume, USD per hour: a base turnover of the market cap, plus more while the price moves fast (pumps
  * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees, a
- * little under the backend's 3-hour launch simulation (180 SOL, SIMULATION.md). Every fee hires rats, so that is
- * about 4,900 rats.
+ * little under the backend's 3-hour launch simulation (SIMULATION.md). Every fee hires rats, so that is about
+ * 4,800 rats.
  */
 export const TURNOVER_BASE_PER_HOUR = 0.62;
 export const TURNOVER_PER_MOVE = 0.8;

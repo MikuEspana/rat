@@ -1,13 +1,13 @@
 // MAINNET SMOKE TEST. Run ONLY by the owner, with THROWAWAY wallets and a THROWAWAY test coin.
 // Never run by agents. Hard cap 0.1 SOL of bot spend (SMOKE_MODE lifetime cap in the SpendGuard).
 //
-//   pnpm --filter @rat/tests smoke -- --topup-hire 0.06 --topup-burn 0.012
+//   pnpm --filter @rat/tests smoke -- --topup-hire 0.06
 //
 // Steps: preflight -> claim (real fees of the test coin) -> optional ledger top-up (the test coin's fees are
-// tiny; you send the SOL to the creator/fund wallets yourself first) -> hire 2 rats -> 1 buy + burn -> report.
+// tiny; you send the SOL to the creator wallet yourself first) -> hire 2 rats -> report.
 import { writeFileSync } from 'node:fs';
 import { createLogger, formatSol, loadConfig, solToLamports, TOKEN_2022_PROGRAM } from '@rat/core';
-import { createProductionDeps, runBurnStep, runClaimStep, runHireStep, runMintStep, runPriceStep, WorkerState } from '@rat/worker';
+import { createProductionDeps, runClaimStep, runHireStep, runMintStep, runPriceStep, WorkerState } from '@rat/worker';
 import { smokePreflight } from './preflight';
 
 function arg(name: string): string | undefined {
@@ -43,9 +43,7 @@ try {
   await step('mints (verification)', () => runMintStep(deps));
   await step('claim', () => runClaimStep(deps, state));
   const topHire = arg('--topup-hire');
-  const topBurn = arg('--topup-burn');
   if (topHire) await deps.store.ledger.append({ bucket: 'hire', deltaLamports: solToLamports(topHire), reason: 'claim_credit', refType: 'smoke_topup', note: 'owner-funded smoke test' });
-  if (topBurn) await deps.store.ledger.append({ bucket: 'burn', deltaLamports: solToLamports(topBurn), reason: 'claim_credit', refType: 'smoke_topup', note: 'owner-funded smoke test' });
   await step('hire (2 rats)', () => runHireStep(deps, state));
   const rats = await deps.store.rats.listByStatus(['active', 'hiring', 'failed']);
   const stocks = new Map((await deps.store.stocks.list()).map((s) => [s.mint, s]));
@@ -57,14 +55,13 @@ try {
     facts.push({ id: r.id, wallet: r.wallet, stock: st?.symbol, status: r.status, sig: r.hireSig, tokensDb: r.tokenAmountRaw?.toString(), tokensChain: acct?.amount.toString(), ratSol: formatSol(sol) });
   }
   report.push('## rats on-chain', '', '```json', JSON.stringify(facts, null, 2), '```', '');
-  await step('buy + burn', () => runBurnStep(deps, state));
   report.push('## ledger', '', '```json', JSON.stringify(Object.fromEntries([...(await deps.store.ledger.sumByReason())].map(([k, v]) => [k, formatSol(v)])), null, 2), '```', '');
   report.push(
     '## What to check',
     '',
     '- Each rat is a fresh wallet that holds its stock on Solscan (single-tx hire worked with an unfunded taker + `payer`: owner decision #3).',
     '- Real cost per rat vs the 0.03 SOL salary (token account rent for xStocks, fees).',
-    '- The coin token program (runtime detection, owner decision #5) and that the burn reduced supply.',
+    '- The coin token program (runtime detection, owner decision #5).',
     '- Run `pnpm --filter @rat/jupiter check:scaled-ui` for owner decision #6.',
   );
 } finally {

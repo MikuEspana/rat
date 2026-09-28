@@ -6,7 +6,7 @@ import './style.css';
 import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
-  API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
+  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
   STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
@@ -21,7 +21,6 @@ import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
-import { Effects } from './world/effects';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
 import { setNowSource } from './now';
@@ -104,7 +103,7 @@ async function boot(): Promise<Site> {
   const store = new Store();
   const [atlas, state, roster] = await Promise.all([loadAtlas(), retry('state', () => api.state()), retry('rats', () => api.rats())]);
   store.initState(state);
-  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, 5000) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
+  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, DEBUG_MAX_RATS) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
   // the master plan never changes; the growth state replays the roster in hire (id) order
   const plan = buildMaster();
@@ -129,12 +128,12 @@ async function boot(): Promise<Site> {
   let world: World = buildWorld(plan, growth, atlas, store.stocks);
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
-  const effects = new Effects(atlas, world);
   const camera = new Camera(scene, app.canvas);
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, world.signs, markers);
+    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, world.signs, markers);
+    world.setJobFair(rats.queueLength, rats.lineHead());
     camera.apply();
   };
   const wireRats = (): void => {
@@ -184,7 +183,6 @@ async function boot(): Promise<Site> {
     world = buildWorld(plan, growth, atlas, store.stocks, rooms);
     rats.rebind(world.main, world.blocked);
     wireRats();
-    effects.setWorld(world);
     mount();
     old.destroy();
     applyMoods(store.state ?? state);
@@ -199,6 +197,16 @@ async function boot(): Promise<Site> {
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
 
+  /** The job-fair line outside: its sign, and a feed line when it forms or clears. */
+  let lineWas = rats.queueLength;
+  const updateLine = (): void => {
+    const n = rats.queueLength;
+    world.setJobFair(n, rats.lineHead());
+    if (n > 0 && lineWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires line up outside the lobby, job-fair style, for the next desk.' }]);
+    else if (n === 0 && lineWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'The line outside is gone: everyone has a desk.' }]);
+    lineWas = n;
+  };
+
   // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
   let batchGrowth: GrowthEvent[] = [];
   let batchHires: RatRecord[] = [];
@@ -210,6 +218,7 @@ async function boot(): Promise<Site> {
     batchHires = [];
     grew(events, true);
     for (const r of hires) rats.hire(r, rats.walking < MAX_WALKERS);
+    updateLine();
     ui.setStage(STAGES[growth.stage]!.name, ratCount);
   };
   store.on((e) => {
@@ -220,7 +229,6 @@ async function boot(): Promise<Site> {
       batchHires.push(e.rat);
     } else if (e.kind === 'feed') flushHires();
     else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
-    else if (e.kind === 'burn') effects.burn(e.event.data.solSpent, rats.sample(12));
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
       applyMoods(e.state);
@@ -235,7 +243,6 @@ async function boot(): Promise<Site> {
     const dt = Math.min(0.1, t.deltaMS / 1000);
     rats.update(dt);
     world.update(dt);
-    effects.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -287,6 +294,7 @@ async function boot(): Promise<Site> {
       speed: SIM_SPEED,
       autostart: SIM_AUTOSTART,
       stage: () => STAGES[growth.stage]!.name,
+      line: () => rats.queueLength,
       onLaunch: frameBuilding,
     });
   }
@@ -296,7 +304,7 @@ async function boot(): Promise<Site> {
     site.setRats = (n: number): void => {
       const before = new Set(plan.rooms.filter((r) => growth.isBuilt(r)).map((r) => r.id));
       const beforeStage = growth.stage;
-      ratCount = Math.max(1, Math.min(5000, Math.round(n)));
+      ratCount = Math.max(1, Math.min(DEBUG_MAX_RATS, Math.round(n)));
       recs = replay(ratCount);
       const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
       const old = world;
@@ -305,7 +313,6 @@ async function boot(): Promise<Site> {
       wireRats();
       applyMoods(store.state ?? state);
       rats.load(recs);
-      effects.setWorld(world);
       ui.setRats(rats);
       site.rats = rats;
       site.growth = growth;
@@ -316,7 +323,7 @@ async function boot(): Promise<Site> {
       if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };
-    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000));
+    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000, DEBUG_MAX_RATS));
   }
   (window as unknown as { __site?: Site }).__site = site;
   return site;

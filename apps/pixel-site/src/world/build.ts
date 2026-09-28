@@ -8,7 +8,7 @@ import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
 import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixelfont';
-import { cellCentre, cellToScreen } from '../iso';
+import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
 import { CORRIDOR_TINT, LOT_TINT, ROOM_LOOK, STAGES, STREET_TINT } from '../floor/plan';
 import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room } from '../floor/types';
@@ -37,13 +37,14 @@ export interface World {
   signs: Container; // room signs, readable when zoomed out
   tickers: Ticker[];
   furnaceGlow: Sprite;
-  furnaceMouth: { x: number; y: number };
   /** the walk mask this world was built for */
   blocked: Uint8Array;
   /** call every frame: server lights blink, new rooms pop in, the beam pulses */
   update(dt: number): void;
   setChair(seatId: number, visible: boolean): void;
   setZoom(z: number): void;
+  /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
+  setJobFair(count: number, head: Cell | null): void;
   destroy(): void;
 }
 
@@ -403,7 +404,6 @@ export function buildWorld(
   lights.addChild(leds);
 
   // the furnace: glow, and a light beam that grows with the company (the landmark you see from anywhere)
-  const mouth = { x: fp.x + 10 * fscale, y: fp.y + 4 - 30 * fscale };
   const furnaceGlow = addGlow(glowTexture(255, 120, 40), fp.x + 8 * fscale, fp.y - 18 * fscale, 2.2 * fscale);
   const beam = new Sprite(beamTexture());
   beam.anchor.set(0.5, 1);
@@ -456,6 +456,11 @@ export function buildWorld(
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
 
+  // the job-fair sign: made when the first rat lines up outside, redrawn when the count changes
+  let fair: Sprite | null = null;
+  let fairText = '';
+  let signScale = 1;
+
   main.sync(true);
   let blink = 0;
   let clock = 0;
@@ -468,7 +473,6 @@ export function buildWorld(
     signs,
     tickers,
     furnaceGlow,
-    furnaceMouth: mouth,
     blocked,
     update(dt: number): void {
       clock += dt;
@@ -519,7 +523,30 @@ export function buildWorld(
         sg.scale.set(s);
         sg.visible = a > 0.01;
       }
-      name.scale.set(Math.max(1, Math.min(4, 0.6 / z)));
+      signScale = Math.max(1, Math.min(4, 0.6 / z));
+      name.scale.set(signScale);
+      fair?.scale.set(signScale);
+    },
+    setJobFair(count: number, head: Cell | null): void {
+      if (!head || count <= 0) {
+        if (fair) fair.visible = false;
+        return;
+      }
+      const text = `JOB FAIR: ${count.toLocaleString('en-US')} IN LINE`;
+      if (!fair) {
+        fair = new Sprite(signTexture(text, 0x43d17a, 2));
+        fair.anchor.set(0.5, 1);
+        fair.scale.set(signScale);
+        signs.addChild(fair);
+      } else if (text !== fairText) {
+        const old = fair.texture;
+        fair.texture = signTexture(text, 0x43d17a, 2);
+        old.destroy(true);
+      }
+      fairText = text;
+      const c = cellCentre(head.i, head.j);
+      fair.position.set(c.x, c.y - 56);
+      fair.visible = true;
     },
     destroy(): void {
       for (const c of [floor, main.container, overlay, lights, signs]) {

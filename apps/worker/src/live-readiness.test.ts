@@ -71,13 +71,15 @@ describe('idle hire budget alert', () => {
     w.clock.advanceSeconds(11 * 60);
     await runHireStep(w.deps, w.worker.state);
     const alert = w.alerts.sent.find((a) => a.key === 'hire_idle')!;
-    expect(alert.text).toMatch(/No rat hired for 31 min while 0\.5 SOL waits in the hire budget/);
+    // the whole 1 SOL claim is hire budget
+    expect(alert.text).toMatch(/No rat hired for 31 min while 1 SOL waits in the hire budget/);
     expect(alert.text).toContain('no eligible stocks');
   });
 
   it('stays quiet at or under 0.1 SOL, and while the kill switch is on', async () => {
     w = await createSimWorld({ dryRun: true });
-    await fundHires(w, SOL / 5n); // 0.1 SOL for hires
+    await fundHires(w, SOL / 10n); // 0.1 SOL for hires (the whole claim)
+    expect(await w.store.ledger.balance('hire')).toBe(SOL / 10n);
     await runHireStep(w.deps, w.worker.state);
     w.clock.advanceSeconds(16 * 60);
     for (let i = 0; i < 3; i++) {
