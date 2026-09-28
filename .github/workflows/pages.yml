@@ -2,7 +2,8 @@ name: pages
 
 # The launch simulator demo: the pixel site built as a static site (VITE_SIM=1: the simulator runs in the browser,
 # no server, no API, no keys), published on every push to main to the gh-pages branch, which GitHub Pages serves at
-# https://mikuespana.github.io/rat/. The same folder is kept as the rat-race-demo artifact (Netlify Drop, Vercel).
+# the custom domain https://wallstreetrats.world (built for the root path; the CNAME file keeps the domain set on every
+# deploy). The same folder is kept as the rat-race-demo artifact (Netlify Drop, Vercel).
 on:
   push:
     branches: [main]
@@ -31,6 +32,7 @@ jobs:
         run: pnpm --filter @rat/pixel-site build
         env:
           VITE_SIM: '1'
+          VITE_BASE: /
       - name: Keep the folder for manual hosting
         uses: actions/upload-artifact@v4
         with:
@@ -42,6 +44,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           touch .nojekyll
+          echo wallstreetrats.world > CNAME
           git init -q -b gh-pages
           git add -A
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
