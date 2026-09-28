@@ -19,6 +19,7 @@ export interface LayerItem {
 
 const BUCKET = 256;
 const MARGIN = 160; // sprites reach up and sideways from their anchor
+const byDepth = (a: LayerItem, b: LayerItem): number => a.depth - b.depth;
 
 export class SortedLayer {
   readonly container: ParticleContainer;
@@ -106,17 +107,12 @@ export class SortedLayer {
     this.listDirty = true;
   }
 
+  /**
+   * Stable, and quick on a nearly sorted list. (An insertion sort was, too, until a big building with a thousand
+   * applicants walking round it: then it took 90% of the frame.)
+   */
   private sortItems(): void {
-    const a = this.items;
-    for (let k = 1; k < a.length; k++) {
-      const it = a[k]!;
-      let m = k - 1;
-      while (m >= 0 && a[m]!.depth > it.depth) {
-        a[m + 1] = a[m]!;
-        m--;
-      }
-      a[m + 1] = it;
-    }
+    this.items.sort(byDepth);
   }
 
   /** Rebuild the uploaded list if anything moved, changed depth or the view changed. Call once per frame. */
