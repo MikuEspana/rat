@@ -1,12 +1,12 @@
-// RAT RACE pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
-// evil empire (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
+// WALL STREET RATS pixel site: an idle game at night. The company grows with its rat count, from a garage startup to
+// Wall Street (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
 import './style.css';
 import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
-  API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
+  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
   STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
@@ -28,10 +28,11 @@ import { SewerView } from './world/sewer';
 import { SPAWN_STAGES, spawnStageOf } from './floor/sewer';
 import { VAULT_STAGES, vaultStageOf } from './floor/vault';
 import { lookKey, RatSystem, type Mood } from './world/rats';
+import { stageLine } from './ui/format';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
 import type { NewsStats } from './ui/news';
-import { pct, tokens, usd } from './ui/format';
+import { pct, usd } from './ui/format';
 import { setNowSource } from './now';
 import { LaunchSim } from './sim/engine';
 import { SimPanel } from './sim/panel';
@@ -95,8 +96,7 @@ export interface Site {
 /** Feed line for something that got built. */
 function buildLine(e: GrowthEvent): { tag: string; text: string } {
   if (e.kind === 'stage') {
-    const name = STAGES[e.stage]!.name.toLowerCase();
-    return { tag: 'STAGE', text: `The company is now ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}` };
+    return { tag: 'STAGE', text: stageLine(STAGES[e.stage]!.name, e.stage === STAGES.length - 1) };
   }
   const r = e.room;
   if (r.kind === 'stock') return { tag: 'BUILD', text: e.symbol ? `New desk room for ${e.symbol}` : 'New desk room' };
@@ -105,7 +105,7 @@ function buildLine(e: GrowthEvent): { tag: string; text: string } {
 }
 
 async function boot(): Promise<Site> {
-  setStatus('Loading the building...');
+  setStatus('WALL STREET RATS: loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
@@ -123,7 +123,7 @@ async function boot(): Promise<Site> {
   const store = new Store();
   const [atlas, state, roster] = await Promise.all([loadAtlas(), retry('state', () => api.state()), retry('rats', () => api.rats())]);
   store.initState(state);
-  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, 5000) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
+  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, DEBUG_MAX_RATS) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
   // the master plan never changes; the growth state replays the roster in hire (id) order
   const plan = buildMaster();
@@ -147,9 +147,9 @@ async function boot(): Promise<Site> {
 
   let world: World = buildWorld(plan, growth, atlas, store.stocks);
   // (mount() also picks the sky for the stage)
-  let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+  let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
   const effects = new Effects();
-  // the Vault: the money pile in the middle of the building shows the Rat Race portfolio (?vault=USD pins a value)
+  // the Vault: the money pile in the middle of the building shows the Wall Street Rats portfolio (?vault=USD pins a value)
   const vault = new VaultView(atlas, world.vault);
   const VAULT_PIN = new URLSearchParams(location.search).get('vault');
   const PNL_PIN = new URLSearchParams(location.search).get('vaultpnl');
@@ -165,6 +165,7 @@ async function boot(): Promise<Site> {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
     scene.addChild(world.backdrop, world.floor, sewer.flat, world.under, world.main.container, world.overlay, world.lights, effects.container, vault.fx, sewer.fx, world.signs, markers);
+    world.setJobFair(rats.lineLength, rats.lineHead());
     camera.apply();
   };
   const wireRats = (): void => {
@@ -243,7 +244,7 @@ async function boot(): Promise<Site> {
   };
   const vaultReveal = (stage: number): Reveal => ({
     title: `THE VAULT: ${VAULT_STAGES[stage]!.name}`,
-    sub: `${usd(vault.value)} in the Rat Race portfolio`,
+    sub: `${usd(vault.value)} in the Wall Street Rats portfolio`,
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
@@ -311,7 +312,7 @@ async function boot(): Promise<Site> {
     if (!fresh.size && !sewerUp) return false;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, new Set(), announce ? fresh : new Set());
-    rats.rebind(world.main, world.blocked);
+    rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
     sewer.attach(world.main, world.sewer, world.sewerDoor);
@@ -360,7 +361,7 @@ async function boot(): Promise<Site> {
         effects.dust(c.x, c.y, 20);
       }
     }
-    rats.rebind(world.main, world.blocked);
+    rats.rebind(world.main, world.blocked, world.line);
     wireRats();
     vault.setAnchor(world.vault);
     sewer.attach(world.main, world.sewer, world.sewerDoor);
@@ -393,6 +394,80 @@ async function boot(): Promise<Site> {
     ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress());
   };
 
+  /**
+   * The job-fair line outside: applicants (claimed salaries whose buy has not confirmed yet) and, once the building
+   * is full, hired rats waiting for a desk. Its sign, the HUD stat, and a feed line when the building fills or
+   * empties out.
+   */
+  let seatlessWas = rats.seatlessCount;
+  const updateLine = (): void => {
+    world.setJobFair(rats.lineLength, rats.lineHead());
+    ui.setLine(rats.lineLength);
+    const n = rats.seatlessCount;
+    if (n > 0 && seatlessWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires wait in the line outside the lobby, job-fair style, for the next desk.' }]);
+    else if (n === 0 && seatlessWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'Every hire in line has a desk again.' }]);
+    seatlessWas = n;
+  };
+
+  // Money you can see: every claim sends applicants into the line and bills into the Vault; every confirmed hire
+  // pulls an applicant in and sends its stock's value into the Vault. Display only, from the same API data.
+  let salarySol = 0.03;
+  /** stock value one SOL of salary buys (what lands in the Vault), from the latest hire */
+  let usdPerSol = 0;
+  const knownCosts = [...store.rats.values()].map((r) => r.facts.costUsd).filter((c) => c > 0).sort((a, b) => a - b);
+  if (knownCosts.length) usdPerSol = knownCosts[knownCosts.length >> 1]! / salarySol;
+  let claimCarry = 0;
+  const subway = (): { x: number; y: number } => {
+    const sp = plan.rings[growth.stage]!.spawn;
+    return cellCentre(sp.i, sp.j);
+  };
+  const onClaim = (amountSol: number): void => {
+    if (DEBUG_RATS) return;
+    const sol = amountSol + claimCarry;
+    const n = Math.floor(sol / salarySol + 1e-9);
+    claimCarry = sol - n * salarySol;
+    // the applicants come up out of the sewer: a few per claim climb out on screen and walk round to the back of the
+    // line; in a rush the rest are already standing in it
+    const shown = rats.walking < MAX_WALKERS && sewer.waiting < 12 ? Math.min(n, 6) : 0;
+    for (let k = 0; k < shown; k++) {
+      sewer.enqueue('intern', () => {
+        rats.addApplicants(1, true);
+        updateLine();
+      });
+    }
+    if (n > shown) rats.addApplicants(n - shown, false);
+    const from = subway();
+    vault.claim(from, amountSol * (usdPerSol || 150), Math.max(4, Math.min(30, Math.round(amountSol * 8))));
+    updateLine();
+  };
+  let applicantsSynced = false;
+  let driftSince: number | null = null;
+  /** The line follows the API: claimed SOL not hired yet (waitingSol), one applicant per salary. */
+  const syncApplicants = (s: StateResponse): void => {
+    if (DEBUG_RATS) return;
+    const target = Math.floor(s.treasury.waitingSol / salarySol + 1e-9);
+    if (!applicantsSynced) {
+      applicantsSynced = true;
+      rats.setApplicants(target, false);
+      updateLine();
+      return;
+    }
+    // Claims and hires already move the line. waitingSol leaves out the salaries of a hire loop in flight (their
+    // hire events are still coming), so only a gap bigger than a loop that lasts over 10 seconds is corrected.
+    if (Math.abs(target - rats.applicantCount) <= 25 + target * 0.05) {
+      driftSince = null;
+      return;
+    }
+    const now = performance.now();
+    driftSince ??= now;
+    if (now - driftSince < 10_000) return;
+    driftSince = null;
+    rats.setApplicants(target, rats.walking < MAX_WALKERS);
+    updateLine();
+  };
+  // on page load the line already holds everyone the API says is waiting
+  syncApplicants(state);
+
   // Hires arrive in batches (one /api/events poll). The building grows once per batch, then the new rats walk in.
   let batchGrowth: GrowthEvent[] = [];
   let batchHires: RatRecord[] = [];
@@ -406,12 +481,15 @@ async function boot(): Promise<Site> {
     for (const r of hires) {
       // a desk in a pod still under construction: the site clears, the desks pop in with a puff of dust
       const sid = growth.seatOfRat.get(r.facts.id);
-      const at = sid === undefined ? null : world.activatePod(sid);
-      if (at) effects.dust(at.x, at.y);
-      // out of the sewer (a line of them in a burst), then to its desk; a long queue skips the show
-      if (rats.walking < MAX_WALKERS && sewer.waiting < 12) sewer.enqueue(lookKey(r), () => rats.hire(r, true));
+      const pod = sid === undefined ? null : world.activatePod(sid);
+      if (pod) effects.dust(pod.x, pod.y);
+      // the applicant at the front of the job-fair line walks in; with nobody waiting, the new rat comes up out of
+      // the sewer (a line of them in a burst) and walks to its desk; a long queue skips the show
+      if (rats.applicantAhead) rats.hire(r, rats.walking < MAX_WALKERS);
+      else if (rats.walking < MAX_WALKERS && sewer.waiting < 12) sewer.enqueue(lookKey(r), () => rats.hire(r, true));
       else rats.hire(r, false);
     }
+    updateLine();
     sound.hire();
     updatePrep();
     checkLandmarks(true);
@@ -442,7 +520,12 @@ async function boot(): Promise<Site> {
       ratCount++;
       batchGrowth.push(...growth.add(e.rat.facts.id, e.rat.facts.stock).events);
       batchHires.push(e.rat);
-    } else if (e.kind === 'feed') flushHires();
+      if (e.event.data.salarySol > 0) {
+        salarySol = e.event.data.salarySol;
+        if (e.event.data.costUsd > 0) usdPerSol = e.event.data.costUsd / salarySol;
+      }
+    } else if (e.kind === 'claim') onClaim(e.event.data.amountSol);
+    else if (e.kind === 'feed') flushHires();
     else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
@@ -455,6 +538,7 @@ async function boot(): Promise<Site> {
         reveals.push(vaultReveal(up.to));
         if (!revealing) revealNext();
       }
+      syncApplicants(e.state);
     }
   });
 
@@ -531,6 +615,7 @@ async function boot(): Promise<Site> {
       speed: SIM_SPEED,
       autostart: SIM_AUTOSTART,
       stage: () => STAGES[growth.stage]!.name,
+      line: () => rats.lineLength,
       onLaunch: frameBuilding,
     });
   }
@@ -548,7 +633,7 @@ async function boot(): Promise<Site> {
     landmarksOn = nowOn;
     spawnStage = spawnStageOf(n);
     world = buildWorld(plan, growth, atlas, store.stocks, announce && popIn.size < 60 ? popIn : new Set(), announce ? freshOn : new Set());
-    rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+    rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
     wireRats();
     applyMoods(store.state ?? state);
     rats.load(recs);
@@ -652,7 +737,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, false);
       const v = composeView();
       camera.centerOn(v.x, v.y, v.zoom);
-      caption.text = `RAT RACE  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
+      caption.text = `WALL STREET RATS  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
       await wait(k === steps - 1 ? 1800 : 260);
     }
     rec.stop();
@@ -665,7 +750,7 @@ async function boot(): Promise<Site> {
     const blob = new Blob(chunks, { type: mime || 'video/webm' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `rat-race-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    a.download = `wall-street-rats-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };
@@ -686,7 +771,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, true);
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };
-    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000));
+    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000, DEBUG_MAX_RATS));
   }
   (window as unknown as { __site?: Site }).__site = site;
   return site;

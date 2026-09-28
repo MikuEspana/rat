@@ -523,7 +523,7 @@ export function buildCity(
   };
 }
 
-const STAGE_NAMES = ['GARAGE STARTUP', 'SMALL OFFICE', 'FULL FLOOR', 'CORPORATE FLOOR', 'MEGACORP', 'EVIL EMPIRE'];
+const STAGE_NAMES = ['GARAGE STARTUP', 'SMALL OFFICE', 'FULL FLOOR', 'CORPORATE FLOOR', 'MEGACORP', 'WALL STREET'];
 const TIERS = ['intern', 'analyst', 'associate', 'vp', 'intern', 'analyst'];
 const FURS = ['', '', '.brown', '.white', '.black'];
 

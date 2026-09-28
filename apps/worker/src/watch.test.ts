@@ -82,7 +82,7 @@ describe('coin launch vs the wallet watch', () => {
     await externalClaim(w); // someone claims our vault after the launch, before the worker went live
     const r = await runWatchStep(w.deps);
     expect(r).toMatchObject({ beforeFloor: 1, externalClaims: 1, unknownSigned: 0 });
-    expect(await w.store.ledger.balance('burn')).toBe(SOL / 2n);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL);
     expect(await killSwitchOn(w)).toBe(false);
   });
 

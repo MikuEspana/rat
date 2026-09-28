@@ -2,7 +2,7 @@
 import { type TxEffects, type TxKind, type TxLimits, formatSol } from '@rat/core';
 
 /** Transaction kinds that must carry spend limits in live mode. `sweep` is the owner's emergency exit. */
-export const LIMITED_TX_KINDS: readonly TxKind[] = ['claim', 'hire', 'burn'];
+export const LIMITED_TX_KINDS: readonly TxKind[] = ['claim', 'hire'];
 
 /** Every broken limit, in plain words. Empty = the transaction stays inside its limits. */
 export function limitViolations(limits: TxLimits, eff: TxEffects): string[] {

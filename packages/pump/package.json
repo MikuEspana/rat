@@ -8,14 +8,9 @@
     "./sim": "./src/sim.ts"
   },
   "dependencies": {
-    "@pump-fun/pump-sdk": "^2.0.0",
-    "bn.js": "^5.2.2",
     "@rat/chain": "workspace:*",
     "@rat/core": "workspace:*",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2"
-  },
-  "devDependencies": {
-    "@types/bn.js": "^5.1.6"
   }
 }

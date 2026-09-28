@@ -1,5 +1,6 @@
-// Where new rats come from: the sewer. It grows with the hires, from one rusty manhole to a giant portal, in front of
-// the current lobby (on its apron and sidewalk, spawn zone). Pure: stages, and the tiles each part stands on.
+// Where new rats come from: the sewer. It grows with the hires: one manhole, then two, then a steaming grate, then a
+// big sewer entrance, in front of the current lobby (on its apron and sidewalk, spawn zone). Hires and the job-fair
+// line's applicants all come up through it. Pure: stages, and the tiles each part stands on.
 import type { Cell } from '../iso';
 
 export interface SpawnStage {
@@ -9,11 +10,10 @@ export interface SpawnStage {
 }
 
 export const SPAWN_STAGES: SpawnStage[] = [
-  { min: 0, name: 'ONE RUSTY MANHOLE' },
-  { min: 50, name: 'MANHOLES AND STEAM VENTS' },
-  { min: 250, name: 'THE GLOWING GRATE' },
-  { min: 1000, name: 'THE HIRING TUNNEL' },
-  { min: 3000, name: 'THE SEWER PORTAL' },
+  { min: 0, name: 'ONE MANHOLE' },
+  { min: 50, name: 'TWO MANHOLES' },
+  { min: 250, name: 'THE STEAMING GRATE' },
+  { min: 1000, name: 'THE SEWER ENTRANCE' },
 ];
 
 export function spawnStageOf(rats: number): number {
@@ -22,7 +22,7 @@ export function spawnStageOf(rats: number): number {
   return s;
 }
 
-export type SewerKind = 'manhole' | 'vent' | 'grate' | 'tunnel' | 'portal';
+export type SewerKind = 'manhole' | 'vent' | 'grate' | 'tunnel';
 
 export interface SewerPart {
   kind: SewerKind;
@@ -39,18 +39,16 @@ export interface SewerPart {
 export function sewerParts(stage: number, spawn: Cell): SewerPart[] {
   const { i, j } = spawn;
   const out: SewerPart[] = [];
-  // the main way out, bigger every stage: its front edge sits on the spawn row
-  if (stage >= 4) out.push({ kind: 'portal', i0: i - 2, j0: j - 3, w: 4, h: 4, main: true });
-  else if (stage === 3) out.push({ kind: 'tunnel', i0: i - 1, j0: j - 2, w: 3, h: 3, main: true });
+  // the way out, bigger every stage: its front edge sits on the spawn row
+  if (stage >= 3) out.push({ kind: 'tunnel', i0: i - 1, j0: j - 2, w: 3, h: 3, main: true });
   else if (stage === 2) out.push({ kind: 'grate', i0: i - 1, j0: j - 1, w: 2, h: 2, main: true });
   else out.push({ kind: 'manhole', i0: i, j0: j, w: 1, h: 1, main: true });
-  // more manholes along the sidewalk, and steam vents on the apron (from 50 hires)
-  if (stage >= 1) {
-    out.push({ kind: 'manhole', i0: i - 5, j0: j, w: 1, h: 1, main: false });
-    out.push({ kind: 'manhole', i0: i + 5, j0: j, w: 1, h: 1, main: false });
+  // a second manhole along the sidewalk (50 hires on)
+  if (stage === 1) out.push({ kind: 'manhole', i0: i - 4, j0: j, w: 1, h: 1, main: false });
+  // the grate and the entrance steam: vents either side on the apron
+  if (stage >= 2) {
     out.push({ kind: 'vent', i0: i - 3, j0: j - 3, w: 1, h: 1, main: false });
     out.push({ kind: 'vent', i0: i + 3, j0: j - 3, w: 1, h: 1, main: false });
   }
-  if (stage >= 2 && stage < 3) out.push({ kind: 'manhole', i0: i + 2, j0: j, w: 1, h: 1, main: false });
   return out;
 }

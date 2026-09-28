@@ -94,9 +94,9 @@ export const keyPool = pgTable(
     pubkey: text('pubkey').primaryKey(),
     secretEnc: text('secret_enc').notNull(),
     keyVersion: integer('key_version').notNull(),
-    /** rat | creator | fund */
+    /** rat | creator */
     role: text('role').notNull(),
-    /** rat keys: assigned (a rat's wallet) | unused (hire abandoned before any tx, never reused). creator/fund: assigned.
+    /** rat keys: assigned (a rat's wallet) | unused (hire abandoned before any tx, never reused). creator: assigned.
      *  Every insert sets it explicitly; the column default is a leftover of the removed pre-ground pool. */
     status: text('status').notNull().default('available'),
     assignedAt: ts('assigned_at'),
@@ -140,32 +140,11 @@ export const claims = pgTable(
     sig: text('sig'),
     claimableLamports: lamports('claimable_lamports').notNull(),
     claimedLamports: lamports('claimed_lamports').notNull().default(sql`0`),
-    /** transfer to the fund wallet included in this tx */
-    toFundLamports: lamports('to_fund_lamports').notNull().default(sql`0`),
-    /** credited to the burn bucket */
-    fundShareLamports: lamports('fund_share_lamports').notNull().default(sql`0`),
+    /** credited to the hire bucket: all of it (every claimed lamport hires rats) */
     hireShareLamports: lamports('hire_share_lamports').notNull().default(sql`0`),
     feeLamports: lamports('fee_lamports').notNull().default(sql`0`),
   },
   (t) => [index('claims_mode_at').on(t.mode, t.at), uniqueIndex('claims_sig').on(t.sig)],
-);
-
-export const burns = pgTable(
-  'burns',
-  {
-    id: bigserial('id', { mode: 'number' }).primaryKey(),
-    mode: text('mode').notNull(),
-    at: ts('at').notNull(),
-    /** pending | confirmed | failed | expired | simulated | released */
-    status: text('status').notNull(),
-    sig: text('sig'),
-    reservedLamports: lamports('reserved_lamports').notNull(),
-    reserveLedgerId: bigint('reserve_ledger_id', { mode: 'number' }),
-    solSpentLamports: lamports('sol_spent_lamports'),
-    tokensBurnedRaw: lamports('tokens_burned_raw'),
-    coinDecimals: integer('coin_decimals'),
-  },
-  (t) => [index('burns_mode_at').on(t.mode, t.at)],
 );
 
 export const txAttempts = pgTable(

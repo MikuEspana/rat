@@ -23,7 +23,6 @@ import {
 import { and, asc, desc, eq, gt, gte, inArray, sql } from 'drizzle-orm';
 import type { Database } from './connection';
 import {
-  burns,
   claims,
   events,
   heartbeats,
@@ -41,7 +40,6 @@ import {
 export type RatRow = typeof rats.$inferSelect;
 export type StockRow = typeof stocks.$inferSelect;
 export type ClaimRow = typeof claims.$inferSelect;
-export type BurnRow = typeof burns.$inferSelect;
 export type AttemptRow = typeof txAttempts.$inferSelect;
 export type EventRow = typeof events.$inferSelect;
 export type HeartbeatRow = typeof heartbeats.$inferSelect;
@@ -97,14 +95,14 @@ export class KeyPoolRepo implements KeyPoolStore {
     return k ? { pubkey: k.pubkey, secretEnc: k.secretEnc, keyVersion: k.keyVersion, role: k.role as KeyPoolRecord['role'] } : null;
   }
 
-  async getRole(role: 'creator' | 'fund'): Promise<KeyPoolRecord | null> {
+  async getRole(role: 'creator'): Promise<KeyPoolRecord | null> {
     const r = await this.db.select().from(keyPool).where(eq(keyPool.role, role)).limit(1);
     const k = r[0];
     return k ? { pubkey: k.pubkey, secretEnc: k.secretEnc, keyVersion: k.keyVersion, role } : null;
   }
 
-  /** Stores the creator or fund key. Refuses to overwrite unless `replace` is set. */
-  async setRoleKey(record: KeyPoolRecord & { role: 'creator' | 'fund' }, opts: { replace?: boolean } = {}): Promise<void> {
+  /** Stores the creator key. Refuses to overwrite unless `replace` is set. */
+  async setRoleKey(record: KeyPoolRecord & { role: 'creator' }, opts: { replace?: boolean } = {}): Promise<void> {
     const existing = await this.getRole(record.role);
     if (existing && !opts.replace) throw new Error(`a ${record.role} key is already stored (${existing.pubkey})`);
     await this.db.transaction(async (tx) => {
@@ -139,7 +137,6 @@ export class KeyPoolRepo implements KeyPoolStore {
 
 const SPEND_REASONS: Record<Bucket, LedgerReason[]> = {
   hire: ['hire_reserve', 'hire_settle', 'hire_release'],
-  burn: ['burn_reserve', 'burn_settle', 'burn_release'],
 };
 
 export class LedgerRepo implements LedgerStore {
@@ -198,7 +195,7 @@ export class LedgerRepo implements LedgerStore {
         and(
           eq(ledgerEntries.mode, this.mode),
           eq(ledgerEntries.bucket, bucket),
-          eq(ledgerEntries.reason, bucket === 'hire' ? 'hire_reserve' : 'burn_reserve'),
+          eq(ledgerEntries.reason, `${bucket}_reserve`),
           sql`not exists (select 1 from ledger_entries c where c.closes_id = ${ledgerEntries.id})`,
         ),
       )
@@ -236,7 +233,7 @@ export class LedgerRepo implements LedgerStore {
       .where(
         and(
           eq(ledgerEntries.mode, this.mode),
-          inArray(ledgerEntries.reason, [...SPEND_REASONS.hire, ...SPEND_REASONS.burn, 'claim_fee']),
+          inArray(ledgerEntries.reason, [...SPEND_REASONS.hire, 'claim_fee']),
         ),
       );
     return toBig(r[0]?.v);
@@ -579,13 +576,11 @@ export class ClaimRepo {
     return and(eq(claims.mode, this.mode), inArray(claims.status, ['confirmed', 'simulated']));
   }
 
-  async totals(): Promise<{ claimed: bigint; hireShare: bigint; fundShare: bigint; toFund: bigint; fee: bigint; count: number; lastAt: Date | null }> {
+  async totals(): Promise<{ claimed: bigint; hireShare: bigint; fee: bigint; count: number; lastAt: Date | null }> {
     const r = await this.db
       .select({
         claimed: sql<string>`coalesce(sum(${claims.claimedLamports}),0)::text`,
         hire: sql<string>`coalesce(sum(${claims.hireShareLamports}),0)::text`,
-        fund: sql<string>`coalesce(sum(${claims.fundShareLamports}),0)::text`,
-        toFund: sql<string>`coalesce(sum(${claims.toFundLamports}),0)::text`,
         fee: sql<string>`coalesce(sum(${claims.feeLamports}),0)::text`,
         n: sql<number>`count(*)::int`,
         lastAt: sql<Date | string | null>`max(${claims.at})`,
@@ -596,74 +591,9 @@ export class ClaimRepo {
     return {
       claimed: toBig(x.claimed),
       hireShare: toBig(x.hire),
-      fundShare: toBig(x.fund),
-      toFund: toBig(x.toFund),
       fee: toBig(x.fee),
       count: Number(x.n),
       lastAt: x.lastAt ? new Date(x.lastAt) : null,
-    };
-  }
-
-  /** Fund share credited but not yet transferred to the fund wallet (e.g. external claims). */
-  async pendingFundTransfer(): Promise<bigint> {
-    const t = await this.totals();
-    const pending = t.fundShare - t.toFund;
-    return pending > 0n ? pending : 0n;
-  }
-}
-
-// ---------------------------------------------------------------- burns
-
-export class BurnRepo {
-  constructor(
-    private readonly db: Database,
-    readonly mode: Mode,
-    private readonly clock: Clock,
-  ) {}
-
-  async insert(row: Omit<typeof burns.$inferInsert, 'mode' | 'at' | 'id'>): Promise<number> {
-    const r = await this.db
-      .insert(burns)
-      .values({ ...row, mode: this.mode, at: this.clock.now() })
-      .returning({ id: burns.id });
-    return r[0]!.id;
-  }
-
-  async update(id: number, patch: Partial<Omit<BurnRow, 'id' | 'mode'>>): Promise<void> {
-    await this.db.update(burns).set(patch).where(and(eq(burns.id, id), eq(burns.mode, this.mode)));
-  }
-
-  async get(id: number): Promise<BurnRow | null> {
-    const r = await this.db.select().from(burns).where(and(eq(burns.id, id), eq(burns.mode, this.mode))).limit(1);
-    return r[0] ?? null;
-  }
-
-  async listByStatus(statuses: string[]): Promise<BurnRow[]> {
-    return this.db
-      .select()
-      .from(burns)
-      .where(and(eq(burns.mode, this.mode), inArray(burns.status, statuses)))
-      .orderBy(asc(burns.id));
-  }
-
-  async totals(): Promise<{ spent: bigint; burnedRaw: bigint; count: number; lastAt: Date | null; decimals: number | null }> {
-    const r = await this.db
-      .select({
-        spent: sql<string>`coalesce(sum(${burns.solSpentLamports}),0)::text`,
-        burned: sql<string>`coalesce(sum(${burns.tokensBurnedRaw}),0)::text`,
-        n: sql<number>`count(*)::int`,
-        lastAt: sql<Date | string | null>`max(${burns.at})`,
-        decimals: sql<number | null>`max(${burns.coinDecimals})`,
-      })
-      .from(burns)
-      .where(and(eq(burns.mode, this.mode), inArray(burns.status, ['confirmed', 'simulated'])));
-    const x = r[0]!;
-    return {
-      spent: toBig(x.spent),
-      burnedRaw: toBig(x.burned),
-      count: Number(x.n),
-      lastAt: x.lastAt ? new Date(x.lastAt) : null,
-      decimals: x.decimals === null || x.decimals === undefined ? null : Number(x.decimals),
     };
   }
 }
@@ -792,7 +722,6 @@ export class Store {
   readonly stocks: StockRepo;
   readonly rats: RatRepo;
   readonly claims: ClaimRepo;
-  readonly burns: BurnRepo;
   readonly events: EventRepo;
   readonly heartbeats: HeartbeatRepo;
   readonly seen: SeenSignatureRepo;
@@ -810,7 +739,6 @@ export class Store {
     this.stocks = new StockRepo(db, clock);
     this.rats = new RatRepo(db, mode, clock);
     this.claims = new ClaimRepo(db, mode, clock);
-    this.burns = new BurnRepo(db, mode, clock);
     this.events = new EventRepo(db, mode, clock);
     this.heartbeats = new HeartbeatRepo(db);
     this.seen = new SeenSignatureRepo(db);
@@ -835,7 +763,7 @@ export class Store {
           .returning({ p: keyPool.pubkey });
         keysRetired = r.length;
       }
-      for (const table of [rats, ledgerEntries, claims, burns, txAttempts, events]) {
+      for (const table of [rats, ledgerEntries, claims, txAttempts, events]) {
         await tx.delete(table).where(eq(table.mode, 'paper'));
       }
       await tx.delete(settings).where(inArray(settings.key, ['paper_claim_watermark']));

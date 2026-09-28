@@ -39,7 +39,7 @@ export class SeededRng implements Rng {
   }
 }
 
-/** Production randomness (burn timing, stock picks): from the OS CSPRNG, so the schedule cannot be predicted. */
+/** Production randomness (stock picks): from the OS CSPRNG, so it cannot be predicted. */
 export const systemRng: Rng = { next: () => randomInt(0, 2 ** 48 - 1) / 2 ** 48 };
 
 export function sleep(ms: number): Promise<void> {

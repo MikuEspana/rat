@@ -8,13 +8,14 @@ import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
 import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixelfont';
-import { cellCentre, cellToScreen } from '../iso';
+import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
 import { layoutScene, type Scene } from '../floor/scene';
 import type { SewerPart } from '../floor/sewer';
 import { openness } from '../floor/zones';
 import { layoutLabels } from '../floor/labels';
+import { planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, type SignKind } from '../floor/signs';
 import { type Focus, renderLandmarks } from './landmarks';
 import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
@@ -51,6 +52,8 @@ export interface World {
   /** the sewer parts in front of the lobby (SewerView draws them) and the row of the lobby door */
   sewer: SewerPart[];
   sewerDoor: number;
+  /** the job-fair line, head first (outdoor tiles the scene kept free for it) */
+  line: Cell[];
   /** the walk mask this world was built for */
   blocked: Uint8Array;
   /** call every frame: server lights blink, new rooms pop in */
@@ -69,6 +72,8 @@ export interface World {
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
+  /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
+  setJobFair(count: number, head: Cell | null): void;
   destroy(): void;
 }
 
@@ -238,6 +243,12 @@ export function buildWorld(
   const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`));
   // what stands where: every placement claims its tiles in its zone, what does not fit is skipped (floor/scene.ts)
   const scene = layoutScene(plan, open, city, growth.count);
+  // every sign's spot, worked out once (floor/signs.ts; the label tests check these same spots)
+  const signSpots = planSigns({
+    plan, stage, count: growth.count, built: (id) => growth.built[id] === 1, symbolOf: growth.symbolOf, city, scene,
+    frames: (k) => (atlas.has(`world:${k}`) ? atlas.frame(`world:${k}`) : null),
+  });
+  const spotAt = new Map(signSpots.map((x) => [x.key, x]));
   const a0 = ring.i0 - APRON;
   const a1 = ring.i1 + APRON;
   const inApron = (i: number, j: number): boolean => i >= a0 && i <= a1 && j >= a0 && j <= a1;
@@ -398,9 +409,6 @@ export function buildWorld(
   const lockSigns: Sprite[] = [];
   // signs only on what comes next: the next few amenities by rat count and the next desk rooms in build order
   const lots = plan.rooms.filter((r) => r.ring === stage && !built(r) && openStrip.has(`${r.ring}:${r.strip}`));
-  const nextAmenities = lots.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!).slice(0, 4);
-  const nextDesks = lots.filter((r) => r.unlockAt === null).sort((a, b) => a.order - b.order).slice(0, 2);
-  const signed = new Set([...nextAmenities, ...nextDesks].map((r) => r.id));
   for (const r of lots) {
     for (let i = r.i0; i < r.i0 + r.w; i++) {
       for (let j = r.j0; j < r.j0 + r.h; j++) {
@@ -415,13 +423,11 @@ export function buildWorld(
         if (i === r.i0 + r.w - 1) floorLayer.add(makeParticle(atlas.frame('world:tape_j'), p.x + 8, p.y + 12), 1e6 + i + j);
       }
     }
-    if (!signed.has(r.id)) continue;
-    const what = r.kind === 'stock' || r.kind === 'open' ? 'DESKS' : ROOM_LOOK[r.kind].label;
-    const when = r.unlockAt !== null ? `${r.unlockAt.toLocaleString('en-US')} RATS` : 'NEXT HIRES';
-    const s = new Sprite(lockTexture(what, when));
-    const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
+    const sp = spotAt.get(`lock:${r.id}`);
+    if (!sp) continue;
+    const s = new Sprite(lockTexture(sp.text, sp.sub ?? ''));
     s.anchor.set(0.5, 1);
-    s.position.set(c.x, c.y - 4);
+    s.position.set(sp.x, sp.y);
     signs.addChild(s);
     lockSigns.push(s);
   }
@@ -729,20 +735,19 @@ export function buildWorld(
   const signBase = new Map<Sprite, number>();
   let lastLayoutZoom = -1;
   for (const r of plan.rooms) {
-    if (!built(r)) continue;
-    const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : ROOM_LOOK[r.kind].label;
-    if (!label) continue;
-    const s = new Sprite(signTexture(label, r.tint, 2));
-    const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
+    const sp = spotAt.get(`room:${r.id}`);
+    if (!sp) continue;
+    const s = new Sprite(signTexture(sp.text, r.tint, 2));
     s.anchor.set(0.5, 1);
-    s.position.set(c.x, c.y - 24);
+    s.position.set(sp.x, sp.y);
     signs.addChild(s);
     roomSigns.push(s);
   }
-  const top = cellToScreen(ring.i0, ring.j0);
-  const name = new Sprite(signTexture(`RAT RACE ${STAGES[stage]!.name}`, STAGE_COLOR[stage] ?? 0xffd36b, 3));
+  // the company name: over the building, or on tower A's roof once it stands
+  const nameAt = spotAt.get('name')!;
+  const name = new Sprite(signTexture(nameAt.text, STAGE_COLOR[stage] ?? 0xffd36b, 3));
   name.anchor.set(0.5, 1);
-  name.position.set(top.x, top.y - 70);
+  name.position.set(nameAt.x, nameAt.y);
   signs.addChild(name);
 
   // landmark set pieces (one per milestone) and the towers that grow the office upwards
@@ -751,8 +756,15 @@ export function buildWorld(
     addPop, posed, sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
-  // with a tower the company name goes up on its roof, where the whole town can read it
-  if (lm.crown) name.position.set(lm.crown.x, lm.crown.y);
+  // WALL ST RATS HIRING over the big sewer entrance, laid out with the landmark names
+  const hiringAt = spotAt.get('hiring');
+  if (hiringAt) {
+    const s = new Sprite(signTexture(hiringAt.text, 0x43d17a, 2));
+    s.anchor.set(0.5, 1);
+    s.position.set(hiringAt.x, hiringAt.y);
+    signs.addChild(s);
+    landmarkSigns.push(s);
+  }
 
   // a new room goes up: scaffolding over it and a crane beside it, for a moment
   const builders: Array<{ s: Sprite; t: number; life: number; base: number }> = [];
@@ -775,6 +787,32 @@ export function buildWorld(
     }
   }
 
+  // the job-fair sign: made when the first rat lines up outside, redrawn when the count changes
+  let fair: Sprite | null = null;
+  let fairText = '';
+  let fairOn = false;
+  let zoom = 1;
+  const signGroups = (): Array<[Sprite[], SignKind]> => [
+    [landmarkSigns, 'landmark'],
+    [[name], 'name'],
+    [fair ? [fair] : [], 'fair'],
+    [lockSigns, 'lock'],
+    [roomSigns, 'room'],
+  ];
+  /** Lay the signs showing at this zoom out so none overlaps: the less important move up a step or hide. */
+  const relayout = (): void => {
+    lastLayoutZoom = zoom;
+    const shown = signGroups().flatMap(([list, kind]) => list.filter((x) => x.visible && x.alpha > 0.01).map((x) => ({ s: x, ...SIGN_PRIO[kind] })));
+    for (const x of shown) if (!signBase.has(x.s)) signBase.set(x.s, x.s.y);
+    const boxes = shown.map((x) => ({ x: x.s.x, y: signBase.get(x.s)!, w: x.s.texture.width * Math.abs(x.s.scale.x), h: x.s.texture.height * Math.abs(x.s.scale.y), prio: x.prio, steps: x.steps }));
+    const spots = layoutLabels(boxes);
+    shown.forEach((x, n) => {
+      const sp = spots[n]!;
+      x.s.y = signBase.get(x.s)! - sp.dy;
+      x.s.renderable = sp.visible;
+    });
+  };
+
   main.sync(true);
   let blink = 0;
   let clock = 0;
@@ -791,6 +829,7 @@ export function buildWorld(
     vault: { item: vaultItem, x: vc.x, y: vc.y, glow: vaultGlow },
     sewer: scene.sewer,
     sewerDoor: ring.j1,
+    line: scene.line,
     blocked,
     update(dt: number): void {
       clock += dt;
@@ -892,39 +931,46 @@ export function buildWorld(
       return { x: c.x, y: c.y };
     },
     setZoom(z: number): void {
-      // room labels only at mid zoom (hidden zoomed out, where only landmark names and the building name show;
-      // at close zoom the rooms speak for themselves)
-      const a = z >= 1.2 ? 0 : z >= 0.95 ? (1.2 - z) / 0.25 : z >= 0.72 ? 1 : z <= 0.62 ? 0 : (z - 0.62) / 0.1;
-      for (const sg of roomSigns) {
-        sg.alpha = a;
-        sg.scale.set(1);
-        sg.visible = a > 0.01;
+      zoom = z;
+      // every kind of sign by the shared rules (floor/signs.ts): room names only at mid zoom, padlocks from mid zoom
+      // in, the landmark and company names bigger the further out you are
+      for (const [list, kind] of signGroups()) {
+        const a = signAlpha(kind, z);
+        const k = scaleFor(kind, z);
+        for (const sg of list) {
+          sg.alpha = a;
+          sg.scale.set(k);
+          sg.visible = a > 0.01 && (sg !== fair || fairOn);
+        }
       }
-      // the building name and landmark names keep a readable size on screen: bigger zoomed out, smaller close up
-      name.scale.set(Math.max(0.4, Math.min(4, 0.6 / z)));
-      for (const l of lockSigns) {
-        l.visible = z >= 0.6;
-        l.scale.set(1);
-      }
-      for (const l of landmarkSigns) l.scale.set(Math.max(0.45, Math.min(6, 0.9 / z)));
-      // no two signs overlap: landmarks first, then the company name, the "next" signs, the room names
+      // no two signs overlap: landmarks first, then the company name and the job fair, padlocks, room names
       if (Math.abs(z - lastLayoutZoom) < 0.005) return;
-      lastLayoutZoom = z;
-      const all: Array<{ s: Sprite; prio: number; steps: number }> = [
-        ...landmarkSigns.map((x) => ({ s: x, prio: 0, steps: 3 })),
-        { s: name, prio: 1, steps: 2 },
-        ...lockSigns.map((x) => ({ s: x, prio: 2, steps: 1 })),
-        ...roomSigns.map((x) => ({ s: x, prio: 3, steps: 0 })),
-      ];
-      const shown = all.filter((x) => x.s.visible && x.s.alpha > 0.01);
-      for (const x of shown) if (!signBase.has(x.s)) signBase.set(x.s, x.s.y);
-      const boxes = shown.map((x) => ({ x: x.s.x, y: signBase.get(x.s)!, w: x.s.texture.width * Math.abs(x.s.scale.x), h: x.s.texture.height * Math.abs(x.s.scale.y), prio: x.prio, steps: x.steps }));
-      const spots = layoutLabels(boxes);
-      shown.forEach((x, n) => {
-        const sp = spots[n]!;
-        x.s.y = signBase.get(x.s)! - sp.dy;
-        x.s.renderable = sp.visible;
-      });
+      relayout();
+    },
+    setJobFair(count: number, head: Cell | null): void {
+      fairOn = !!head && count > 0;
+      if (!fairOn || !head) {
+        if (fair) fair.visible = false;
+        return;
+      }
+      const text = `JOB FAIR: ${count.toLocaleString('en-US')} IN LINE`;
+      if (!fair) {
+        fair = new Sprite(signTexture(text, 0x43d17a, 2));
+        fair.anchor.set(0.5, 1);
+        signs.addChild(fair);
+      } else if (text !== fairText) {
+        const old = fair.texture;
+        fair.texture = signTexture(text, 0x43d17a, 2);
+        old.destroy(true);
+      }
+      fair.scale.set(scaleFor('fair', zoom));
+      fair.visible = true;
+      const c = cellCentre(head.i, head.j);
+      const moved = text.length !== fairText.length || signBase.get(fair) !== c.y - 56;
+      fairText = text;
+      fair.position.set(c.x, c.y - 56);
+      signBase.set(fair, c.y - 56);
+      if (moved) relayout();
     },
     destroy(): void {
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {

@@ -1,7 +1,8 @@
 // Property test (fast-check), end to end: random launches (fee bursts on the bonding curve and PumpSwap,
-// strangers claiming our vault, 0 to 40% of claim/hire/burn transactions failing in random ways, both hire
+// strangers claiming our vault, 0 to 40% of claim/hire transactions failing in random ways, both hire
 // modes) run by the real worker in live mode on SimChain. After everything settles, every lamport is checked
-// against the chain: SOL spent never exceeds SOL claimed, and the ledger matches what really moved, exactly.
+// against the chain: SOL spent never exceeds SOL claimed (all of it goes to hires), and the ledger matches what
+// really moved, exactly.
 import { collectCreatorFeeV2Ix } from '@rat/pump';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { Keypair } from '@solana/web3.js';
@@ -29,10 +30,10 @@ const burst: fc.Arbitrary<Burst> = fc.record({
 
 const LOOP_SEC = 35;
 
-async function loop(w: SimWorld, n: number, check: () => void): Promise<void> {
+async function loop(w: SimWorld, n: number, check: () => Promise<void>): Promise<void> {
   for (let i = 0; i < n; i++) {
     await w.worker.tick();
-    check();
+    await check();
     w.clock.advanceSeconds(LOOP_SEC);
     w.chain.advanceBlocks(90); // ~35 s of blocks: unconfirmed transactions eventually expire
     w.prices.step(w.rng);
@@ -43,14 +44,21 @@ async function scenario(plan: { seed: number; hireMode: 'single' | 'two_step'; b
   const w = await createSimWorld({ dryRun: false, seed: plan.seed, env: { HIRE_MODE: plan.hireMode, MAX_HIRES_PER_LOOP: '6' } });
   try {
     const creator = w.creator.publicKey.toBase58();
-    const fund = w.fund.publicKey.toBase58();
     const creatorStart = w.chain.sol(creator);
-    const fundStart = w.chain.sol(fund);
     const stranger = Keypair.generate();
     w.chain.fundAccount(stranger.publicKey.toBase58(), SOL);
     let accrued = 0n;
-    // after every loop, not just at the end: the fund only ever burns SOL that has actually arrived in it
-    const check = () => expect(w.chain.sol(fund)).toBeGreaterThanOrEqual(fundStart);
+    // after every loop, not just at the end: hires only ever spend claimed SOL, so the creator's own SOL is never
+    // spent (only the fee of a claim that landed with an error can come out of it)
+    const failedClaimFees = async () => {
+      let fees = 0n;
+      for (const a of await w.store.db.query.txAttempts.findMany({ where: (x, { and, eq }) => and(eq(x.mode, 'live'), eq(x.kind, 'claim')) })) {
+        const r = w.chain.transaction(a.signature);
+        if (r?.err) fees += r.feeLamports;
+      }
+      return fees;
+    };
+    const check = async () => expect(w.chain.sol(creator)).toBeGreaterThanOrEqual(creatorStart - (await failedClaimFees()));
 
     await loop(w, 1, check); // prices, mint checks, watch cursor
     for (const b of plan.bursts) {
@@ -64,18 +72,18 @@ async function scenario(plan: { seed: number; hireMode: 'single' | 'two_step'; b
       if (b.failRate > 0) w.simSender.setRandomFailures(b.failRate, w.rng);
       await loop(w, b.loops, check);
     }
-    // the network calms down: everything in flight lands or expires, rounds finish, owed shares get forwarded
+    // the network calms down: everything in flight lands or expires, the carried budget gets hired
     w.simSender.clearFailures();
     await loop(w, 40, check);
 
-    await checkMoney(w, { creator: creatorStart, fund: fundStart, accrued });
+    await checkMoney(w, { creator: creatorStart, accrued });
   } finally {
     await w.close();
   }
 }
 
 describe('property: end-to-end money invariants (fast-check, live on SimChain)', () => {
-  it('regression (found by this property): a stranger\'s claim credited in the same loop as a burn round did not make the fund burn its own SOL', () =>
+  it('fixed scenario: strangers claim our vault while two-step hires run; every lamport accounted for', () =>
     scenario({
       seed: 2,
       hireMode: 'two_step',

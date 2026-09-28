@@ -10,6 +10,7 @@ import type { City } from '../floor/city';
 import { LANDMARKS, TOWER_SLOT, towerFloors } from '../floor/landmarks';
 import type { FloorLayout } from '../floor/types';
 import type { Scene } from '../floor/scene';
+import { landmarkSigns } from '../floor/signs';
 
 export interface Focus {
   x: number;
@@ -103,14 +104,19 @@ export function renderLandmarks(o: Opts): LandmarkView {
     if (id && o.fresh.has(id)) o.addPop(item, (delay += 0.06));
     return item;
   };
-  const label = (id: string, x: number, y: number): void => {
-    const def = LANDMARKS.find((l) => l.id === id)!;
-    const s = new Sprite(o.sign(def.name, 0xffd23f));
+  // every name sign at its fixed spot (floor/signs.ts works them out; the label tests check the same spots)
+  const signAt = new Map(
+    landmarkSigns({ plan, stage, count, built: o.built, symbolOf: [], city: o.city, scene: o.scene, frames: (k) => (has(k) ? atlas.frame(`world:${k}`) : null) }).map((x) => [x.key, x]),
+  );
+  const label = (id: string): void => {
+    const at = signAt.get(id);
+    if (!at) return;
+    const s = new Sprite(o.sign(at.text, id === 'annex' ? 0x9fd3ff : 0xffd23f));
     s.anchor.set(0.5, 1);
-    s.position.set(x, y);
+    s.position.set(at.x, at.y);
     o.signs.addChild(s);
     signs.push(s);
-    if (!focus.has(id)) focus.set(id, { x, y: y + 50, h: 150 });
+    if (!focus.has(id)) focus.set(id, { x: at.x, y: at.y + 50, h: 150 });
   };
   const fit = (kind: string, cells: number): number => (has(kind) ? (cells * 32) / atlas.frame(`world:${kind}`).w : 1);
 
@@ -122,14 +128,12 @@ export function renderLandmarks(o: Opts): LandmarkView {
     const cj = sp.j0 + sp.h / 2 - 0.5;
     const c = cellCentre(ci, cj);
     const d = ci + cj + 1;
-    let top = c.y - 70; // where the name sign goes
     if (id === 'espresso') {
       // a giant espresso machine with the garage's back corner to itself, steam puffing from its top, and rats
       // kneeling round it in worship (only on free floor)
       const kind = has('espresso_giant') ? 'espresso_giant' : 'espresso_shrine';
       const em = put(kind, c.x, c.y + 14, d, fit(kind, 3.4), false, 0xffffff, id);
       const eh = em ? em.p.scaleY * atlas.frame(`world:${kind}`).h : 90;
-      top = Math.min(top, c.y - eh);
       focus.set(id, { x: c.x, y: c.y + 14 - eh / 2, h: eh + 130 });
       for (let k = 0; k < 3; k++) steam.push({ x: c.x - 10 + k * 10, y: c.y + 14 - eh * 0.92, t: k * 0.6 });
       for (const q of o.scene.kneelers) o.posed(q.look, q.anim, q.i, q.j, q.mirror, undefined, true);
@@ -148,7 +152,6 @@ export function renderLandmarks(o: Opts): LandmarkView {
       const st = put('giant_rat_statue', c.x, c.y + 10, d, fit('giant_rat_statue', 3.2), false, 0xffffff, id) ?? put('rat_statue', c.x, c.y + 10, d, 2.6, false, 0xffffff, id);
       const sh = st ? st.p.scaleY * atlas.frame(`world:${has('giant_rat_statue') ? 'giant_rat_statue' : 'rat_statue'}`).h : 120;
       focus.set(id, { x: c.x, y: c.y + 10 - sh / 2, h: sh + 110 });
-      top = Math.min(top, c.y - sh);
     } else if (id === 'throne') {
       put('throne', c.x - 16, c.y, d, 1.4, false, 0xffffff, id);
       put('red_button', c.x + 18, c.y + 10, d + 0.5, 1, false, 0xffffff, id);
@@ -161,7 +164,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
       beam.blendMode = 'add';
       o.lights.addChild(beam);
     }
-    label(id, c.x, top);
+    label(id);
   }
 
   // the towers stand in their slots in the core (plan.ts): A from the glass elevator on, a floor every 25 rats; B, the
@@ -215,14 +218,14 @@ export function renderLandmarks(o: Opts): LandmarkView {
       }
       crown = { x: t.x, y: t.top - (on('helipad') ? 190 : 100) * s };
       focus.set('elevator', { x: t.x, y: (t.base + t.top) / 2 - 10 * s, h: t.base - t.top + 90 * s });
-      label('elevator', t.x + 70 * s, (t.base + t.top) / 2);
+      label('elevator');
       // the helipad and the CEO's helicopter on the roof
       if (on('helipad')) {
         const roofY = t.top - 48 * s;
         put('helipad', t.x, roofY + 40 * s, t.d + 0.6, fit('helipad', 5.2) * s, false, 0xffffff, 'helipad');
         put('helicopter', t.x + 6 * s, roofY + 30 * s, t.d + 0.7, fit('helicopter', 3.2) * s, false, 0xffffff, 'helipad');
         focus.set('helipad', { x: t.x, y: roofY + 10 * s, h: 190 * s });
-        label('helipad', t.x, roofY - 50 * s);
+        label('helipad');
       }
       if (B && o.built(B.room)) {
         if (!on('pool') && stage < 4) pad(B);
@@ -250,7 +253,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
               k++;
             }
             focus.set('pool', { x: t2.x, y: roofY + 20 * s, h: 170 * s });
-            label('pool', t2.x, roofY - 40 * s);
+            label('pool');
           }
         }
       }
@@ -280,11 +283,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
       piece('pylon_roof', bi + 1, pj + 2, 34 - 1, bi + pj + 2.2);
       for (let j = pj + 2; j < fj; j++) piece('bridge_j', bi, j, bh, bi + j + 0.9);
     }
-    const s = new Sprite(o.sign('RAT RACE ANNEX', 0x9fd3ff));
-    s.anchor.set(0.5, 1);
-    s.position.set(t.x, t.top - 100 * as);
-    o.signs.addChild(s);
-    signs.push(s);
+    label('annex');
     focus.set('annex', { x: t.x, y: (t.base + t.top) / 2, h: t.base - t.top + 120 });
     // a couple of rats on the plaza out front
     o.posed('associate.brown', 'idle_se', annex.i0 + 1, annex.j0 + annex.h - 1, false);
@@ -326,7 +325,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
       o.posed('associate.brown', 'cheer', G.i0 + 1, G.j0 + G.h - 2, false);
       const c = cellCentre(G.i0 + G.w / 2 - 0.5, G.j0 + G.h / 2 - 0.5);
       focus.set('gym', { x: c.x, y: c.y, h: (G.w + G.h) * 8 + 60 });
-      label('gym', c.x, c.y - 50);
+      label('gym');
     }
   }
   // the rocket on its launchpad, in a lot of its own across the cross street
@@ -344,7 +343,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
     const rk = put('rocket', c.x, c.y - 6, ci + cj + 1.5, 1.6 + stage * 0.2, false, 0xffffff, 'rocket');
     const rh = rk ? rk.p.scaleY * atlas.frame('world:rocket').h : 120;
     focus.set('rocket', { x: c.x, y: c.y - rh / 2, h: rh + 90 });
-    label('rocket', c.x, c.y - rh - 10);
+    label('rocket');
   }
   // steam from the espresso machine: soft puffs that rise, swell and fade
   const puffs = steam.map((q) => {

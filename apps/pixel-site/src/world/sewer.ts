@@ -1,13 +1,13 @@
 // The sewer new rats come out of, in front of the lobby (parts and stages in floor/sewer.ts). A hire: the lid wobbles,
 // pops up with a bounce and a puff of steam, the rat climbs out, shakes itself off, straightens its tie and walks to
 // its desk (the rat system takes over). A burst keeps the lid open for a line of rats; then it drops back with a clank.
-// From the hiring tunnel on, rats also march out in lines; the portal pours them out.
+// From the big sewer entrance on, rats also march out in a line.
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, type LayerItem, type SortedLayer } from '../gfx/layer';
-import { drawText, textWidth } from '../gfx/pixelfont';
 import { cellCentre, cellToScreen } from '../iso';
 import type { SewerPart } from '../floor/sewer';
+import { SEWER_TUNNEL_SCALE } from '../floor/signs';
 import { sound } from '../ui/sound';
 
 interface Lid {
@@ -46,30 +46,6 @@ interface Marcher {
   t: number;
 }
 
-let signTex: Texture | null = null;
-function hiringSign(): Texture {
-  if (signTex) return signTex;
-  const text = 'WALL ST RATS HIRING';
-  const sc = 2;
-  const w = textWidth(text, sc) + 14;
-  const h = 7 * sc + 12;
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#16182c';
-  ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#7dff9a';
-  ctx.fillRect(0, 0, w, 2);
-  ctx.fillRect(0, h - 2, w, 2);
-  ctx.fillRect(0, 0, 2, h);
-  ctx.fillRect(w - 2, 0, 2, h);
-  drawText(ctx, text, 7, 6, '#b8ffc8', sc);
-  signTex = Texture.from(c);
-  signTex.source.scaleMode = 'nearest';
-  return signTex;
-}
-
 let glowTex: Texture | null = null;
 function greenGlow(): Texture {
   if (glowTex) return glowTex;
@@ -100,7 +76,7 @@ function puff(): Texture {
   return puffTex;
 }
 
-const SCALE: Record<string, number> = { sewer_grate: 0.85, sewer_tunnel: 1.25, sewer_portal: 0.95 };
+export const SEWER_SCALE: Record<string, number> = { sewer_grate: 0.85, sewer_tunnel: SEWER_TUNNEL_SCALE };
 
 export class SewerView {
   /** manholes and vents, flat on the ground under the rats */
@@ -166,7 +142,7 @@ export class SewerView {
         const f = this.atlas.frame(`world:${kind}`);
         const front = cellToScreen(p.i0 + p.w, p.j0 + p.h);
         const base = { x: c.x, y: Math.min(front.y, c.y + (p.w * 16) / 2) };
-        this.items.push(main.add(makeParticle(f, base.x, base.y + 4, false, SCALE[kind] ?? 1), p.i0 + p.w + p.j0 + p.h - 1));
+        this.items.push(main.add(makeParticle(f, base.x, base.y + 4, false, SEWER_SCALE[kind] ?? 1), p.i0 + p.w + p.j0 + p.h - 1));
         const glow = new Sprite(greenGlow());
         glow.anchor.set(0.5);
         glow.position.set(c.x, c.y - (p.kind === 'tunnel' ? 10 : 20));
@@ -174,19 +150,13 @@ export class SewerView {
         glow.blendMode = 'add';
         this.fx.addChild(glow);
         this.glows.push(glow);
-        if (p.kind === 'tunnel') {
-          const sg = new Sprite(hiringSign());
-          sg.anchor.set(0.5, 1);
-          sg.position.set(c.x, base.y - f.h * (SCALE[kind] ?? 1) - 4);
-          this.fx.addChild(sg);
-        }
       }
       if (p.main) {
         this.exitKind = p.kind;
         const front = cellCentre(p.i0 + p.w / 2 - 0.5, p.j0 + p.h - 1);
         this.exitAt = p.kind === 'manhole' ? { x: c.x, y: c.y + 6 } : p.kind === 'grate' ? { x: c.x, y: c.y + 4 } : { x: front.x, y: front.y + 2 };
-        // rats marching out of the tunnel in a line, pouring out of the portal in two
-        const lines = p.kind === 'portal' ? [p.i0 + 1, p.i0 + 2] : p.kind === 'tunnel' ? [p.i0 + 1] : [];
+        // rats marching out of the big entrance in a line
+        const lines = p.kind === 'tunnel' ? [p.i0 + 1] : [];
         // the line runs from the mouth through the lobby door and a few tiles into the lobby, a rat every 1.3 tiles
         const start = p.j0 + p.h - 1;
         const end = doorJ - 5;
@@ -225,7 +195,7 @@ export class SewerView {
   }
 
   focus(): { x: number; y: number; h: number } {
-    const big = this.exitKind === 'portal' ? 220 : this.exitKind === 'tunnel' ? 190 : 150;
+    const big = this.exitKind === 'tunnel' ? 190 : 150;
     return { x: this.exitAt.x, y: this.exitAt.y - 30, h: big };
   }
 

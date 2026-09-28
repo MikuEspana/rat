@@ -7,7 +7,38 @@ import { T, idx, type FloorLayout } from './types';
 
 export type Zone = 'void' | 'office' | 'site' | 'slot' | 'apron' | 'street' | 'sidewalk' | 'lot' | 'spawn';
 
-export type ClaimCat = 'wall' | 'furniture' | 'landmark' | 'vault' | 'building' | 'prop' | 'site' | 'extra' | 'spawn';
+/**
+ * The zone map a viewer reads: inside the office (its floors, building sites and landmark slots), the street round
+ * it (apron, sidewalks, road, city lots), where new rats come up (spawn), and beyond the city the skyline, where
+ * only the far backdrop is drawn and nothing stands on a tile.
+ */
+export type Area = 'interior' | 'street' | 'spawn' | 'skyline';
+
+export function areaOf(zone: Zone): Area {
+  if (zone === 'office' || zone === 'site' || zone === 'slot') return 'interior';
+  if (zone === 'spawn') return 'spawn';
+  if (zone === 'void') return 'skyline';
+  return 'street';
+}
+
+/** Which area each landmark belongs to: set pieces inside the office, the rocket and the annex in lots of their own. */
+export const LANDMARK_AREA: Record<string, Area> = {
+  vault: 'interior',
+  espresso: 'interior',
+  pingpong: 'interior',
+  pit: 'interior',
+  elevator: 'interior',
+  gym: 'interior',
+  helipad: 'interior',
+  statue: 'interior',
+  pool: 'interior',
+  throne: 'interior',
+  rocket: 'street',
+  annex: 'street',
+  pylon: 'street',
+};
+
+export type ClaimCat = 'wall' | 'furniture' | 'landmark' | 'vault' | 'building' | 'prop' | 'site' | 'extra' | 'spawn' | 'line';
 
 export interface Claim {
   what: string;
@@ -80,6 +111,10 @@ export class Zoning {
 
   zoneAt(i: number, j: number): Zone {
     return this.zone.get(CITY_KEY(i, j)) ?? 'void';
+  }
+
+  areaAt(i: number, j: number): Area {
+    return areaOf(this.zoneAt(i, j));
   }
 
   slotAt(i: number, j: number): string | null {

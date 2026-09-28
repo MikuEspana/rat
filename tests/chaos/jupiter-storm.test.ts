@@ -1,6 +1,6 @@
 // D. Jupiter answers every call with 429 for 20 minutes in the middle of a launch (live, SimChain).
-// Claims must keep flowing, nothing that needs a Jupiter build is sent, the worker must not hammer Jupiter,
-// everything resumes afterwards, and every lamport is accounted for. Runs in the `chaos` CI job.
+// Claims must keep flowing, nothing that needs a Jupiter build is sent, the worker backs off exponentially instead
+// of hammering Jupiter and alerts the owner, everything resumes afterwards, and every lamport is accounted for. Runs in the `chaos` CI job.
 import { SOL, createSimWorld, createWorker } from '@rat/worker';
 import { describe, expect, it } from 'vitest';
 import { launchCurve } from '../e2e/helpers';
@@ -11,7 +11,7 @@ const STEP = 35;
 const MIN = 60 / STEP;
 
 describe('D. Jupiter 429 storm', () => {
-  it('20 minutes of 429s: claims continue, no hire or burn is sent, no retry storm, full recovery, money exact', async () => {
+  it('20 minutes of 429s: claims continue, no hire is sent, no retry storm, full recovery, money exact', async () => {
     const w = await createSimWorld({ dryRun: false, seed: 5 });
     try {
       const start = moneyStart(w);
@@ -28,15 +28,16 @@ describe('D. Jupiter 429 storm', () => {
         const minute = (i * STEP) / 60;
         if (minute >= 5 && !chaos.down.has('jupiter') && minute < 25) {
           chaos.down.add('jupiter');
-          before = { spend: await attempts(['hire', 'burn']), claims: await attempts(['claim']), jupiter: chaos.counts.jupiter };
+          before = { spend: await attempts(['hire']), claims: await attempts(['claim']), jupiter: chaos.counts.jupiter };
         }
         if (minute >= 25 && chaos.down.has('jupiter')) {
           chaos.down.delete('jupiter');
           // during the storm: claims kept going, nothing that needs a Jupiter build was sent
           expect(await attempts(['claim'])).toBeGreaterThan(before.claims);
-          expect(await attempts(['hire', 'burn'])).toBe(before.spend);
-          // no retry storm: well under the 55 requests/minute plan limit on average
-          expect((chaos.counts.jupiter - before.jupiter) / 20).toBeLessThan(30);
+          expect(await attempts(['hire'])).toBe(before.spend);
+          // no retry storm: exponential backoff (5 s, 10, 20 ... 5 min) makes a handful of calls in 20 minutes
+          expect(chaos.counts.jupiter - before.jupiter).toBeLessThanOrEqual(12);
+          expect(w.alerts.keys()).toContain('jupiter_429');
         }
         w.accrue({ bondingLamports: curve[i]! });
         await worker.tick();
@@ -51,12 +52,11 @@ describe('D. Jupiter 429 storm', () => {
         w.chain.advanceBlocks(90);
         w.prices.step(w.rng);
       }
-      expect(await attempts(['hire', 'burn'])).toBeGreaterThan(before.spend); // recovered
-      expect((await w.store.burns.listByStatus(['confirmed'])).length).toBeGreaterThan(0);
-      expect(w.alerts.keys().some((k) => ['burn_no_route', 'no_eligible_stocks', 'hire_idle'].includes(k))).toBe(true);
+      expect(await attempts(['hire'])).toBeGreaterThan(before.spend); // recovered
+      expect(w.alerts.keys().some((k) => ['no_eligible_stocks', 'hire_idle'].includes(k))).toBe(true);
       await checkMoney(w, start);
       // the budget was used after the storm: less than one salary of hire budget is left idle
-      expect(await w.store.ledger.balance('hire')).toBeLessThan(w.deps.config.salaryLamports * BigInt(w.deps.config.maxHiresPerLoop));
+      expect(await w.store.ledger.balance('hire')).toBeLessThan(w.deps.config.salaryLamports);
     } finally {
       await w.close();
     }

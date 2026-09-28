@@ -19,21 +19,18 @@ async function setup(env: Record<string, string> = {}, over: Partial<PreflightDe
   const clock = new FakeClock('2026-10-01T12:00:00Z');
   const chain = new SimChain();
   const creator = Keypair.generate();
-  const fund = Keypair.generate();
   const authority = Keypair.generate().publicKey.toBase58();
   const coin = Keypair.generate().publicKey.toBase58();
   const stock = Keypair.generate().publicKey.toBase58();
   chain.createMint({ mint: coin, decimals: 6, tokenProgram: TOKEN_2022_PROGRAM, supply: 1n });
   chain.createMint({ mint: stock, decimals: 8, tokenProgram: TOKEN_2022_PROGRAM, mintAuthority: authority, supply: 1n });
   chain.fundAccount(creator.publicKey.toBase58(), SOL / 10n);
-  chain.fundAccount(fund.publicKey.toBase58(), SOL / 50n);
   const master = randomBytes(32).toString('base64');
   const config = loadConfig({
     DATABASE_URL: 'memory://',
     RPC_URL: 'http://localhost:8899',
     KEY_ENCRYPTION_KEY: master,
     CREATOR_PUBKEY: creator.publicKey.toBase58(),
-    FUND_PUBKEY: fund.publicKey.toBase58(),
     COIN_MINT: coin,
     JUPITER_API_KEY: 'jup-key',
     TELEGRAM_BOT_TOKEN: '123:abc',
@@ -45,19 +42,18 @@ async function setup(env: Record<string, string> = {}, over: Partial<PreflightDe
   const store = new Store(handle.db, config.dryRun ? 'paper' : 'live', clock);
   const ring = new MasterKeyRing({ version: 1, base64: master });
   await store.keys.setRoleKey(encryptRoleKey(creator, ring, 'creator'));
-  await store.keys.setRoleKey(encryptRoleKey(fund, ring, 'fund'));
   await store.stocks.syncConfig([{ symbol: 'TSTx', name: 'Test', mint: stock, group: 'volatile', enabled: true, approved: true }]);
   const deps: PreflightDeps = {
     config,
     store,
     chain: new SimChainReader(chain),
-    keys: new DbKeyStore(store.keys, ring, { expectedCreator: config.creatorPubkey, expectedFund: config.fundPubkey }),
+    keys: new DbKeyStore(store.keys, ring, { expectedCreator: config.creatorPubkey }),
     jupiterSolPrice: async () => 185.4,
     telegram: async () => ({ ok: true, detail: 'bot @rat_bot can post to ops.' }),
     now: () => clock.now().getTime(),
     ...over,
   };
-  return { deps, store, chain, creator, fund, stock };
+  return { deps, store, chain, creator, stock };
 }
 
 const byCheck = (lines: CheckLine[], check: string) => lines.find((l) => l.check === check);
@@ -69,8 +65,11 @@ describe('rat preflight', () => {
     const lines = await runPreflightChecks(deps);
     expect(fails(lines)).toEqual([]);
     expect(lines.map((l) => l.check)).toEqual(
-      expect.arrayContaining(['mode', 'settings', 'database', 'rpc', 'jupiter', 'creator key', 'fund key', 'creator wallet', 'fund wallet', 'coin', 'stocks', 'watch floor', 'kill switch', 'caps', 'telegram', 'worker']),
+      expect.arrayContaining(['mode', 'settings', 'database', 'rpc', 'jupiter', 'creator key', 'creator wallet', 'coin', 'stocks', 'watch floor', 'kill switch', 'caps', 'telegram', 'worker']),
     );
+    // there is no fund wallet any more: every claimed SOL hires rats
+    expect(lines.map((l) => l.check).filter((c) => /fund/.test(c))).toEqual([]);
+    expect(byCheck(lines, 'caps')?.detail).toMatch(/hires 60 SOL\/h, .* max 20 hires per loop/);
     expect(byCheck(lines, 'mode')?.detail).toMatch(/DRY RUN/);
     const out: string[] = [];
     expect(printPreflight(lines, (l) => out.push(l), 'RAT RACE preflight')).toBe(true);
@@ -119,11 +118,10 @@ describe('rat preflight', () => {
     expect(byCheck(await runPreflightChecks(deps), 'jupiter')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/401/) });
   });
 
-  it('wallets under their reserve, unapproved or unverifiable stocks, watch floor in the future', async () => {
+  it('creator wallet under its reserve, unapproved or unverifiable stocks, watch floor in the future', async () => {
     const s = await setup({ CREATOR_RESERVE_SOL: '0.5', WATCH_FROM_SLOT: '99999999' });
     const lines = await runPreflightChecks(s.deps);
     expect(byCheck(lines, 'creator wallet')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/0\.1 SOL, needs at least the 0\.5 SOL reserve/) });
-    expect(byCheck(lines, 'fund wallet')?.status).toBe('PASS');
     expect(byCheck(lines, 'watch floor')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/ahead of the chain/) });
     // a stock whose mint authority is not the xStocks one fails the mint check
     s.chain.updateMint(s.stock, { mintAuthority: Keypair.generate().publicKey.toBase58() });

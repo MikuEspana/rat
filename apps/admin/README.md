@@ -2,7 +2,7 @@
 
 Private admin page. One password, no JavaScript, refreshes itself every 15 seconds.
 
-- **Shows**: mode (DRY RUN / LIVE), kill switch, ledger buckets (available, spent in the last hour, cap used, open reservations), claimed / burned totals, fund share owed, rats by status, the last 25 transactions (Solscan links), errors (failed transactions and worker loop errors), worker loops.
+- **Shows**: mode (DRY RUN / LIVE), kill switch, ledger buckets (available, spent in the last hour, cap used, open reservations), claimed, spent on hires and waiting totals, rats by status, the last 25 transactions (Solscan links), errors (failed transactions and worker loop errors), worker loops.
 - **Buttons**: KILL (the same code as `rat kill`, always allowed) and Resume (the same code as `rat resume`, type `RESUME` to confirm; an env `KILL_SWITCH=true` cannot be resumed from here).
 - **Worker-down watchdog**: every minute it checks the worker's loop heartbeats; no loop for 3 minutes = a critical Telegram alert (again every 30 minutes while down, and once when it is back) and a red WORKER DOWN banner. Set `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` on this service too.
 - **Never** sends a transaction and never reads a private key.
