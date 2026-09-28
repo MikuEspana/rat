@@ -3,7 +3,7 @@
 // walls, the subway stairs, the Vault's money pile (vault.ts sets it from the portfolio value), lamp glows, blinking
 // server lights, wall tickers and big room signs for reading the building from far away.
 // Rebuilt from scratch whenever a room is built (rare); new rooms pop in.
-import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture, type TextureSource } from 'pixi.js';
 import type { StockView } from '@rat/contract';
 import type { Atlas, Frame } from '../gfx/atlas';
 import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
@@ -125,6 +125,16 @@ export function tickerText(stock: StockView | undefined, symbol: string): string
   return `${symbol}\n${c >= 0 ? '^+' : '_'}${c.toFixed(2)}%`;
 }
 
+/**
+ * Textures drawn fresh for one build (signs, tickers, the skyline). The world frees them with their GPU copy when it
+ * goes: `destroy({ texture: true })` alone keeps the GPU copy, and the world rebuilds on every growth step.
+ */
+const fresh = new WeakSet<TextureSource>();
+function own(tex: Texture): Texture {
+  fresh.add(tex.source);
+  return tex;
+}
+
 function renderTickerText(text: string, width: number, height: number, axis: 'i' | 'j'): Texture {
   const [line1 = '', line2 = ''] = text.split('\n');
   const c = document.createElement('canvas');
@@ -136,7 +146,7 @@ function renderTickerText(text: string, width: number, height: number, axis: 'i'
   drawText(ctx, line2, Math.max(6, Math.floor((width - textWidth(line2)) / 2)), 18, color);
   const tex = Texture.from(axis === 'i' ? shearRightWall(c) : shearLeftWall(c));
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 function hex(n: number): string {
@@ -162,7 +172,7 @@ function signTexture(text: string, color: number, scale: number): Texture {
   drawText(ctx, text, pad + 2, pad + 2, '#f4f6ff', scale);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 /** The top of the wall face at a wall cell: left end for a back-right wall, right end for a back-left wall. */
@@ -973,6 +983,13 @@ export function buildWorld(
       if (moved) relayout();
     },
     destroy(): void {
+      const free = (c: Container): void => {
+        for (const ch of c.children) {
+          if (ch instanceof Sprite && fresh.has(ch.texture.source)) ch.texture.source.destroy();
+          free(ch);
+        }
+      };
+      for (const c of [backdrop, overlay, signs]) free(c);
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {
         c.parent?.removeChild(c);
       }
@@ -1038,7 +1055,7 @@ function lockTexture(what: string, when: string): Texture {
   drawText(ctx, when, 17, 14, '#ffd23f', scale);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 
@@ -1085,7 +1102,7 @@ function skylineLayer(width: number, evil: boolean, seed: number, depth: number)
   ctx.putImageData(img, 0, 0);
   const tex = Texture.from(c);
   tex.source.scaleMode = 'nearest';
-  return tex;
+  return own(tex);
 }
 
 /** A city sprite as it stands (for the demolition effect). */
