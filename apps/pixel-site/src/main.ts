@@ -1,21 +1,22 @@
-// RAT RACE pixel site: an isometric office building at night. Rats are hired by creator fees, walk in from the
-// subway, sit at their stock's desks and type, and wander off for coffee. The data comes from the public API
-// (CONTRACT.md).
+// RAT RACE pixel site: an idle game at night. The company grows with its rat count, from a garage startup to an
+// evil empire (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
+// their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md).
 import './style.css';
 import { Application, Container, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
-import { API_BASE, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, STRESS_RATS, STRESS_WALKERS } from './config';
+import { API_BASE, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, STRESS_RATS, STRESS_WALKERS } from './config';
 import { Api } from './data/api';
-import { Store } from './data/store';
+import { Store, type RatRecord } from './data/store';
 import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
 import { Camera } from './gfx/camera';
 import { Sky } from './gfx/sky';
 import { cellCentre } from './iso';
-import { buildLayout } from './floor/plan';
+import { Growth, type GrowthEvent } from './floor/growth';
+import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
-import { buildWorld, updateTickers } from './world/build';
+import { buildWorld, updateTickers, type World } from './world/build';
 import { Effects } from './world/effects';
 import { RatSystem, type Mood } from './world/rats';
 import { Ui } from './ui/ui';
@@ -51,11 +52,23 @@ export interface Site {
   camera: Camera;
   api: Api;
   layout: FloorLayout;
+  growth: Growth;
   ui: Ui;
+  /** debug: rebuild the company at N rats */
+  setRats?: (n: number) => void;
+}
+
+/** Feed line for something that got built. */
+function buildLine(e: GrowthEvent): { tag: string; text: string } {
+  if (e.kind === 'stage') return { tag: 'STAGE', text: `The company is now a ${STAGES[e.stage]!.name.toLowerCase()}` };
+  const r = e.room;
+  if (r.kind === 'stock') return { tag: 'BUILD', text: e.symbol ? `New desk room for ${e.symbol}` : 'New desk room' };
+  if (r.kind === 'open') return { tag: 'BUILD', text: 'New open-plan office' };
+  return { tag: 'BUILD', text: `${ROOM_LOOK[r.kind].label.charAt(0)}${ROOM_LOOK[r.kind].label.slice(1).toLowerCase()} built` };
 }
 
 async function boot(): Promise<Site> {
-  setStatus('Loading the floor...');
+  setStatus('Loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
@@ -71,48 +84,92 @@ async function boot(): Promise<Site> {
   const store = new Store();
   const [atlas, state, roster] = await Promise.all([loadAtlas(), retry('state', () => api.state()), retry('rats', () => api.rats())]);
   store.initState(state);
-  store.loadRoster(STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
+  store.loadRoster(DEBUG_RATS ? padRoster(roster, state, 5000) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
-  const counts = new Map<string, number>();
-  let partners = 0;
-  for (const r of store.rats.values()) {
-    counts.set(r.facts.stock, (counts.get(r.facts.stock) ?? 0) + 1);
-    if (r.view.tier === 'partner') partners++;
-  }
-  const layout = buildLayout(
-    state.stocks.map((s) => ({ symbol: s.symbol, ratCount: counts.get(s.symbol) ?? 0 })),
-    { partners },
-  );
-  const world = buildWorld(layout, atlas, store.stocks);
-  const rats = new RatSystem(atlas, layout, world.main);
-  rats.onChair = (seatId, visible) => world.setChair(seatId, visible);
-  const applyMoods = (s: StateResponse): void => {
-    for (const st of s.stocks) rats.setMood(st.symbol, moodOf(st.change24hPct, st.status === 'paused'));
+  // the master plan never changes; the growth state replays the roster in hire (id) order
+  const plan = buildMaster();
+  const everyone = (): RatRecord[] => [...store.rats.values()].sort((a, b) => a.facts.id - b.facts.id);
+  let ratCount = DEBUG_RATS || everyone().length;
+  let growth = new Growth(plan);
+  const replay = (n: number): RatRecord[] => {
+    growth = new Growth(plan);
+    const recs = everyone().slice(0, n);
+    for (const r of recs) growth.add(r.facts.id, r.facts.stock);
+    return recs;
   };
-  applyMoods(state);
-  rats.load([...store.rats.values()]);
-  const effects = new Effects(atlas, world);
+  let recs = replay(ratCount);
 
   const sky = new Sky();
   sky.resize(window.innerWidth, window.innerHeight);
   window.addEventListener('resize', () => sky.resize(window.innerWidth, window.innerHeight));
   const scene = new Container();
   const markers = new Container();
-  scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, markers);
   app.stage.addChild(sky.sprite, scene);
 
+  let world: World = buildWorld(plan, growth, atlas, store.stocks);
+  // (mount() also picks the sky for the stage)
+  let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+  const effects = new Effects(atlas, world);
   const camera = new Camera(scene, app.canvas);
+  const mount = (): void => {
+    sky.setEvil(growth.stage >= 5);
+    scene.removeChildren();
+    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, world.signs, markers);
+    camera.apply();
+  };
+  const wireRats = (): void => {
+    rats.onChair = (seatId, visible) => world.setChair(seatId, visible);
+  };
+  wireRats();
+  const applyMoods = (s: StateResponse): void => {
+    for (const st of s.stocks) rats.setMood(st.symbol, moodOf(st.change24hPct, st.status === 'paused'));
+  };
+  applyMoods(state);
+  rats.load(recs);
+  mount();
+
   camera.onChange = () => {
     const v = camera.view();
     world.main.setView(v.x, v.y, v.w, v.h);
+    world.setZoom(camera.zoom);
   };
-  const hq = cellCentre(layout.furnace.i, layout.furnace.j);
+  const hq = cellCentre(plan.furnace.i, plan.furnace.j);
   camera.centerOn(hq.x, hq.y + 60, window.innerWidth < 700 ? 0.6 : 0.9);
   window.addEventListener('resize', () => camera.apply());
 
+  const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers });
+  ui.setStage(STAGES[growth.stage]!.name, ratCount);
+
+  /** Something got built: rebuild the world, new rooms pop in, tell the feed (and the banner on a new stage). */
+  const grew = (events: GrowthEvent[], announce: boolean): void => {
+    const rooms = new Set<number>();
+    for (const e of events) if (e.kind === 'room') rooms.add(e.room.id);
+    if (!rooms.size && !events.some((e) => e.kind === 'stage')) return;
+    const old = world;
+    world = buildWorld(plan, growth, atlas, store.stocks, rooms);
+    rats.rebind(world.main, world.blocked);
+    wireRats();
+    effects.setWorld(world);
+    mount();
+    old.destroy();
+    applyMoods(store.state ?? state);
+    if (!announce) return;
+    const lines = events.map(buildLine);
+    ui.pushLocal(lines.slice(-12));
+    const stage = events.filter((e) => e.kind === 'stage').pop();
+    if (stage && stage.kind === 'stage') ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats and growing`);
+    ui.setStage(STAGES[growth.stage]!.name, ratCount);
+  };
+
   store.on((e) => {
-    if (e.kind === 'hire') rats.hire(e.rat);
-    else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
+    if (e.kind === 'hire') {
+      if (DEBUG_RATS) return; // the debug slider sets the rat count
+      ratCount++;
+      const { events } = growth.add(e.rat.facts.id, e.rat.facts.stock);
+      grew(events, true);
+      rats.hire(e.rat);
+      ui.setStage(STAGES[growth.stage]!.name, ratCount);
+    } else if (e.kind === 'freeze' || e.kind === 'unfreeze' || e.kind === 'tiers') rats.refresh(e.ratIds);
     else if (e.kind === 'burn') effects.burn(e.event.data.solSpent, rats.sample(12));
     else if (e.kind === 'state') {
       updateTickers(world, store.stocks);
@@ -121,6 +178,8 @@ async function boot(): Promise<Site> {
   });
 
   const perf = new PerfMeter(SHOW_PERF);
+  let frameStart = 0;
+  let jsMs = 0;
   app.ticker.add((t) => {
     const t0 = performance.now();
     const dt = Math.min(0.1, t.deltaMS / 1000);
@@ -132,10 +191,8 @@ async function boot(): Promise<Site> {
     jsMs = performance.now() - t0;
   });
   // after Pixi has rendered (UTILITY runs after the LOW-priority render): CPU time of the whole frame
-  let frameStart = 0;
-  let jsMs = 0;
   app.ticker.add(
-    () => perf.frame(jsMs, performance.now() - frameStart, `${rats.count} rats, ${rats.walking} walking, ${rats.awayCount} away | particles ${world.main.visibleCount}/${world.main.size}`),
+    () => perf.frame(jsMs, performance.now() - frameStart, `${rats.count} rats, ${rats.walking} walking, ${rats.awayCount} away | ${STAGES[growth.stage]!.name} | particles ${world.main.visibleCount}/${world.main.size}`),
     undefined,
     UPDATE_PRIORITY.UTILITY,
   );
@@ -170,9 +227,36 @@ async function boot(): Promise<Site> {
     }, 10_000);
   }
 
-  const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers });
   setStatus(null);
-  const site: Site = { store, rats, camera, api, layout, ui };
+  const site: Site = { store, rats, camera, api, layout: plan, growth, ui };
+
+  // debug: ?rats=N shows the company at N rats, with a slider to scrub through the stages
+  if (DEBUG_RATS) {
+    site.setRats = (n: number): void => {
+      const before = new Set(plan.rooms.filter((r) => growth.isBuilt(r)).map((r) => r.id));
+      const beforeStage = growth.stage;
+      ratCount = Math.max(1, Math.min(5000, Math.round(n)));
+      recs = replay(ratCount);
+      const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
+      const old = world;
+      world = buildWorld(plan, growth, atlas, store.stocks, popIn.size < 60 ? popIn : new Set());
+      rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
+      wireRats();
+      applyMoods(store.state ?? state);
+      rats.load(recs);
+      effects.setWorld(world);
+      ui.setRats(rats);
+      site.rats = rats;
+      site.growth = growth;
+      mount();
+      old.destroy();
+      ui.setStage(STAGES[growth.stage]!.name, ratCount);
+      if (growth.stage > beforeStage) ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
+      if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
+      history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
+    };
+    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000));
+  }
   (window as unknown as { __site?: Site }).__site = site;
   return site;
 }

@@ -74,7 +74,7 @@ function shapeCost([w, h]: [number, number], list: readonly Req[]): number {
   return Math.max(0, aspect - 2.2) ** 2 * 1.5;
 }
 
-function split(list: Req[], r: Rect, depth: number, lastCorr: 'i' | 'j' | null, out: Packing): void {
+function split(list: Req[], r: Rect, depth: number, lastCorr: 'i' | 'j' | null, out: Packing, corridors = true): void {
   if (list.length === 1) {
     out.placed.push({ req: list[0]!, rect: r });
     return;
@@ -96,7 +96,7 @@ function split(list: Req[], r: Rect, depth: number, lastCorr: 'i' | 'j' | null, 
   const longer: 'i' | 'j' = r.w >= r.h ? 'i' : 'j';
   // corridors: the first two splits always, big blocks below that; each corridor crosses its parent
   const options: Array<{ axis: 'i' | 'j'; corr: boolean }> = [];
-  if (depth <= 3) {
+  if (corridors && depth <= 3) {
     const want = lastCorr === null ? longer : lastCorr === 'i' ? 'j' : 'i';
     if ((depth <= 1 || span(want) >= 44) && len(want) >= 2 * MIN_PART + CORRIDOR_W + 2) options.push({ axis: want, corr: true });
   }
@@ -137,8 +137,8 @@ function split(list: Req[], r: Rect, depth: number, lastCorr: 'i' | 'j' | null, 
     if (corr) out.corridors.push({ i0: r.i0, j0: r.j0 + a + 1, w: r.w, h: CORRIDOR_W, axis: 'j' });
   }
   const next = corr ? axis : lastCorr;
-  split(A, RA, depth + 1, next, out);
-  split(B, RB, depth + 1, next, out);
+  split(A, RA, depth + 1, next, out, corridors);
+  split(B, RB, depth + 1, next, out, corridors);
 }
 
 /** Pack into a square building interior [1, side] x [1, side]; grows the square until every room fits. */
@@ -161,4 +161,11 @@ export function pack(list: Req[], fixedSide?: number): Packing {
     if (!bad && off.length <= Math.max(1, Math.round(out.placed.length * 0.06))) return out;
   }
   return last!;
+}
+
+/** Pack a list into a fixed rectangle with shared walls only (no corridors). */
+export function packRect(list: Req[], rect: Rect): Placed[] {
+  const out: Packing = { side: 0, placed: [], corridors: [] };
+  if (list.length) split(list, rect, 4, null, out, false);
+  return out.placed;
 }

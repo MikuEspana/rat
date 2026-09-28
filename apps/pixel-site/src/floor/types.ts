@@ -1,7 +1,8 @@
 // Shared types for the office floor. Cells are (i, j): +i runs down-right on screen, +j down-left.
 import type { Cell } from '../iso';
 
-export type RoomKind = 'stock' | 'hq' | 'ceo' | 'lobby' | 'break' | 'bath' | 'server' | 'copy' | 'meeting' | 'storage';
+export type RoomKind =
+  | 'garage' | 'open' | 'stock' | 'hq' | 'ceo' | 'lobby' | 'break' | 'bath' | 'server' | 'copy' | 'meeting' | 'storage' | 'war' | 'vault';
 
 /** Screen facing: se = +i, sw = +j, ne = -j, nw = -i. */
 export type Face = 'se' | 'sw' | 'ne' | 'nw';
@@ -48,6 +49,8 @@ export interface Spot {
   pos: Cell;
   face: Face;
   pose: 'stand' | 'sit';
+  /** street spots: the stage whose street they stand on */
+  ring?: number;
 }
 
 export interface Prop {
@@ -67,6 +70,8 @@ export interface Prop {
   glow?: number;
   /** hung on a wall: the wall cell (i, j) and the way the wall runs ('i' back-right wall, 'j' back-left wall) */
   wall?: 'i' | 'j';
+  /** street props: the stage whose street they stand on */
+  ring?: number;
 }
 
 export interface Room {
@@ -85,6 +90,27 @@ export interface Room {
   ticker: { i: number; j: number; axis: 'i' | 'j' } | null;
   seats: Seat[];
   spots: Spot[];
+  /** growth: the ring (stage) the room belongs to, 0 = the garage */
+  ring: number;
+  /** growth: the room it opens into (-1: the ring corridor); it can only be built after that one */
+  parent: number;
+  /** growth: amenities are built at this rat count; null = built on demand (desks) or at stage start (lobby) */
+  unlockAt: number | null;
+  /** growth: fixed build order among the ring's demand-built rooms */
+  order: number;
+}
+
+export interface Ring {
+  index: number;
+  /** outer wall square of the building once this ring stands (inclusive) */
+  i0: number;
+  j0: number;
+  i1: number;
+  j1: number;
+  lobby: number;
+  /** the subway stairs while this is the outermost ring */
+  spawn: Cell;
+  entrance: Cell[];
 }
 
 export interface FloorLayout {
@@ -117,7 +143,15 @@ export interface FloorLayout {
   building: { i0: number; j0: number; i1: number; j1: number };
   /** corridor cells, for rats out for a stroll */
   corridor: Cell[];
+  /** growth: rings from the garage outwards, and which ring each cell belongs to (rings.length = outside) */
+  rings: Ring[];
+  ringOf: Uint8Array;
+  /** growth: the two regions a door joins (room id, or CORRIDOR_REGION + ring) */
+  doorSides: Map<number, [number, number]>;
+  garage: Room;
 }
+
+export const CORRIDOR_REGION = 10000;
 
 export const FLOOR_STYLES: FloorStyle[] = ['office', 'warm', 'marble', 'tile', 'dark', 'street', 'platform'];
 
