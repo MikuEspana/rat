@@ -1,8 +1,8 @@
 // Launch scenarios for the simulator: a market cap curve per scenario, trading volume from that curve, and
-// creator fees from the volume. Everything after the fees (claims, the hire split, hires, burns, caps) is the
-// backend's rules (rules.ts), run by engine.ts.
+// creator fees from the volume. Everything after the fees (claims, hires, the per-loop limit and the hourly cap) is
+// the backend's rules (rules.ts), run by engine.ts.
 
-export type ScenarioId = 'normal' | 'mega' | 'rug';
+export type ScenarioId = 'normal' | 'mega' | 'rush' | 'rug';
 
 export interface Scenario {
   id: ScenarioId;
@@ -13,6 +13,11 @@ export interface Scenario {
   /** how long the scenario runs, in minutes */
   minutes: number;
   seed: string;
+  /**
+   * Fees paid straight from phases (SOL per phase) instead of the volume model: the backend's 3-hour launch
+   * simulation (tests/sim/launch-3h.test.ts, SIMULATION.md), so the site shows the same launch.
+   */
+  feePhases?: ReadonlyArray<{ fromMin: number; toMin: number; sol: number; shape: 'decay' | 'bump'; k?: number }>;
 }
 
 export const SCENARIOS: Record<ScenarioId, Scenario> = {
@@ -40,7 +45,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   mega: {
     id: 'mega',
     label: 'Mega',
-    blurb: 'Runs to about $10M in 4 hours. Hiring maxes out at the hourly cap.',
+    blurb: 'Runs to about $10M in 4 hours. The building fills up and new hires line up outside.',
     curve: [
       [0, 6_000],
       [4, 30_000],
@@ -55,9 +60,34 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       [360, 7_000_000],
       [480, 6_000_000],
     ],
-    // ends while money still waits under the hourly cap: about 5,000 rats, what the building is drawn for
+    // about 6,400 rats: every desk taken, a few hundred in the job-fair line outside
     minutes: 300,
     seed: 'mega-1',
+  },
+  rush: {
+    id: 'rush',
+    label: 'Rush',
+    blurb: 'The backend\'s 3-hour launch: 90 SOL of fees in 30 minutes. The job-fair line swells, then drains.',
+    curve: [
+      [0, 6_000],
+      [5, 90_000],
+      [15, 900_000],
+      [30, 3_200_000],
+      [60, 2_400_000],
+      [90, 1_700_000],
+      [105, 2_600_000],
+      [120, 1_900_000],
+      [180, 700_000],
+      [240, 520_000],
+    ],
+    feePhases: [
+      { fromMin: 0, toMin: 30, sol: 90, shape: 'decay', k: 2.5 },
+      { fromMin: 30, toMin: 90, sol: 35, shape: 'decay', k: 1.5 },
+      { fromMin: 90, toMin: 120, sol: 40, shape: 'bump' },
+      { fromMin: 120, toMin: 180, sol: 15, shape: 'decay', k: 3 },
+    ],
+    minutes: 210,
+    seed: 'rush-1',
   },
   rug: {
     id: 'rug',
@@ -105,8 +135,8 @@ export function curveAt(s: Scenario, minutes: number): { mcap: number; slopePerH
 /**
  * Trading volume, USD per hour: a base turnover of the market cap, plus more while the price moves fast (pumps
  * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees, a
- * little under the backend's 3-hour launch simulation (180 SOL, SIMULATION.md). Every fee hires rats, so that is
- * about 4,900 rats.
+ * little under the backend's 3-hour launch simulation (SIMULATION.md). Every fee hires rats, so that is about
+ * 4,800 rats.
  */
 export const TURNOVER_BASE_PER_HOUR = 0.62;
 export const TURNOVER_PER_MOVE = 0.8;
@@ -120,6 +150,18 @@ export function volumeUsdPerHour(mcap: number, slopePerHour: number): number {
  * the bonding curve, the highest rate just after graduation, then lower as the market cap grows (about 0.05% at
  * $20M). REPORTED, not verified here: the real tiers are set on-chain by pump.fun and can change.
  */
+/** Fees (SOL per minute) at `minutes` from a scenario's fee phases: the same shapes as the backend simulation. */
+export function phaseFeePerMin(phases: NonNullable<Scenario['feePhases']>, minutes: number): number {
+  const p = phases.find((x) => minutes >= x.fromMin && minutes < x.toMin);
+  if (!p) return 0;
+  const span = p.toMin - p.fromMin;
+  const x = (minutes - p.fromMin) / span;
+  // the weight shape normalised so the phase pays exactly p.sol
+  if (p.shape === 'bump') return ((p.sol / span) * Math.PI * Math.sin(Math.PI * x)) / 2;
+  const k = p.k ?? 2;
+  return ((p.sol / span) * k * Math.exp(-k * x)) / (1 - Math.exp(-k));
+}
+
 export function creatorFeeRate(mcap: number): number {
   if (mcap < 88_000) return 0.003;
   if (mcap <= 300_000) return 0.0095;

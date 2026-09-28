@@ -2,9 +2,9 @@
 // Starts from packages/contract/mock/*.json (timestamps shifted to "now") and keeps changing like the real bot:
 //   - a new rat every 2 to 6 seconds (fresh wallet; stock picked like the bot: better 24h change, more hires, 5% floor)
 //   - stock prices drift every second in trends that flip, exaggerated so rats visibly change tier
-//   - a claim every 35 seconds (all of it to hires), a burn round every minute (chunks of <= 1 SOL, 3 to 8 s apart)
+//   - a claim every 35 seconds (every claimed SOL goes to hiring rats)
 //   - one stock (COINx) pauses (its rats freeze) and resumes (they unfreeze) every couple of minutes
-// Same contract, schemaVersion 1. No database, no chain, nothing real.
+// Same contract, schemaVersion 2. No database, no chain, nothing real.
 import { createRequire } from 'node:module';
 import {
   type BotMode,
@@ -70,15 +70,14 @@ export class LiveMock implements StateProvider {
   private readonly stocks: MockStock[] = [];
   private events: RatEvent[] = [];
   private nextEventId: number;
-  private readonly coin: { mint: string | null; priceUsd: number; supply: number; burned: number };
-  private readonly wallets: { creator: string | null; fund: string | null };
+  private readonly coin: { mint: string | null; priceUsd: number; supply: number };
+  private readonly wallets: { creator: string | null };
   private readonly treasury: StateResponse['treasury'];
-  private readonly bot: { lastClaimAt: string | null; nextClaimAt: string | null; nextBurnAt: string | null };
+  private readonly bot: { lastClaimAt: string | null; nextClaimAt: string | null };
   private readonly pausing: string;
   private simMs: number;
   private lastPriceAt: number;
-  private readonly due: { price: number; hire: number; claim: number; burn: number; pause: number };
-  private chunks: { at: number; sol: number }[] = [];
+  private readonly due: { price: number; hire: number; claim: number; pause: number };
 
   constructor(opts: LiveMockOptions) {
     this.clock = opts.clock;
@@ -132,11 +131,10 @@ export class LiveMock implements StateProvider {
       mint: state.coin.mint,
       priceUsd: state.coin.priceUsd ?? 0.0018,
       supply: Number(state.coin.supply ?? '1000000000'),
-      burned: Number(state.coin.burnedTokens),
     };
     this.wallets = { ...state.wallets };
-    this.treasury = { ...state.treasury, lastBurnAt: moved(state.treasury.lastBurnAt) };
-    this.bot = { lastClaimAt: moved(state.bot.lastClaimAt), nextClaimAt: null, nextBurnAt: null };
+    this.treasury = { ...state.treasury };
+    this.bot = { lastClaimAt: moved(state.bot.lastClaimAt), nextClaimAt: null };
 
     this.simMs = now;
     this.lastPriceAt = now;
@@ -145,11 +143,9 @@ export class LiveMock implements StateProvider {
       price: now + 1000,
       hire: now + this.gap(2, 6),
       claim: now + this.gap(35, 35),
-      burn: now + this.gap(20, 20),
       pause: now + this.gap(paused?.status === 'paused' ? 40 : 80, paused?.status === 'paused' ? 40 : 80),
     };
     this.bot.nextClaimAt = new Date(this.due.claim).toISOString();
-    this.bot.nextBurnAt = new Date(this.due.burn).toISOString();
   }
 
   // ---------- simulation ----------
@@ -209,6 +205,8 @@ export class LiveMock implements StateProvider {
     const costUsd = SWAP_SOL * SOL_USD;
     const tokens = (costUsd * 0.995) / stock.price; // a little under cost: new rats start slightly red
     const sig = this.b58(88);
+    this.treasury.totalHiredSol = round6(this.treasury.totalHiredSol + SALARY_SOL);
+    this.treasury.waitingSol = round6(Math.max(0, this.treasury.waitingSol - SALARY_SOL));
     this.rats.push({
       id,
       name: ratName(id),
@@ -226,33 +224,11 @@ export class LiveMock implements StateProvider {
   }
 
   private claim(): void {
-    // every fee hires rats (HIRE_SPLIT_BPS=10000, the production default): nothing goes to the fund wallet
     const amount = round6(0.05 + this.rng.next() * 0.55);
     this.treasury.totalClaimedSol = round6(this.treasury.totalClaimedSol + amount);
-    this.treasury.totalToHiresSol = round6(this.treasury.totalToHiresSol + amount);
+    this.treasury.waitingSol = round6(this.treasury.waitingSol + amount);
     this.bot.lastClaimAt = this.at();
-    this.push({ type: 'claim', at: this.at(), txSig: this.b58(88), data: { amountSol: amount, toHiresSol: amount, toFundSol: 0, source: this.rng.next() < 0.1 ? 'external' : 'bot' } });
-  }
-
-  private startBurnRound(): void {
-    const total = 0.3 + this.rng.next() * 2.5;
-    const n = Math.ceil(total);
-    let t = this.simMs;
-    for (let i = 0; i < n; i++) {
-      this.chunks.push({ at: t, sol: round6(total / n) });
-      t += this.gap(3, 8);
-    }
-  }
-
-  private burnChunk(sol: number): void {
-    const tokens = (sol * SOL_USD) / this.coin.priceUsd;
-    this.coin.burned += tokens;
-    this.coin.supply -= tokens;
-    this.treasury.totalBurnSpentSol = round6(this.treasury.totalBurnSpentSol + sol);
-    this.treasury.fundWalletSol = round6(Math.max(0, this.treasury.fundWalletSol - sol));
-    this.treasury.burnCount++;
-    this.treasury.lastBurnAt = this.at();
-    this.push({ type: 'burn', at: this.at(), txSig: this.b58(88), data: { solSpent: sol, tokensBurned: tokens.toFixed(2) } });
+    this.push({ type: 'claim', at: this.at(), txSig: this.b58(88), data: { amountSol: amount, source: this.rng.next() < 0.1 ? 'external' : 'bot' } });
   }
 
   private togglePause(): void {
@@ -281,16 +257,11 @@ export class LiveMock implements StateProvider {
       const skip = target - MAX_CATCHUP_MS - this.simMs;
       this.simMs += skip;
       for (const k of Object.keys(this.due) as (keyof typeof this.due)[]) this.due[k] = Math.max(this.due[k], this.simMs);
-      this.chunks = [];
     }
     for (;;) {
-      const next = Math.min(this.due.price, this.due.hire, this.due.claim, this.due.burn, this.due.pause, this.chunks[0]?.at ?? Number.POSITIVE_INFINITY);
+      const next = Math.min(this.due.price, this.due.hire, this.due.claim, this.due.pause);
       if (next > target) break;
       this.simMs = next;
-      if (this.chunks[0] && this.chunks[0].at === next) {
-        this.burnChunk(this.chunks.shift()!.sol);
-        continue;
-      }
       if (this.due.price === next) {
         this.stepPrices();
         this.due.price = next + 1000;
@@ -301,10 +272,6 @@ export class LiveMock implements StateProvider {
         this.claim();
         this.due.claim = next + this.gap(35, 35);
         this.bot.nextClaimAt = new Date(this.due.claim).toISOString();
-      } else if (this.due.burn === next) {
-        this.startBurnRound();
-        this.due.burn = next + this.gap(60, 60);
-        this.bot.nextBurnAt = new Date(this.due.burn).toISOString();
       } else {
         this.togglePause();
       }
@@ -343,7 +310,6 @@ export class LiveMock implements StateProvider {
         priceUsd: Number(this.coin.priceUsd.toPrecision(4)),
         supply: this.coin.supply.toFixed(2),
         marketCapUsd: Math.round(this.coin.priceUsd * this.coin.supply),
-        burnedTokens: this.coin.burned.toFixed(2),
       },
       wallets: { ...this.wallets },
       treasury: { ...this.treasury },

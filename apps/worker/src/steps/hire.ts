@@ -24,12 +24,20 @@ import {
   tokenOwnerDelta,
 } from '@rat/core';
 import type { RatRow, StockRow } from '@rat/db';
+import { JupiterBudgetError } from '@rat/jupiter';
 import type { GuardedResult, Reservation } from '@rat/safety';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
 import type { WorkerDeps, WorkerState } from '../deps';
 import { solUsd } from './prices';
 
 export const MAX_HIRE_ATTEMPTS = 5;
+/** Jupiter budget tokens hires always leave for the price step (one batched call every 45 s). */
+export const TOKENS_KEPT_FOR_PRICES = 1;
+
+/** A hire may start only if the Jupiter budget has a token for it (and still one for prices). */
+function jupiterHasRoom(d: WorkerDeps): boolean {
+  return d.jupiter.available() > TOKENS_KEPT_FOR_PRICES;
+}
 
 export interface HireResult {
   hired: number;
@@ -38,6 +46,8 @@ export interface HireResult {
   gaveUp: number;
   blocked?: string;
   skipped?: string;
+  /** new hires waiting for the Jupiter budget (the rest of the budget is hired next loop) */
+  waitingForJupiter?: boolean;
 }
 
 interface Amounts {
@@ -85,7 +95,8 @@ export async function eligibleStocks(d: WorkerDeps): Promise<StockRow[]> {
   return (await d.store.stocks.list()).filter((st) => isEligible(d, st));
 }
 
-type Built = { ok: true; build: SwapBuild } | { ok: false; reason: string };
+/** `wait`: Jupiter's budget is empty or it is backing off after a 429: not a failure, try again next loop. */
+type Built = { ok: true; build: SwapBuild } | { ok: false; reason: string; wait?: boolean };
 
 async function buildSwap(d: WorkerDeps, s: WorkerState, wallet: Pubkey, stock: StockRow, a: Amounts): Promise<Built> {
   const sol = await solUsd(d, s);
@@ -101,6 +112,7 @@ async function buildSwap(d: WorkerDeps, s: WorkerState, wallet: Pubkey, stock: S
       slippageBps: d.config.slippageBpsStock,
     });
   } catch (err) {
+    if (err instanceof JupiterBudgetError) return { ok: false, reason: err.message, wait: true };
     return { ok: false, reason: `no route: ${(err as Error).message}` };
   }
   const outUi = (Number(build.outAmount) / 10 ** stock.decimals!) * stock.uiMultiplier;
@@ -358,6 +370,7 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
   if (!isEligible(d, stock)) return 'waiting';
   const kill = await d.killSwitch.status();
   if (kill.on) return 'waiting';
+  if (!jupiterHasRoom(d)) return 'waiting';
 
   let reservation = await openReservationOf(d, rat);
   if (!reservation && !(d.config.hireMode === 'two_step' && rat.funded)) {
@@ -397,7 +410,10 @@ async function checkIdle(d: WorkerDeps, res: HireResult): Promise<void> {
   }
   const minutes = (now.getTime() - new Date(since).getTime()) / 60_000;
   if (minutes >= cfg.minutes) {
-    const why = res.skipped ?? res.blocked ?? (res.attempted > 0 ? 'hire transactions did not confirm' : 'no hire attempted');
+    const why =
+      res.skipped ??
+      res.blocked ??
+      (res.waitingForJupiter ? 'waiting for the Jupiter budget (backing off after 429s?)' : res.attempted > 0 ? 'hire transactions did not confirm' : 'no hire attempted');
     await d.alerts.send(
       'warn',
       'hire_idle',
@@ -450,6 +466,11 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
 
   while (slots > 0) {
     if ((await d.store.ledger.balance('hire')) < d.config.salaryLamports) break;
+    // no Jupiter token: the rest waits in line for the next loop (no key, no reservation, no call)
+    if (!jupiterHasRoom(d)) {
+      res.waitingForJupiter = true;
+      break;
+    }
     const mint = pickWeighted(weights, d.rng);
     if (!mint) break;
     const stock = bySymbol.get(mint)!;
@@ -462,6 +483,13 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
       break;
     }
     const b = await buildSwap(d, s, wallet, stock, a);
+    if (!b.ok && b.wait) {
+      // Jupiter said 429 (or the budget ran out): stop for this loop, never retry hot
+      await d.guard.release(auth.reservation, b.reason);
+      await d.keys.discardRatKey(wallet);
+      res.waitingForJupiter = true;
+      break;
+    }
     if (!b.ok) {
       await d.guard.release(auth.reservation, b.reason);
       await d.keys.discardRatKey(wallet);

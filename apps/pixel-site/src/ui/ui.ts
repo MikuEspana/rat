@@ -6,6 +6,7 @@ import type { Atlas } from '../gfx/atlas';
 import type { Camera } from '../gfx/camera';
 import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
+import { DEBUG_MAX_RATS } from '../config';
 import { now as clockNow } from '../now';
 import { STAGES, stageOf } from '../floor/plan';
 import { headlines, type NewsStats } from './news';
@@ -16,7 +17,7 @@ type Progress = ReturnType<Growth['progress']>;
 
 /** Badges by the stage the company was in when a rat was hired. */
 const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'EVIL EMPIRE ERA'];
-import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, tokens, usd } from './format';
+import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
 
@@ -46,10 +47,61 @@ export interface UiDeps {
   simulated?: boolean;
 }
 
+/**
+ * A HUD number that glides to each new value over a couple of seconds. Stock prices refresh every 45 s (one
+ * batched Jupiter call, to stay far under the Free tier), so the portfolio numbers would otherwise jump.
+ */
+class Glide {
+  private from = 0;
+  private to = 0;
+  private start = 0;
+  private started = false;
+  private running = false;
+
+  constructor(
+    private readonly ms: number,
+    private readonly render: (v: number) => void,
+  ) {}
+
+  private now(): number {
+    const u = Math.min(1, (performance.now() - this.start) / this.ms);
+    return this.from + (this.to - this.from) * (1 - (1 - u) ** 3);
+  }
+
+  set(v: number): void {
+    if (!this.started) {
+      this.started = true;
+      this.from = this.to = v;
+      this.render(v);
+      return;
+    }
+    if (v === this.to) return;
+    this.from = this.now();
+    this.to = v;
+    this.start = performance.now();
+    if (this.running) return;
+    this.running = true;
+    const step = (): void => {
+      this.render(this.now());
+      if (performance.now() - this.start < this.ms) requestAnimationFrame(step);
+      else this.running = false;
+    };
+    requestAnimationFrame(step);
+  }
+}
+
 export class Ui {
   private root = el('div', 'ui');
   private banner = el('div', 'banner');
   private stats = new Map<string, { value: HTMLElement; sub: HTMLElement }>();
+  private readonly glides = {
+    portfolio: new Glide(2000, (v) => this.statText('portfolio', usd(v))),
+    pnl: new Glide(2000, (v) => this.statText('pnl', usd(v))),
+    pnlPct: new Glide(2000, (v) => {
+      const st = this.stats.get('pnl');
+      if (st) st.sub.textContent = pct(v);
+    }),
+  };
   private ringArc!: SVGCircleElement;
   private ringLabel = el('div', 'ring-label');
   private feedList = el('ol', 'feed-list');
@@ -127,8 +179,9 @@ export class Ui {
     for (const [key, label] of [
       ['mcap', 'Market cap'],
       ['rats', 'Rats hired'],
-      ['fund', 'Fund value'],
+      ['portfolio', 'Portfolio value'],
       ['pnl', 'Portfolio PnL'],
+      ['line', 'Job fair'],
     ] as const) {
       const box = el('div', 'stat');
       const value = el('div', 'stat-value', '--');
@@ -161,6 +214,20 @@ export class Ui {
     return hud;
   }
 
+  /** The job-fair line: rats waiting outside for their buy (or, with the building full, a desk). */
+  setLine(n: number): void {
+    const st = this.stats.get('line');
+    if (!st) return;
+    st.value.textContent = n.toLocaleString('en-US');
+    st.value.className = `stat-value ${n > 0 ? 'hype' : ''}`;
+    st.sub.textContent = n === 1 ? 'rat in line' : n > 0 ? 'rats in line' : 'no line: walk right in';
+  }
+
+  private statText(key: string, text: string): void {
+    const st = this.stats.get(key);
+    if (st) st.value.textContent = text;
+  }
+
   private onState(s: StateResponse): void {
     const set = (k: string, v: string, sub = '', cls = ''): void => {
       const st = this.stats.get(k);
@@ -173,12 +240,18 @@ export class Ui {
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
-    set('fund', usd(s.portfolio.valueUsd), s.treasury.burnCount > 0 ? `${tokens(s.coin.burnedTokens)} RAT burned` : holdings || 'no positions yet');
-    set('pnl', usd(s.portfolio.pnlUsd), pct(s.portfolio.pnlPct), signClass(s.portfolio.pnlUsd));
+    // the portfolio numbers glide between price updates (every 45 s) instead of jumping
+    const portfolio = this.stats.get('portfolio');
+    if (portfolio) portfolio.sub.textContent = holdings || 'no positions yet';
+    this.glides.portfolio.set(s.portfolio.valueUsd);
+    const pnl = this.stats.get('pnl');
+    if (pnl) pnl.value.className = `stat-value ${signClass(s.portfolio.pnlUsd)}`;
+    this.glides.pnl.set(s.portfolio.pnlUsd);
+    this.glides.pnlPct.set(s.portfolio.pnlPct);
     const mode = s.bot.mode;
     this.banner.hidden = mode === 'live';
     this.banner.textContent =
-      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No hires, no burns.' : '';
+      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No claims, no hires.' : '';
     this.banner.className = `banner ${mode}`;
     this.renderBoard();
     if (this.selected !== null) this.renderCard();
@@ -370,7 +443,7 @@ export class Ui {
     const input = el('input');
     input.type = 'range';
     input.min = '1';
-    input.max = '5000';
+    input.max = String(DEBUG_MAX_RATS);
     input.value = String(n);
     input.oninput = () => (label.textContent = `rats: ${input.value}`);
     input.onchange = () => onChange(Number(input.value));

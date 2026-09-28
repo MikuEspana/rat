@@ -2,18 +2,18 @@
 
 Nothing leaves a wallet without passing these. Owned by WS08.
 
-- `spend-guard.ts`: `authorize()` is the only way to reserve money for a hire or burn. It requires:
+- `spend-guard.ts`: `authorize()` is the only way to reserve money for a hire. It requires:
   - the kill switch is off
-  - the **ledger bucket** covers the amount (claimed fees only; the wallet's own SOL never counts)
-  - the bucket's rolling 60-minute net outflow stays under its cap (`SPEND_CAP_SOL_PER_HOUR_HIRE` / `_BURN`, 30 SOL each)
+  - the **hire ledger bucket** covers the amount (claimed fees only; the wallet's own SOL never counts)
+  - the rolling 60-minute net outflow stays under the cap (`SPEND_CAP_SOL_PER_HOUR_HIRE`, 60 SOL)
   - the smoke lifetime cap holds (smoke mode)
-  - live: the wallet holds amount + reserve (+ the fund share owed, for the creator)
+  - live: the creator wallet holds amount + reserve
 
-  Alerts once when a bucket crosses `SPEND_ALERT_PCT` (50%), and critical when a cap is hit. `settle()` books the real cost (critical `overspend_*` alert if it was more than reserved), `release()` returns a reservation that definitely did not land. `authorize()` calls run one at a time.
+  Alerts once when spending crosses `SPEND_ALERT_PCT` (50%), and critical when a cap is hit. `settle()` books the real cost (critical `overspend_*` alert if it was more than reserved), `release()` returns a reservation that definitely did not land. `authorize()` calls run one at a time.
 - `guarded-sender.ts`: every transaction goes through it. In order:
   - kill switch (only the emergency `sweep` bypasses it)
-  - reservation required for hire/burn
-  - live claim/hire/burn: **effects check**. The signed tx is simulated; it is refused (critical `effects_*` alert) if any of our wallets would lose more than its limit or the rat would get less than the quoted minimum. No limits or no simulation = not sent.
+  - reservation required for a hire
+  - live claim/hire: **effects check**. The signed tx is simulated; it is refused (critical `effects_*` alert) if any of our wallets would lose more than its limit or the rat would get less than the quoted minimum. No limits or no simulation = not sent.
   - **lease fence**: the worker renews its lease right before sending; a worker that lost it sends nothing
   - attempt written before sending; a send that throws after that counts as `unknown` (re-checked later), never as "not sent"
   - DRY RUN = simulate only

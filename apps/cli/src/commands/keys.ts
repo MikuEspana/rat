@@ -4,19 +4,19 @@ import { type MasterKeyRing, decryptSecret, encryptRoleKey, encryptSecret, parse
 import { Keypair } from '@solana/web3.js';
 import type { CliContext } from '../context';
 
-/** Imports the creator or fund private key (read from stdin, never from argv). */
+/** Imports the creator private key (read from stdin, never from argv). */
 export async function keysImportRoleCommand(
   ctx: CliContext,
   ring: MasterKeyRing,
-  role: 'creator' | 'fund',
+  role: 'creator',
   secretText: string,
   opts: { replace?: boolean } = {},
 ): Promise<void> {
-  const expected = role === 'creator' ? ctx.config.creatorPubkey : ctx.config.fundPubkey;
-  if (!expected) throw new Error(`${role === 'creator' ? 'CREATOR_PUBKEY' : 'FUND_PUBKEY'} must be set before importing the ${role} key`);
+  const expected = ctx.config.creatorPubkey;
+  if (!expected) throw new Error(`CREATOR_PUBKEY must be set before importing the ${role} key`);
   const kp = parseSecretKey(secretText);
   if (kp.publicKey.toBase58() !== expected) {
-    throw new Error(`the ${role} key is ${kp.publicKey.toBase58()} but ${role === 'creator' ? 'CREATOR_PUBKEY' : 'FUND_PUBKEY'} is ${expected}`);
+    throw new Error(`the ${role} key is ${kp.publicKey.toBase58()} but CREATOR_PUBKEY is ${expected}`);
   }
   await ctx.store.keys.setRoleKey(encryptRoleKey(kp, ring, role), { replace: opts.replace });
   ctx.out(`${role} key ${expected} imported (encrypted, key version ${ring.currentVersion}).`);
@@ -75,7 +75,7 @@ export function verifyKeyRecords(records: KeyPoolRecord[], ring: MasterKeyRing):
 }
 
 /**
- * Writes every stored key (rat wallets, creator, fund) to a file, STILL ENCRYPTED with the master key. The rat
+ * Writes every stored key (rat wallets and the creator) to a file, STILL ENCRYPTED with the master key. The rat
  * wallets' keys exist nowhere else: if the database is lost, this file plus KEY_ENCRYPTION_KEY recover them.
  * Every key is checked to decrypt first, so a backup is never silently broken. The file is created 0600.
  */
@@ -90,7 +90,7 @@ export async function keysBackupCommand(ctx: CliContext, ring: MasterKeyRing, ou
   const back = JSON.parse(readFileSync(outPath, 'utf8')) as KeyBackupFile;
   if (back.keys.length !== records.length) throw new Error('backup file did not read back completely');
   const rats = records.filter((r) => r.role === 'rat').length;
-  ctx.out(`backed up ${records.length} keys (${rats} rat wallets, ${records.length - rats} creator/fund) to ${outPath}, still encrypted (key versions ${[...new Set(records.map((r) => r.keyVersion))].join(', ')}).`);
+  ctx.out(`backed up ${records.length} keys (${rats} rat wallets, ${records.length - rats} creator) to ${outPath}, still encrypted (key versions ${[...new Set(records.map((r) => r.keyVersion))].join(', ')}).`);
   ctx.out('Keep this file and KEY_ENCRYPTION_KEY in two DIFFERENT safe places: one without the other is useless to a thief and to you.');
   return { keys: records.length };
 }
@@ -99,10 +99,14 @@ export async function keysBackupCommand(ctx: CliContext, ring: MasterKeyRing, ou
 export async function keysRestoreCommand(ctx: CliContext, ring: MasterKeyRing, inPath: string): Promise<{ restored: number; skipped: number }> {
   const file = JSON.parse(readFileSync(inPath, 'utf8')) as Partial<KeyBackupFile>;
   if (file.format !== KEY_BACKUP_FORMAT || !Array.isArray(file.keys)) throw new Error(`${inPath} is not a ${KEY_BACKUP_FORMAT} backup`);
-  const records = file.keys.filter(
-    (k): k is KeyPoolRecord => typeof k?.pubkey === 'string' && typeof k.secretEnc === 'string' && Number.isInteger(k.keyVersion) && ['rat', 'creator', 'fund'].includes(k.role),
+  const wellFormed = file.keys.filter(
+    (k) => typeof k?.pubkey === 'string' && typeof k.secretEnc === 'string' && Number.isInteger(k.keyVersion) && ['rat', 'creator', 'fund'].includes(k.role as string),
   );
-  if (records.length !== file.keys.length) throw new Error('backup has malformed entries: nothing restored');
+  if (wellFormed.length !== file.keys.length) throw new Error('backup has malformed entries: nothing restored');
+  // a backup from before buy and burn was removed can hold the old fund wallet's key: it is not restored
+  const legacy = wellFormed.filter((k) => (k.role as string) === 'fund');
+  for (const k of legacy) ctx.out(`skipped the old fund wallet key ${k.pubkey} (buy and burn was removed; the bot no longer uses a fund wallet)`);
+  const records = wellFormed.filter((k): k is KeyPoolRecord => (k.role as string) !== 'fund');
   const check = verifyKeyRecords(records, ring);
   if (check.bad.length > 0) throw new Error(`${check.bad.length} keys in the backup do not decrypt with this master key (first: ${check.bad[0]!.pubkey}): nothing restored`);
   let restored = 0;
@@ -124,6 +128,6 @@ export async function keysRestoreCommand(ctx: CliContext, ring: MasterKeyRing, i
     }
     restored++;
   }
-  ctx.out(`restored ${restored} keys from ${inPath} (${skipped} already present).`);
-  return { restored, skipped };
+  ctx.out(`restored ${restored} keys from ${inPath} (${skipped} already present${legacy.length ? `, ${legacy.length} old fund key skipped` : ''}).`);
+  return { restored, skipped: skipped + legacy.length };
 }

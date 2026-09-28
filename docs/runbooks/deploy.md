@@ -15,7 +15,7 @@ Agents did not create any of these resources. Everything below is done by the ow
 3. Service **api**: config file path `infra/railway.api.json`. Generate a public domain.
 4. Service **admin** (private admin page, optional but recommended): config file path `infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), the worker's `DATABASE_URL` (the kill switch is a database setting), `DRY_RUN` like the worker, and `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` for its worker-down watchdog (a Telegram alert when the worker's loops stop for 3 minutes, since a dead worker cannot alert by itself). It serves HTTPS on Railway; open it, log in with any user name and the password.
 5. Variables (Railway > Variables), from `.env.example`:
-   - both: `DATABASE_URL` (worker) / `DATABASE_URL_READONLY` (api), `DRY_RUN=true`, `COIN_MINT` (empty until launch), `CREATOR_PUBKEY`, `FUND_PUBKEY`, `STOCKS_FILE=config/stocks.json`
+   - both: `DATABASE_URL` (worker) / `DATABASE_URL_READONLY` (api), `DRY_RUN=true`, `COIN_MINT` (empty until launch), `CREATOR_PUBKEY`, `STOCKS_FILE=config/stocks.json`
    - worker only: `KEY_ENCRYPTION_KEY` (32 random bytes, base64), `KEY_VERSION=1`, `RPC_URL`, `RPC_URL_BACKUP`, `JUPITER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
    - api only: `CORS_ORIGIN` (your site domain), `API_CACHE_SEC=3` (the API listens on the `PORT` Railway injects, `API_PORT` is only a fallback)
 6. Leave `LIVE_CONFIRM` empty until launch.
@@ -23,7 +23,7 @@ Agents did not create any of these resources. Everything below is done by the ow
 Generate the master key on your own machine: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Store it in your password manager too.
 
 ## 3. Keys (from a machine with the production env)
-See `keys.md`: import the creator and fund keys. Rat wallets are created at hire time (nothing to prepare).
+See `keys.md`: import the creator key. Rat wallets are created at hire time (nothing to prepare).
 
 ## 4. Vercel (your site)
 - Point the site at the API domain: it reads `/api/state` every 5s, `/api/rats` every 30s, `/api/events?afterId=` every 5s (see `CONTRACT.md`).
