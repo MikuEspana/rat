@@ -64,6 +64,13 @@ export const TIER_LABEL: Record<Tier | 'frozen', string> = {
   frozen: 'Frozen',
 };
 
+/** Feed line for a new stage. The last stage is a place, not a kind of company: the company made it there. */
+export function stageLine(name: string, last: boolean): string {
+  if (last) return 'The company made it to Wall Street';
+  const n = name.toLowerCase();
+  return `The company is now ${/^[aeiou]/.test(n) ? 'an' : 'a'} ${n}`;
+}
+
 /** One feed line: a tag and a sentence. */
 export function describe(e: RatEvent): { tag: string; text: string } {
   switch (e.type) {
