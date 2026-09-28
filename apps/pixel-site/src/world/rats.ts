@@ -255,7 +255,7 @@ export class RatSystem {
       if (route) this.walkTo(a, [a.pos, ...route, seat.pos], { kind: 'move', spot: null, back: [], stay: 0 });
       else this.sit(a);
     }
-    if (lineMoved || left) this.reflow(!lineMoved);
+    if (lineMoved || left) this.reflow(!lineMoved, lineMoved);
     layer.sync(true);
   }
 
@@ -395,15 +395,21 @@ export class RatSystem {
   }
 
   /** The line moved up (someone got a desk) or moved out (a new stage): everyone takes their new place. */
-  private reflow(walk: boolean): void {
+  private reflow(walk: boolean, moved = false): void {
     this.lineDirty = false;
     let walking = 0;
     this.queue.forEach((a, p) => {
       const cell = this.lineCell(p);
-      if (a.qi === p && a.home.i === cell.i && a.home.j === cell.j) return;
+      if (a.qi === p && a.home.i === cell.i && a.home.j === cell.j && !moved) return;
       a.qi = p;
       a.home = cell;
-      if (a.mode === 'walk') return; // on arrival it steps along to its new place
+      if (a.mode === 'walk') {
+        if (!moved) return; // on arrival it steps along to its new place
+        // the office grew over its route: it goes straight to its new place outside, never through the new rooms
+        this.walkers.delete(a);
+        a.path = [];
+        a.pos = { ...cell };
+      }
       this.standInLine(a, walk && walking++ < 300);
     });
   }
