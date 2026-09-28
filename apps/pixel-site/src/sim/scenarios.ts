@@ -104,9 +104,9 @@ export function curveAt(s: Scenario, minutes: number): { mcap: number; slopePerH
 
 /**
  * Trading volume, USD per hour: a base turnover of the market cap, plus more while the price moves fast (pumps
- * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees
- * (about 2,400 rats, the megacorp stage), a little under the backend's 3-hour launch simulation (180 SOL,
- * SIMULATION.md), and only the Mega launch reaches the evil empire.
+ * and dumps both trade heavily). A rough model, tuned so the Normal launch pays about 145 SOL of creator fees, a
+ * little under the backend's 3-hour launch simulation (180 SOL, SIMULATION.md). Every fee hires rats, so that is
+ * about 4,900 rats.
  */
 export const TURNOVER_BASE_PER_HOUR = 0.62;
 export const TURNOVER_PER_MOVE = 0.8;
