@@ -201,6 +201,15 @@ export async function bootFilm(): Promise<void> {
   const still = q.get('frame');
   const shot = Number(q.get('shot'));
   if (q.has('play')) {
+    // fit the film to the window (letterboxed on black, still pixelated), for watching or screen recording
+    const fit = (): void => {
+      const k = Math.min(window.innerWidth / view.w, window.innerHeight / view.h);
+      canvas.style.width = `${Math.floor(view.w * k)}px`;
+      canvas.style.height = `${Math.floor(view.h * k)}px`;
+      canvas.style.margin = `${Math.floor((window.innerHeight - view.h * k) / 2)}px auto 0`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
     // a preview: frames follow the real clock (a slow machine drops frames; the recorder never does)
     const [f0, f1] = shot ? api.shotRange(shot) : [0, TOTAL_FRAMES];
     const t0 = realNow();
