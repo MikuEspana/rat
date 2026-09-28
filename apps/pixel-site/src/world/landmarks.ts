@@ -228,7 +228,7 @@ export function renderLandmarks(o: Opts): LandmarkView {
       piece('pylon_roof', pi + 2, bj + 1, 34 - 1, pi + bj + 2.2);
       for (let i = pi + 2; i < fi; i++) piece('bridge_i', i, bj, bh, i + bj + 0.9);
     }
-    const s = new Sprite(o.sign('RAT RACE ANNEX', 0x9fd3ff));
+    const s = new Sprite(o.sign('WALL STREET RATS ANNEX', 0x9fd3ff));
     s.anchor.set(0.5, 1);
     s.position.set(t.x, t.top - 100 * as);
     o.signs.addChild(s);

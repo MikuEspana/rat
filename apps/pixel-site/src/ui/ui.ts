@@ -16,7 +16,7 @@ import { sound } from './sound';
 type Progress = ReturnType<Growth['progress']>;
 
 /** Badges by the stage the company was in when a rat was hired. */
-const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'EVIL EMPIRE ERA'];
+const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
 import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
@@ -174,7 +174,7 @@ export class Ui {
       note.textContent = id === null ? 'no rat found' : '';
       if (id !== null) this.spotlight(id);
     };
-    title.append(el('div', 'brand', 'RAT RACE'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
