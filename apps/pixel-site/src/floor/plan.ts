@@ -25,7 +25,8 @@ export const STAGES: ReadonlyArray<{ name: string; min: number }> = [
   { name: 'MEGACORP', min: 1500 },
   { name: 'EVIL EMPIRE', min: 3000 },
 ];
-/** the plan is drawn for this many rats; beyond it new rats stand */
+/** the plan is drawn for about this many rats (it has a few hundred desks more); beyond its desks new hires line up
+ * outside the lobby (queueCells) */
 export const PLAN_RATS = 5200;
 
 export function stageOf(ratCount: number): number {
@@ -536,6 +537,77 @@ export function standCells(layout: FloorLayout, room: Room, blocked: Uint8Array 
     for (let j = room.j0; j < room.j0 + room.h; j++) {
       if (!blocked[idx(layout.W, i, j)] && !used.has(`${i},${j}`)) out.push({ i, j });
     }
+  }
+  return out;
+}
+
+/** Street lanes of the job-fair line, at these distances from the outer wall (odd, so lamps at 2 stay clear). */
+const LINE_LANES = [1, 3, 5, 7];
+
+/**
+ * The job-fair line for a stage: street cells in line order, from the head (next to the lobby door) outwards.
+ * Rats with no desk stand here. Lane 1 runs along the outer wall all the way around the building, back to the other
+ * side of the door; lane 3 runs back the other way, and so on: a line around the block. The walkway from the subway
+ * stairs to the door, the smokers' corner, lamps and anything blocked stay clear. Pure and deterministic.
+ */
+export function queueCells(layout: FloorLayout, stage: number, blocked: Uint8Array = layout.blocked): Cell[] {
+  const ring = layout.rings[stage]!;
+  const lo = ring.i0;
+  const hi = ring.i1;
+  const door = ring.entrance[1]!;
+  // the door is on the +i face (i = hi) or the +j face (j = hi); u runs along that face
+  const onI = ring.entrance[0]!.i === hi && door.i === hi;
+  const e = onI ? door.j : door.i;
+  const props = new Set<number>();
+  for (const p of layout.props) if (p.ring === stage) props.add(idx(layout.W, p.i, p.j));
+  const clear = (c: Cell): boolean => {
+    if (c.i < 0 || c.j < 0 || c.i >= layout.W || c.j >= layout.H) return false;
+    const k = idx(layout.W, c.i, c.j);
+    return !blocked[k] && !props.has(k);
+  };
+  /** the walkway and the smokers' corner (the smokers stand 3 and 4 cells along, on the +u side) */
+  const inGap = (c: Cell, d: number): boolean => {
+    const front = onI ? c.i === hi + d : c.j === hi + d;
+    const u = onI ? c.j : c.i;
+    return front && u >= e - 3 && u <= e + 5;
+  };
+  /** the square at distance d, clockwise in i/j, starting just outside the door */
+  const loop = (d: number): Cell[] => {
+    const a = lo - d;
+    const b = hi + d;
+    const cells: Cell[] = [];
+    for (let i = a; i < b; i++) cells.push({ i, j: a });
+    for (let j = a; j < b; j++) cells.push({ i: b, j });
+    for (let i = b; i > a; i--) cells.push({ i, j: b });
+    for (let j = b; j > a; j--) cells.push({ i: a, j });
+    const s = cells.findIndex((c) => (onI ? c.i === b && c.j === e : c.j === b && c.i === e));
+    return [...cells.slice(s), ...cells.slice(0, s)];
+  };
+  // lane 1 first heads for the far corner (the long side of the front), so the head of the line is by the door
+  const probe = loop(1)[1]!;
+  const towardLow = (onI ? probe.j : probe.i) < e;
+  const longLow = e - lo > hi - e;
+  let forward = towardLow === longLow;
+  const out: Cell[] = [];
+  const seen = new Set<number>();
+  const push = (c: Cell): void => {
+    const k = idx(layout.W, c.i, c.j);
+    if (seen.has(k) || !clear(c)) return;
+    seen.add(k);
+    out.push(c);
+  };
+  for (const d of LINE_LANES) {
+    const l = loop(d);
+    const order = forward ? l : [l[0]!, ...l.slice(1).reverse()];
+    const lane = order.filter((c) => !inGap(c, d));
+    // the step out from the lane before: one cell between the lanes, on the side where it ended
+    if (out.length && lane.length) {
+      const last = out[out.length - 1]!;
+      const first = lane[0]!;
+      push({ i: (last.i + first.i) / 2, j: (last.j + first.j) / 2 });
+    }
+    for (const c of lane) push(c);
+    forward = !forward;
   }
   return out;
 }

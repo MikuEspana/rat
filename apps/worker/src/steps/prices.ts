@@ -1,15 +1,23 @@
-// Prices: ONE batched Jupiter Price v3 call per loop for every stock + SOL + the coin.
-// Missing prices keep the last value and age into "stale" (never zero).
+// Prices: ONE batched Jupiter Price v3 call per loop (every 45 s) for every stock + SOL + the coin.
+// Missing prices keep the last value and age into "stale" (never zero). The call takes one token of the Jupiter
+// budget; with none left (or while backing off after a 429) this round is skipped and the last prices stay.
 import { NATIVE_SOL_MINT, SETTINGS } from '@rat/core';
+import { JupiterBudgetError } from '@rat/jupiter';
 import type { WorkerDeps, WorkerState } from '../deps';
 
 const HISTORY_EVERY_MS = 60_000;
 
-export async function runPriceStep(d: WorkerDeps, s: WorkerState): Promise<{ priced: number; missing: string[] }> {
+export async function runPriceStep(d: WorkerDeps, s: WorkerState): Promise<{ priced: number; missing: string[]; skipped?: string }> {
   const stocks = (await d.store.stocks.list()).filter((x) => x.enabled);
   const mints = [...stocks.map((x) => x.mint), NATIVE_SOL_MINT];
   if (d.config.coinMint) mints.push(d.config.coinMint);
-  const quotes = await d.prices.getPrices(mints);
+  let quotes: Awaited<ReturnType<typeof d.prices.getPrices>>;
+  try {
+    quotes = await d.prices.getPrices(mints);
+  } catch (err) {
+    if (err instanceof JupiterBudgetError) return { priced: 0, missing: [], skipped: err.message };
+    throw err;
+  }
   const now = d.clock.now();
   const history: { mint: string; priceUsd: number; at: Date }[] = [];
   const missing: string[] = [];

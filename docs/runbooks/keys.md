@@ -2,11 +2,10 @@
 
 Only one secret lives in the host env: `KEY_ENCRYPTION_KEY`. Every private key is stored AES-256-GCM encrypted in the database. **Back up the master key** (password manager). Losing it means losing every rat wallet.
 
-## Import the creator and fund keys
-`CREATOR_PUBKEY` and `FUND_PUBKEY` must be set first; the import refuses a key that does not match.
+## Import the creator key
+`CREATOR_PUBKEY` must be set first; the import refuses a key that does not match. There is no fund wallet (buy and burn was removed).
 ```
 rat keys import --role creator   # paste the private key (base58 or JSON array), then Ctrl-D
-rat keys import --role fund
 ```
 The key is read from stdin, never from the command line, and never printed.
 

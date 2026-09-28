@@ -11,12 +11,13 @@ export interface Dashboard {
   mode: 'DRY RUN' | 'LIVE';
   smoke: boolean;
   kill: { on: boolean; source: 'env' | 'database' | null; reason: string | null };
-  buckets: { bucket: 'hire' | 'burn'; available: string; spentLastHour: string; cap: string; capPct: number; openReservations: number }[];
+  buckets: { bucket: 'hire'; available: string; spentLastHour: string; cap: string; capPct: number; openReservations: number }[];
   claimed: string;
   claims: number;
-  fundShareOwed: string;
-  burned: string;
-  burns: number;
+  /** spent on hires: salaries plus their fees, rent and tips */
+  hired: string;
+  /** claimed, not spent yet (waits under the hourly hire cap) */
+  waiting: string;
   rats: Record<string, number>;
   txs: { at: string; kind: string; status: string; signature: string; url: string; error: string | null }[];
   errors: { source: string; at: string; message: string }[];
@@ -31,7 +32,7 @@ export async function loadDashboard(store: Store, config: AppConfig, clock: Cloc
   const envKill = config.killSwitch;
   const dbKill = (await store.settings.get(SETTINGS.killSwitch)) === 'on';
   const buckets = [];
-  for (const bucket of ['hire', 'burn'] as const) {
+  for (const bucket of ['hire'] as const) {
     const spent = await store.ledger.netOutflowSince(bucket, since);
     const cap = config.spendCapLamportsPerHour[bucket];
     buckets.push({
@@ -44,7 +45,8 @@ export async function loadDashboard(store: Store, config: AppConfig, clock: Cloc
     });
   }
   const claims = await store.claims.totals();
-  const burns = await store.burns.totals();
+  const byReason = await store.ledger.sumByReason();
+  const hired = -(['hire_reserve', 'hire_settle', 'hire_release'] as const).reduce((a, r) => a + (byReason.get(`hire:${r}`) ?? 0n), 0n);
   const attempts = await store.attempts.latest(25);
   const txs = attempts.map((a) => ({
     at: a.createdAt.toISOString(),
@@ -79,9 +81,8 @@ export async function loadDashboard(store: Store, config: AppConfig, clock: Cloc
     buckets,
     claimed: formatSol(claims.claimed),
     claims: claims.count,
-    fundShareOwed: formatSol(await store.claims.pendingFundTransfer()),
-    burned: formatSol(burns.spent),
-    burns: burns.count,
+    hired: formatSol(hired),
+    waiting: formatSol(await store.ledger.balance('hire')),
     rats: await store.rats.countByStatus(),
     txs,
     errors,
@@ -117,7 +118,7 @@ button{padding:8px 14px;border-radius:4px;border:0;font-weight:700;cursor:pointe
 <h1>RAT RACE admin <span class="banner">${esc(d.mode)}${d.smoke ? ' + SMOKE' : ''}</span></h1>
 <div style="color:var(--mute)">Updated ${esc(d.generatedAt)} (refreshes every 15 s)</div>
 ${notice ? `<div class="notice">${esc(notice)}</div>` : ''}
-${d.workerDown ? '<div class="kill on">WORKER DOWN: no loop has run for over 3 minutes. Claims, hires and burns have stopped. Check the worker on Railway.</div>' : ''}
+${d.workerDown ? '<div class="kill on">WORKER DOWN: no loop has run for over 3 minutes. Claims and hires have stopped. Check the worker on Railway.</div>' : ''}
 ${d.workerDown === null ? '<div class="notice">The worker has not run yet.</div>' : ''}
 ${killBox}
 <form method="post" action="/kill"><input type="hidden" name="csrf" value="${esc(csrf)}"><input type="text" name="reason" placeholder="reason (optional)" maxlength="200"> <button class="stop" type="submit">KILL: stop everything</button></form>
@@ -125,8 +126,8 @@ ${killBox}
 <h2>Money</h2>
 <div class="grid">
 <div class="card">Claimed<b>${esc(d.claimed)} SOL</b>${d.claims} claims</div>
-<div class="card">Burned (spent)<b>${esc(d.burned)} SOL</b>${d.burns} burns</div>
-<div class="card">Fund share owed<b>${esc(d.fundShareOwed)} SOL</b>rides in the next claim</div>
+<div class="card">Spent on hires<b>${esc(d.hired)} SOL</b>every claimed SOL goes to hires</div>
+<div class="card">Waiting for hires<b>${esc(d.waiting)} SOL</b>under the hourly hire cap</div>
 <div class="card">Rats<b>${Object.values(d.rats).reduce((a, b) => a + b, 0)}</b>${esc(Object.entries(d.rats).map(([k, v]) => `${k} ${v}`).join(', '))}</div>
 </div>
 <h2>Ledger buckets and caps</h2>

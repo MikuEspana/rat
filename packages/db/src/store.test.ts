@@ -25,32 +25,42 @@ afterEach(async () => {
 });
 
 describe('ledger', () => {
-  it('is exact to the lamport and separated by bucket and mode', async () => {
+  it('is exact to the lamport and separated by mode', async () => {
     await live.ledger.append({ bucket: 'hire', deltaLamports: 642_000_001n, reason: 'claim_credit' });
-    await live.ledger.append({ bucket: 'burn', deltaLamports: 642_000_000n, reason: 'claim_credit' });
+    await live.ledger.append({ bucket: 'hire', deltaLamports: 642_000_000n, reason: 'claim_credit' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: -30_000_000n, reason: 'hire_reserve' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: 1_234n, reason: 'hire_settle' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: -5_000n, reason: 'claim_fee' });
     await paper.ledger.append({ bucket: 'hire', deltaLamports: 999_999_999_999n, reason: 'claim_credit' });
 
-    expect(await live.ledger.balance('hire')).toBe(642_000_001n - 30_000_000n + 1_234n - 5_000n);
-    expect(await live.ledger.balance('burn')).toBe(642_000_000n);
+    expect(await live.ledger.balance('hire')).toBe(642_000_001n + 642_000_000n - 30_000_000n + 1_234n - 5_000n);
     expect(await paper.ledger.balance('hire')).toBe(999_999_999_999n);
-    expect(await paper.ledger.balance('burn')).toBe(0n);
   });
 
-  it('computes net outflow per bucket in a rolling window', async () => {
+  it('computes the hire net outflow in a rolling window', async () => {
     await live.ledger.append({ bucket: 'hire', deltaLamports: 100_000_000_000n, reason: 'claim_credit' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: -30_000_000n, reason: 'hire_reserve' });
     clock.advanceSeconds(3600);
     await live.ledger.append({ bucket: 'hire', deltaLamports: -30_000_000n, reason: 'hire_reserve' });
     await live.ledger.append({ bucket: 'hire', deltaLamports: 30_000_000n, reason: 'hire_release' });
-    await live.ledger.append({ bucket: 'hire', deltaLamports: -30_000_000n, reason: 'hire_reserve' });
-    await live.ledger.append({ bucket: 'burn', deltaLamports: -2_000_000_000n, reason: 'burn_reserve' });
+    await live.ledger.append({ bucket: 'hire', deltaLamports: -2_000_000_000n, reason: 'hire_reserve' });
+    await live.ledger.append({ bucket: 'hire', deltaLamports: -5_000n, reason: 'claim_fee' });
     const since = new Date(clock.now().getTime() - 3_599_000);
-    expect(await live.ledger.netOutflowSince('hire', since)).toBe(30_000_000n);
-    expect(await live.ledger.netOutflowSince('burn', since)).toBe(2_000_000_000n);
-    expect(await live.ledger.lifetimeNetOutflow()).toBe(2_060_000_000n);
+    expect(await live.ledger.netOutflowSince('hire', since)).toBe(2_000_000_000n);
+    expect(await live.ledger.lifetimeNetOutflow()).toBe(2_030_005_000n);
+    expect(await paper.ledger.netOutflowSince('hire', since)).toBe(0n);
+  });
+
+  it('rows of the retired burn bucket (kept by migration 0002) never count as hire budget', async () => {
+    const { ledgerEntries } = await import('./schema');
+    await live.ledger.append({ bucket: 'hire', deltaLamports: 1_000_000_000n, reason: 'claim_credit' });
+    await handle.db.insert(ledgerEntries).values([
+      { mode: 'live', at: clock.now(), bucket: 'burn', deltaLamports: 500_000_000n, reason: 'claim_credit' },
+      { mode: 'live', at: clock.now(), bucket: 'burn', deltaLamports: -400_000_000n, reason: 'burn_reserve' },
+    ]);
+    expect(await live.ledger.balance('hire')).toBe(1_000_000_000n);
+    expect(await live.ledger.openReservations('hire')).toEqual([]);
+    expect(await live.ledger.netOutflowSince('hire', new Date(clock.now().getTime() - 3_600_000))).toBe(0n);
   });
 });
 
@@ -67,14 +77,14 @@ describe('keys', () => {
     expect((await live.keys.get('k2'))?.secretEnc).toBe('enc2');
   });
 
-  it('stores creator/fund keys and refuses silent overwrite', async () => {
+  it('stores the creator key and refuses silent overwrite', async () => {
     await live.keys.setRoleKey({ pubkey: 'creator1', secretEnc: 'e', keyVersion: 1, role: 'creator' });
     await expect(live.keys.setRoleKey({ pubkey: 'creator2', secretEnc: 'e', keyVersion: 1, role: 'creator' })).rejects.toThrow(
       /already stored/,
     );
     await live.keys.setRoleKey({ pubkey: 'creator2', secretEnc: 'e', keyVersion: 1, role: 'creator' }, { replace: true });
     expect((await live.keys.getRole('creator'))?.pubkey).toBe('creator2');
-    // markUnused never touches a creator or fund key
+    // markUnused never touches the creator key
     await live.keys.markUnused('creator2');
     expect((await live.keys.getRole('creator'))?.pubkey).toBe('creator2');
   });
@@ -140,16 +150,19 @@ describe('rats and stocks', () => {
   });
 });
 
-describe('claims, burns, events', () => {
-  it('tracks pending fund transfers from external claims', async () => {
-    await live.claims.insert({ source: 'bot', status: 'confirmed', claimableLamports: 100n, claimedLamports: 100n, toFundLamports: 50n, fundShareLamports: 50n, hireShareLamports: 45n, feeLamports: 5n });
-    await live.claims.insert({ source: 'external', status: 'confirmed', claimableLamports: 0n, claimedLamports: 40n, toFundLamports: 0n, fundShareLamports: 20n, hireShareLamports: 20n });
+describe('claims and events', () => {
+  it('claim totals: the whole claim is the hire share, only confirmed or simulated claims count', async () => {
+    await live.claims.insert({ source: 'bot', status: 'confirmed', claimableLamports: 100n, claimedLamports: 100n, hireShareLamports: 95n, feeLamports: 5n });
+    await live.claims.insert({ source: 'external', status: 'confirmed', claimableLamports: 0n, claimedLamports: 40n, hireShareLamports: 40n });
     await live.claims.insert({ source: 'bot', status: 'failed', claimableLamports: 999n });
-    expect(await live.claims.pendingFundTransfer()).toBe(20n);
     const t = await live.claims.totals();
     expect(t.claimed).toBe(140n);
+    expect(t.hireShare).toBe(135n);
+    expect(t.fee).toBe(5n);
+    expect(t.hireShare + t.fee).toBe(t.claimed);
     expect(t.count).toBe(2);
-    expect(await paper.claims.pendingFundTransfer()).toBe(0n);
+    expect(t.lastAt).toEqual(clock.now());
+    expect(await paper.claims.totals()).toEqual({ claimed: 0n, hireShare: 0n, fee: 0n, count: 0, lastAt: null });
   });
 
   it('events are ordered and paged per mode', async () => {
@@ -161,16 +174,6 @@ describe('claims, burns, events', () => {
     expect(rest.length).toBe(2);
     expect((await live.events.latest(1))[0]?.data).toEqual({ i: 4 });
     expect((await paper.events.latest(10)).length).toBe(1);
-  });
-
-  it('burn totals only count confirmed or simulated burns', async () => {
-    await live.burns.insert({ status: 'confirmed', reservedLamports: 10n, solSpentLamports: 9n, tokensBurnedRaw: 1000n, coinDecimals: 6 });
-    await live.burns.insert({ status: 'released', reservedLamports: 10n });
-    const t = await live.burns.totals();
-    expect(t.spent).toBe(9n);
-    expect(t.burnedRaw).toBe(1000n);
-    expect(t.count).toBe(1);
-    expect(t.decimals).toBe(6);
   });
 });
 

@@ -4,7 +4,6 @@ export interface NewsStats {
   stage: number;
   rats: number;
   frozen: number;
-  burned: string;
   fund: string;
   mcap: string;
   price: string;
@@ -23,7 +22,7 @@ const n = (v: number): string => v.toLocaleString('en-US');
 const BY_STAGE: Line[][] = [
   [
     (s) => `LOCAL GARAGE STARTUP HIRES ITS ${n(s.rats)}TH RAT, NEIGHBOURS "MILDLY CONCERNED"`,
-    () => 'FOUNDERS SAY THE FURNACE IS "A FEATURE"',
+    () => 'FOUNDERS COUNT THE LOOSE CHANGE IN THE VAULT TWICE A DAY',
     (s) => `${s.topStock} DESK OVERBOOKED: ${n(s.topRats)} RATS SHARE ONE COFFEE MACHINE`,
     () => 'GARAGE DOOR STAYS OPEN ALL NIGHT, CITY ISSUES FRIENDLY REMINDER',
   ],
@@ -37,7 +36,7 @@ const BY_STAGE: Line[][] = [
     (s) => `FULL FLOOR: ${n(s.rats)} RATS, ${n(s.frozen)} FROZEN BY "MARKET CONDITIONS"`,
     (s) => `${s.worstStock} DESKS SLUMP ${s.worstPct} AS MORALE PLAYS ALONG`,
     () => 'SERVER ROOM FIRE CONTAINED, POSTMORTEM BLAMES A TOASTER',
-    (s) => `FUND WORTH ${s.fund}. RATS WORTH "PRICELESS", SAYS BROCHURE`,
+    (s) => `PORTFOLIO WORTH ${s.fund}. RATS WORTH "PRICELESS", SAYS BROCHURE`,
   ],
   [
     () => 'CORPORATE FLOOR REACHED. MISSION STATEMENT NOW 40 PAGES',
@@ -47,7 +46,7 @@ const BY_STAGE: Line[][] = [
   ],
   [
     (s) => `MEGACORP SWALLOWS THREE CITY BLOCKS, RESIDENTS OFFERED ${s.topStock} STOCK`,
-    (s) => `FURNACE BURNS ${s.burned} RAT, AIR QUALITY OFFICIALLY "FINE"`,
+    (s) => `THE VAULT NOW HOLDS ${s.fund}. RATS ASKED TO STOP SWIMMING IN IT`,
     () => 'CITY RENAMES MAIN AVENUE "RAT RACE WAY" AFTER GENEROUS DONATION',
     (s) => `MARKET CAP ${s.mcap}. SMALL BUSINESSES "WELCOME TO APPLY" FOR DESKS`,
   ],
@@ -56,12 +55,12 @@ const BY_STAGE: Line[][] = [
     (s) => `${n(s.rats)} RATS. NONE MAY LEAVE. RETENTION AT AN ALL-TIME HIGH`,
     () => 'CITY COUNCIL NOW A WHOLLY OWNED SUBSIDIARY',
     (s) => `${n(s.frozen)} RATS FROZEN FOREVER. "PERFORMANCE REVIEW", SAYS HR`,
-    (s) => `THE FURNACE HAS EATEN ${s.burned} RAT AND IS STILL HUNGRY`,
+    (s) => `THE VAULT HAS SWALLOWED ${s.fund} AND IS STILL HUNGRY`,
   ],
 ];
 
 const ALWAYS: Line[] = [
-  (s) => `RAT ${s.price} . MCAP ${s.mcap} . FUND ${s.fund}`,
+  (s) => `RAT ${s.price} . MCAP ${s.mcap} . VAULT ${s.fund}`,
   (s) => `TOP DESK: ${s.topStock} WITH ${n(s.topRats)} RATS`,
 ];
 

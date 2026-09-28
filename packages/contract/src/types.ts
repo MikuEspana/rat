@@ -1,7 +1,6 @@
 import type { z } from 'zod';
 import type {
   BotModeSchema,
-  BurnEventSchema,
   ClaimEventSchema,
   EventSchema,
   EventsResponseSchema,
@@ -25,7 +24,6 @@ export type Portfolio = z.infer<typeof PortfolioSchema>;
 export type RatEvent = z.infer<typeof EventSchema>;
 export type ClaimEvent = z.infer<typeof ClaimEventSchema>;
 export type HireEvent = z.infer<typeof HireEventSchema>;
-export type BurnEvent = z.infer<typeof BurnEventSchema>;
 export type FreezeEvent = z.infer<typeof FreezeEventSchema>;
 export type UnfreezeEvent = z.infer<typeof UnfreezeEventSchema>;
 export type StateResponse = z.infer<typeof StateResponseSchema>;

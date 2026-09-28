@@ -1,12 +1,11 @@
-// Spend guard: the only way to reserve money for a hire or a burn.
+// Spend guard: the only way to reserve money for a hire.
 //
 // A spend is authorized only if ALL of these hold:
 //   1. the kill switch is off
-//   2. the ledger bucket (money the bot actually claimed) covers it; the wallet's own balance never counts.
-//      For burns, a fund share not yet forwarded to the fund wallet does not count either.
-//   3. the rolling 60-minute net outflow of that bucket stays under its cap (30 SOL/h per bucket by default)
+//   2. the ledger bucket (money the bot actually claimed) covers it; the wallet's own balance never counts
+//   3. the rolling 60-minute net outflow stays under the hourly cap (60 SOL/h by default)
 //   4. in smoke mode, the lifetime outflow stays under the smoke cap (0.1 SOL)
-//   5. (live) the wallet still holds the amount + its reserve (+ for the creator: the fund's pending share)
+//   5. (live) the paying wallet (the creator) still holds the amount + its reserve
 // Then a negative ledger entry (the reservation) is written before any transaction is built.
 // authorize() calls are serialized (one at a time per guard), so two callers can never both pass the same check.
 // Across processes, the worker lease fence in the GuardedSender makes sure only one worker sends.
@@ -16,6 +15,7 @@ import {
   type ChainReader,
   type Clock,
   type KillSwitch,
+  type LedgerReason,
   type LedgerStore,
   type Pubkey,
   formatSol,
@@ -34,7 +34,7 @@ export type AuthorizeResult = { ok: true; reservation: Reservation } | { ok: fal
 export interface SpendGuardConfig {
   capPerHour: Record<Bucket, bigint>;
   alertPct: number;
-  /** wallet that pays each bucket: hire = creator, burn = fund */
+  /** wallet that pays each bucket: hire = creator */
   wallets: Record<Bucket, Pubkey | undefined>;
   reserves: Record<Bucket, bigint>;
   smokeMode: boolean;
@@ -49,8 +49,6 @@ export interface SpendGuardDeps {
   alerts: Alerts;
   clock: Clock;
   chain?: ChainReader;
-  /** fund share still sitting in the creator wallet (must not be spent on hires) */
-  pendingFundTransfer?: () => Promise<bigint>;
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -77,9 +75,7 @@ export class SpendGuard {
     const kill = await killSwitch.status();
     if (kill.on) return { ok: false, reason: 'kill_switch', detail: kill.reason ?? 'kill switch on' };
 
-    // burn: a fund share that is booked but not yet forwarded to the fund wallet cannot be burned yet
-    const pending = this.deps.pendingFundTransfer ? await this.deps.pendingFundTransfer() : 0n;
-    const balance = (await ledger.balance(bucket)) - (bucket === 'burn' ? pending : 0n);
+    const balance = await ledger.balance(bucket);
     if (balance < lamports) {
       return { ok: false, reason: 'insufficient_budget', detail: `${bucket} bucket has ${formatSol(balance)} SOL available, needs ${formatSol(lamports)}` };
     }
@@ -103,10 +99,9 @@ export class SpendGuard {
       const wallet = this.cfg.wallets[bucket];
       if (!wallet || !this.deps.chain) return { ok: false, reason: 'wallet_unknown', detail: `no wallet configured for ${bucket}` };
       const sol = (await this.deps.chain.getSolBalances([wallet])).get(wallet) ?? 0n;
-      const owedOut = bucket === 'hire' ? pending : 0n;
-      const needed = lamports + this.cfg.reserves[bucket] + owedOut;
+      const needed = lamports + this.cfg.reserves[bucket];
       if (sol < needed) {
-        await alerts.send('warn', `wallet_low_${bucket}`, `${bucket} wallet ${wallet} holds ${formatSol(sol)} SOL, needs ${formatSol(needed)} (amount + reserve${owedOut > 0n ? ' + fund share owed' : ''}).`);
+        await alerts.send('warn', `wallet_low_${bucket}`, `${bucket} wallet ${wallet} holds ${formatSol(sol)} SOL, needs ${formatSol(needed)} (amount + reserve).`);
         return { ok: false, reason: 'wallet_low', detail: `wallet has ${formatSol(sol)} SOL, needs ${formatSol(needed)}` };
       }
     }
@@ -114,7 +109,7 @@ export class SpendGuard {
     const ledgerId = await ledger.append({
       bucket,
       deltaLamports: -lamports,
-      reason: bucket === 'hire' ? 'hire_reserve' : 'burn_reserve',
+      reason: `${bucket}_reserve` satisfies LedgerReason,
       refType: req.refType,
       refId: req.refId,
     });
@@ -144,7 +139,7 @@ export class SpendGuard {
     const closed = await this.deps.ledger.close({
       bucket: r.bucket,
       deltaLamports: diff,
-      reason: r.bucket === 'hire' ? 'hire_settle' : 'burn_settle',
+      reason: `${r.bucket}_settle` satisfies LedgerReason,
       refType: r.refType,
       refId: r.refId,
       note: `actual ${actualLamports}`,
@@ -166,7 +161,7 @@ export class SpendGuard {
     await this.deps.ledger.close({
       bucket: r.bucket,
       deltaLamports: r.lamports,
-      reason: r.bucket === 'hire' ? 'hire_release' : 'burn_release',
+      reason: `${r.bucket}_release` satisfies LedgerReason,
       refType: r.refType,
       refId: r.refId,
       note,
@@ -175,7 +170,7 @@ export class SpendGuard {
   }
 
   /**
-   * Releases reservations that no rat or burn row refers to: the worker stopped after reserving but before
+   * Releases reservations that no rat row refers to: the worker stopped after reserving but before
    * recording the reservation, so nothing was ever sent with it. `inUse` = reservation ids rows still refer to.
    * Call it only at the start of a step, before that step reserves anything.
    */

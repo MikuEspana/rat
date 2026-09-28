@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Growth } from './growth';
 import { Paths } from './path';
-import { buildMaster, STAGES, stageOf } from './plan';
+import { buildMaster, queueCells, STAGES, stageOf } from './plan';
 import { buildCity, carSprite, CITY_KEY } from './city';
 import { LANDMARKS, towerFloors, towerSpots, unlocked } from './landmarks';
 import { idx, type FloorLayout } from './types';
@@ -247,5 +247,66 @@ describe('traffic', () => {
       expect(new Set(c.movers.map((m) => m.dir))).toEqual(new Set([1, -1]));
       for (const m of c.movers) expect(m.kind.endsWith('_rear')).toBe(m.dir < 0);
     }
+  });
+});
+
+describe('the job-fair line outside', () => {
+  const plan = buildMaster();
+
+  it('starts by the lobby door, runs around the block on the street, one rat per cell, walkable and reachable', () => {
+    for (let stage = 0; stage < STAGES.length; stage++) {
+      const g = new Growth(plan);
+      for (let id = 1; g.stage < stage; id++) g.add(id, stockOf(id));
+      const blocked = g.blocked();
+      const line = queueCells(plan, stage, blocked);
+      const ring = plan.rings[stage]!;
+      const door = ring.entrance[1]!;
+      // long enough for thousands of rats on the last stage
+      expect(line.length).toBeGreaterThan(stage === STAGES.length - 1 ? 4000 : 300);
+      // the head is right by the door
+      expect(Math.abs(line[0]!.i - door.i) + Math.abs(line[0]!.j - door.j)).toBeLessThanOrEqual(6);
+      const seen = reach(plan, blocked, ring.spawn);
+      const keys = new Set<number>();
+      for (const c of line) {
+        const k = idx(plan.W, c.i, c.j);
+        expect(keys.has(k)).toBe(false);
+        keys.add(k);
+        expect(blocked[k]).toBe(0);
+        expect(seen[k]).toBe(1);
+        // outside the building, on the street
+        expect(c.i < ring.i0 || c.i > ring.i1 || c.j < ring.j0 || c.j > ring.j1).toBe(true);
+        // the way from the subway stairs to the door stays clear
+        expect(Math.abs(c.i - door.i) <= 1 && Math.abs(c.j - door.j) <= 4 && c.i === door.i).toBe(false);
+      }
+      expect(keys.has(idx(plan.W, ring.spawn.i, ring.spawn.j))).toBe(false);
+      // a line, not a crowd: each place is next to the one before it
+      let gaps = 0;
+      for (let k = 1; k < line.length; k++) if (Math.abs(line[k]!.i - line[k - 1]!.i) + Math.abs(line[k]!.j - line[k - 1]!.j) > 2) gaps++;
+      expect(gaps).toBeLessThan(line.length / 50);
+    }
+  });
+
+  it('is deterministic', () => {
+    expect(queueCells(plan, 5)).toEqual(queueCells(plan, 5));
+  });
+
+  it('rats without a desk wait, and get one when the next ring opens; past the last ring the line only grows', () => {
+    const g = new Growth(plan);
+    // a lopsided launch (a few stocks get most hires): their rooms fill up before the next stage opens
+    let seed = 7;
+    const pick = (): string => SYMBOLS[Math.min(9, Math.floor(-Math.log(1 - (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648) * 3))]!;
+    let peak = 0;
+    for (let id = 1; id <= 499; id++) {
+      g.add(id, pick());
+      peak = Math.max(peak, g.waitingCount);
+    }
+    expect(peak).toBeGreaterThan(0);
+    const before = g.waitingCount;
+    g.add(500, pick()); // the corporate floor: ring 3 opens and new desk rooms go up for them
+    expect(g.waitingCount).toBeLessThan(before);
+    expect(g.waitingCount).toBe(0);
+    const full = grow(plan, 7000);
+    expect(full.waitingCount).toBeGreaterThan(500);
+    expect(full.seatOfRat.size + full.waitingCount).toBe(7000);
   });
 });

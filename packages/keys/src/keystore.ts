@@ -8,7 +8,6 @@ import { type MasterKeyRing, decryptSecret, encryptSecret } from './vault';
 export interface DbKeyStoreOptions {
   /** If set, the stored creator key must match this public key. */
   expectedCreator?: string;
-  expectedFund?: string;
 }
 
 export class DbKeyStore implements KeyStore {
@@ -31,7 +30,7 @@ export class DbKeyStore implements KeyStore {
     return kp;
   }
 
-  private async role(role: 'creator' | 'fund', expected?: string): Promise<Keypair> {
+  private async role(role: 'creator', expected?: string): Promise<Keypair> {
     const rec = await this.pool.getRole(role);
     if (!rec) throw new Error(`no ${role} key imported (run: rat keys import --role ${role})`);
     if (expected && rec.pubkey !== expected) {
@@ -42,10 +41,6 @@ export class DbKeyStore implements KeyStore {
 
   creator(): Promise<Keypair> {
     return this.role('creator', this.opts.expectedCreator);
-  }
-
-  fund(): Promise<Keypair> {
-    return this.role('fund', this.opts.expectedFund);
   }
 
   async newRatKey(): Promise<Pubkey> {
@@ -68,8 +63,8 @@ export class DbKeyStore implements KeyStore {
   }
 }
 
-/** Encrypts an imported creator or fund key. */
-export function encryptRoleKey(kp: Keypair, ring: MasterKeyRing, role: 'creator' | 'fund') {
+/** Encrypts the imported creator key. */
+export function encryptRoleKey(kp: Keypair, ring: MasterKeyRing, role: 'creator') {
   const pubkey = kp.publicKey.toBase58();
   return { pubkey, secretEnc: encryptSecret(kp.secretKey, ring.current(), pubkey), keyVersion: ring.currentVersion, role };
 }

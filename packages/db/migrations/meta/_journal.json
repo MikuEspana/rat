@@ -15,6 +15,13 @@
       "when": 1790530534931,
       "tag": "0001_reservation_close_once",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790585194841,
+      "tag": "0002_remove_buy_and_burn",
+      "breakpoints": true
     }
   ]
 }
