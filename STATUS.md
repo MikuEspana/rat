@@ -1,6 +1,6 @@
 # RAT RACE: Status
 
-Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://mikuespana.github.io/rat/). **Economics (owner decision after legal advice): every fee hires rats and the fund holds their stocks. No burns (the code stays, off by default: `HIRE_SPLIT_BPS=10000`), no dividends.**
+Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://wallstreetrats.world). **Economics (owner decision after legal advice): every fee hires rats and the fund holds their stocks. No burns (the code stays, off by default: `HIRE_SPLIT_BPS=10000`), no dividends.**
 
 **Hard limits kept:**
 - DRY RUN is on by default everywhere.
