@@ -124,7 +124,9 @@ const envSchema = z.object({
   JUPITER_BASE_URL: z.string().trim().url().default('https://api.jup.ag'),
   JUPITER_MAX_RPM: intStr(55, 1, 100_000),
 
-  HIRE_SPLIT_BPS: intStr(5000, 0, 10_000),
+  // Share of every claim that pays for rats. 10000 = all of it: the fund only holds stocks, nothing is burned.
+  // Lower it (for example 5000) to send the rest to the buy-and-burn fund again.
+  HIRE_SPLIT_BPS: intStr(10_000, 0, 10_000),
   SALARY_SOL: solStr('0.03'),
   HIRE_OVERHEAD_EST_SOL: solStr('0.0025'),
   RAT_BUFFER_SOL: solStr('0.003'),

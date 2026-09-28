@@ -1,6 +1,6 @@
 # RAT RACE: Status
 
-Updated 2026-09-27 at the end of the autonomous run (queue Q1 to Q12, log in `LOG.md`). Every item was its own branch and PR, CI green (guards, typecheck, tests, the long chaos + simulation job, Docker build), merged into the integration branch `claude/rat-race-planning-1qouxa`. The integration PR into `main` ([MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)) is still open for you: `main` was never touched.
+Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log in `LOG.md`, [MikuEspana/rat#27](https://github.com/MikuEspana/rat/pull/27)), the pixel site and the in-browser launch simulator (live demo: https://mikuespana.github.io/rat/). **Economics (owner decision after legal advice): every fee hires rats and the fund holds their stocks. No burns (the code stays, off by default: `HIRE_SPLIT_BPS=10000`), no dividends.**
 
 **Hard limits kept:**
 - DRY RUN is on by default everywhere.
@@ -58,7 +58,7 @@ Updated 2026-09-27 at the end of the autonomous run (queue Q1 to Q12, log in `LO
 | Safety | `packages/safety` | spend guard (ledger only, 30 SOL/h per bucket, exactly-once settle), kill switch, guarded sender (effects check before every live send, lease fence), Telegram alerts (secrets redacted), xStocks mint verifier |
 | Operator CLI | `apps/cli` | status, **preflight** (PASS / WARN / FAIL launch checklist), kill/resume, key import/rotate/**backup/restore**, ledger, dry-run reset, stocks sync, alert test, emergency sweep |
 | Admin page | `apps/admin` | private page: money, caps used, last transactions, errors, worker loops, KILL / Resume; worker-down watchdog (Telegram) |
-| The bot | `apps/worker` | prices, mint checks, claim + wallet watch + hire, buy + burn (random 8 to 12 min rounds, chunks of at most 1 SOL, 1.5% slippage, optional Jito), reconcile; tick scheduler; single-worker lease |
+| The bot | `apps/worker` | prices, mint checks, claim + wallet watch + hire (every fee hires rats by default), buy + burn (off by default; random 8 to 12 min rounds, chunks of at most 1 SOL, 1.5% slippage, optional Jito), reconcile; tick scheduler; single-worker lease |
 | State API | `apps/api` | `/api/state`, `/api/rats`, `/api/events`, `/health` exactly per `CONTRACT.md` |
 | Live mock API | `apps/api/src/mock`, `pnpm mock:api` | the same 4 endpoints with live-changing mock data (hires, price drift, tier changes, claims, burns every minute, a stock pausing and resuming) for building the site |
 | Tests | `tests/` | e2e + property tests, chaos suite (`tests/chaos`), 3-hour launch simulation (`tests/sim`, `SIMULATION.md`), smoke script (not run), docs checks |
@@ -75,7 +75,7 @@ Updated 2026-09-27 at the end of the autonomous run (queue Q1 to Q12, log in `LO
 | 4 | Direct pump.fun buy fallback | `PumpDirectBuyBuilder` (official SDK), used when Jupiter has no route. |
 | 5 | Coin token program at runtime | Read from the mint account owner. |
 | 6 | Scaled UI vs price | Script `check:scaled-ui` ready. Current valuation: scaled amount x price (display only). |
-| 7 | External claims | Our vault claimed by anyone: split 50/50 automatically (fund share rides in the next claim tx). Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
+| 7 | External claims | Our vault claimed by anyone: booked with the same split as our own claims (all to hires by default; any fund share rides in the next claim tx). Any other SOL: alert, never spent. A tx signed by our wallets that the bot did not send: kill switch, except before `WATCH_FROM_SLOT` (the coin launch) or listed in `KNOWN_OWNER_TX_SIGS`. |
 | 8 | Tier names | intern, analyst, associate, vp, partner. |
 | 10 | Jupiter free tier, limit in config | `JUPITER_MAX_RPM=55`. |
 | 11 | Emergency sweep | `rat sweep`, CLI only, exact typed phrase, never called by the bot. |
@@ -206,8 +206,9 @@ Issues #1 to #12 close when the final PR merges into `main`.
 | autonomous run (Q2 to Q4) | 18 findings on the money paths (RT-01 to RT-18: 4 High, 8 Medium, 6 Low) | all fixed with tests: `SECURITY-REVIEW.md` |
 | Q5 simulation | unpaced settings pause hiring 30 min and burns 39 min at launch | `MAX_HIRES_PER_LOOP=10`, `BURN_ROUND_MAX_SOL=5` made the defaults ([#46](https://github.com/MikuEspana/rat/pull/46)) |
 | Q12 | a dead worker is silent; rat keys exist only in the database; secrets could ride in error texts | watchdog, key backup/restore, preflight key check, redaction |
+| all fees to rats | `HIRE_SPLIT_BPS` was applied as the FUND's share in the claim step (the name, the docs and the simulator all mean the hires' share). At 50/50 the two are the same, so no test saw it; setting 100% for hires would have sent every fee to burns | `fundShareOf()` in `@rat/core` (the complement of the split) in all four places, with tests; default now 10000: every fee hires rats, burns off |
 
 ## 11. Important while live
 
 - Never send a transaction from the creator or fund wallet yourself while the bot is live: it trips the kill switch (a transaction signed by a bot wallet that the bot did not send looks like a key leak). Sending SOL to them is fine. If you must: `rat kill`, send it, add its signature to `KNOWN_OWNER_TX_SIGS`, redeploy, `rat resume`.
-- The fund's buy + burn is the only way profits leave. There is no code path that pays holders.
+- Profits never leave to holders: every fee hires rats and the fund holds (burns are off by default). There is no code path that pays holders.

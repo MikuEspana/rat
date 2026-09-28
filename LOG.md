@@ -18,6 +18,7 @@ Hard limits kept throughout: DRY RUN on, no mainnet transaction, no Jito call, t
 | Q8 | Private admin page | [#41](https://github.com/MikuEspana/rat/pull/41) | merged |
 | Q9 | Site shell (Vite + React + Three.js) | none | **skipped by Miguel**: built in a separate session in `apps/pixel-site` (not touched here) |
 | Q10 | Site deploy docs (Vercel) | none | **skipped by Miguel** (part of Tier 3) |
+| Decision | All fees to rats, no burns, no dividends (after legal advice) | this PR | split bug fixed, default `HIRE_SPLIT_BPS=10000` |
 | Q11 | Cleanup | [#42](https://github.com/MikuEspana/rat/pull/42) | merged |
 | Q12 | Extra launch-risk reduction | [#43](https://github.com/MikuEspana/rat/pull/43) | merged, 4 items |
 | Final | STATUS.md | [#44](https://github.com/MikuEspana/rat/pull/44) | merged, queue empty |
@@ -203,3 +204,13 @@ After reading `SIMULATION.md`, Miguel chose to make the pacing settings the defa
 - `LAUNCH-DAY.md`, `STATUS.md`, `SECURITY-REVIEW.md` updated.
 
 **Tests**: main suite 249 passed, chaos suite 16 passed, 3-hour simulation passed (same numbers: 3,042 rats, longest hiring pause 1 min, longest burn gap 12 min, ledger = chain).
+
+## Miguel's decision: every fee hires rats (2026-09-28)
+
+After legal advice: hold, never burn, never pay dividends; keep buy and burn as an option for later.
+
+- **Bug found and fixed.** `HIRE_SPLIT_BPS` was applied as the FUND's share in the claim step (4 places), while its name, `.env.example`, the docs and the simulator all mean the hires' share. At 50/50 both readings give the same numbers, so no test could see it. Setting it to 100% "for hires" would have sent every fee to burns. Now `fundShareOf()` in `@rat/core` (the complement of the split, rounding as before) is used everywhere, with unit tests.
+- **Default `HIRE_SPLIT_BPS=10000`.** Every claimed lamport hires rats; nothing is forwarded to the fund wallet; the burn step finds an empty budget and skips quietly. Buy and burn comes back by lowering the split (for example 5000) and redeploying.
+- **Tests.** Test worlds (`createSimWorld`) keep a 50/50 split so every burn test (chaos, red team, property, launch hour) keeps covering that path. New `tests/e2e/launch-hour.test.ts` D runs the production default live on SimChain: all 12 SOL claimed go to hires, 405 rats, the fund wallet untouched, 0 burns, coin supply unchanged, every claim event shows 0 to the fund.
+- **Site and simulator.** The HUD shows **Fund value** (what all the rats' stocks are worth, top positions under it) instead of Total burned; claim lines read "all of it hires rats"; the simulator runs the new split (Normal about 4,900 rats and a $23K fund; Mega ends at 5 hours with about 4,900 rats and 45 SOL still waiting under the hourly cap).
+- **Limit found.** The site's building is drawn for about 5,200 rats (`PLAN_RATS`). With every fee hiring, a big launch passes that after about 5 hours at the cap; rats beyond it stand in HQ. Follow-up: a bigger final ring or a stage after the evil empire.

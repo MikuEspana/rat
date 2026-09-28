@@ -46,6 +46,14 @@ export function applyBps(amount: bigint, bps: number): bigint {
   return (amount * BigInt(bps)) / 10_000n;
 }
 
+/**
+ * The buy-and-burn fund's share of a claim: whatever HIRE_SPLIT_BPS does not send to hires, rounded down (the
+ * rounding lamport stays with hires). 10000 (the default) = 0: every lamport pays for rats.
+ */
+export function fundShareOf(claimed: bigint, hireSplitBps: number): bigint {
+  return applyBps(claimed, 10_000 - hireSplitBps);
+}
+
 export function minBig(...values: bigint[]): bigint {
   if (values.length === 0) throw new Error('minBig needs at least one value');
   return values.reduce((a, b) => (b < a ? b : a));

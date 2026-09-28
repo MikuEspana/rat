@@ -1,5 +1,5 @@
 // Launch simulator controls: the SIMULATION banner, the "Simulate launch" start screen and the control panel
-// (start / pause / reset, speed, scenario, and a readout of sim time, market cap, rats, stage and burns).
+// (start / pause / reset, speed, scenario, and a readout of sim time, market cap, rats, stage and fund value).
 // It also drives the simulator's clock. Plain DOM, textContent only.
 import { compact, usd } from '../ui/format';
 import type { Ui } from '../ui/ui';
@@ -116,7 +116,7 @@ export class SimPanel {
     const speedLabel = el('div', 'sim-label', 'Speed');
     box.append(
       el('div', 'sim-kicker', 'RAT RACE LAUNCH SIMULATOR'),
-      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, rats get hired, the company grows, burns fire.'),
+      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a rat that buys and holds a stock, and the fund and the company grow.'),
       el('div', 'sim-label', 'Scenario'),
       pick,
       speedLabel,
@@ -193,7 +193,8 @@ export class SimPanel {
       // after the site's next event polls, so the closing line lands below the launch's last events
       this.announcedEnd = true;
       const s = sim.stats();
-      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, ${s.burnSpentSol.toFixed(1)} SOL burned. Reset to run it again.` }]);
+      const waiting = s.hireWaitingSol >= 1 ? ` ${s.hireWaitingSol.toFixed(1)} SOL still waiting under the hourly cap.` : '';
+      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, fund worth ${usd(s.fundValueUsd)}.${waiting} Reset to run it again.` }]);
     }
     this.render();
   }
@@ -210,7 +211,7 @@ export class SimPanel {
       ['Market cap', s.mcap === null ? 'pre-launch' : usd(s.mcap)],
       ['Rats', s.rats.toLocaleString('en-US')],
       ['Stage', this.d.stage()],
-      ['Burned', `${compact(s.burnedTokens)} RAT (${s.burnSpentSol.toFixed(2)} SOL)`],
+      s.burnCount > 0 ? ['Burned', `${compact(s.burnedTokens)} RAT (${s.burnSpentSol.toFixed(2)} SOL)`] : ['Fund value', usd(s.fundValueUsd)],
       ['Fees', `${s.feesSol.toFixed(2)} SOL`],
     ];
     this.readout.replaceChildren(

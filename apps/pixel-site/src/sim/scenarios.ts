@@ -40,7 +40,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   mega: {
     id: 'mega',
     label: 'Mega',
-    blurb: 'Runs to about $10M. Enough rats for the evil empire.',
+    blurb: 'Runs to about $10M in 4 hours. Hiring maxes out at the hourly cap.',
     curve: [
       [0, 6_000],
       [4, 30_000],
@@ -55,7 +55,8 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
       [360, 7_000_000],
       [480, 6_000_000],
     ],
-    minutes: 480,
+    // ends while money still waits under the hourly cap: about 5,000 rats, what the building is drawn for
+    minutes: 300,
     seed: 'mega-1',
   },
   rug: {

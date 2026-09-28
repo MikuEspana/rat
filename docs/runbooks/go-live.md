@@ -32,7 +32,7 @@ Order matters: the coin launch is a creator-wallet transaction the bot did not s
 ## T-0: start live (only after the steps above)
 - [ ] With the worker's live settings (`DRY_RUN=false`, `LIVE_CONFIRM`, `WATCH_FROM_SLOT`, ...), `rat preflight --live` says **READY**. Any FAIL: stop and fix it first.
 - [ ] Set `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS` on the worker, redeploy (the API only needs `DRY_RUN=false` to show live rows). This is the worker's first live start. Its preflight refuses to start live if 0 stocks are approved, if no approved stock passes the mint check, or if `WATCH_FROM_SLOT` is ahead of the chain (it would hide a real leak); the logs and a Telegram alert say exactly why.
-- [ ] Watch on Solscan: the first claim (fund share transferred in the same tx), the first rats (each a fresh wallet holding its stock), the first burn round within 8 to 12 minutes (one transaction per 1 SOL chunk, a few seconds apart).
+- [ ] Watch on Solscan: the first claim (with the default split nothing goes to the fund wallet), the first rats (each a fresh wallet holding its stock). No burns unless `HIRE_SPLIT_BPS` was lowered.
 
 ## T+1 hour
 - [ ] `rat status`: buckets, spent in the last hour vs caps, txs, heartbeats.

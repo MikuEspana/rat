@@ -57,7 +57,8 @@ describe('D. random transaction failures (drop, fail, land-but-timeout, reject)'
     expect(claims.claimed).toBe(20n * SOL);
     const failedRats = await w.store.rats.listByStatus(['failed']);
     console.log(`[D] ${injected} random failures: ${rats.length} rats active, ${failedRats.length} gave up, 0 double funded, all 20 SOL claimed once, ledger exact`);
-  });
+    // about 35 s alone, over 60 s (the default) when the whole suite shares a slow machine
+  }, 180_000);
 });
 
 describe('E. kill switch and stock pause during a live run', () => {

@@ -1,10 +1,10 @@
 // Claim (every ~35s). One tx signed by the creator: pump.fun claim(s) + WSOL unwrap + transfer of the fund's
-// share (50%) to the fund wallet. The amount claimed is measured from what left OUR vaults in that tx, so the
+// share to the fund wallet (the part HIRE_SPLIT_BPS does not send to hires; none by default, so no transfer). The amount claimed is measured from what left OUR vaults in that tx, so the
 // math only uses what was actually claimed (fee-agnostic).
 //
 // DRY RUN: claims are paper. The paper amount is the growth of the real claimable since the last paper claim
 // (so nothing is counted twice) plus DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR for rehearsals.
-import { SETTINGS, applyBps, formatSol, lamportsToSol, solDelta } from '@rat/core';
+import { SETTINGS, formatSol, fundShareOf, lamportsToSol, solDelta } from '@rat/core';
 import type { ClaimRow } from '@rat/db';
 import type { PumpClaimable } from '@rat/pump';
 import { SystemProgram, PublicKey } from '@solana/web3.js';
@@ -21,7 +21,7 @@ export async function creditClaim(
   d: WorkerDeps,
   args: { claimed: bigint; fee: bigint; toFund: bigint; source: 'bot' | 'external'; sig: string | null; claimable?: bigint; claimId?: number },
 ): Promise<void> {
-  const fundShare = applyBps(args.claimed, d.config.hireSplitBps);
+  const fundShare = fundShareOf(args.claimed, d.config.hireSplitBps);
   const hireShare = args.claimed - fundShare;
   const row = {
     status: d.store.mode === 'paper' ? 'simulated' : 'confirmed',
@@ -114,7 +114,7 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
     return { status: 'skipped', claimedLamports: 0n, reason: 'nothing to claim' };
   }
   const readable = worthClaiming ? claimable : { ...claimable, bondingLamports: 0n, ammLamports: 0n, totalLamports: 0n };
-  const toFund = applyBps(readable.totalLamports, d.config.hireSplitBps) + owed;
+  const toFund = fundShareOf(readable.totalLamports, d.config.hireSplitBps) + owed;
   const creatorKp = await d.keys.creator();
   const ixs = d.pump.buildClaimInstructions({ creator: d.creator, claimable: readable });
   if (toFund > 0n) {
@@ -191,7 +191,7 @@ async function runPaperClaim(d: WorkerDeps, s: WorkerState): Promise<ClaimResult
   if (real > 0n) {
     const creatorKp = await d.keys.creator();
     const ixs = d.pump.buildClaimInstructions({ creator: d.creator, claimable });
-    const toFund = applyBps(claimable.totalLamports, d.config.hireSplitBps);
+    const toFund = fundShareOf(claimable.totalLamports, d.config.hireSplitBps);
     if (toFund > 0n) ixs.push(SystemProgram.transfer({ fromPubkey: creatorKp.publicKey, toPubkey: new PublicKey(d.fund), lamports: toFund }));
     const r = await d.sender.execute({
       request: { kind: 'claim', label: 'paper claim', feePayer: creatorKp, signers: [], instructions: ixs, computeUnitLimit: d.config.computeUnitLimitClaim },
@@ -204,7 +204,7 @@ async function runPaperClaim(d: WorkerDeps, s: WorkerState): Promise<ClaimResult
   }
   await d.store.settings.set(SETTINGS.paperClaimWatermark, claimable.totalLamports.toString());
   s.paperFakeAccrued = 0n;
-  const fundShare = applyBps(claimed, d.config.hireSplitBps);
+  const fundShare = fundShareOf(claimed, d.config.hireSplitBps);
   await creditClaim(d, { claimed, fee: 0n, toFund: fundShare, source: 'bot', sig, claimable: claimed });
   return { status: 'paper', claimedLamports: claimed };
 }
