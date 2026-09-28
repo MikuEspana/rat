@@ -72,6 +72,7 @@ export function describe(e: RatEvent): { tag: string; text: string } {
     case 'burn':
       return { tag: 'BURN', text: `${sol(e.data.solSpent)} bought ${tokens(e.data.tokensBurned)} RAT and burned it` };
     case 'claim':
+      if (e.data.toFundSol === 0) return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees, all of it hires rats` };
       return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees: ${sol(e.data.toHiresSol)} to hires, ${sol(e.data.toFundSol)} to the fund` };
     case 'freeze':
       return {

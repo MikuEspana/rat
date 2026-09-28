@@ -189,3 +189,39 @@ async function boughtTotal(world: SimWorld): Promise<bigint> {
   const burns = await world.store.burns.totals();
   return burns.burnedRaw + world.chain.tokenBalance(world.fund.publicKey.toBase58(), world.coinMint, TOKEN_2022_PROGRAM);
 }
+
+describe('D. LIVE on SimChain with the production default: every fee hires rats', () => {
+  it('HIRE_SPLIT_BPS=10000: nothing reaches the fund wallet, nothing is burned, every claimed lamport is for hires', async () => {
+    w = await createSimWorld({ dryRun: false, env: { HIRE_SPLIT_BPS: '10000' } });
+    expect(w.deps.config.hireSplitBps).toBe(10_000);
+    const creator = w.creator.publicKey.toBase58();
+    const fund = w.fund.publicKey.toBase58();
+    const creatorStart = w.chain.sol(creator);
+    const fundStart = w.chain.sol(fund);
+    const supplyStart = w.chain.mintState(w.coinMint)!.supply;
+    await runLaunch(w, { seconds: HOUR / 2, totalFees: 12n * SOL, graduateAtSec: 10 * 60 });
+    await drain(w, 15 * 60); // past at least one burn window: still no burn
+
+    const claims = await w.store.claims.totals();
+    const l = await ledgerTotals(w);
+    expect(claims.claimed).toBe(12n * SOL);
+    expect(l.hireCredited).toBe(12n * SOL);
+    expect(l.burnCredited).toBe(0n);
+    expect(await w.store.claims.pendingFundTransfer()).toBe(0n);
+    // the fund wallet is never touched and the coin supply never shrinks
+    expect(w.chain.sol(fund)).toBe(fundStart);
+    expect((await w.store.burns.totals()).count).toBe(0);
+    expect(w.chain.mintState(w.coinMint)!.supply).toBe(supplyStart);
+    // conservation: the creator changed by exactly the hire bucket; every rat holds its stock
+    expect(w.chain.sol(creator) - creatorStart).toBe(await w.store.ledger.balance('hire'));
+    const rats = await w.store.rats.listByStatus(['active', 'frozen']);
+    expect(rats.length).toBeGreaterThan(350); // 12 SOL / ~0.03 SOL per rat, twice the 50/50 count
+    for (const r of rats) expect(w.chain.tokenBalance(r.wallet, r.stockMint, TOKEN_2022_PROGRAM)).toBe(r.tokenAmountRaw);
+    // the feed says so: claims carry nothing for the fund
+    const events = await w.store.events.after(0, 10_000);
+    const claimEvents = events.filter((e) => e.type === 'claim');
+    expect(claimEvents.length).toBeGreaterThan(0);
+    for (const e of claimEvents) expect((e.data as { toFundSol: number }).toFundSol).toBe(0);
+    console.log(`[D] production default: 12 SOL claimed, ${rats.length} rats, fund wallet untouched, 0 burns`);
+  }, 180_000);
+});

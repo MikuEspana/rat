@@ -97,7 +97,7 @@ export class Ui {
     for (const [key, label] of [
       ['mcap', 'Market cap'],
       ['rats', 'Rats hired'],
-      ['burned', 'Total burned'],
+      ['fund', 'Fund value'],
       ['pnl', 'Portfolio PnL'],
     ] as const) {
       const box = el('div', 'stat');
@@ -141,7 +141,9 @@ export class Ui {
     };
     set('mcap', s.coin.marketCapUsd === null ? 'pre-launch' : usd(s.coin.marketCapUsd), s.coin.priceUsd === null ? '' : `$${s.coin.priceUsd} / RAT`);
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
-    set('burned', `${tokens(s.coin.burnedTokens)} RAT`, `${s.treasury.totalBurnSpentSol.toFixed(2)} SOL, ${s.treasury.burnCount} burns`);
+    const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
+    const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
+    set('fund', usd(s.portfolio.valueUsd), s.treasury.burnCount > 0 ? `${tokens(s.coin.burnedTokens)} RAT burned` : holdings || 'no positions yet');
     set('pnl', usd(s.portfolio.pnlUsd), pct(s.portfolio.pnlPct), signClass(s.portfolio.pnlUsd));
     const mode = s.bot.mode;
     this.banner.hidden = mode === 'live';

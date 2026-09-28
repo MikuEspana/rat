@@ -11,7 +11,7 @@ describe('loadConfig', () => {
     expect(cfg.liveConfirmed).toBe(false);
     expect(cfg.killSwitch).toBe(false);
     expect(cfg.salaryLamports).toBe(30_000_000n);
-    expect(cfg.hireSplitBps).toBe(5000);
+    expect(cfg.hireSplitBps).toBe(10_000);
     expect(cfg.spendCapLamportsPerHour).toEqual({ hire: 30_000_000_000n, burn: 30_000_000_000n });
     expect(cfg.spendAlertPct).toBe(50);
     expect(cfg.maxHiresPerLoop).toBe(10);

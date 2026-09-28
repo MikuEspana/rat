@@ -129,6 +129,9 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     CREATOR_PUBKEY: creator.publicKey.toBase58(),
     FUND_PUBKEY: fund.publicKey.toBase58(),
     KEY_ENCRYPTION_KEY: masterKey,
+    // Test worlds run a 50/50 split so the buy-and-burn path (off in production, kept for a possible buyback)
+    // stays covered by every test. Tests of the production default (every fee to hires) pass HIRE_SPLIT_BPS=10000.
+    HIRE_SPLIT_BPS: '5000',
     ...opts.env,
   });
 

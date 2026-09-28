@@ -14,7 +14,7 @@ Loop (tick-based scheduler, loops never overlap, single worker via a lease lock)
 
 Hire state machine: attempt recorded before sending; never retried while it can still land; before a retry the rat wallet is read on-chain; reservations are settled with the real cost or released. `HIRE_MODE=two_step` funds first, then the rat buys.
 
-Wallet watch (owner decision #7): an external pump.fun claim of OUR vault is credited 50/50 (fund share rides in the next claim tx); any other inflow is alerted and left unspent; a tx signed by our creator or fund that the bot did not send trips the kill switch.
+Wallet watch (owner decision #7): an external pump.fun claim of OUR vault is credited like our own (any fund share rides in the next claim tx); any other inflow is alerted and left unspent; a tx signed by our creator or fund that the bot did not send trips the kill switch.
 
 DRY RUN: paper claims (growth of the real claimable since the last paper claim, plus `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR` for rehearsals), paper hires and burns with real quotes; every tx is simulated, nothing is sent. Paper rows are separate from live rows (`rat dry-run-reset --yes`).
 

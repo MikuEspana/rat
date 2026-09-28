@@ -61,7 +61,7 @@ for (const { full, rel } of files) {
     failures.push(`${rel}: @rat/contract must stay browser safe (no Node built-in imports)`);
   }
   if (/^(packages|apps)\/[^/]+\/src\//.test(rel) && /\.ts$/.test(rel) && PAYOUT_PATTERN.test(text)) {
-    failures.push(`${rel}: holder payout code is forbidden (profits only leave as buy and burn)`);
+    failures.push(`${rel}: holder payout code is forbidden (profits never go to holders)`);
   }
   if (text.includes('—')) {
     failures.push(`${rel}: contains an em dash`);

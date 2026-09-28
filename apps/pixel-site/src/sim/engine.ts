@@ -1,7 +1,8 @@
 // The launch simulator: a whole launch in the browser, no server. A market cap curve (scenarios.ts) makes
-// trading volume, volume makes creator fees, and the backend's rules (rules.ts) turn fees into claims, hires and
-// burns: a claim every 35 s loop, 50% to hires and 50% to the buy-and-burn fund, 0.03 SOL per rat, at most 10
-// hires per loop, 30 SOL per hour per bucket, burn rounds 8 to 12 minutes apart in chunks of at most 1 SOL.
+// trading volume, volume makes creator fees, and the backend's rules (rules.ts) turn fees into claims and hires:
+// a claim every 35 s loop, every lamport to hires (the fund holds stocks, nothing is burned), 0.03 SOL per rat, at
+// most 10 hires per loop, 30 SOL per hour. With a lower split the rest goes to buy and burn, like the bot: burn
+// rounds 8 to 12 minutes apart in chunks of at most 1 SOL.
 // Stock picks use the worker's own picker. Responses are built with the contract's display math, in the exact
 // shapes of /api/state, /api/rats and /api/events, so the site renders them with its real code.
 //
@@ -68,6 +69,8 @@ export interface SimStats {
   /** claimed SOL waiting for the hourly caps */
   hireWaitingSol: number;
   burnWaitingSol: number;
+  /** what all the rats' stocks are worth now */
+  fundValueUsd: number;
 }
 
 export class LaunchSim {
@@ -106,10 +109,15 @@ export class LaunchSim {
     lastBurnAt: null,
   };
 
+  private readonly hireSplitBps: number;
+
   constructor(
     readonly scenario: Scenario,
     epoch = Date.now(),
+    /** the bot's HIRE_SPLIT_BPS (default: all to hires); tests lower it to cover the burn path */
+    opts: { hireSplitBps?: number } = {},
   ) {
+    this.hireSplitBps = opts.hireSplitBps ?? RULES.hireSplitBps;
     this.epoch = epoch;
     this.endMs = scenario.minutes * 60_000;
     this.rng = new Rng(scenario.seed);
@@ -220,7 +228,7 @@ export class LaunchSim {
   private loop(): void {
     if (this.claimable >= RULES.minClaimSol) {
       const amount = round6(this.claimable);
-      const toHires = round6((amount * RULES.hireSplitBps) / 10_000);
+      const toHires = round6((amount * this.hireSplitBps) / 10_000);
       const toFund = round6(amount - toHires);
       this.claimable = 0;
       this.hireBucket += toHires;
@@ -341,7 +349,15 @@ export class LaunchSim {
       burnCount: this.treasury.burnCount,
       hireWaitingSol: Math.max(0, this.hireBucket),
       burnWaitingSol: Math.max(0, this.burnBucket),
+      fundValueUsd: this.fundValue(),
     };
+  }
+
+  private fundValue(): number {
+    const prices = new Map(this.stocks.map((s) => [s.mint, s.price]));
+    let v = 0;
+    for (const r of this.rats) v += Number(r.tokenAmount) * (prices.get(r.stockMint) ?? 0);
+    return v;
   }
 
   // ------------------------------------------------------------------ responses (same shapes as the real API)

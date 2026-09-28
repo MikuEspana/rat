@@ -38,15 +38,14 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 - [ ] With the live settings, `rat preflight --live` says **READY**. Any FAIL: stop and fix it.
 - [ ] Worker: `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS`. API: `DRY_RUN=false`. Redeploy.
 - [ ] Admin page: mode **LIVE**, kill switch off, worker loops a few seconds old.
-- [ ] Solscan: first claim (the fund's half goes out in the same tx).
+- [ ] Solscan: first claim (all of it stays for hires; no transfer to the fund wallet).
 - [ ] Site: first rats walk in.
-- [ ] Within 8 to 12 minutes: first buy + burn.
 
 ## What normal looks like
 
 - About 17 new rats a minute, about 1,000 an hour.
 - "Waiting" budget grows during the rush. Normal: at most 30 SOL per hour is spent per bucket; the rest waits and is spent later. Nothing is lost.
-- A burn round every 8 to 12 minutes, in chunks of at most 1 SOL a few seconds apart.
+- No burns: every claimed lamport hires rats. The fund is the rats' stocks.
 - Worker restarts and redeploys are safe at any moment (tested at every single step).
 
 ## Telegram: which alerts matter
@@ -55,7 +54,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 |---|---|---|
 | `cap_alert_*`, `cap_reached_*` | 50% / 100% of the hourly cap used. Spending waits for the window. | Nothing. |
 | `inflow_*` | Someone sent SOL to a bot wallet. It is never spent. | Nothing. |
-| `external_claim_*` | Someone else triggered our fee claim. Booked 50/50 as usual. | Nothing. |
+| `external_claim_*` | Someone else triggered our fee claim. Booked for hires as usual. | Nothing. |
 | `no_eligible_stocks`, `hire_idle` | No hires (usually stale stock prices: markets closed). | Check the admin page. Wait, or approve more stocks. |
 | `burn_no_route`, `burn_failed`, `claim_failed` | One attempt failed; the money waits for the next one. | Nothing, unless it repeats for 30+ minutes. |
 | `task_failing_*` | A worker loop keeps failing. | Railway logs. Restarting the worker is safe. |
@@ -76,10 +75,10 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 
 - [ ] `rat status` and the admin page: claimed vs spent, nothing stuck.
 - [ ] `rat keys backup --out rat-keys-<date>.json` (every hour or so while hiring, and once at the end). Store it away from `KEY_ENCRYPTION_KEY`. The rat wallets' keys exist nowhere else.
-- [ ] Coin dying: the bot keeps burning what is left, then idles. Leave it running, or `rat kill`.
+- [ ] Coin dying: the bot hires with what is left, then idles. Leave it running, or `rat kill`.
 
 ## Numbers to remember
 
-- Salary 0.03 SOL per rat. Claimed fees split 50% hires / 50% buy + burn.
-- Caps: 30 SOL per hour for hires, 30 SOL per hour for burns.
-- 180 SOL of creator fees = about 3,000 rats.
+- Salary 0.03 SOL per rat. Every claimed lamport hires rats (no burns).
+- Cap: 30 SOL per hour for hires (about 1,000 rats an hour); the rest waits and is spent later.
+- 180 SOL of creator fees = about 6,000 rats (about 6 hours of hiring at the cap).
