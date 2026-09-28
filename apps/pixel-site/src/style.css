@@ -484,13 +484,36 @@ body {
 /* idle game: stage chip, milestone banner, build lines, debug slider */
 .stage-chip {
   margin-top: 4px;
-  display: inline-block;
-  padding: 1px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
+}
+.stage-now {
+  padding: 1px 6px;
   color: #16182c;
   background: #ffd23f;
+}
+.stage-bar {
+  position: relative;
+  width: 120px;
+  height: 8px;
+  background: #1b1f33;
+  border: 1px solid #ffd23f;
+}
+.stage-bar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #ffb13d, #ffd23f);
+  transition: width 0.4s;
+}
+.stage-next {
+  color: #ffd23f;
 }
 .milestone {
   position: absolute;

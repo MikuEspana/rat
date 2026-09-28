@@ -8,6 +8,7 @@ import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
 import { DEBUG_MAX_RATS } from '../config';
 import { now as clockNow } from '../now';
+import { STAGES } from '../floor/plan';
 import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
@@ -299,8 +300,20 @@ export class Ui {
   }
 
   // ------------------------------------------------------------------ idle game
+  /** Stage name and the bar to the next stage ("SMALL OFFICE: 12 / 25 rats"). */
   setStage(name: string, rats: number): void {
-    this.stageChip.textContent = `${name} . ${rats.toLocaleString('en-US')} rats`;
+    const k = Math.max(0, STAGES.findIndex((s) => s.name === name));
+    const next = STAGES[k + 1];
+    const from = STAGES[k]!.min;
+    const fill = next ? Math.max(0, Math.min(1, (rats - from) / (next.min - from))) : 1;
+    const bar = el('div', 'stage-bar');
+    const inner = el('i', '');
+    inner.style.width = `${(fill * 100).toFixed(1)}%`;
+    bar.append(inner);
+    const label = next
+      ? `${next.name}: ${rats.toLocaleString('en-US')} / ${next.min.toLocaleString('en-US')} rats`
+      : `${name}: ${rats.toLocaleString('en-US')} rats, the top`;
+    this.stageChip.replaceChildren(el('span', 'stage-now', name), bar, el('span', 'stage-next', label));
   }
 
   /** Big banner for a new stage; fades out on its own. */

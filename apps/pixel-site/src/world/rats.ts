@@ -8,7 +8,7 @@
 // once; each confirmed hire turns the applicant at the front into the new rat, who walks in to its desk (early on
 // that is straight from the subway). The line moves up as they go.
 import { computeRatView, type Tier } from '@rat/contract';
-import type { Atlas, Frame } from '../gfx/atlas';
+import { ACCESSORIES, type Accessory, type Atlas, type Frame } from '../gfx/atlas';
 import { makeParticle, type LayerItem, type SortedLayer } from '../gfx/layer';
 import { cellCentre, type Cell } from '../iso';
 import { Paths } from '../floor/path';
@@ -21,7 +21,7 @@ import type { RatRecord } from '../data/store';
 export type Look = Tier | 'frozen';
 export type Mood = 'up' | 'down' | 'flat';
 type Mode = 'walk' | 'type' | 'slump' | 'cheer' | 'stand' | 'sit' | 'nap' | 'frozen';
-type AnimName = 'walk_se' | 'walk_ne' | 'idle_se' | 'idle_ne' | 'type' | 'slump' | 'cheer';
+type AnimName = 'walk_se' | 'walk_ne' | 'idle_se' | 'idle_ne' | 'type' | 'slump' | 'cheer' | 'sit_front' | 'sit_back' | 'sulk_front' | 'sulk_back';
 
 /** at most this many applicants are drawn (the HUD counts all of them) */
 export const APPLICANT_CAP = 2000;
@@ -45,7 +45,8 @@ function applicantRecord(id: number): RatRecord {
 }
 
 export const TIER_SCALE: Record<Tier, number> = { intern: 0.88, analyst: 1, associate: 1.08, vp: 1.17, partner: 1.3 };
-const FPS: Record<AnimName, number> = { walk_se: 10, walk_ne: 10, idle_se: 5, idle_ne: 5, type: 8, slump: 6, cheer: 11 };
+const FPS: Record<AnimName, number> = { walk_se: 10, walk_ne: 10, idle_se: 5, idle_ne: 5, type: 8, slump: 6, cheer: 11, sit_front: 4, sit_back: 4, sulk_front: 3, sulk_back: 3 };
+const FURS = ['grey', 'brown', 'white', 'black'] as const;
 const WALK_SPEED = 2.8; // cells per second
 /** share of rats away from their desk at any moment */
 const AWAY_SHARE = 0.07;
@@ -62,6 +63,15 @@ interface Agent {
   id: number;
   rec: RatRecord;
   item: LayerItem;
+  /** accessory overlay (glasses, headphones, a hat), follows the rat frame for frame */
+  acc: LayerItem | null;
+  accKind: Accessory | null;
+  accFrames: Frame[];
+  /** fur colour from the avatar seed */
+  fur: string;
+  /** a coffee mug on the desk (from the avatar seed), left there while the rat is away */
+  hasMug: boolean;
+  mug: LayerItem | null;
   look: Look;
   mode: Mode;
   anim: AnimName;
@@ -88,6 +98,16 @@ interface Agent {
 
 function lookOf(rec: RatRecord): Look {
   return rec.facts.status === 'frozen' ? 'frozen' : rec.view.tier;
+}
+
+/** Fur and accessory from the rat's avatar seed: the same rat always looks the same. */
+function styleOf(rec: RatRecord): { fur: string; acc: Accessory | null; mug: boolean } {
+  const h = hash32(`look:${rec.facts.avatarSeed ?? rec.facts.id}`);
+  const r = h % 10;
+  const fur = FURS[r < 4 ? 0 : r < 6 ? 1 : r < 8 ? 2 : 3]!;
+  const a = (h >>> 8) % 100;
+  const acc = a < 40 ? null : ACCESSORIES[Math.floor(((a - 40) / 60) * ACCESSORIES.length)]!;
+  return { fur, acc, mug: (h >>> 16) % 4 === 0 };
 }
 
 function faceAnim(face: Face): { anim: AnimName; mirror: boolean } {
@@ -128,6 +148,7 @@ export class RatSystem {
   private tripClock = 0;
   private away = 0;
   private boxFrame: Frame;
+  private mugFrame: Frame;
   onArrive: (id: number) => void = () => {};
   /** show or hide the empty chair at a seat */
   onChair: (seatId: number, visible: boolean) => void = () => {};
@@ -143,6 +164,7 @@ export class RatSystem {
     this.spawn = layout.rings[growth.stage]!.spawn;
     this.strollCells = [];
     this.boxFrame = atlas.frame('world:box_s');
+    this.mugFrame = atlas.frame('world:mug');
     this.index();
   }
 
@@ -189,6 +211,8 @@ export class RatSystem {
     const lineMoved = this.index();
     for (const a of this.list) {
       a.item = layer.add(a.item.p, this.depthOf(a));
+      if (a.acc) a.acc = layer.add(a.acc.p, this.depthOf(a) + 0.002);
+      if (a.mug && a.seat) a.mug = layer.add(a.mug.p, a.seat.deskAt.i + a.seat.deskAt.j + 1.02);
       if (a.box) a.box = layer.add(a.box.p, this.depthOf(a) + 0.01);
       if (a.seat && !a.seated) this.onChair(a.seat.id, true);
     }
@@ -260,12 +284,13 @@ export class RatSystem {
     const rec = applicantRecord(-++this.applicantSeq);
     const qi = this.queue.length;
     const home = this.lineCell(qi);
-    const first = this.frames('intern', 'idle_se')[0]!;
+    const fur = styleOf(rec).fur;
+    const first = this.frames({ look: 'intern', fur }, 'idle_se')[0]!;
     const start = walk ? { ...this.spawn } : { ...home };
     const c = cellCentre(start.i, start.j);
     const item = this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE.intern), 0);
     const a: Agent = {
-      id: rec.facts.id, rec, item, look: 'intern', mode: 'stand', anim: 'idle_se', frames: [first], frame: 0, t: 0, once: false, mirror: false,
+      id: rec.facts.id, rec, item, acc: null, accKind: null, accFrames: [], fur, hasMug: false, mug: null, look: 'intern', mode: 'stand', anim: 'idle_se', frames: [first], frame: 0, t: 0, once: false, mirror: false,
       seat: null, home, qi, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null, nextCheer: 0, seated: false,
     };
     this.agents.set(a.id, a);
@@ -284,6 +309,7 @@ export class RatSystem {
     const k = this.list.indexOf(a);
     if (k >= 0) this.list.splice(k, 1);
     this.layer.remove(a.item);
+    if (a.acc) this.layer.remove(a.acc);
   }
 
   /** The way in for a rat standing outside: along the line to its head, to the door, then to its desk. */
@@ -375,8 +401,9 @@ export class RatSystem {
     return this.away;
   }
 
-  private frames(look: Look, anim: AnimName): Frame[] {
-    return this.atlas.anim(`${look}/${anim}`);
+  private frames(a: { look: Look; fur: string }, anim: AnimName): Frame[] {
+    const key = a.look === 'frozen' || a.fur === 'grey' ? a.look : `${a.look}.${a.fur}`;
+    return this.atlas.anim(`${key}/${anim}`);
   }
 
   private freeCeo(): Seat | null {
@@ -403,7 +430,7 @@ export class RatSystem {
   }
 
   private depthOf(a: Agent): number {
-    if (a.seated && a.seat) return a.seat.cell.i + a.seat.cell.j + 1.5;
+    if (a.seated && a.seat) return a.seat.pos.i + a.seat.pos.j + 1;
     return a.pos.i + a.pos.j + 1.25;
   }
 
@@ -413,6 +440,11 @@ export class RatSystem {
     a.item.p.x = c.x + (s ? s.dx : 0);
     a.item.p.y = c.y + (s ? s.dy : 0);
     this.layer.moved(a.item, this.depthOf(a));
+    if (a.acc) {
+      a.acc.p.x = a.item.p.x;
+      a.acc.p.y = a.item.p.y;
+      this.layer.moved(a.acc, this.depthOf(a) + 0.002);
+    }
     if (a.box) {
       a.box.p.x = a.item.p.x + (a.mirror ? -5 : 5);
       a.box.p.y = a.item.p.y - 14 * TIER_SCALE[a.rec.view.tier];
@@ -422,7 +454,8 @@ export class RatSystem {
 
   private setAnim(a: Agent, anim: AnimName, once: boolean, mirror = a.mirror): void {
     a.anim = anim;
-    a.frames = this.frames(a.look, anim);
+    a.frames = this.frames(a, anim);
+    a.accFrames = a.accKind && a.look !== 'frozen' ? this.atlas.anim(`acc/${a.accKind}/${anim}`) : [];
     a.frame = once ? 0 : Math.floor(Math.random() * a.frames.length);
     a.t = Math.random() / FPS[anim];
     a.once = once;
@@ -439,6 +472,18 @@ export class RatSystem {
     const s = TIER_SCALE[a.rec.view.tier];
     p.scaleX = a.mirror ? -s : s;
     p.scaleY = s;
+    if (a.acc) {
+      const g = a.accFrames[a.frame];
+      const q = a.acc.p;
+      q.alpha = g ? 1 : 0;
+      if (g) {
+        q.texture = g.texture;
+        q.anchorX = g.anchorX;
+        q.anchorY = g.anchorY;
+      }
+      q.scaleX = p.scaleX;
+      q.scaleY = s;
+    }
   }
 
   /** Sit down at the desk and work (or sulk, or freeze). */
@@ -451,21 +496,37 @@ export class RatSystem {
     if (!a.seated) this.onChair(seat.id, false);
     a.seated = true;
     a.pos = { ...seat.pos };
-    const mirror = seat.axis === 'i';
+    const front = seat.view === 'front';
+    const mirror = front ? seat.axis === 'i' : seat.axis === 'j';
+    const sit: AnimName = front ? 'sit_front' : 'sit_back';
+    const sulk: AnimName = front ? 'sulk_front' : 'sulk_back';
     if (a.look === 'frozen') {
       a.mode = 'frozen';
-      this.setAnim(a, 'type', true, mirror);
+      this.setAnim(a, sit, true, mirror);
       a.frame = 0;
       this.applyFrame(a);
     } else if (this.moods.get(a.rec.facts.stock) === 'down') {
       a.mode = 'slump';
-      this.setAnim(a, 'slump', true, mirror);
+      this.setAnim(a, sulk, false, mirror);
     } else {
       a.mode = 'type';
-      this.setAnim(a, 'type', false, mirror);
+      this.setAnim(a, sit, false, mirror);
     }
     a.nextCheer = this.time + 3 + Math.random() * 18;
     this.place(a);
+    if (a.hasMug) this.putMug(a, seat);
+  }
+
+  /** The rat's mug stands at one end of its desk. */
+  private putMug(a: Agent, seat: Seat): void {
+    const c = cellCentre(seat.deskAt.i, seat.deskAt.j);
+    const x = c.x + (seat.axis === 'j' ? -10 : 10);
+    const y = c.y + 5 - 14;
+    const depth = seat.deskAt.i + seat.deskAt.j + 1.02;
+    if (!a.mug) a.mug = this.layer.add(makeParticle(this.mugFrame, x, y, seat.axis === 'i', 0.32), depth);
+    a.mug.p.x = x;
+    a.mug.p.y = y;
+    this.layer.moved(a.mug, depth);
   }
 
   private standUp(a: Agent): void {
@@ -502,6 +563,12 @@ export class RatSystem {
     app.id = rec.facts.id;
     app.rec = rec;
     app.look = lookOf(rec);
+    // and gets its own looks: fur, accessory, mug
+    const style = styleOf(rec);
+    app.fur = style.fur;
+    app.hasMug = style.mug;
+    app.accKind = style.acc;
+    if (style.acc && !app.acc) app.acc = this.layer.add(makeParticle(app.frames[0]!, app.item.p.x, app.item.p.y, false, TIER_SCALE[rec.view.tier]), this.depthOf(app) + 0.002);
     this.agents.set(app.id, app);
     if (this.hiddenApplicants > 0) {
       // one more applicant steps into view at the back
@@ -533,12 +600,14 @@ export class RatSystem {
     const qi = seat ? -1 : this.realInLine;
     const home = seat ? seat.pos : this.lineCell(qi);
     const look = lookOf(rec);
-    const first = this.frames(look, 'type')[0]!;
+    const style = styleOf(rec);
+    const first = this.frames({ look, fur: style.fur }, 'idle_se')[0]!;
     const start = walk ? { ...this.spawn } : { ...home };
     const c = cellCentre(start.i, start.j);
     const item = this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0);
+    const acc = style.acc ? this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0.001) : null;
     const a: Agent = {
-      id: rec.facts.id, rec, item, look, mode: 'type', anim: 'type', frames: [first], frame: 0, t: 0, once: false, mirror: false,
+      id: rec.facts.id, rec, item, acc, accKind: style.acc, accFrames: [], fur: style.fur, hasMug: style.mug, mug: null, look, mode: 'type', anim: 'type', frames: [first], frame: 0, t: 0, once: false, mirror: false,
       seat, home: seat ? seat.access : home, qi, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null,
       nextCheer: 0, seated: false,
     };
@@ -660,7 +729,7 @@ export class RatSystem {
       if (r < 0.1) {
         // nap at the desk
         a.mode = 'nap';
-        this.setAnim(a, 'slump', true, a.seat.axis === 'i');
+        this.setAnim(a, a.seat.view === 'front' ? 'sulk_front' : 'sulk_back', false, a.seat.view === 'front' ? a.seat.axis === 'i' : a.seat.axis === 'j');
         a.until = this.time + 12 + Math.random() * 20;
         continue;
       }
@@ -748,8 +817,7 @@ export class RatSystem {
         else k = a.frames.length - 1;
       }
       a.frame = k;
-      const f = a.frames[k];
-      if (f) a.item.p.texture = f.texture;
+      this.applyFrame(a);
     }
   }
 

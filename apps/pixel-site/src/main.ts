@@ -21,6 +21,7 @@ import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
 import type { FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
 import { buildWorld, updateTickers, type World } from './world/build';
+import { Effects } from './world/effects';
 import { MoneyFx } from './world/money';
 import { RatSystem, type Mood } from './world/rats';
 import { stageLine } from './ui/format';
@@ -131,11 +132,12 @@ async function boot(): Promise<Site> {
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked);
   const money = new MoneyFx(atlas, world);
+  const effects = new Effects();
   const camera = new Camera(scene, app.canvas);
   const mount = (): void => {
     sky.setEvil(growth.stage >= 5);
     scene.removeChildren();
-    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, world.signs, money.container, markers);
+    scene.addChild(world.floor, world.main.container, world.overlay, world.lights, effects.container, world.signs, money.container, markers);
     world.setJobFair(rats.lineLength, rats.lineHead());
     camera.apply();
   };
@@ -185,6 +187,13 @@ async function boot(): Promise<Site> {
     if (!rooms.size && !events.some((e) => e.kind === 'stage')) return;
     const old = world;
     world = buildWorld(plan, growth, atlas, store.stocks, rooms);
+    if (announce) {
+      for (const e of events) {
+        if (e.kind !== 'room') continue;
+        const c = cellCentre(e.room.i0 + e.room.w / 2 - 0.5, e.room.j0 + e.room.h / 2 - 0.5);
+        effects.dust(c.x, c.y, 20);
+      }
+    }
     rats.rebind(world.main, world.blocked);
     wireRats();
     money.setWorld(world);
@@ -281,6 +290,10 @@ async function boot(): Promise<Site> {
     let value = 0;
     const desks: Array<{ x: number; y: number }> = [];
     for (const r of hires) {
+      // a desk in a pod still under construction: the site clears, the desks pop in with a puff of dust
+      const sid = growth.seatOfRat.get(r.facts.id);
+      const pod = sid === undefined ? null : world.activatePod(sid);
+      if (pod) effects.dust(pod.x, pod.y);
       rats.hire(r, rats.walking < MAX_WALKERS);
       value += r.facts.costUsd;
       const at = rats.positionOf(r.facts.id);
@@ -320,6 +333,7 @@ async function boot(): Promise<Site> {
     rats.update(dt);
     world.update(dt);
     money.update(dt);
+    effects.update(dt);
     world.main.sync();
     frameStart = t0;
     jsMs = performance.now() - t0;
@@ -397,6 +411,13 @@ async function boot(): Promise<Site> {
       old.destroy();
       ui.setStage(STAGES[growth.stage]!.name, ratCount);
       if (growth.stage > beforeStage) ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
+      if (popIn.size < 60) {
+        for (const id of [...popIn].slice(0, 16)) {
+          const r = plan.rooms[id]!;
+          const c = cellCentre(r.i0 + r.w / 2 - 0.5, r.j0 + r.h / 2 - 0.5);
+          effects.dust(c.x, c.y, 20);
+        }
+      }
       if (popIn.size) ui.pushLocal([...popIn].slice(0, 12).map((id) => buildLine({ kind: 'room', room: plan.rooms[id]!, symbol: growth.symbolOf[id] ?? null })));
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };

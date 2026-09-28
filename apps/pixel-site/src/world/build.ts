@@ -10,8 +10,9 @@ import { makeParticle, SortedLayer, type LayerItem } from '../gfx/layer';
 import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixelfont';
 import { cellCentre, cellToScreen, type Cell } from '../iso';
 import type { Growth } from '../floor/growth';
-import { CORRIDOR_TINT, LOT_TINT, ROOM_LOOK, STAGES, STREET_TINT } from '../floor/plan';
-import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room } from '../floor/types';
+import { TIER_SCALE } from './rats';
+import { CORRIDOR_TINT, ROOM_LOOK, STAGES } from '../floor/plan';
+import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room, type Seat } from '../floor/types';
 
 export interface WorldBounds {
   x: number;
@@ -47,6 +48,8 @@ export interface World {
   /** call every frame: server lights blink, new rooms pop in, the beam pulses */
   update(dt: number): void;
   setChair(seatId: number, visible: boolean): void;
+  /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
+  activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
   /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
   setJobFair(count: number, head: Cell | null): void;
@@ -56,10 +59,11 @@ export interface World {
 export const FURNACE_SCALE = [1, 1, 2, 2, 2, 3];
 
 export function worldBounds(layout: FloorLayout): WorldBounds {
-  const left = cellToScreen(0, layout.H).x - 64;
-  const right = cellToScreen(layout.W, 0).x + 64;
-  const top = cellToScreen(0, 0).y - 700;
-  const bottom = cellToScreen(layout.W, layout.H).y + 64;
+  // the city round the building reaches 22 cells past the street and its towers stand tall
+  const left = cellToScreen(-24, layout.H + 24).x - 64;
+  const right = cellToScreen(layout.W + 24, -24).x + 64;
+  const top = cellToScreen(-24, -24).y - 1100;
+  const bottom = cellToScreen(layout.W + 24, layout.H + 24).y + 64;
   return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
@@ -175,10 +179,6 @@ function ledPixels(atlas: Atlas, f: Frame): Array<[number, number]> {
   return out;
 }
 
-const FLOOR_FRAME: Record<string, string> = {
-  office: 'world:floor_office', warm: 'world:floor_office', tile: 'world:floor_office', dark: 'world:floor_office',
-  street: 'world:floor_office', marble: 'world:floor_hq', platform: 'world:floor_subway',
-};
 const DESK_TINT = [0xffffff, 0xffffff, 0xe6c07a];
 const STAGE_COLOR = [0xbdb5a6, 0x9fe0a8, 0x6fa8ff, 0xffd36b, 0xffa040, 0xff4040];
 
@@ -205,6 +205,8 @@ export function buildWorld(
   const overlay = new Container();
   const lights = new Container();
   const signs = new Container();
+  const fx = new Container(); // cranes and scaffolding while something is being built
+  overlay.addChild(fx);
   const pops: Pop[] = [];
   const built = (r: Room): boolean => growth.isBuilt(r);
   const M = 7;
@@ -218,40 +220,93 @@ export function buildWorld(
     return t === T.CORRIDOR;
   }
 
-  // floor: rooms in their type colour, lots dark, the street round the current building
+  // floor: a look per room type (carpet, wood, tile, marble...), lots bare, the street round the current building
   const floorLayer = new SortedLayer(atlas.source, bounds, { position: false, vertex: false, uvs: false, color: false, rotation: false });
   const heights = new Uint8Array(plan.W * plan.H);
+  const outer = plan.rings[stage]!;
+  const variantAt = (i: number, j: number): number => ((Math.imul(i, 73856093) ^ Math.imul(j, 19349663)) >>> 0) % 4;
+  const styleFrame = (style: string, i: number, j: number): string => {
+    if (style === 'platform') return 'world:floor_subway';
+    return `world:fl_${style === 'street' ? 'asphalt' : style}_${variantAt(i, j)}`;
+  };
+  const wallish = (k: number): boolean => {
+    const t = plan.tile[k];
+    return t === T.WALL || (t === T.DOOR && blocked[k] === 1);
+  };
+  /** the floor a cell shows (walls show the floor of the cell behind them) */
+  const floorOfCell = (i: number, j: number): { frame: string; tint: number } => {
+    const k = idx(W, i, j);
+    const t = plan.tile[k];
+    const r = plan.ringOf[k]!;
+    if (r > stage || t === T.STREET || t === T.VOID) {
+      const near = Math.abs(i - ring.spawn.i) <= 2 && Math.abs(j - ring.spawn.j) <= 2;
+      if (near) return { frame: 'world:floor_subway', tint: 0x9aa1b8 };
+      const d = Math.max(outer.i0 - i, i - outer.i1, outer.j0 - j, j - outer.j1);
+      if (d >= 1 && d <= 2) return { frame: styleFrame('sidewalk', i, j), tint: 0xffffff };
+      return { frame: styleFrame('asphalt', i, j), tint: 0xffffff };
+    }
+    if (t === T.ROOM) {
+      if (growth.built[plan.roomOf[k]!]) return { frame: styleFrame(FLOOR_STYLES[plan.floorOf[k]!] ?? 'carpet', i, j), tint: plan.floorTint[k]! };
+      return { frame: styleFrame('lot', i, j), tint: 0xffffff };
+    }
+    if (t === T.CORRIDOR) return { frame: styleFrame('vinyl', i, j), tint: r === 5 ? 0xe8b8b8 : CORRIDOR_TINT };
+    if (t === T.DOOR && blocked[k] === 0) return { frame: styleFrame('vinyl', i, j), tint: CORRIDOR_TINT };
+    return { frame: styleFrame('lot', i, j), tint: 0xffffff };
+  };
+  interface Face {
+    i: number;
+    j: number;
+    axis: 'i' | 'j';
+    tall: boolean;
+    kind: 'plain' | 'window' | 'panel';
+  }
+  const faces: Face[] = [];
+  const mounted = new Set<number>();
+  for (const pr of plan.props) if (pr.wall) for (let n = 0; n < Math.ceil((atlas.has(`world:${pr.kind}`) ? atlas.frame(`world:${pr.kind}`).w : 32) / 16); n++) mounted.add(pr.wall === 'i' ? idx(W, pr.i + n, pr.j) : idx(W, pr.i, pr.j + n));
+  for (const r of plan.rooms) if (r.ticker && r.kind === 'stock' && built(r) && growth.symbolOf[r.id]) for (let n = 0; n < 7; n++) mounted.add(r.ticker.axis === 'i' ? idx(W, r.ticker.i + n, r.ticker.j) : idx(W, r.ticker.i, r.ticker.j + n));
   for (let j = i0; j <= i1; j++) {
     for (let i = i0; i <= i1; i++) {
       const k = idx(W, i, j);
       const t = plan.tile[k];
-      const r = plan.ringOf[k]!;
-      let frame = 'world:floor_office';
-      let tint = STREET_TINT;
-      if (r > stage) {
-        const near = Math.abs(i - ring.spawn.i) <= 2 && Math.abs(j - ring.spawn.j) <= 2;
-        if (near) (frame = 'world:floor_subway'), (tint = 0x9aa1b8);
-      } else if (t === T.ROOM) {
-        if (growth.built[plan.roomOf[k]!]) {
-          frame = FLOOR_FRAME[FLOOR_STYLES[plan.floorOf[k]!] ?? 'office'] ?? frame;
-          tint = plan.floorTint[k]!;
-        } else tint = LOT_TINT;
-      } else if (t === T.CORRIDOR) tint = r === 5 ? 0xe2b4b4 : CORRIDOR_TINT;
-      else if (t === T.DOOR && blocked[k] === 0) tint = CORRIDOR_TINT;
-      else if (t === T.WALL || t === T.DOOR) {
-        // a wall stands where it borders something built; otherwise this is open lot
+      let cell = floorOfCell(i, j);
+      if (wallish(k) || t === T.DOOR) {
         let near = false;
         for (let dj = -1; dj <= 1 && !near; dj++) for (let di = -1; di <= 1 && !near; di++) if (isBuiltCell(idx(W, i + di, j + dj))) near = true;
-        if (near) {
-          const edge = i === ring.i0 || j === ring.j0 ? 3 : i === ring.i1 || j === ring.j1 ? 1 : 2;
-          heights[k] = edge;
-          continue;
+        if (near && wallish(k)) {
+          // thin walls on the cell's front edges; the cell shows the floor behind the wall
+          const alongI = wallish(idx(W, i - 1, j)) || wallish(idx(W, i + 1, j));
+          const alongJ = wallish(idx(W, i, j - 1)) || wallish(idx(W, i, j + 1));
+          const tee = (a: number, b: number, c: number): boolean => wallish(a) && wallish(b) && !wallish(c);
+          const faceI = (!wallish(idx(W, i, j + 1)) && (alongI || !alongJ)) || (wallish(idx(W, i, j + 1)) && tee(idx(W, i - 1, j), idx(W, i + 1, j), idx(W, i - 1, j + 1)));
+          const faceJ = (!wallish(idx(W, i + 1, j)) && (alongJ || !alongI)) || (wallish(idx(W, i + 1, j)) && tee(idx(W, i, j - 1), idx(W, i, j + 1), idx(W, i + 1, j - 1)));
+          const behindOut = (bk: number): boolean => !isBuiltCell(bk) && !wallish(bk) && plan.tile[bk] !== T.DOOR;
+          if (faceI) {
+            const out = behindOut(idx(W, i, j - 1));
+            const tall = out || mounted.has(k);
+            faces.push({ i, j, axis: 'i', tall, kind: out ? 'window' : mounted.has(k) ? 'panel' : 'plain' });
+            if (tall) heights[k] = 3;
+          }
+          if (faceJ) {
+            const out = behindOut(idx(W, i - 1, j));
+            const tall = out || mounted.has(k);
+            faces.push({ i, j, axis: 'j', tall, kind: out ? 'window' : mounted.has(k) ? 'panel' : 'plain' });
+            if (tall) heights[k] = 3;
+          }
+          if (!heights[k]) heights[k] = 1;
+          const behind = isBuiltCell(idx(W, i, j - 1)) ? [i, j - 1] : isBuiltCell(idx(W, i - 1, j)) ? [i - 1, j] : isBuiltCell(idx(W, i, j + 1)) ? [i, j + 1] : [i + 1, j];
+          const bi = behind[0]!;
+          const bj = behind[1]!;
+          cell = floorOfCell(bi, bj);
+          if (!isBuiltCell(idx(W, bi, bj))) cell = { frame: styleFrame('lot', i, j), tint: 0xffffff };
+        } else if (!near) {
+          const outside = plan.ringOf[k]! > stage || plan.ringOf[k]! === stage + 1;
+          cell = outside ? floorOfCell(i + 99, j + 99) : { frame: styleFrame('lot', i, j), tint: 0xffffff };
+          if (plan.ringOf[k]! > stage) cell = floorOfCell(Math.min(i, W - 1), j);
         }
-        tint = r === stage && plan.ringOf[k] === stage ? LOT_TINT : STREET_TINT;
       }
       const p = cellToScreen(i, j);
-      const tile = makeParticle(atlas.frame(frame), p.x, p.y);
-      tile.tint = tint;
+      const tile = makeParticle(atlas.frame(cell.frame), p.x, p.y);
+      tile.tint = cell.tint;
       floorLayer.add(tile, i + j);
     }
   }
@@ -286,56 +341,122 @@ export function buildWorld(
     if (pr.tint !== undefined) p.tint = pr.tint;
     floorLayer.add(p, 1e6 + pr.i + pr.j);
   }
-  // construction lots: a few boxes on each empty lot of the current ring
-  for (const r of plan.rooms) {
-    if (r.ring !== stage || built(r)) continue;
-    for (let n = 0; n < 3; n++) {
-      const i = r.i0 + 1 + ((r.id * 7 + n * 5) % Math.max(1, r.w - 2));
-      const j = r.j0 + 1 + ((r.id * 3 + n * 11) % Math.max(1, r.h - 2));
-      const c = cellCentre(i, j);
-      const p = makeParticle(atlas.frame(n === 0 ? 'world:box_pile' : 'world:box_s'), c.x, c.y + 4, n % 2 === 1);
-      main.add(p, i + j + 1);
+  // lots of the current ring not built yet: blueprint floor, and a lock sign saying what comes and when
+  const lockSigns: Sprite[] = [];
+  // signs only on what comes next: the next few amenities by rat count and the next desk rooms in build order
+  const lots = plan.rooms.filter((r) => r.ring === stage && !built(r));
+  const nextAmenities = lots.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!).slice(0, 4);
+  const nextDesks = lots.filter((r) => r.unlockAt === null).sort((a, b) => a.order - b.order).slice(0, 2);
+  const signed = new Set([...nextAmenities, ...nextDesks].map((r) => r.id));
+  for (const r of lots) {
+    for (let i = r.i0; i < r.i0 + r.w; i++) {
+      for (let j = r.j0; j < r.j0 + r.h; j++) {
+        const p = cellToScreen(i, j);
+        const t = makeParticle(atlas.frame(styleFrame('blueprint', i, j)), p.x, p.y);
+        t.tint = 0x9aa6c4; // muted, so big empty rings do not shout louder than the rooms
+        floorLayer.add(t, 1e5 + i + j);
+      }
     }
+    if (!signed.has(r.id)) continue;
+    const what = r.kind === 'stock' || r.kind === 'open' ? 'DESKS' : ROOM_LOOK[r.kind].label;
+    const when = r.unlockAt !== null ? `${r.unlockAt.toLocaleString('en-US')} RATS` : 'NEXT HIRES';
+    const s = new Sprite(lockTexture(what, when));
+    const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
+    s.anchor.set(0.5, 1);
+    s.position.set(c.x, c.y - 4);
+    signs.addChild(s);
+    lockSigns.push(s);
   }
-  floorLayer.sync(true);
+
+  // the city round the building: it changes with the stage (suburb, downtown, towers, the evil empire)
+  const city = buildCity(plan, stage, atlas, main, floorLayer);
+
   const floor = floorLayer.container;
 
-  // walls
-  const wallFrames = [null, atlas.frame('world:wall'), atlas.frame('world:wall_x2'), atlas.frame('world:wall_x3')];
-  const tint = stage >= 5 ? 0xd8b0b8 : 0xffffff;
-  for (let j = i0; j <= i1; j++) {
-    for (let i = i0; i <= i1; i++) {
-      const h = heights[idx(W, i, j)]!;
-      if (!h) continue;
-      const p = cellToScreen(i, j);
-      const w = makeParticle(wallFrames[h]!, p.x, p.y);
-      if (plan.ringOf[idx(W, i, j)] === 5) w.tint = tint;
-      main.add(w, i + j - 0.5);
-    }
+  // walls: thin faces, low (cut away) inside, tall on the building's back walls and where things hang
+  const evil = stage >= 5 ? 0xe0a0a8 : 0xffffff;
+  // the founders' garage keeps its roll-up door (open) over the front door
+  const gdoor = plan.rings[0]!.entrance;
+  const gi = Math.min(...gdoor.map((c) => c.i));
+  for (let i = gi - 1; i <= gi + 2; i++) {
+    const p = cellToScreen(i, gdoor[0]!.j);
+    main.add(makeParticle(atlas.frame('world:wf_i_tall_header'), p.x, p.y), i + gdoor[0]!.j + 0.52);
+  }
+  for (const f of faces) {
+    const name = `world:wf_${f.axis}_${f.tall ? 'tall' : 'low'}${f.tall && f.kind !== 'plain' ? '_' + f.kind : ''}`;
+    const p = cellToScreen(f.i, f.j);
+    const w = makeParticle(atlas.frame(name), p.x, p.y);
+    if (plan.ringOf[idx(W, f.i, f.j)] === 5) w.tint = evil;
+    main.add(w, f.i + f.j + 0.5);
   }
 
-  // desks (chairs only while their rat is away: empty desks stay chairless)
+  // desks, in pods; a pod stands once one of its rats is in, until then it is a taped-off building site.
+  // Chairs only while their rat is away (empty desks stay chairless).
   const deskA = atlas.frame('world:desk_oak_clutter');
   const deskB = atlas.frame('world:desk_oak');
+  const deskF = atlas.frame('world:desk_back');
   const chairF = atlas.frame('world:chair');
   const chairs = new Map<number, LayerItem>();
   const chairAt = new Map<number, { x: number; y: number; mirror: boolean; depth: number }>();
+  const podSeats = new Map<number, Seat[]>();
+  const podRoom = new Map<number, Room>();
+  const podItems = new Map<number, { main: LayerItem[]; floor: LayerItem[] }>();
   let delay = 0;
+  const placeDesk = (r: Room, s: Seat, pop: boolean): LayerItem => {
+    const c = cellCentre(s.deskAt.i, s.deskAt.j);
+    const frameD = s.view === 'front' ? deskF : s.variant === 1 ? deskB : deskA;
+    const desk = makeParticle(frameD, c.x, c.y + 20, s.axis === 'i');
+    desk.tint = r.kind === 'ceo' ? DESK_TINT[2]! : 0xffffff;
+    const item = main.add(desk, s.deskAt.i + s.deskAt.j + 1);
+    if (pop) addPop(item, (delay += 0.015));
+    return item;
+  };
+  const siteItems = (pod: number): { main: LayerItem[]; floor: LayerItem[] } => {
+    // tape round the pod's cells, a boxed-up desk and a ladder or cones
+    const seats = podSeats.get(pod)!;
+    const cells = new Set<number>();
+    for (const s of seats) for (const c of s.cells) cells.add(idx(W, c.i, c.j));
+    const out = { main: [] as LayerItem[], floor: [] as LayerItem[] };
+    for (const k of cells) {
+      const i = k % W;
+      const j = Math.floor(k / W);
+      const p = cellToScreen(i, j);
+      if (!cells.has(idx(W, i, j - 1))) out.floor.push(floorLayer.add(makeParticle(atlas.frame('world:tape_i'), p.x + 8, p.y + 4), 1e6 + i + j));
+      if (!cells.has(idx(W, i, j + 1))) out.floor.push(floorLayer.add(makeParticle(atlas.frame('world:tape_i'), p.x - 8, p.y + 12), 1e6 + i + j));
+      if (!cells.has(idx(W, i - 1, j))) out.floor.push(floorLayer.add(makeParticle(atlas.frame('world:tape_j'), p.x - 8, p.y + 4), 1e6 + i + j));
+      if (!cells.has(idx(W, i + 1, j))) out.floor.push(floorLayer.add(makeParticle(atlas.frame('world:tape_j'), p.x + 8, p.y + 12), 1e6 + i + j));
+    }
+    const s0 = seats[0]!;
+    const c = cellCentre(s0.deskAt.i, s0.deskAt.j);
+    out.main.push(main.add(makeParticle(atlas.frame(pod % 3 === 0 ? 'world:box_pile' : 'world:box_long'), c.x, c.y + 4, pod % 2 === 0), s0.deskAt.i + s0.deskAt.j + 1));
+    const s1 = seats[seats.length - 1]!;
+    const c1 = cellCentre(s1.pos.i, s1.pos.j);
+    out.main.push(main.add(makeParticle(atlas.frame(pod % 2 === 0 ? 'world:box_s' : 'world:box_half'), c1.x, c1.y + 2, pod % 3 === 1), s1.pos.i + s1.pos.j + 1));
+    return out;
+  };
   for (const r of plan.rooms) {
     if (!built(r)) continue;
-    const pop = popIn.has(r.id);
     for (const s of r.seats) {
-      const c = cellCentre(s.desk.i, s.desk.j);
-      const mirror = s.axis === 'i';
-      const desk = makeParticle(s.variant === 1 ? deskB : deskA, c.x + s.dx, c.y + s.dy, mirror);
-      desk.tint = r.kind === 'ceo' ? DESK_TINT[2]! : DESK_TINT[s.variant] ?? 0xffffff;
-      const depth = s.cell.i + s.cell.j + 1;
-      const item = main.add(desk, depth);
-      if (pop) addPop(item, (delay += 0.015));
+      const l = podSeats.get(s.pod) ?? [];
+      l.push(s);
+      podSeats.set(s.pod, l);
+      podRoom.set(s.pod, r);
       const sc = cellCentre(s.pos.i, s.pos.j);
-      chairAt.set(s.id, { x: sc.x + (mirror ? 10 : -10) + s.dx, y: sc.y - 1 + s.dy, mirror, depth: depth + 0.4 });
+      chairAt.set(s.id, { x: sc.x, y: sc.y + 3, mirror: s.axis === 'j' ? s.view === 'back' : s.view === 'front', depth: s.pos.i + s.pos.j + 0.95 });
     }
   }
+  const podActive = (pod: number): boolean => {
+    const r = podRoom.get(pod)!;
+    return r.kind === 'ceo' || podSeats.get(pod)!.some((s) => growth.owner[s.id]! >= 0);
+  };
+  for (const [pod, seats] of podSeats) {
+    const r = podRoom.get(pod)!;
+    if (podActive(pod)) {
+      const pop = popIn.has(r.id);
+      podItems.set(pod, { main: seats.map((s) => placeDesk(r, s, pop)), floor: [] });
+    } else podItems.set(pod, siteItems(pod));
+  }
+  floorLayer.sync(true);
 
   // props, wall pieces and glows
   const warm = glowTexture(255, 186, 102);
@@ -371,7 +492,8 @@ export function buildWorld(
     const c = cellCentre(pr.i, pr.j);
     const x = c.x + (pr.dx ?? 0);
     const y = c.y + (pr.dy ?? 0);
-    const p = makeParticle(f, x, y, pr.mirror, pr.kind === 'furnace' ? fscale : 1);
+    const sc = pr.kind === 'furnace' ? fscale : pr.scale ?? 1;
+    const p = makeParticle(f, x, y, pr.mirror, sc);
     if (pr.tint !== undefined) p.tint = pr.tint;
     const item = main.add(p, pr.i + pr.j + 1 + (pr.bias ?? 0));
     if (pop) addPop(item, (delay += 0.02));
@@ -383,11 +505,55 @@ export function buildWorld(
     if (pr.kind.startsWith('server_rack')) {
       let px = ledCache.get(pr.kind);
       if (!px) ledCache.set(pr.kind, (px = ledPixels(atlas, f)));
-      const left = x - f.anchorX * f.w;
-      const top = y - f.anchorY * f.h;
-      for (let n = 0; n < Math.min(14, px.length); n++) {
+      const left = x - f.anchorX * f.w * sc;
+      const top = y - f.anchorY * f.h * sc;
+      for (let n = 0; n < Math.min(12, px.length); n++) {
         const [lx, ly] = px[Math.floor(Math.random() * px.length)]!;
-        rackLeds.push({ x: pr.mirror ? x + f.anchorX * f.w - 1 - lx : left + lx, y: top + ly, color: [0x6dffb0, 0x7ad7ff, 0xffc75a][n % 3]! });
+        rackLeds.push({ x: Math.round(pr.mirror ? x + (f.anchorX * f.w - 1 - lx) * sc : left + lx * sc), y: Math.round(top + ly * sc), color: [0x6dffb0, 0x7ad7ff, 0xffc75a][n % 3]! });
+      }
+    }
+  }
+
+  // vignette extras: posed rats that belong to the set, animated in place (tears for the one crying in the WC)
+  const extras: Array<{ p: Particle; frames: Frame[]; k: number; t: number; fps: number; hold: boolean }> = [];
+  const tears: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
+  const tearTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 2;
+    c.height = 3;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#8fd8ff';
+    ctx.fillRect(0, 0, 2, 3);
+    ctx.fillStyle = '#e8f8ff';
+    ctx.fillRect(0, 0, 1, 1);
+    const t = Texture.from(c);
+    t.source.scaleMode = 'nearest';
+    return t;
+  })();
+  for (const a of plan.actors) {
+    const room = plan.rooms[a.room]!;
+    if (!built(room)) continue;
+    let frames: Frame[];
+    try {
+      frames = atlas.anim(`${a.look}/${a.anim}`);
+    } catch {
+      continue;
+    }
+    const c = cellCentre(a.i, a.j);
+    const tier = a.look.split('.')[0] as keyof typeof TIER_SCALE;
+    const sc = TIER_SCALE[tier] ?? 1;
+    const f0 = frames[0]!;
+    const p = makeParticle(f0, c.x + a.dx, c.y + a.dy, a.mirror, sc);
+    const item = main.add(p, a.i + a.j + 1.25 + (a.dy < -10 ? 1.2 : 0));
+    if (popIn.has(room.id)) addPop(item, (delay += 0.02));
+    const fps = a.anim === 'cheer' ? 9 : a.anim.startsWith('walk') ? 10 : 4;
+    extras.push({ p, frames, k: Math.floor(Math.random() * frames.length), t: 0, fps, hold: a.anim === 'slump' });
+    if (a.tears) {
+      for (let n = 0; n < 2; n++) {
+        const s = new Sprite(tearTex);
+        s.position.set(c.x + a.dx + (a.mirror ? -4 : 4) - n * 6, c.y + a.dy - 30 * sc);
+        overlay.addChild(s);
+        tears.push({ s, x: s.x, y: s.y, t: n * 0.4 });
       }
     }
   }
@@ -469,6 +635,27 @@ export function buildWorld(
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
 
+  // a new room goes up: scaffolding over it and a crane beside it, for a moment
+  const builders: Array<{ s: Sprite; t: number; life: number; base: number }> = [];
+  for (const r of plan.rooms) {
+    if (!popIn.has(r.id) || r.kind === 'lobby') continue;
+    const c = cellCentre(r.i0 + r.w / 2 - 0.5, r.j0 + r.h / 2 - 0.5);
+    const sc = new Sprite(atlas.frame('world:scaffold').texture);
+    sc.anchor.set(0.5, 1);
+    sc.position.set(c.x, c.y + 20);
+    fx.addChild(sc);
+    builders.push({ s: sc, t: 0, life: 1.6 + builders.length * 0.05, base: 1 });
+    if (builders.length < 12) {
+      const cr = new Sprite(atlas.frame('world:crane').texture);
+      const cc = cellCentre(r.i0 - 1, r.j0 + r.h - 1);
+      cr.anchor.set(0.5, 1);
+      cr.position.set(cc.x, cc.y);
+      cr.scale.set(0.8);
+      fx.addChild(cr);
+      builders.push({ s: cr, t: 0, life: 2.4, base: 0.8 });
+    }
+  }
+
   // the job-fair sign: made when the first rat lines up outside, redrawn when the count changes
   let fair: Sprite | null = null;
   let fairText = '';
@@ -493,6 +680,32 @@ export function buildWorld(
     blocked,
     update(dt: number): void {
       clock += dt;
+      city.update(dt);
+      for (let k = builders.length - 1; k >= 0; k--) {
+        const b = builders[k]!;
+        b.t += dt;
+        const u = b.t / b.life;
+        if (u > 0.75) b.s.alpha = Math.max(0, 1 - (u - 0.75) / 0.25);
+        if (u >= 1) {
+          b.s.destroy();
+          builders.splice(k, 1);
+        }
+      }
+      for (const e of extras) {
+        e.t += dt;
+        if (e.t < 1 / e.fps) continue;
+        e.t = 0;
+        e.k = e.k + 1 >= e.frames.length ? (e.hold ? e.frames.length - 3 : 0) : e.k + 1;
+        const f = e.frames[e.k]!;
+        e.p.texture = f.texture;
+        e.p.anchorX = f.anchorX;
+        e.p.anchorY = f.anchorY;
+      }
+      for (const t of tears) {
+        t.t = (t.t + dt) % 0.8;
+        t.s.y = t.y + t.t * 14;
+        t.s.alpha = 1 - t.t / 0.8;
+      }
       beam.alpha = 0.75 + 0.25 * Math.sin(clock * 2.1);
       flareT = Math.max(0, flareT - dt);
       vaultGlow.alpha = 0.7 + flareT * 1.2;
@@ -534,6 +747,20 @@ export function buildWorld(
         }
       } else if (item) main.remove(item);
     },
+    activatePod(seatId: number): { x: number; y: number } | null {
+      const s = plan.seats[seatId];
+      if (!s) return null;
+      const items = podItems.get(s.pod);
+      const r = podRoom.get(s.pod);
+      if (!items || !r || items.floor.length === 0) return null;
+      for (const it of items.main) main.remove(it);
+      for (const it of items.floor) floorLayer.remove(it);
+      floorLayer.sync(true);
+      delay = 0;
+      podItems.set(s.pod, { main: podSeats.get(s.pod)!.map((x) => placeDesk(r, x, true)), floor: [] });
+      const c = cellCentre(s.deskAt.i, s.deskAt.j);
+      return { x: c.x, y: c.y };
+    },
     setZoom(z: number): void {
       // room signs fade in as you zoom out and grow so they stay readable; the stage sign always shows
       const a = z <= 0.55 ? 1 : z >= 0.8 ? 0 : (0.8 - z) / 0.25;
@@ -547,6 +774,7 @@ export function buildWorld(
       name.scale.set(signScale);
       vaultSign.scale.set(signScale);
       fair?.scale.set(signScale);
+      for (const l of lockSigns) l.scale.set(Math.max(1, Math.min(5, 0.9 / z)));
     },
     setJobFair(count: number, head: Cell | null): void {
       if (!head || count <= 0) {
@@ -589,7 +817,7 @@ function placeOnWall(heights: Uint8Array, W: number, main: SortedLayer, f: Frame
   const flatH = f.h - Math.floor(f.w / 2) - 1;
   const oy = Math.max(1, Math.floor((16 * t.h - flatH) / 2));
   const span = Math.ceil(f.w / 16);
-  const depth = pr.i + pr.j + span - 1 - 0.5 + 0.05;
+  const depth = pr.i + pr.j + span - 1 + 0.55;
   const x = axis === 'i' ? t.x + 2 : t.x - 2;
   return main.add(makeParticle(f, x, t.y + oy, axis === 'j'), depth);
 }
@@ -603,4 +831,177 @@ export function updateTickers(world: Pick<World, 'tickers'>, stocks: Map<string,
     t.text.texture = renderTickerText(text, 101, 32, t.axis);
     if (old !== Texture.EMPTY) old.destroy(true);
   }
+}
+
+/** A lock sign for a lot: what comes here and when. */
+function lockTexture(what: string, when: string): Texture {
+  const scale = 1;
+  const w = Math.max(textWidth(what, scale), textWidth(when, scale)) + 22;
+  const h = 26;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#10244e';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#6f9cf0';
+  ctx.fillRect(0, 0, w, 1);
+  ctx.fillRect(0, h - 1, w, 1);
+  ctx.fillRect(0, 0, 1, h);
+  ctx.fillRect(w - 1, 0, 1, h);
+  // padlock
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillRect(4, 10, 9, 7);
+  ctx.fillRect(5, 6, 1, 4);
+  ctx.fillRect(11, 6, 1, 4);
+  ctx.fillRect(6, 5, 5, 1);
+  ctx.fillStyle = '#10244e';
+  ctx.fillRect(8, 12, 1, 3);
+  drawText(ctx, what, 17, 4, '#e8f0ff', scale);
+  drawText(ctx, when, 17, 14, '#ffd23f', scale);
+  const tex = Texture.from(c);
+  tex.source.scaleMode = 'nearest';
+  return tex;
+}
+
+interface CityLook {
+  ground: string;
+  groundTint: number;
+  back: string[];
+  front: string[];
+  cars: string[];
+  scale: number;
+  tint: number;
+}
+
+const CITY: CityLook[] = [
+  { ground: 'grass', groundTint: 0xffffff, back: ['house_a', 'tree_round', 'house_b', 'tree_bushy', 'tree_pine'], front: ['tree_round', 'mailbox', 'tree_bushy', 'tree_pine'], cars: ['car_red', 'car_blue', 'van'], scale: 1, tint: 0xffffff },
+  { ground: 'sidewalk', groundTint: 0xffffff, back: ['shop', 'house_b', 'brick_block', 'shop', 'tree_square'], front: ['tree_square', 'bench', 'hydrant', 'trash_can', 'bus_stop'], cars: ['taxi', 'car_blue', 'van', 'car_red'], scale: 1, tint: 0xffffff },
+  { ground: 'sidewalk', groundTint: 0xffffff, back: ['brick_block', 'shop', 'glass_tower', 'brick_block', 'shop'], front: ['tree_square', 'bench', 'hydrant', 'bus_stop', 'trash_can'], cars: ['taxi', 'car_white', 'van', 'police', 'car_blue'], scale: 1.2, tint: 0xffffff },
+  { ground: 'sidewalk', groundTint: 0xe8ecf4, back: ['glass_tower', 'deco_tower', 'brick_block', 'glass_tower'], front: ['tree_square', 'bus_stop', 'hydrant', 'bench'], cars: ['taxi', 'limo', 'car_white', 'taxi'], scale: 1.5, tint: 0xffffff },
+  { ground: 'sidewalk', groundTint: 0xdfe4f0, back: ['deco_tower', 'glass_tower', 'glass_tower', 'deco_tower', 'crane'], front: ['tree_square', 'bus_stop', 'hydrant'], cars: ['limo', 'taxi', 'police', 'car_white'], scale: 1.9, tint: 0xffffff },
+  { ground: 'asphalt', groundTint: 0xd89090, back: ['evil_tower', 'evil_rat_tower', 'glass_tower', 'evil_tower', 'deco_tower'], front: ['skull_flag', 'barrier', 'cone'], cars: ['limo', 'car_gold', 'police', 'limo'], scale: 2.1, tint: 0xffb0b0 },
+];
+
+/** Ground, neighbour buildings, trees, benches and parked cars round the current building. */
+function buildCity(plan: FloorLayout, stage: number, atlas: Atlas, main: SortedLayer, floor: SortedLayer): { update(dt: number): void } {
+  const ring = plan.rings[stage]!;
+  const look = CITY[stage] ?? CITY[0]!;
+  const rng = (n: number): number => ((Math.imul(n + stage * 977, 2654435761) >>> 0) % 10000) / 10000;
+  const lo = ring.i0;
+  const hi = ring.i1;
+  const IN = 8; // the street square drawn by the floor pass
+  const OUT = 22;
+  // ground beyond the street
+  for (let j = lo - OUT; j <= hi + OUT; j++) {
+    for (let i = lo - OUT; i <= hi + OUT; i++) {
+      const d = Math.max(lo - i, i - hi, lo - j, j - hi);
+      if (d < IN) continue;
+      const v = ((Math.imul(i, 73856093) ^ Math.imul(j, 19349663)) >>> 0) % 4;
+      const style = d <= IN + 1 && look.ground === 'grass' ? 'sidewalk' : look.ground;
+      const p = cellToScreen(i, j);
+      const t = makeParticle(atlas.frame(`world:fl_${style}_${v}`), p.x, p.y);
+      t.tint = look.groundTint;
+      floor.add(t, i + j);
+    }
+  }
+  const put = (kind: string, i: number, j: number, mirror: boolean, scale = 1, tint = 0xffffff): void => {
+    if (!atlas.has(`world:${kind}`)) return;
+    const c = cellCentre(i, j);
+    const p = makeParticle(atlas.frame(`world:${kind}`), c.x, c.y, mirror, scale);
+    p.tint = tint;
+    main.add(p, i + j + 1);
+  };
+  // neighbour buildings along the two back sides (they never hide the office), a landmark on the back corner
+  const big = (k: string): boolean => k.includes('tower') || k === 'brick_block' || k === 'crane' || k === 'shop' || k.startsWith('house');
+  let n = 0;
+  const step = Math.round(7 * look.scale);
+  for (let s = lo - 4; s <= hi + 6; s += step) {
+    const kind = look.back[n++ % look.back.length]!;
+    const sc = big(kind) ? look.scale : 1;
+    const tint = kind === 'glass_tower' ? look.tint : 0xffffff;
+    put(kind, s, lo - IN - 3 - Math.round(rng(n) * 2), rng(n + 7) < 0.5, sc, tint);
+    const kind2 = look.back[(n + 2) % look.back.length]!;
+    put(kind2, lo - IN - 3 - Math.round(rng(n + 3) * 2), s, rng(n + 9) < 0.5, big(kind2) ? look.scale : 1, kind2 === 'glass_tower' ? look.tint : 0xffffff);
+  }
+  put(look.back[0]!, lo - IN - 6, lo - IN - 6, false, look.scale * 1.15, look.back[0] === 'glass_tower' ? look.tint : 0xffffff);
+  // a second row further back, dimmer (distance), and a few on the far left and right corners
+  const far = stage >= 5 ? 0xb07070 : 0x9098b0;
+  for (let s = lo - 8 + Math.round(step / 2); s <= hi + 8; s += step) {
+    const kind = look.back[(n + 3) % look.back.length]!;
+    n++;
+    if (!big(kind)) continue;
+    put(kind, s, lo - IN - 3 - step, rng(n + 11) < 0.5, look.scale, far);
+    put(look.back[(n + 1) % look.back.length]!, lo - IN - 3 - step, s, rng(n + 17) < 0.5, look.scale, far);
+  }
+  for (let k = 0; k < 3; k++) {
+    const kind = look.back[(k + 1) % look.back.length]!;
+    if (!big(kind)) continue;
+    put(kind, hi + IN + 3 + k * step, lo - IN - 2 - k * 2, k % 2 === 1, look.scale, 0xffffff);
+    put(look.back[(k + 2) % look.back.length]!, lo - IN - 2 - k * 2, hi + IN + 3 + k * step, k % 2 === 0, look.scale, 0xffffff);
+  }
+  // low things along the two front sides, in the band past the road
+  n = 0;
+  for (let s = lo - 2; s <= hi + 4; s += 5) {
+    const a = look.front[n++ % look.front.length]!;
+    const b = look.front[(n + 1) % look.front.length]!;
+    put(a, s, hi + IN + 1, rng(n) < 0.5);
+    put(b, hi + IN + 1, s, rng(n + 5) < 0.5);
+  }
+  // parked cars on the road ring (sprites run along j; mirrored along i)
+  n = 0;
+  for (let s = lo - 3; s <= hi + 3; s += 6) {
+    for (const [i, j, mirror] of [[s, lo - 5, true], [lo - 5, s, false], [s, hi + 5, true], [hi + 5, s, false]] as const) {
+      if (rng(n * 13 + i + j) < 0.45) continue;
+      const near = Math.abs(i - ring.spawn.i) + Math.abs(j - ring.spawn.j) < 6;
+      if (near) continue;
+      put(look.cars[n++ % look.cars.length]!, i, j, mirror);
+    }
+  }
+  // the suburb: a driveway up to the garage door, the family car on it
+  if (stage === 0) {
+    const d = ring.entrance[0]!;
+    for (let j = d.j + 1; j <= d.j + 3; j++) {
+      for (let i = d.i - 4; i <= d.i - 2; i++) {
+        const p = cellToScreen(i, j);
+        floor.add(makeParticle(atlas.frame(`world:fl_driveway_${(i + j) & 3}`), p.x, p.y), 2e5 + i + j);
+      }
+    }
+    put('car_red', d.i - 3, d.j + 2, true);
+    put('mailbox', d.i - 5, d.j + 3, false);
+  }
+  // traffic: cars drive down the four roads (sprites only point down-right or down-left, so every road runs that way)
+  const NOSE_RIGHT = new Set(['car_red', 'car_blue', 'taxi']);
+  const movers: Array<{ item: LayerItem; axis: 'i' | 'j'; fixed: number; pos: number; from: number; to: number; speed: number }> = [];
+  const roads: Array<[axis: 'i' | 'j', fixed: number]> = [['i', lo - 4], ['j', lo - 4], ['i', hi + 4], ['j', hi + 4]];
+  const perRoad = stage === 0 ? 1 : 2;
+  n = 0;
+  for (const [axis, fixed] of roads) {
+    for (let k = 0; k < perRoad; k++) {
+      const kind = look.cars[(n + k) % look.cars.length]!;
+      n++;
+      if (!atlas.has(`world:${kind}`)) continue;
+      // down-right (+i) wants the nose on the right; down-left (+j) on the left
+      const mirror = axis === 'i' ? !NOSE_RIGHT.has(kind) : NOSE_RIGHT.has(kind);
+      const from = lo - 10;
+      const to = hi + 10;
+      const pos = from + rng(n * 31 + k) * (to - from);
+      const c = axis === 'i' ? cellCentre(pos, fixed) : cellCentre(fixed, pos);
+      const p = makeParticle(atlas.frame(`world:${kind}`), c.x, c.y, mirror);
+      const item = main.add(p, pos + fixed + 1);
+      movers.push({ item, axis, fixed, pos, from, to, speed: 3 + rng(n * 7) * 3 });
+    }
+  }
+  return {
+    update(dt: number): void {
+      for (const m of movers) {
+        m.pos += m.speed * dt;
+        if (m.pos > m.to) m.pos = m.from;
+        const c = m.axis === 'i' ? cellCentre(m.pos, m.fixed) : cellCentre(m.fixed, m.pos);
+        m.item.p.x = c.x;
+        m.item.p.y = c.y;
+        main.moved(m.item, m.pos + m.fixed + 1);
+      }
+    },
+  };
 }

@@ -11,7 +11,9 @@ export type Face = 'se' | 'sw' | 'ne' | 'nw';
 export const T = { VOID: 0, STREET: 1, ROOM: 2, CORRIDOR: 3, WALL: 4, DOOR: 5 } as const;
 export type TileType = (typeof T)[keyof typeof T];
 
-export type FloorStyle = 'office' | 'warm' | 'marble' | 'tile' | 'dark' | 'street' | 'platform';
+export type FloorStyle =
+  | 'carpet' | 'vinyl' | 'wood_i' | 'wood_j' | 'bath' | 'checker' | 'raised' | 'concrete' | 'marble' | 'asphalt' | 'sidewalk'
+  | 'driveway' | 'lot' | 'blueprint' | 'grass' | 'platform';
 
 export interface Seat {
   id: number;
@@ -20,12 +22,18 @@ export interface Seat {
   symbol: string | null;
   /** the cell the chair stands on (blocked for walking) */
   cell: Cell;
-  /** 'j': desk runs along j in front of the seat, rat faces ne. 'i': desk runs along i, rat faces nw (mirrored). */
+  /** the desk's long side: 'j' (sprites as drawn) or 'i' (mirrored) */
   axis: 'i' | 'j';
-  /** desk sprite anchor cell */
-  desk: Cell;
-  /** where the seated rat's feet go (fractional cell) */
+  /** 'front': the rat sits behind its desk facing the camera; 'back': in front of it, back to the camera */
+  view: 'front' | 'back';
+  /** centre of the desk's 2-cell footprint (fractional cell, like pos) */
+  deskAt: Cell;
+  /** where the seated rat goes (fractional cell) */
   pos: Cell;
+  /** desks come in pods (2 to 4 facing each other, or a row along a wall); a pod shows once one of its rats is in */
+  pod: number;
+  /** cells the desk and chair take (blocked) */
+  cells: Cell[];
   /** free cell next to the chair where walks start and end */
   access: Cell;
   /** screen-pixel nudge shared by desk, chair and rat, so rows are not ruler-straight */
@@ -72,6 +80,26 @@ export interface Prop {
   wall?: 'i' | 'j';
   /** street props: the stage whose street they stand on */
   ring?: number;
+  /** sprite scale (server racks are drawn smaller than their art) */
+  scale?: number;
+  /** props of a desk pod (drawn only while the pod stands) */
+  pod?: number;
+}
+
+/** A posed rat that belongs to the set, not the roster (vignettes). */
+export interface Actor {
+  room: number;
+  /** atlas look: tier, or tier.fur */
+  look: string;
+  anim: string;
+  mirror: boolean;
+  i: number;
+  j: number;
+  dx: number;
+  dy: number;
+  tears: boolean;
+  zzz: boolean;
+  story: string;
 }
 
 export interface Room {
@@ -149,11 +177,16 @@ export interface FloorLayout {
   /** growth: the two regions a door joins (room id, or CORRIDOR_REGION + ring) */
   doorSides: Map<number, [number, number]>;
   garage: Room;
+  /** vignette extras */
+  actors: Actor[];
 }
 
 export const CORRIDOR_REGION = 10000;
 
-export const FLOOR_STYLES: FloorStyle[] = ['office', 'warm', 'marble', 'tile', 'dark', 'street', 'platform'];
+export const FLOOR_STYLES: FloorStyle[] = [
+  'carpet', 'vinyl', 'wood_i', 'wood_j', 'bath', 'checker', 'raised', 'concrete', 'marble', 'asphalt', 'sidewalk', 'driveway', 'lot',
+  'blueprint', 'grass', 'platform',
+];
 
 export function idx(W: number, i: number, j: number): number {
   return j * W + i;

@@ -4,6 +4,19 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Round 2: close the gap with floor796 (owner, 2026-09-28).** Rooms were the problem more than the art, so most of it is code:
+  - **Desk pods** (`src/floor/furnish.ts` `deskRoom`): pods of 2 to 4 desks facing each other on a grid with aisles round each one, plus rows along the two front walls. No random rotations: one pod direction per room. Every rat faces its own monitor; the far side of a pod and the front-wall rows face the camera over the back of their monitor (`desk_back`, the oak desk turned round in `tools/build_gen.py`), the near side shows its back and the screen. Rats fill a room pod by pod.
+  - **Seated poses** (`tools/build_rats2.py`): `sit_front` and `sit_back` are the standing idle frames cut at the hips and set on a chair (the desk hides the legs); `sulk_*` sits lower for a falling stock and for naps.
+  - **Cutaway walls:** walls are thin faces on cell edges instead of full blocks. Knee-high (10 px, light cut top) inside and on the front; tall (48 px) only on the building's back walls (night windows) and as panels where a ticker, whiteboard or TV hangs.
+  - **Floors per room type** (`gen.png`): carpet, wood planks, checker, bath tile, raised server floor, concrete, marble, vinyl corridors, plus rugs and worn patches. Colours per type are kept so zones still read from far away.
+  - **Empty pods** are taped-off building sites (hazard tape, boxes) until their first rat arrives, then the desks pop in with a dust puff.
+  - **Rats:** fur grey, brown, white or black; accessory glasses, red or white headphones, bowler, cap or beanie (58%) or none; both picked from the avatar seed. Suits still carry the tier. Accessories are one overlay particle per rat, frame for frame.
+  - **Vignettes** (`src/floor/vignettes.ts`): 18 authored scenes with a story and posed extras (server fire, red chart meeting, all-hands nap, nap on the copier, paper jam, smoking fax, crying in the WC, CEO counting cash, donut fight, birthday, pizza night, arcade, ping pong, foosball, aquarium, vault hoard, evil throne, wet floor). Code only picks one that fits the room type and finds a free spot; it never invents a layout. 80% of amenity rooms get one, no repeats within a ring while others fit.
+  - **Rare props:** one easter egg per ring (disco ball, phone booth, UFO, rubber duck, treasure, golden rat). Common clutter stays everywhere.
+  - **The city per stage** (`buildCity` in `src/world/build.ts`): suburb (grass, houses, trees, mailboxes, a driveway with the family car, the garage keeps an open roll-up door), downtown (shops, brick blocks, benches, hydrants, bus stops), towers (glass and art deco, scaled up per stage, two rows deep), the evil empire (black and red towers, red ground). Tall buildings only stand behind the office, never in front. Parked cars and traffic on the road ring.
+  - **Idle feel:** lots of the current stage show a muted blueprint floor; the next few get a lock sign ("BREAK ROOM 367 RATS", "DESKS NEXT HIRES"). The HUD shows a bar to the next stage ("CORPORATE FLOOR: 104 / 500 rats"). A room going up gets scaffolding and a crane for a moment and a dust puff, then pops in.
+  - **Server racks** at 72% of their art.
+
 - **Idle game (owner, 2026-09-27):** the building grows with the rat count, deterministically: garage startup (under 25), small office (25+), full floor (100+), corporate floor (500+), megacorp (1500+), evil empire (3000+). `src/floor/plan.ts` draws a fixed master plan once (the garage in the middle, one ring of rooms per later stage, drawn for 5,200 rats); `src/floor/growth.ts` replays rats in id order: a new stage builds its ring corridor and lobby, amenities open at set counts, and a rat with no free desk in its stock's rooms gets the next desk-room slot built for that stock. Rooms never move or disappear. Before the full floor everyone shares the garage and open-plan offices. New stage: banner; every new room: a BUILD line in the live feed and its furniture pops in. Revert point before this work: branch `snapshot/pixel-dense-v1`.
 - **Readable from far away (owner, 2026-09-27):** a floor colour per room type (blue desk rooms, orange break rooms, aqua WCs, lilac meeting rooms, deep blue servers, grey copy rooms, brown storage, green lobbies, gold CEO office, red war room), big pixel-font signs over every room that fade in and grow as you zoom out, the stage name over the building, and a light beam from the furnace that widens with each stage. The furnace itself grows (x1, x2, x3). The evil empire gets a red sky, red corridors and darker walls.
 - **Fewer black chairs (owner, 2026-09-27):** empty desks have no chair at all; a light grey chair shows only while its rat is away. Desk rooms are built on demand, so few desks stand empty.
@@ -21,6 +34,8 @@ Running log of decisions and blockers. Newest first inside each section.
 - **Phase 2 facing plan:** walk and idle drawn for south-east and north-east; south-west and north-west are mirrors. Seated rats (type, slump) face screen right on their own chair; mirror to face left. Cheer is standing, facing south-east (arms read best toward the camera).
 
 ## Blockers
+
+- **The deployed page cannot be checked from this container:** `mikuespana.github.io` is refused by the network policy (CONNECT 403). The build is tested locally (`VITE_SIM=1` build, same code) and pushed to `gh-pages`.
 
 - **Git tags cannot be pushed through the git proxy (HTTP 403)**, so the revert point is a branch: `snapshot/pixel-dense-v1` (commit 6bc2627, the dense floor before the idle game).
 - **CC0 asset hosts are blocked by the network policy** (itch.io, img.itch.zone, kenney.nl, opengameart.org all refused at CONNECT). No third-party props were used, so there are no outside licenses to log. To try CC0 props later, add those hosts under the environment's Network access settings.
@@ -53,7 +68,11 @@ The account is on a trial: 40 generations total, 0 USD credits.
 | `create_building_kit`, `create_tiles_pro`, `create_character_state`, objects | 20 to 40 (out of budget) |
 | `pixelart_workbench` (recolor, edit, draw) | free |
 
-### Idle game: assets per stage (nothing generated yet, 4 generations left)
+### Round 2 (paid plan, cap 150 for this round): 31 used
+
+`create_map_object`, 1 generation each: 22 prompts, 9 retries (props merged or missing; at most 2 retries per idea). Crops in `assets/raw/props3/crops/`, prompts and ids in `assets/raw/props3/log.json` and `assets/manifest.json`, atlas `props3.png` (`tools/build_props3.py`). Contact sheets: `assets/preview/props3_contact_1.png` (world) and `props3_contact_2.png` (vignette props). Accessories, seated poses, fur, floors and walls cost nothing (drawn in code).
+
+### Idle game: assets per stage (before round 2)
 
 Every stage works today with existing art, kitbashes and code-drawn pieces. Optional hero props, 1 generation each (`create_map_object`), waiting on the owner's go:
 
