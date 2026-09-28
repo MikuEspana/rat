@@ -6,7 +6,14 @@ export const SCHEMA_VERSION = 1;
 
 export class ApiError extends Error {}
 
-export class Api {
+/** What the site reads: this HTTP client, or the in-browser launch simulator (sim/sim-api.ts). */
+export interface ApiLike {
+  state(): Promise<StateResponse>;
+  rats(): Promise<RatsResponse>;
+  events(afterId: number): Promise<EventsResponse>;
+}
+
+export class Api implements ApiLike {
   constructor(readonly base: string) {}
 
   private async get<T extends { schemaVersion: number }>(path: string): Promise<T> {

@@ -132,7 +132,8 @@ describe('B. DRY RUN double volume: 100 SOL in one hour hits the caps', () => {
     const rats = await w.store.rats.listByStatus(['active']);
     expect(rats.length).toBe(Number((50n * SOL) / w.deps.config.salaryLamports));
     console.log(`[B] 100 SOL hour: hire outflow first hour ${formatSol(hireOut)} SOL (cap 30), carried ${formatSol(carried)} SOL, ${rats.length} rats after 2h`);
-  });
+    // two simulated hours and about 1,700 hires: 45 to 75 s on a CI runner, too close to the 60 s default
+  }, 180_000);
 });
 
 describe('C. LIVE on SimChain (in-memory): 50 SOL hour with exact conservation', () => {

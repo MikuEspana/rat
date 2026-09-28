@@ -573,3 +573,175 @@ body {
     font-size: 22px;
   }
 }
+
+/* launch simulator: SIMULATION banner, start screen, control panel */
+.sim-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  padding: 5px 16px;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #16182c;
+  background: repeating-linear-gradient(-45deg, #ffd23f 0 14px, #ffb13d 14px 28px);
+  border-bottom: 2px solid #16182c;
+  pointer-events: auto;
+}
+.sim-mode .hud {
+  top: 38px;
+}
+.sim-mode .feed {
+  top: 128px;
+}
+.sim-intro {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+.sim-kicker {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--gold);
+}
+.sim-lede {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sim-label {
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.sim-fine {
+  font-size: 11px;
+  color: var(--dim);
+}
+.ui .sim-go {
+  margin-top: 8px;
+  padding: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #16182c;
+  background: var(--gold);
+  border: 3px solid #16182c;
+  box-shadow: 0 0 0 3px var(--gold), 0 0 30px rgba(255, 210, 63, 0.5);
+}
+.ui .sim-go:hover {
+  color: #16182c;
+  background: #ffe27a;
+}
+.sim-select {
+  font: inherit;
+  color: var(--text);
+  background: #0f1122;
+  border: 2px solid var(--edge);
+  padding: 4px;
+  max-width: 100%;
+}
+.sim-speeds {
+  display: flex;
+  gap: 4px;
+}
+.sim-panel {
+  position: absolute;
+  left: 10px;
+  top: 130px;
+  width: 330px;
+  padding: 0 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sim-tag {
+  font-weight: 800;
+  color: #16182c;
+  background: var(--gold);
+  padding: 0 6px;
+}
+.sim-status {
+  margin-left: auto;
+  color: var(--dim);
+}
+.sim-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ui .sim-play {
+  min-width: 64px;
+  color: #16182c;
+  background: var(--gold);
+  border-color: #16182c;
+  font-weight: 700;
+}
+.ui .sim-play:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sim-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+}
+.sim-row {
+  display: flex;
+  flex-direction: column;
+}
+.sim-k {
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.sim-v {
+  font-weight: 700;
+  font-size: 13px;
+}
+.ev-tag.launch {
+  background: var(--up);
+}
+.ev-tag.sim {
+  background: var(--gold);
+}
+@media (max-width: 900px) {
+  .sim-mode .feed {
+    top: auto;
+  }
+  .sim-panel {
+    width: auto;
+    right: 10px;
+  }
+  .sim-readout {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .sim-banner {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+}
+.sim-intro[hidden],
+.sim-panel[hidden] {
+  display: none;
+}
+/* the site's own overlay (HUD, feed, card, stage banner) stays above the simulator panel on small screens */
+.ui {
+  z-index: 2;
+}
+.ui.sim-ui {
+  z-index: 1;
+}

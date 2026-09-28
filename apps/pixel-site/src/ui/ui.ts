@@ -6,6 +6,7 @@ import type { Atlas } from '../gfx/atlas';
 import type { Camera } from '../gfx/camera';
 import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
+import { now as clockNow } from '../now';
 import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, tokens, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
@@ -32,6 +33,8 @@ export interface UiDeps {
   atlas: Atlas;
   /** world-space layer for the selection marker */
   markerLayer: Container;
+  /** the launch simulator feeds the site: wallets are made up, so no Solscan links */
+  simulated?: boolean;
 }
 
 export class Ui {
@@ -154,17 +157,17 @@ export class Ui {
       const p = claimProgress(s.bot.lastClaimAt, s.bot.nextClaimAt);
       const len = 2 * Math.PI * 26;
       this.ringArc.setAttribute('stroke-dashoffset', String(len * (1 - (p ?? 0))));
-      const next = s.bot.nextClaimAt ? Math.round((Date.parse(s.bot.nextClaimAt) - Date.now()) / 1000) : null;
+      const next = s.bot.nextClaimAt ? Math.round((Date.parse(s.bot.nextClaimAt) - clockNow()) / 1000) : null;
       this.ringLabel.textContent = s.bot.mode === 'paused' ? 'paused' : next === null ? 'next hire --' : next > 0 ? `next hire ${next}s` : 'hiring...';
     }
-    const now = Date.now();
+    const now = clockNow();
     for (const it of this.feedItems) it.time.textContent = ago(it.at, now);
     if (this.selected !== null) {
       const pos = this.d.rats.positionOf(this.selected);
       const rec = this.d.store.rats.get(this.selected);
       if (pos && rec) {
         this.marker.visible = true;
-        this.marker.position.set(pos.x, pos.y - 54 * TIER_SCALE[rec.view.tier] - 4 + Math.sin(now / 160) * 2);
+        this.marker.position.set(pos.x, pos.y - 54 * TIER_SCALE[rec.view.tier] - 4 + Math.sin(performance.now() / 160) * 2);
       }
     }
   }
@@ -209,7 +212,7 @@ export class Ui {
 
   /** Local lines (things the company built), newest last. */
   pushLocal(lines: Array<{ tag: string; text: string }>): void {
-    const at = new Date().toISOString();
+    const at = new Date(clockNow()).toISOString();
     for (const d of lines) {
       const li = el('li', `ev ${d.tag.toLowerCase()} fresh`);
       const time = el('span', 'ev-time', ago(at));
@@ -379,7 +382,8 @@ export class Ui {
     row('Status', v.status === 'frozen' ? 'frozen (stock paused or account frozen)' : 'at work');
     row('Hired', ago(v.hiredAt));
     const links = el('div', 'card-links');
-    links.append(link(v.solscanUrl, 'Wallet on Solscan'));
+    if (this.d.simulated) links.append(el('span', 'card-note', 'simulated rat: made-up wallet, nothing on chain'));
+    else links.append(link(v.solscanUrl, 'Wallet on Solscan'));
     if (rec.estimated) links.append(el('span', 'card-note', 'value estimated since hire; exact after reload'));
     this.card.replaceChildren(head, grid, links);
     this.card.hidden = false;

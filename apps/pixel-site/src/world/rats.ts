@@ -289,10 +289,10 @@ export class RatSystem {
     this.layer.sync(true);
   }
 
-  /** A hire: comes up the subway stairs and walks to the next free desk of its stock. */
-  hire(rec: RatRecord): void {
+  /** A hire: comes up the subway stairs and walks to the next free desk of its stock (walk false: appears there). */
+  hire(rec: RatRecord, walk = true): void {
     if (this.agents.has(rec.facts.id)) return;
-    this.create(rec, true);
+    this.create(rec, walk);
   }
 
   private create(rec: RatRecord, walk: boolean): void {

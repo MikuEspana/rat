@@ -1,0 +1,49 @@
+name: pages
+
+# The launch simulator demo: the pixel site built as a static site (VITE_SIM=1: the simulator runs in the browser,
+# no server, no API, no keys), published on every push to main to the gh-pages branch, which GitHub Pages serves at
+# https://mikuespana.github.io/rat/. The same folder is kept as the rat-race-demo artifact (Netlify Drop, Vercel).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the static demo (launch simulator, no API)
+        run: pnpm --filter @rat/pixel-site build
+        env:
+          VITE_SIM: '1'
+      - name: Keep the folder for manual hosting
+        uses: actions/upload-artifact@v4
+        with:
+          name: rat-race-demo
+          path: apps/pixel-site/dist
+      - name: Publish to the gh-pages branch
+        working-directory: apps/pixel-site/dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "Launch simulator demo from ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

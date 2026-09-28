@@ -18,6 +18,26 @@ VITE_API_BASE=https://api.example.com pnpm --filter @rat/pixel-site build   # st
 
 Controls: drag to pan, mouse wheel or pinch to zoom, click a rat for its card (Esc closes). Click a hire in the feed or a leaderboard row to fly to that rat.
 
+## Launch simulator (no server)
+
+A whole launch, simulated in the browser: the coin goes live, the market cap climbs, volume makes creator fees, and the bot's rules turn them into claims, hires and burns. The site reads it through the same interface as the API, in the same response shapes, so every piece on screen (hires walking in, stage banners, rooms being built, BUILD lines, burns into the furnace) is the real rendering code.
+
+```sh
+pnpm --filter @rat/pixel-site dev                           # then open http://localhost:5173/?sim
+VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in apps/pixel-site/dist (any static host)
+```
+
+- "Simulate launch", then Start / Pause / Reset, speed 1x, 10x, 60x or 300x, and a scenario:
+  - **Normal**: pumps to about $1.8M over 3 hours, then cools off. About 2,400 rats (megacorp).
+  - **Mega**: runs to about $10M. About 4,500 rats (evil empire).
+  - **Rug**: pumps to about $300K, then dumps 80%. About 390 rats (full floor).
+- Page flags: `?sim&scenario=mega&speed=300&autostart=1`. `?api=<url>` always uses a real API.
+- A yellow SIMULATION banner stays on screen the whole time. Events carry no transaction signature and link to nothing.
+- `src/sim/rules.ts` holds the bot's rules (50/50 split, 0.03 SOL per rat, at most 10 hires per 35 s loop, 30 SOL per hour per bucket, burn rounds 8 to 12 minutes apart, chunks of at most 1 SOL, at most 5 SOL per round). `rules.test.ts` compares every number with the worker's real default config. Stock picks use the worker's own picker (`packages/core/src/picker.ts`).
+- `src/sim/scenarios.ts`: the market cap curves, the volume model and the creator fee tiers. Volume and fee rates are rough models (the fee tiers approximate pump.fun's, which are set on-chain and can change), tuned so Normal pays about 145 SOL of fees.
+- `src/sim/engine.test.ts` runs every scenario to the end: every response passes the contract's zod schemas, and the rules hold (split, per-loop limit, hourly cap, chunk and round sizes, round spacing, never spending more than was claimed).
+- Live demo: https://mikuespana.github.io/rat/ . `.github/workflows/pages.yml` rebuilds it on every push to `main` and publishes it to the `gh-pages` branch, which GitHub Pages serves. The same folder is kept as the `rat-race-demo` workflow artifact (drag it onto Netlify Drop or Vercel).
+
 ## What is on screen
 
 | Piece | Source |
