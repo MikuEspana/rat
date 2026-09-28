@@ -1,5 +1,17 @@
-// Dust: a puff where something just got built. (The money flying into the Vault lives in vault.ts.)
+// Dust: a puff where something just got built. Demolition: when the office takes a lot, what stood there shakes,
+// sinks into a cloud of dust and is gone. (The money flying into the Vault lives in vault.ts.)
 import { Container, Sprite, Texture } from 'pixi.js';
+import type { CityPart } from './build';
+
+interface Wreck {
+  s: Sprite;
+  x: number;
+  y: number;
+  sy: number;
+  h: number;
+  t: number;
+  delay: number;
+}
 
 interface Puff {
   s: Sprite;
@@ -35,6 +47,20 @@ function puffTexture(): Texture {
 export class Effects {
   readonly container = new Container();
   private puffs: Puff[] = [];
+  private wrecks: Wreck[] = [];
+
+  /** The office expands over these: shake, sink, dust (at most 40, nearest first; the rest just vanish). */
+  demolish(parts: CityPart[]): void {
+    parts.slice(0, 40).forEach((p, k) => {
+      const s = new Sprite(p.texture);
+      s.anchor.set(p.ax, p.ay);
+      s.position.set(p.x, p.y);
+      s.scale.set(p.sx, p.sy);
+      s.tint = p.tint;
+      this.container.addChild(s);
+      this.wrecks.push({ s, x: p.x, y: p.y, sy: p.sy, h: p.texture.height * Math.abs(p.sy), t: 0, delay: (k % 12) * 0.05 });
+    });
+  }
 
   /** A puff of dust (something just got built here). */
   dust(x: number, y: number, n = 14): void {
@@ -51,6 +77,27 @@ export class Effects {
   }
 
   update(dt: number): void {
+    for (let k = this.wrecks.length - 1; k >= 0; k--) {
+      const w = this.wrecks[k]!;
+      if (w.delay > 0) {
+        w.delay -= dt;
+        continue;
+      }
+      w.t += dt;
+      if (w.t < 0.25) w.s.x = w.x + (Math.random() - 0.5) * 3; // it shakes
+      else {
+        // then sinks and crumbles, dust boiling up round its base
+        const u = Math.min(1, (w.t - 0.25) / 0.6);
+        w.s.x = w.x;
+        w.s.scale.y = w.sy * (1 - u * 0.8);
+        w.s.alpha = 1 - u;
+        if (Math.random() < 0.5) this.dust(w.x + (Math.random() - 0.5) * 30, w.y, 2);
+      }
+      if (w.t >= 0.85) {
+        w.s.destroy();
+        this.wrecks.splice(k, 1);
+      }
+    }
     for (let k = this.puffs.length - 1; k >= 0; k--) {
       const p = this.puffs[k]!;
       p.t += dt;
@@ -69,6 +116,6 @@ export class Effects {
   }
 
   get active(): number {
-    return this.puffs.length;
+    return this.puffs.length + this.wrecks.length;
   }
 }

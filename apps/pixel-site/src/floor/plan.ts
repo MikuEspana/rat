@@ -13,7 +13,7 @@ import {
 } from './furnish';
 import { packRect, type Req } from './pack';
 import { EASTER_EGGS, placeVignette } from './vignettes';
-import type { LandmarkSpot } from './landmarks';
+import { type LandmarkSpot, TOWER_SLOT } from './landmarks';
 import { Rng } from './rng';
 import { CORRIDOR_REGION, FLOOR_STYLES, T, idx, type Actor, type FloorLayout, type FloorStyle, type Ring, type Room, type RoomKind, type Spot } from './types';
 
@@ -422,11 +422,21 @@ export function buildMaster(): FloorLayout {
   const landmarkSpots: Record<string, LandmarkSpot & { room: number }> = {};
   const firstOpen = rooms.filter((r) => r.ring === 1 && r.kind === 'open' && r.w >= 9 && r.h >= 9).sort((a, b) => a.order - b.order)[0];
   const lobbyOf = (k: number): Room | undefined => rooms[rings[k]?.lobby ?? -1];
+  // the towers stand in the core, near the two outer corners of the first ring: A (the glass elevator, the helipad) at
+  // the right end of the back room, B (the pool party) in the left corner room; a sky bridge runs round the back
+  const roomAt = (k: number, i: number, j: number): Room | undefined => rooms.find((r) => r.ring === k && i >= r.i0 && i < r.i0 + r.w && j >= r.j0 && j < r.j0 + r.h);
+  const r1 = rings[1]!;
+  const towerA = roomAt(1, r1.i1 - 14, r1.j0 + 2);
+  const towerB = roomAt(1, r1.i0 + 2, r1.j1 - 2);
   const spotFor = (r: Room): Array<[string, number, number, number, number]> => {
     const out: Array<[string, number, number, number, number]> = [];
     // the giant espresso machine has the garage's back corner to itself, clear of the Vault as it grows
     if (r.kind === 'garage') out.push(['espresso', r.i0, r.j0, 3, 3]);
     if (r === lobbyOf(1)) out.push(['pingpong', r.i0 + r.w - 5, r.j0 + r.h - 4, 3, 2]);
+    if (r === towerA) out.push(['elevator', r.i0 + r.w - TOWER_SLOT - 1, r.j0 + 1, TOWER_SLOT, TOWER_SLOT]);
+    if (r === towerB) out.push(['pool', r.i0, r.j0 + r.h - TOWER_SLOT - 1, TOWER_SLOT, TOWER_SLOT]);
+    // the basement wing: a pit dug into the back of the full floor's lobby
+    if (r === lobbyOf(2)) out.push(['gym', r.i0 + 3, r.j0 + 2, 10, 7]);
     if (r === lobbyOf(3)) out.push(['statue', r.i0 + Math.floor(r.w / 2) - 1, r.j0 + Math.floor(r.h / 2) - 1, 3, 3]);
     if (r === firstOpen) out.push(['pit', r.i0 + Math.floor(r.w / 2) - 2, r.j0 + Math.floor(r.h / 2) - 2, 5, 5]);
     if (r.kind === 'war' && r.ring === 5) out.push(['throne', r.i0 + Math.floor(r.w / 2) - 2, r.j0 + Math.floor(r.h / 2) - 2, 5, 4]);

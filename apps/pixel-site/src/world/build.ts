@@ -11,6 +11,9 @@ import { drawText, shearLeftWall, shearRightWall, textWidth } from '../gfx/pixel
 import { cellCentre, cellToScreen } from '../iso';
 import type { Growth } from '../floor/growth';
 import { buildCity as planCity, CITY_KEY, type City } from '../floor/city';
+import { layoutScene, type Scene } from '../floor/scene';
+import { openness } from '../floor/zones';
+import { layoutLabels } from '../floor/labels';
 import { type Focus, renderLandmarks } from './landmarks';
 import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
@@ -57,6 +60,8 @@ export interface World {
   setPrep(on: boolean): void;
   /** the camera moved: the skyline layers drift at their own depth */
   parallax(cx: number, cy: number): void;
+  /** the city's buildings and props standing in a cell rectangle (to demolish when the office takes the ground) */
+  cityParts(i0: number, j0: number, i1: number, j1: number): CityPart[];
   /** a rat got a desk in a pod still under construction: the site clears and the desks pop in. Returns where. */
   activatePod(seatId: number): { x: number; y: number } | null;
   setZoom(z: number): void;
@@ -222,12 +227,13 @@ export function buildWorld(
   // the building and its 2-cell apron come from the plan; everything past it is the city of this stage
   const APRON = 2;
   // wings: a ring's strips open one at a time (plan.ts wingOrder); the ones still shut are city for now
-  const openStrip = new Set<string>();
-  for (const r of plan.rooms) if (r.ring >= 1 && r.ring <= stage && growth.built[r.id]) openStrip.add(`${r.ring}:${r.strip}`);
-  const closedRects: Array<{ i0: number; j0: number; w: number; h: number }> = [];
-  for (let k = 1; k <= stage; k++) plan.rings[k]!.strips.forEach((st, n) => !openStrip.has(`${k}:${n}`) && closedRects.push(st));
-  const inClosed = (i: number, j: number): boolean => closedRects.some((r) => i >= r.i0 && i < r.i0 + r.w && j >= r.j0 && j < r.j0 + r.h);
-  const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`), closedRects);
+  // wings open one at a time; the shut ones are building sites inside the office's outline (never city)
+  const open = openness(plan, stage, (id) => growth.built[id] === 1);
+  const openStrip = open.openStrip;
+  const inClosed = (i: number, j: number): boolean => open.closedRects.some((r) => i >= r.i0 && i < r.i0 + r.w && j >= r.j0 && j < r.j0 + r.h);
+  const city = planCity(plan, stage, (k) => atlas.has(`world:${k}`), (k) => atlas.frame(`world:${k}`));
+  // what stands where: every placement claims its tiles in its zone, what does not fit is skipped (floor/scene.ts)
+  const scene = layoutScene(plan, open, city, growth.count);
   const a0 = ring.i0 - APRON;
   const a1 = ring.i1 + APRON;
   const inApron = (i: number, j: number): boolean => i >= a0 && i <= a1 && j >= a0 && j <= a1;
@@ -291,7 +297,15 @@ export function buildWorld(
   for (const r of plan.rooms) if (r.ticker && r.kind === 'stock' && built(r) && growth.symbolOf[r.id]) for (let n = 0; n < 7; n++) mounted.add(r.ticker.axis === 'i' ? idx(W, r.ticker.i + n, r.ticker.j) : idx(W, r.ticker.i, r.ticker.j + n));
   for (let j = i0; j <= i1; j++) {
     for (let i = i0; i <= i1; i++) {
-      if (!inApron(i, j) || (inClosed(i, j) && !nearBuiltCell(i, j))) {
+      if (inClosed(i, j) && !nearBuiltCell(i, j) && plan.ringOf[idx(W, i, j)]! <= stage) {
+        // a shut wing: a building site inside the office's outline
+        const p = cellToScreen(i, j);
+        const t = makeParticle(atlas.frame(styleFrame('dirt', i, j)), p.x, p.y);
+        t.tint = 0xcabca6;
+        floorLayer.add(t, i + j);
+        continue;
+      }
+      if (!inApron(i, j)) {
         // the city: dithered and darkened towards its edge, so it fades into the night instead of stopping
         const g = city.ground.get(CITY_KEY(i, j));
         if (!g || g.fade > BAYER[(i & 3) * 4 + (j & 3)]!) continue;
@@ -409,7 +423,7 @@ export function buildWorld(
   }
 
   // the city round the building: lots, street furniture, street scenes, traffic, upcoming lots as grey shells
-  const cityView = renderCity(city, stage, atlas, main, floorLayer, under, signs, backdrop, lights);
+  const cityView = renderCity(city, stage, atlas, main, floorLayer, under, signs, backdrop, lights, scene);
   lockSigns.push(...cityView.shells);
 
 
@@ -599,7 +613,9 @@ export function buildWorld(
   }
 
   // never empty: applicants queue in the lobby, the founders hang about the garage at the start
-  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean, acc?: string): void => {
+  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean, acc?: string, claimed = false): void => {
+    // a rat on its own tile: skipped when the tile is taken (the scene already claimed its own rats)
+    if (!claimed && !scene.zoning.claim({ what: `${look}/${anim}`, cat: 'extra', cells: [[i, j]] }, ['office', 'slot', 'apron', 'site'])) return;
     let frames: Frame[];
     try {
       frames = atlas.anim(`${look}/${anim}`);
@@ -643,41 +659,19 @@ export function buildWorld(
     }
   }
 
-  // the rooms still to come are building sites with life on them: stacks of material and cones on the dirt, and on
-  // the next rooms to open a crane and a hard-hat crew (one prop per cell at most, never on the taped edge)
-  {
-    const h = (n: number): number => (((n * 2654435761) >>> 0) % 10007) / 10007;
-    const STUFF = ['cone', 'cone', 'cement', 'pallets', 'box_pile', 'barrier', 'cone', 'pallets'];
-    const CREW = ['intern', 'associate.brown', 'analyst.white', 'intern.black'];
-    let cranes = 0;
-    for (const r of lots) {
-      if (r.w < 3 || r.h < 3) continue;
-      const used = new Set<number>();
-      const n = Math.min(6, 1 + Math.floor((r.w * r.h) / 24));
-      for (let q = 0; q < n; q++) {
-        const i = r.i0 + 1 + Math.floor(h(r.id * 31 + q) * (r.w - 2));
-        const j = r.j0 + 1 + Math.floor(h(r.id * 57 + q * 7 + 3) * (r.h - 2));
-        const key = idx(W, i, j);
-        if (used.has(key)) continue;
-        used.add(key);
-        const kind = STUFF[Math.floor(h(r.id * 13 + q) * STUFF.length)]!;
-        if (!atlas.has(`world:${kind}`)) continue;
-        const c = cellCentre(i, j);
-        main.add(makeParticle(atlas.frame(`world:${kind}`), c.x, c.y + 4, h(r.id + q) < 0.5, kind === 'cone' ? 0.55 : 0.7), i + j + 1);
-      }
-      if (!signed.has(r.id)) continue;
-      // the next rooms to open: a crane on the corner and a crew of two in hard hats
-      const cc = cellCentre(r.i0 + 1, r.j0 + r.h - 2);
-      if (atlas.has('world:crane') && cranes++ < 2) main.add(makeParticle(atlas.frame('world:crane'), cc.x, cc.y, false, 0.62), r.i0 + r.j0 + r.h);
-      for (let q = 0; q < 2; q++) {
-        const i = r.i0 + 1 + ((r.id + q * 3) % Math.max(1, r.w - 2));
-        const j = r.j0 + r.h - 2 - q;
-        if (used.has(idx(W, i, j))) continue;
-        used.add(idx(W, i, j));
-        posed(CREW[(r.id + q) % CREW.length]!, q === 0 ? 'idle_se' : 'cheer', i, j, q === 1, 'hat_hard');
-      }
-    }
+  // the building sites (rooms still to come, shut wings): material and cones on the dirt, a crane and a hard-hat crew
+  // on the next rooms to open; all placed by the scene, one thing per free tile
+  for (const q of scene.siteProps) {
+    if (!atlas.has(`world:${q.kind}`)) continue;
+    const c = cellCentre(q.i, q.j);
+    main.add(makeParticle(atlas.frame(`world:${q.kind}`), c.x, c.y + 4, q.mirror, q.scale), q.i + q.j + 1);
   }
+  for (const q of scene.cranes) {
+    if (!atlas.has('world:crane')) continue;
+    const c = cellCentre(q.i, q.j);
+    main.add(makeParticle(atlas.frame('world:crane'), c.x, c.y, q.mirror, q.scale), q.i + q.j + 1);
+  }
+  for (const q of scene.crew) posed(q.look, q.anim, q.i, q.j, q.mirror, q.acc, true);
 
   // blinking server lights
   const dot = document.createElement('canvas');
@@ -730,6 +724,8 @@ export function buildWorld(
   // signs: every built room gets one (stock rooms show their symbol), the building gets its stage name
   const roomSigns: Sprite[] = [];
   const landmarkSigns: Sprite[] = [];
+  const signBase = new Map<Sprite, number>();
+  let lastLayoutZoom = -1;
   for (const r of plan.rooms) {
     if (!built(r)) continue;
     const label = r.kind === 'stock' ? growth.symbolOf[r.id] ?? '' : ROOM_LOOK[r.kind].label;
@@ -750,7 +746,7 @@ export function buildWorld(
   // landmark set pieces (one per milestone) and the towers that grow the office upwards
   const lm = renderLandmarks({
     plan, stage, count: growth.count, built: (id) => growth.built[id] === 1, city, atlas, main, lights, signs, fresh: freshLandmarks,
-    addPop, posed, sign: (t, c) => signTexture(t, c, 2),
+    addPop, posed, sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
   // with a tower the company name goes up on its roof, where the whole town can read it
@@ -870,6 +866,9 @@ export function buildWorld(
     parallax(cx: number, cy: number): void {
       cityView.parallax(cx, cy);
     },
+    cityParts(i0: number, j0: number, i1: number, j1: number): CityPart[] {
+      return cityView.parts(i0, j0, i1, j1);
+    },
     crown: lm.crown,
     landmarkFocus(id: string): Focus | null {
       return lm.focus.get(id) ?? null;
@@ -904,6 +903,24 @@ export function buildWorld(
         l.scale.set(1);
       }
       for (const l of landmarkSigns) l.scale.set(Math.max(0.45, Math.min(6, 0.9 / z)));
+      // no two signs overlap: landmarks first, then the company name, the "next" signs, the room names
+      if (Math.abs(z - lastLayoutZoom) < 0.005) return;
+      lastLayoutZoom = z;
+      const all: Array<{ s: Sprite; prio: number; steps: number }> = [
+        ...landmarkSigns.map((x) => ({ s: x, prio: 0, steps: 3 })),
+        { s: name, prio: 1, steps: 2 },
+        ...lockSigns.map((x) => ({ s: x, prio: 2, steps: 1 })),
+        ...roomSigns.map((x) => ({ s: x, prio: 3, steps: 0 })),
+      ];
+      const shown = all.filter((x) => x.s.visible && x.s.alpha > 0.01);
+      for (const x of shown) if (!signBase.has(x.s)) signBase.set(x.s, x.s.y);
+      const boxes = shown.map((x) => ({ x: x.s.x, y: signBase.get(x.s)!, w: x.s.texture.width * Math.abs(x.s.scale.x), h: x.s.texture.height * Math.abs(x.s.scale.y), prio: x.prio, steps: x.steps }));
+      const spots = layoutLabels(boxes);
+      shown.forEach((x, n) => {
+        const sp = spots[n]!;
+        x.s.y = signBase.get(x.s)! - sp.dy;
+        x.s.renderable = sp.visible;
+      });
     },
     destroy(): void {
       for (const c of [backdrop, floor, under, main.container, overlay, lights, signs]) {
@@ -1021,6 +1038,18 @@ function skylineLayer(width: number, evil: boolean, seed: number, depth: number)
   return tex;
 }
 
+/** A city sprite as it stands (for the demolition effect). */
+export interface CityPart {
+  texture: Texture;
+  x: number;
+  y: number;
+  ax: number;
+  ay: number;
+  sx: number;
+  sy: number;
+  tint: number;
+}
+
 /** Everything the city puts on screen, and the traffic and extras that move. */
 function renderCity(
   city: City,
@@ -1031,19 +1060,25 @@ function renderCity(
   under: Container,
   signs: Container,
   backdrop: Container,
-  lights?: Container,
-): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void; parallax(cx: number, cy: number): void } {
+  lights: Container | undefined,
+  scene: Scene,
+): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void; parallax(cx: number, cy: number): void; parts(i0: number, j0: number, i1: number, j1: number): CityPart[] } {
   const fadeAt = (i: number, j: number): number => city.ground.get(CITY_KEY(Math.round(i), Math.round(j)))?.fade ?? 1;
   const warm = glowTexture(255, 186, 102);
-  for (const it of city.items) {
+  const drawn: Array<{ i: number; j: number; p: Particle }> = [];
+  city.items.forEach((it, n) => {
+    if (!scene.keepItem[n]) return; // it did not fit its zone (floor/scene.ts)
     const fade = fadeAt(it.i, it.j);
-    if (fade > 0.8) continue;
+    if (fade > 0.8) return;
     const c = cellCentre(it.i, it.j);
     const f = atlas.frame(`world:${it.kind}`);
     const p = makeParticle(f, c.x + (it.dx ?? 0), c.y + (it.dy ?? 0), it.mirror, it.scale);
     p.tint = darken(it.tint ?? 0xffffff, fade * 0.8 + (stage >= 5 && !it.flat ? 0.12 : 0));
     if (it.flat) floor.add(p, 1e6 + it.i + it.j);
-    else main.add(p, it.i + it.j + 1);
+    else {
+      main.add(p, it.i + it.j + 1);
+      drawn.push({ i: it.i, j: it.j, p });
+    }
     if (it.kind === 'street_lamp' && lights) {
       const g = new Sprite(warm);
       g.anchor.set(0.5);
@@ -1053,7 +1088,7 @@ function renderCity(
       g.blendMode = 'add';
       lights.addChild(g);
     }
-  }
+  });
   // lots the office takes next: grey shells with a label
   const shells: Sprite[] = [];
   const g = new Graphics();
@@ -1131,8 +1166,8 @@ function renderCity(
   // extras: street scenes (food truck queue, the smoker, the delivery, the crew)
   const extras: Array<{ p: Particle; acc: Particle | null; frames: Frame[]; accFrames: Frame[]; k: number; t: number; fps: number }> = [];
   const puffs: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
-  for (const x of city.extras) {
-    if (fadeAt(x.i, x.j) > 0.5) continue;
+  for (const [n, x] of city.extras.entries()) {
+    if (!scene.keepExtra[n] || fadeAt(x.i, x.j) > 0.5) continue;
     let frames: Frame[];
     try {
       frames = atlas.anim(`${x.look}/${x.anim}`);
@@ -1256,6 +1291,11 @@ function renderCity(
   });
   return {
     shells,
+    parts(i0: number, j0: number, i1: number, j1: number): CityPart[] {
+      return drawn
+        .filter((d) => d.i >= i0 && d.i <= i1 && d.j >= j0 && d.j <= j1 && d.p.scaleY !== 0)
+        .map((d) => ({ texture: d.p.texture, x: d.p.x, y: d.p.y, ax: d.p.anchorX, ay: d.p.anchorY, sx: d.p.scaleX, sy: d.p.scaleY, tint: d.p.tint }));
+    },
     parallax(cx: number, cy: number): void {
       for (const l of skyLayers) {
         l.s.x = l.x + (cx - l.x) * l.k;

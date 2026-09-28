@@ -9,11 +9,10 @@
 // dithers out into the night. The office sits on a thirds point; the tallest neighbour stands on the opposite
 // diagonal. Street furniture is spread with Poisson-disk sampling, and a few small street scenes are set up.
 import type { Cell } from '../iso';
-import { type TowerSpot, towerSpots } from './landmarks';
 import { Rng } from './rng';
 import type { FloorLayout } from './types';
 
-export type LotUse = 'building' | 'park' | 'parking' | 'site' | 'vacant' | 'shell' | 'basement' | 'rocket' | 'annex';
+export type LotUse = 'building' | 'park' | 'parking' | 'site' | 'vacant' | 'shell' | 'rocket' | 'annex';
 
 export interface Lot {
   i0: number;
@@ -42,6 +41,8 @@ export interface CityItem {
   flat?: boolean;
   dx?: number;
   dy?: number;
+  /** a lot's building: it stands on the whole lot (index into lots) */
+  lot?: number;
 }
 
 export interface CityExtra {
@@ -234,17 +235,6 @@ export function buildCity(
 
   // lots: recursive splits, mixed sizes, a quarter of the decisions break the rules
   const lots: Lot[] = [];
-  const towers = towerSpots(ring, stage);
-  const plazas = (stage >= 2 ? [towers.a, towers.b] : [])
-    .filter((t): t is TowerSpot => t !== null)
-    .map((t) => {
-      // in (i, j) the footprint is fi-n..fi-1 by fj-n..fj-1; keep 2 cells round it
-      const i0 = t.fi - t.n - 2;
-      const i1 = t.fi + 1;
-      const j0 = t.fj - t.n - 2;
-      const j1 = t.fj + 1;
-      return frontJ ? { a0: i0, a1: i1, b0: j0, b1: j1 } : { a0: j0, a1: j1, b0: i0, b1: i1 };
-    });
   const split = (r: Rect, depth: number): void => {
     const w = r.a1 - r.a0 + 1;
     const h = r.b1 - r.b0 + 1;
@@ -252,12 +242,6 @@ export function buildCity(
     const ca = (r.a0 + r.a1) / 2;
     const cb = (r.b0 + r.b1) / 2;
     if (edge(ca, cb) > 1.05) return;
-    // our towers stand behind the office (landmarks.ts): their ground and a margin round it is a plaza, so no
-    // building stands against a face it would be drawn behind
-    if (plazas.some((z) => r.a1 >= z.a0 && r.a0 <= z.a1 && r.b1 >= z.b0 && r.b0 <= z.b1) && w * h < 400) {
-      for (let a = r.a0; a <= r.a1; a++) for (let b = r.b0; b <= r.b1; b++) setG(a, b, 'marble', 0xd8dce8);
-      return;
-    }
     const far = Math.min(1, Math.max(0, (Math.hypot(ca - c, cb - c) - S / 2) / (R - S / 2)));
     const maxSide = 5 + Math.round(far * 5) + rng.int(3);
     const rebel = rng.chance(0.25);
@@ -311,18 +295,11 @@ export function buildCity(
   }
   void nextDepth;
 
-  // landmark lots: the basement gym (from the full floor on) next to the office on the avenue side, the rocket
-  // launchpad (from megacorp on) on a big lot across the cross street
+  // landmark lots (the only landmarks outside the building, each in a lot of its own): the rocket launchpad (from
+  // megacorp on) on a big lot across the cross street, and the annex across the avenue
   const near = (l: Lot, a: number, b: number): number => Math.hypot(l.i0 + l.w / 2 - a, l.j0 + l.h / 2 - b);
-  if (stage >= 2) {
-    // hugging the office's side, in its front half, well inside the town (never out in the fog)
-    const l = lots
-      .filter((x) => x.use !== 'shell' && Math.min(x.w, x.h) >= 5 && x.j0 + x.h > (s0 + s1) / 2 && x.i0 + x.w < s0 && x.far < 0.65)
-      .sort((x, y) => near(x, s0 - 5, s1 - 4) - near(y, s0 - 5, s1 - 4))[0];
-    if (l) l.use = 'basement';
-  }
   if (stage >= 4) {
-    const l = lots.filter((x) => x.use !== 'shell' && x.use !== 'basement' && Math.min(x.w, x.h) >= 7 && x.i0 > x0).sort((x, y) => near(x, x0 + 8, s1) - near(y, x0 + 8, s1))[0];
+    const l = lots.filter((x) => x.use !== 'shell' && Math.min(x.w, x.h) >= 7 && x.i0 > x0).sort((x, y) => near(x, x0 + 8, s1) - near(y, x0 + 8, s1))[0];
     if (l) l.use = 'rocket';
   }
   // the annex (from the corporate floor on): our second building across the avenue, a sky bridge over the traffic
@@ -414,7 +391,7 @@ export function buildCity(
       const ca = l.i0 + l.w / 2;
       const cb = l.j0 + l.h / 2;
       // stand the sprite with its front corner on the lot's front corner, centred
-      put(l.sprite!, ca + b / 2 - 1, cb + b / 2 - 1, rng.chance(0.5), l.scale ?? 1, { dx: 0, dy: 8 });
+      put(l.sprite!, ca + b / 2 - 1, cb + b / 2 - 1, rng.chance(0.5), l.scale ?? 1, { dx: 0, dy: 8, lot: lots.indexOf(l) });
     } else if (l.use === 'park') {
       fill(l.i0, a1, l.j0, b1, 'grass');
       const n = Math.max(1, Math.round((l.w * l.h) / 10));
@@ -446,8 +423,8 @@ export function buildCity(
       fence(l, has('fence_chain') ? 'fence_chain' : 'barrier');
       if (rng.chance(0.5)) put(has('hoarding') ? 'hoarding' : 'sign_post', l.i0 + 1, b1, false, 0.6);
       if (rng.chance(0.5)) put(rng.pick(['tree_bushy', 'box_s', 'garbage']), l.i0 + 1 + rng.int(Math.max(1, l.w - 2)), l.j0 + 1 + rng.int(Math.max(1, l.h - 2)), rng.chance(0.5), 0.6);
-    } else if (l.use === 'basement' || l.use === 'rocket') {
-      fill(l.i0, a1, l.j0, b1, l.use === 'rocket' ? 'concrete' : 'dirt', l.use === 'rocket' ? 0xb8bcc8 : 0xffffff);
+    } else if (l.use === 'rocket') {
+      fill(l.i0, a1, l.j0, b1, 'concrete', 0xb8bcc8);
     } else if (l.use === 'annex') {
       fill(l.i0, a1, l.j0, b1, 'marble', 0xd8dce8);
     } else {

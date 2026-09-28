@@ -325,6 +325,11 @@ async function boot(): Promise<Site> {
     const now = unlocked(ratCount);
     const fresh = new Set([...now].filter((id) => !landmarksOn.has(id)));
     landmarksOn = now;
+    // a new stage: the office takes the lots next door, so what stood there is demolished first (shake, sink, dust)
+    if (announce && events.some((e) => e.kind === 'stage')) {
+      const r = plan.rings[growth.stage]!;
+      effects.demolish(old.cityParts(r.i0 - 2, r.j0 - 2, r.i1 + 2, r.j1 + 2));
+    }
     world = buildWorld(plan, growth, atlas, store.stocks, rooms, announce ? fresh : new Set());
     if (announce && fresh.size) {
       reveals.push(...LANDMARKS.filter((l) => fresh.has(l.id)).map((l) => landmarkReveal(l.id)));
