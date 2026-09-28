@@ -33,7 +33,11 @@ def load():
 
 def save(man):
     total = sum(g["costGenerations"] for g in man["generations"])
-    man["totals"] = {"generations": total, "calls": len(man["generations"])}
+    by = {}
+    for g in man["generations"]:
+        by[g.get("phase", "looktest")] = by.get(g.get("phase", "looktest"), 0) + g["costGenerations"]
+    man["totals"] = {"generations": total, "calls": len(man["generations"]), "byPhase": by,
+                     "budgets": {"looktest": 60, "detail": 5, "fullBuild": 150}}
     with open(MAN, "w") as f:
         json.dump(man, f, indent=1)
         f.write("\n")
@@ -42,7 +46,8 @@ def save(man):
 def log(id_, tool, cost, pid, args, raw, note=""):
     man = load()
     man["generations"] = [g for g in man["generations"] if g["id"] != id_]
-    man["generations"].append({"id": id_, "tool": tool, "costGenerations": cost, "pixellabId": pid, "args": args,
+    man["generations"].append({"id": id_, "phase": os.environ.get("FILM_PHASE", "fullBuild"), "tool": tool,
+                               "costGenerations": cost, "pixellabId": pid, "args": args,
                                "raw": raw, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "note": note})
     save(man)
     print(f"logged {id_}: {tool}, {cost} gens (total {man['totals']['generations']})")
@@ -50,6 +55,22 @@ def log(id_, tool, cost, pid, args, raw, note=""):
 
 def text(msg):
     return "\n".join(p.get("text", "") for p in msg.get("result", {}).get("content", []) if p.get("type") == "text")
+
+
+def create(tool, args, tries=40):
+    """Start a job; PixelLab allows 8 at once, so wait and retry while it says the limit is hit (a refused call is free)."""
+    for _ in range(tries):
+        try:
+            t = text(call(tool, args))
+        except (urllib.error.URLError, ConnectionError) as e:
+            print("create retry:", e)
+            time.sleep(15)
+            continue
+        if "rate limit" in t or "429" in t or "concurrent" in t:
+            time.sleep(20)
+            continue
+        return t
+    raise SystemExit(f"{tool}: still rate limited")
 
 
 def cost_of(t, default):
@@ -91,7 +112,7 @@ def run_image(id_, tool, args):
     for k in ("image_file", "first_frame_file", "last_frame_file"):
         if k in sent:
             sent[k.replace("_file", "_url")] = data_url(sent.pop(k))
-    t = text(call(tool, sent))
+    t = create(tool, sent)
     print(t)
     jid = re.search(r"job_id:\s*([0-9a-f-]{36})", t).group(1)
     _, t2 = poll("get_image", {"job_id": jid})
@@ -112,7 +133,7 @@ def run_image(id_, tool, args):
 
 
 def run_object(id_, tool, args):
-    t = text(call(tool, args))
+    t = create(tool, args)
     print(t)
     oid = re.search(r"id:\s*([0-9a-f-]{36})", t).group(1)
     getter, key = ("get_isometric_tile", "tile_id") if tool == "create_isometric_tile" else ("get_map_object", "object_id")
@@ -156,6 +177,14 @@ if __name__ == "__main__":
         run_object(sys.argv[2], "create_map_object", json.loads(sys.argv[3]))
     elif cmd == "tile":
         run_object(sys.argv[2], "create_isometric_tile", json.loads(sys.argv[3]))
+    elif cmd == "recover":  # recover <id> <job_id> <cost> '<args>': a job whose poll timed out, fetched when done
+        id_, jid, cost, args = sys.argv[2], sys.argv[3], int(sys.argv[4]), json.loads(sys.argv[5])
+        poll("get_image", {"job_id": jid}, every=15, limit=5400)
+        out = os.path.join(RAW, id_)
+        os.makedirs(out, exist_ok=True)
+        for i in range(args.get("frame_count", 8) + 1):
+            fetch(f"https://api.pixellab.ai/mcp/images/{jid}/download?index={i}", os.path.join(out, f"{i}.png"))
+        log(id_, "animate_image", cost, jid, args, f"raw/{id_}/", "recovered after a poll timeout (PixelLab queue slow)")
     elif cmd == "character":
         download_character(sys.argv[2], sys.argv[3])
     else:

@@ -17,7 +17,8 @@
    },
    "raw": "raw/hero_scruffy/",
    "at": "2026-09-28T14:21:35Z",
-   "note": "128px hero rat, scruffy (before the suit). 8 rotations."
+   "note": "128px hero rat, scruffy (before the suit). 8 rotations.",
+   "phase": "looktest"
   },
   {
    "id": "hero_suited",
@@ -31,7 +32,8 @@
    },
    "raw": "raw/hero_suited/",
    "at": "2026-09-28T14:26:07Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero_burst",
@@ -46,7 +48,8 @@
    },
    "raw": "raw/hero_burst/",
    "at": "2026-09-28T14:28:23Z",
-   "note": "cost from the 128x128x8 rule; the call reply was lost to a connection reset, job recovered via list_jobs"
+   "note": "cost from the 128x128x8 rule; the call reply was lost to a connection reset, job recovered via list_jobs",
+   "phase": "looktest"
   },
   {
    "id": "street_asphalt",
@@ -63,7 +66,8 @@
    },
    "raw": "raw/street_asphalt.png",
    "at": "2026-09-28T14:29:25Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "street_sidewalk",
@@ -80,7 +84,8 @@
    },
    "raw": "raw/street_sidewalk.png",
    "at": "2026-09-28T14:29:34Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "manhole_hole",
@@ -98,7 +103,8 @@
    },
    "raw": "raw/manhole_hole.png",
    "at": "2026-09-28T14:29:43Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "tower_top",
@@ -116,7 +122,8 @@
    },
    "raw": "raw/tower_top.png",
    "at": "2026-09-28T14:29:43Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "manhole_lid",
@@ -134,7 +141,8 @@
    },
    "raw": "raw/manhole_lid.png",
    "at": "2026-09-28T14:33:19Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "vault_cathedral",
@@ -152,7 +160,8 @@
    },
    "raw": "raw/vault_cathedral.png",
    "at": "2026-09-28T14:33:20Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero_tumble",
@@ -167,7 +176,8 @@
    },
    "raw": "raw/hero_tumble/",
    "at": "2026-09-28T14:33:27Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero_tie",
@@ -182,7 +192,8 @@
    },
    "raw": "raw/hero_tie/",
    "at": "2026-09-28T14:33:34Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "vault_cathedral_v2",
@@ -200,7 +211,8 @@
    },
    "raw": "raw/vault_cathedral_v2.png",
    "at": "2026-09-28T14:34:48Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_suited",
@@ -214,7 +226,8 @@
    },
    "raw": "raw/hero2_suited/",
    "at": "2026-09-28T14:38:00Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_suited_detail",
@@ -228,7 +241,8 @@
    },
    "raw": "raw/hero2_suited_detail/",
    "at": "2026-09-28T14:39:06Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_rot",
@@ -246,7 +260,8 @@
    },
    "raw": "raw/hero2_rot/",
    "at": "2026-09-28T14:39:29Z",
-   "note": "on-model hero, 8 rotations from the locked redraw"
+   "note": "on-model hero, 8 rotations from the locked redraw",
+   "phase": "looktest"
   },
   {
    "id": "hero2_scruffy",
@@ -260,7 +275,8 @@
    },
    "raw": "raw/hero2_scruffy/",
    "at": "2026-09-28T14:40:13Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_tumble",
@@ -275,7 +291,8 @@
    },
    "raw": "raw/hero2_tumble/",
    "at": "2026-09-28T14:41:21Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_tie",
@@ -290,7 +307,8 @@
    },
    "raw": "raw/hero2_tie/",
    "at": "2026-09-28T14:41:31Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "hero2_burst",
@@ -305,7 +323,8 @@
    },
    "raw": "raw/hero2_burst/",
    "at": "2026-09-28T14:43:23Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "manhole_lid2",
@@ -323,7 +342,8 @@
    },
    "raw": "raw/manhole_lid2.png",
    "at": "2026-09-28T14:47:53Z",
-   "note": ""
+   "note": "",
+   "phase": "looktest"
   },
   {
    "id": "manhole_hole2",
@@ -341,11 +361,337 @@
    },
    "raw": "raw/manhole_hole2.png",
    "at": "2026-09-28T14:48:02Z",
+   "note": "",
+   "phase": "looktest"
+  },
+  {
+   "id": "hero3_detail_a",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "1dc686ae-bd7f-44f8-8384-faef0ab91be4",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "description": "Keep the exact silhouette, pose, outline and colors of this rat. Only add: soft fur shading on the head and ears, cloth folds on the navy suit sleeves and trousers, and one single white highlight pixel in each eye. Both eyes must stay identical, the same size and perfectly symmetric. Do not change the face shape, the eyes size or the outline",
+    "no_background": true,
+    "seed": 7101
+   },
+   "raw": "raw/hero3_detail_a/",
+   "at": "2026-09-28T15:30:05Z",
+   "note": "",
+   "phase": "detail"
+  },
+  {
+   "id": "hero3_detail_b",
+   "tool": "create_image_pixflux",
+   "costGenerations": 1,
+   "pixellabId": "9ff70dc7-1c45-42fa-a5a2-55c19d0475bb",
+   "args": {
+    "description": "pixel art rat office worker in a navy blue suit and red tie, soft fur shading on the grey head and pink ears, subtle cloth folds on the navy suit, small dark eyes each with one tiny white highlight",
+    "init_image_strength": 380,
+    "no_background": true,
+    "seed": 7102,
+    "outline": "single color black outline",
+    "init_image_file": "raw/hero2_suited/0.png"
+   },
+   "raw": "raw/hero3_detail_b/",
+   "at": "2026-09-28T15:32:34Z",
+   "note": "detail pass try 2: img2img, strength 380",
+   "phase": "detail"
+  },
+  {
+   "id": "hero3_detail_c",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "97d75df4-010c-435f-8055-fe581e9927fa",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "description": "Change almost nothing. Keep the face exactly as it is: the two eyes stay small solid dark squares with no rings, no glasses, no outlines around them; only put one single white pixel at the top-left inside each eye. Add a few slightly darker grey pixels at the sides of the head for fur shading, and a few darker navy pixels on the sleeves and trouser legs for cloth folds. Same silhouette, same outline, same colors",
+    "no_background": true,
+    "seed": 7103
+   },
+   "raw": "raw/hero3_detail_c/",
+   "at": "2026-09-28T15:32:52Z",
+   "note": "",
+   "phase": "detail"
+  },
+  {
+   "id": "hero_detail_pass_result",
+   "phase": "detail",
+   "tool": "none",
+   "costGenerations": 0,
+   "pixellabId": null,
+   "args": {},
+   "raw": "",
+   "at": "",
+   "note": "3 tries: a added eye rings (read as glasses), b changed almost nothing, c put a highlight in one eye only. Kept the simple on-model hero (raw/hero2_suited) as the owner asked."
+  },
+  {
+   "id": "hero_walk",
+   "phase": "fullBuild",
+   "tool": "animate_character",
+   "costGenerations": 2,
+   "pixellabId": "ec30f611-e342-44f4-846e-79e6e4353853",
+   "args": {
+    "character_id": "ec30f611-e342-44f4-846e-79e6e4353853",
+    "template_animation_id": "walking-8-frames",
+    "animation_name": "walk",
+    "directions": [
+     "east",
+     "south-east"
+    ]
+   },
+   "raw": "raw/hero2_rot/",
+   "at": "2026-09-28T15:34:40Z",
+   "note": "template walk east + south-east on the on-model suited hero"
+  },
+  {
+   "id": "smoke_puff",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "69e094ce-a7eb-4edf-af18-bdb66040664d",
+   "args": {
+    "description": "big round puff of white cartoon smoke cloud",
+    "width": 96,
+    "height": 96,
+    "view": "side",
+    "outline": "single color outline",
+    "shading": "medium shading",
+    "detail": "medium detail"
+   },
+   "raw": "raw/smoke_puff.png",
+   "at": "2026-09-28T15:34:55Z",
    "note": ""
+  },
+  {
+   "id": "dust_boom",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "ee751f94-96e5-47a6-9bf7-07cf3e399368",
+   "args": {
+    "description": "big cartoon dust explosion cloud with flying brick chunks and debris",
+    "width": 128,
+    "height": 128,
+    "view": "side",
+    "outline": "single color outline",
+    "shading": "medium shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/dust_boom.png",
+   "at": "2026-09-28T15:35:03Z",
+   "note": ""
+  },
+  {
+   "id": "vault_front",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "b7493d7d-287c-473e-a944-f67ee74de45a",
+   "args": {
+    "description": "front of a colossal gold bank vault: a giant round polished steel vault door with a big spoked wheel, set in a wall of stacked gold bars, bundles of green cash piled high on both sides of the door, wide steps in front, front view, symmetrical",
+    "width": 400,
+    "height": 300,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/vault_front.png",
+   "at": "2026-09-28T15:35:13Z",
+   "note": ""
+  },
+  {
+   "id": "hero_scruffy_rot",
+   "phase": "fullBuild",
+   "tool": "create_character",
+   "costGenerations": 2,
+   "pixellabId": "0cb1be21-e18b-4d27-b862-9c318677cdbf",
+   "args": {
+    "description": "slim tall grey street rat standing upright, no clothes, scruffy grey fur, lighter belly, pink ears, paws, feet and tail",
+    "name": "Hero Rat Scruffy (on-model)",
+    "mode": "v3",
+    "size": 128,
+    "outline": "single color black outline",
+    "detail": "high detail",
+    "reference_image_file": "raw/hero2_scruffy/0.png"
+   },
+   "raw": "raw/hero_scruffy_rot/",
+   "at": "2026-09-28T15:35:26Z",
+   "note": "scruffy rotations for the suit-up spin"
+  },
+  {
+   "id": "coin",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "1dd3762f-f269-4116-972f-685a5a36cac6",
+   "args": {
+    "description": "shiny gold coin, thick rim, face-on, simple",
+    "width": 32,
+    "height": 32,
+    "view": "side",
+    "outline": "single color outline",
+    "shading": "medium shading",
+    "detail": "medium detail"
+   },
+   "raw": "raw/coin.png",
+   "at": "2026-09-28T15:36:12Z",
+   "note": ""
+  },
+  {
+   "id": "hero_desk",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "28f16f40-b17e-4de5-9e44-c6f5c9fea7ad",
+   "args": {
+    "description": "modern office desk seen from the front, wooden top, the back of a computer monitor standing on it with a soft blue glow around its edges, a keyboard, a coffee mug and a small stack of papers",
+    "width": 128,
+    "height": 96,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/hero_desk.png",
+   "at": "2026-09-28T15:36:48Z",
+   "note": ""
+  },
+  {
+   "id": "lid_spin",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 1,
+   "pixellabId": "9f346bcd-b3ff-4610-b218-e5a22e4c40fa",
+   "args": {
+    "first_frame_file": "raw/manhole_lid2.png",
+    "action": "the heavy round cover spins end over end, flipping through the air",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7204
+   },
+   "raw": "raw/lid_spin/",
+   "at": "2026-09-28T15:36:58Z",
+   "note": ""
+  },
+  {
+   "id": "hero_chair",
+   "phase": "fullBuild",
+   "tool": "create_map_object",
+   "costGenerations": 1,
+   "pixellabId": "ebbfbb8c-9991-4f69-bf63-eed7e6642e11",
+   "args": {
+    "description": "black leather office chair seen from the front, tall backrest, armrests",
+    "width": 64,
+    "height": 80,
+    "view": "low top-down",
+    "outline": "single color outline",
+    "shading": "detailed shading",
+    "detail": "high detail"
+   },
+   "raw": "raw/hero_chair.png",
+   "at": "2026-09-28T15:37:07Z",
+   "note": ""
+  },
+  {
+   "id": "hero_look",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "da9540c5-73a3-4cde-9a88-2251c950a6a2",
+   "args": {
+    "first_frame_file": "raw/hero2_scruffy/0.png",
+    "action": "looks curiously to the left, then to the right, ears twitching, then back to the front",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7201
+   },
+   "raw": "raw/hero_look/",
+   "at": "2026-09-28T15:37:41Z",
+   "note": ""
+  },
+  {
+   "id": "hero_type",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "76e45355-b071-4c26-b4d2-48f4b227d7d8",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "action": "types fast on a keyboard just in front of its waist, both paws tapping down in turn, head bobbing slightly, body still",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7202
+   },
+   "raw": "raw/hero_type/",
+   "at": "2026-09-28T15:50:18Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "boom_anim",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "f5bd36ef-d00a-4fca-866e-2e4dc2f1672e",
+   "args": {
+    "first_frame_file": "raw/dust_boom.png",
+    "action": "the explosion cloud bursts outward bigger with debris flying away, then the dust drifts apart and fades",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7303
+   },
+   "raw": "raw/boom_anim/",
+   "at": "2026-09-28T15:53:29Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "puff_anim",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "71343879-1c65-4de5-bdae-568c1210d7df",
+   "args": {
+    "first_frame_file": "raw/smoke_puff.png",
+    "action": "the smoke cloud billows outward, swirling, then thins out and fades away",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7302
+   },
+   "raw": "raw/puff_anim/",
+   "at": "2026-09-28T15:56:54Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
+  },
+  {
+   "id": "hero_crack",
+   "phase": "fullBuild",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "26ac58bd-d176-4baa-b197-48dd635541cb",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "action": "laces its fingers together, pushes both arms straight out in front and cracks its knuckles, then shakes its paws loose",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7203
+   },
+   "raw": "raw/hero_crack/",
+   "at": "2026-09-28T15:58:45Z",
+   "note": "recovered after a poll timeout (PixelLab queue slow)"
   }
  ],
  "totals": {
-  "generations": 30,
-  "calls": 21
+  "generations": 54,
+  "calls": 39,
+  "byPhase": {
+   "looktest": 30,
+   "detail": 3,
+   "fullBuild": 21
+  },
+  "budgets": {
+   "looktest": 60,
+   "detail": 5,
+   "fullBuild": 150
+  }
  }
 }

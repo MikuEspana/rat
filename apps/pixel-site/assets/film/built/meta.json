@@ -1,0 +1,89 @@
+{
+ "street": {
+  "w": 520,
+  "h": 460,
+  "hole": [
+   220,
+   230
+  ],
+  "holeCentre": [
+   260,
+   261
+  ],
+  "holeR": [
+   23,
+   20
+  ]
+ },
+ "holeMask": {
+  "dx": -40,
+  "dy": -130
+ },
+ "lid_spin": 9,
+ "burst": 9,
+ "look": 9,
+ "tie": 9,
+ "tumble": 9,
+ "type": 9,
+ "crack": 9,
+ "walk_e": 8,
+ "team": [
+  "green/brown",
+  "crimson/grey",
+  "brown/white",
+  "black/grey",
+  "navy/dark",
+  "green/white",
+  "crimson/dark",
+  "brown/grey",
+  "black/brown",
+  "navy/white",
+  "green/grey",
+  "crimson/brown"
+ ],
+ "coin_spin": 9,
+ "puff": 9,
+ "boom": 9,
+ "vault_open": 9,
+ "office": {
+  "w": 720,
+  "h": 520,
+  "wall": 250,
+  "ticker": [
+   4,
+   22
+  ]
+ },
+ "desk": {
+  "w": 122,
+  "h": 83,
+  "top": 56
+ },
+ "end": {
+  "w": 1200,
+  "h": 760,
+  "ground": 688,
+  "cathedral": [
+   364,
+   379
+  ]
+ },
+ "front": {
+  "w": 600,
+  "h": 640,
+  "door": [
+   297,
+   292
+  ],
+  "floor": 440,
+  "cashRight": [
+   463,
+   376
+  ],
+  "top": 197
+ },
+ "pile": {
+  "w": 760,
+  "h": 760
+ }
+}

@@ -2,6 +2,7 @@
 // Wall Street (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
+import { FILM } from './film/clock'; // first: ?film swaps the clocks and randomness before anything else runs
 import './style.css';
 import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
@@ -794,4 +795,6 @@ async function boot(): Promise<Site> {
   return site;
 }
 
-void boot();
+// ?film: the hidden, fixed-timeline film mode (src/film/film.ts); nothing of the live site runs
+if (FILM) void import('./film/film').then((m) => m.bootFilm());
+else void boot();
