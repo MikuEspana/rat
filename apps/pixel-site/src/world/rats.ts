@@ -44,6 +44,9 @@ interface Agent {
   accFrames: Frame[];
   /** fur colour from the avatar seed */
   fur: string;
+  /** a coffee mug on the desk (from the avatar seed), left there while the rat is away */
+  hasMug: boolean;
+  mug: LayerItem | null;
   look: Look;
   mode: Mode;
   anim: AnimName;
@@ -71,13 +74,13 @@ function lookOf(rec: RatRecord): Look {
 }
 
 /** Fur and accessory from the rat's avatar seed: the same rat always looks the same. */
-function styleOf(rec: RatRecord): { fur: string; acc: Accessory | null } {
+function styleOf(rec: RatRecord): { fur: string; acc: Accessory | null; mug: boolean } {
   const h = hash32(`look:${rec.facts.avatarSeed ?? rec.facts.id}`);
   const r = h % 10;
   const fur = FURS[r < 4 ? 0 : r < 6 ? 1 : r < 8 ? 2 : 3]!;
   const a = (h >>> 8) % 100;
-  const acc = a < 42 ? null : ACCESSORIES[Math.floor(((a - 42) / 58) * ACCESSORIES.length)]!;
-  return { fur, acc };
+  const acc = a < 40 ? null : ACCESSORIES[Math.floor(((a - 40) / 60) * ACCESSORIES.length)]!;
+  return { fur, acc, mug: (h >>> 16) % 4 === 0 };
 }
 
 function faceAnim(face: Face): { anim: AnimName; mirror: boolean } {
@@ -108,6 +111,7 @@ export class RatSystem {
   private tripClock = 0;
   private away = 0;
   private boxFrame: Frame;
+  private mugFrame: Frame;
   onArrive: (id: number) => void = () => {};
   /** show or hide the empty chair at a seat */
   onChair: (seatId: number, visible: boolean) => void = () => {};
@@ -123,6 +127,7 @@ export class RatSystem {
     this.spawn = layout.rings[growth.stage]!.spawn;
     this.strollCells = [];
     this.boxFrame = atlas.frame('world:box_s');
+    this.mugFrame = atlas.frame('world:mug');
     this.index();
   }
 
@@ -163,6 +168,7 @@ export class RatSystem {
     for (const a of this.list) {
       a.item = layer.add(a.item.p, this.depthOf(a));
       if (a.acc) a.acc = layer.add(a.acc.p, this.depthOf(a) + 0.002);
+      if (a.mug && a.seat) a.mug = layer.add(a.mug.p, a.seat.deskAt.i + a.seat.deskAt.j + 1.02);
       if (a.box) a.box = layer.add(a.box.p, this.depthOf(a) + 0.01);
       if (a.seat && !a.seated) this.onChair(a.seat.id, true);
     }
@@ -315,6 +321,19 @@ export class RatSystem {
     }
     a.nextCheer = this.time + 3 + Math.random() * 18;
     this.place(a);
+    if (a.hasMug) this.putMug(a, seat);
+  }
+
+  /** The rat's mug stands at one end of its desk. */
+  private putMug(a: Agent, seat: Seat): void {
+    const c = cellCentre(seat.deskAt.i, seat.deskAt.j);
+    const x = c.x + (seat.axis === 'j' ? -10 : 10);
+    const y = c.y + 5 - 14;
+    const depth = seat.deskAt.i + seat.deskAt.j + 1.02;
+    if (!a.mug) a.mug = this.layer.add(makeParticle(this.mugFrame, x, y, seat.axis === 'i', 0.32), depth);
+    a.mug.p.x = x;
+    a.mug.p.y = y;
+    this.layer.moved(a.mug, depth);
   }
 
   private standUp(a: Agent): void {
@@ -346,7 +365,7 @@ export class RatSystem {
     const item = this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0);
     const acc = style.acc ? this.layer.add(makeParticle(first, c.x, c.y, false, TIER_SCALE[rec.view.tier]), 0.001) : null;
     const a: Agent = {
-      id: rec.facts.id, rec, item, acc, accKind: style.acc, accFrames: [], fur: style.fur, look, mode: 'type', anim: 'type', frames: [first], frame: 0, t: 0, once: false, mirror: false,
+      id: rec.facts.id, rec, item, acc, accKind: style.acc, accFrames: [], fur: style.fur, hasMug: style.mug, mug: null, look, mode: 'type', anim: 'type', frames: [first], frame: 0, t: 0, once: false, mirror: false,
       seat, home: seat ? seat.access : home, pos: start, path: [], seg: 0, trip: null, phase: null, until: 0, box: null,
       nextCheer: 0, seated: false,
     };

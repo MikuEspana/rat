@@ -165,6 +165,8 @@ def acc_frame(kind, info, front_back):
         if 0 <= x < CELL and 0 <= y < CELL:
             p[x, y] = c
 
+    if kind == "tie_stripes":
+        return im  # drawn from the frame itself, see tie_frame
     x0, x1, y0, y1, cx = info["x0"], info["x1"], info["y0"], info["y1"], info["cx"]
     hh = y1 - y0
     crown = y0 + max(3, hh * 2 // 5)  # between the ears
@@ -240,14 +242,29 @@ def acc_frame(kind, info, front_back):
     return im
 
 
-ACCS = ["glasses", "phones_red", "phones_white", "hat_bowler", "hat_cap", "hat_beanie"]
+def tie_frame(src):
+    """White stripes across the tie (every other row of tie pixels): reads on red and gold ties alike."""
+    im = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
+    p = im.load()
+    s = src.load()
+    rows = sorted({y for y in range(CELL) for x in range(CELL) if s[x, y][3] and s[x, y][:3] == RED})
+    for n, y in enumerate(rows):
+        if n % 2:
+            continue
+        for x in range(CELL):
+            if s[x, y][3] and s[x, y][:3] == RED:
+                p[x, y] = (0xF4, 0xF2, 0xEA, 255)
+    return im
+
+
+ACCS = ["glasses", "phones_red", "phones_white", "hat_bowler", "hat_cap", "hat_beanie", "tie_stripes"]
 ref = base["analyst"]
 accs = {}
 for n in all_names:
     info = head_info(ref[n])
     fb = "back" if ("_ne" in n or n.startswith(("sit_back", "sulk_back")) or n in ("rot_n", "rot_ne", "rot_nw")) else "front"
     for a in ACCS:
-        accs[f"acc/{a}/{n}"] = acc_frame(a, info, fb)
+        accs[f"acc/{a}/{n}"] = tie_frame(ref[n]) if a == "tie_stripes" else acc_frame(a, info, fb)
 
 # ------------------------------------------------------------------ pack
 

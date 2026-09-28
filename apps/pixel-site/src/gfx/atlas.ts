@@ -20,7 +20,7 @@ import genJson from '../../assets/gen.json';
 import props3Json from '../../assets/props3.json';
 
 /** Rat accessories drawn as an overlay frame per pose (tools/build_rats2.py). */
-export const ACCESSORIES = ['glasses', 'phones_red', 'phones_white', 'hat_bowler', 'hat_cap', 'hat_beanie'] as const;
+export const ACCESSORIES = ['glasses', 'phones_red', 'phones_white', 'hat_bowler', 'hat_cap', 'hat_beanie', 'tie_stripes'] as const;
 export type Accessory = (typeof ACCESSORIES)[number];
 
 export interface Frame {
