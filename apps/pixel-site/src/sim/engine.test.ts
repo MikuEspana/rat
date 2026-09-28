@@ -94,7 +94,7 @@ describe('launch simulator', () => {
     expect(peak).toBeGreaterThan(1_500_000);
     expect(peak).toBeLessThan(2_300_000);
     expect(mcapAt(180)).toBeGreaterThan(mcapAt(360));
-    expect(stageOf(sim.stats().rats)).toBe('EVIL EMPIRE');
+    expect(stageOf(sim.stats().rats)).toBe('WALL STREET');
     expect(sim.stats().rats).toBeLessThanOrEqual(PLAN_RATS); // everyone gets a desk, no line outside
   });
 
@@ -102,7 +102,7 @@ describe('launch simulator', () => {
     const { sim, peak } = get('mega');
     const s = sim.stats();
     expect(peak).toBeGreaterThan(8_000_000);
-    expect(stageOf(s.rats)).toBe('EVIL EMPIRE');
+    expect(stageOf(s.rats)).toBe('WALL STREET');
     // replay the roster through the site's idle game: every desk taken, a few hundred in the job-fair line
     const growth = new Growth(buildMaster());
     for (const r of sim.ratsResponse().rats) growth.add(r.id, r.stock);

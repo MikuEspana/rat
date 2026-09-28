@@ -781,7 +781,7 @@ export function buildWorld(
     roomSigns.push(s);
   }
   const top = cellToScreen(ring.i0, ring.j0);
-  const name = new Sprite(signTexture(`RAT RACE ${STAGES[stage]!.name}`, STAGE_COLOR[stage] ?? 0xffd36b, 3));
+  const name = new Sprite(signTexture(`WALL STREET RATS: ${STAGES[stage]!.name}`, STAGE_COLOR[stage] ?? 0xffd36b, 3));
   name.anchor.set(0.5, 1);
   name.position.set(top.x, top.y - 70);
   signs.addChild(name);
