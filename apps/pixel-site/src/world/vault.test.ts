@@ -1,6 +1,6 @@
 import { Texture } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { VaultView, type VaultAnchor } from './vault';
+import { MAX_BILLS, VaultView, type VaultAnchor } from './vault';
 
 const frame = { texture: Texture.EMPTY, x: 0, y: 0, w: 40, h: 40, anchorX: 0.5, anchorY: 1 };
 const atlas = { has: () => true, frame: () => frame };
@@ -17,5 +17,20 @@ describe('the Vault', () => {
     const labels = bills.filter((b) => b.label);
     expect(labels.filter((b) => b.gold)).toHaveLength(20);
     expect(labels.filter((b) => !b.gold).map((b) => b.label)).toEqual(['+$4.53']);
+  });
+
+  it('keeps at most MAX_BILLS bills in the air in a rush, and still labels every claim and every hire', () => {
+    const p = { x: 0, y: 0, texture: Texture.EMPTY, anchorX: 0.5, anchorY: 1, scaleX: 1, scaleY: 1 };
+    const v = new VaultView(atlas as never, { item: { p }, x: 0, y: 0, glow: null } as unknown as VaultAnchor);
+    for (let k = 0; k < 400; k++) {
+      v.claim({ x: 300, y: 200 }, 50, 8);
+      v.hire({ x: 300, y: 200 }, 4.91);
+      v.rain(20);
+    }
+    const bills = (v as unknown as { bills: Array<{ label: string | null; gold: boolean }> }).bills;
+    // only the labelled bills go past the cap: one per claim and one per hire
+    expect(bills.filter((b) => !b.label).length).toBeLessThanOrEqual(MAX_BILLS);
+    expect(bills.filter((b) => b.label && b.gold)).toHaveLength(400);
+    expect(bills.filter((b) => b.label && !b.gold)).toHaveLength(400);
   });
 });
