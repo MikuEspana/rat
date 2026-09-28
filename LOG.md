@@ -322,3 +322,23 @@ After legal advice: hold, never burn, never pay dividends. Buy and burn is gone 
 - 6,084 rats; ledger = chain to the lamport.
 - **The budget binds a little before the 60 SOL/h cap.** Two 20-hire loops can fall in one minute, so the busiest hour spent 57.4 SOL.
 
+
+## Miguel's decision: the site shows every hire at once, money always moving (2026-09-28)
+
+The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only the site changed.
+
+**What changed**
+- **Every claim shows its rats at once.**
+  - One applicant per 0.03 SOL claimed lines up outside the lobby (the job-fair line), drawn as interns.
+  - Each hire turns the rat at the front of the line into the new hire, who walks in to a desk.
+  - With no backlog (early on), a hire comes up the subway stairs and walks straight to its desk, as before.
+  - When every desk is taken (about 5,800 rats), a hired rat stays in line until a desk is built.
+  - The line follows `treasury.waitingSol`; it is only corrected when it drifts by more than 25 + 5% for 10 s, so hire loops in flight do not make it jump.
+- **The Vault**: a gold safe drawn in code replaces the furnace. Bills fly into it from the subway on every claim and from each new rat on every hire; it flares when they land.
+- **"+$X" popups** rise above the Vault: gold for a claim, green for stock bought. One every 0.7 s; what comes in between adds up.
+- **HUD**: a fifth stat, "Job fair", shows the line length ("2,041 rats in line") in green when there is a line.
+- **Simulator**: a Rush scenario runs the backend's 3-hour launch (90 SOL of fees in 30 minutes, 180 SOL in all). The line peaks at about 2,045 and drains.
+
+**Tests**
+- The simulator's engine tests run Rush too: every rule holds, about 180 SOL of fees, more than 1,000 rats waiting at the peak, less than one salary left at the end.
+- Headless browser (Playwright): no console errors; Rush shows the line and the HUD stat (1,662 in line at minute 12); Normal has no line and hires walk straight in; bills and popups on screen; the HUD fits on mobile.

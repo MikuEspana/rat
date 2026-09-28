@@ -145,7 +145,7 @@ body {
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
   gap: 8px;
   flex: 1;
 }
@@ -407,6 +407,10 @@ body {
   .stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 8px;
+  }
+  /* the job-fair line gets its own row on small screens */
+  .stats .stat:last-child {
+    grid-column: span 2;
   }
   .stat-value {
     font-size: 14px;
@@ -744,4 +748,10 @@ body {
 }
 .ui.sim-ui {
   z-index: 1;
+}
+
+/* the job-fair line: a hype number */
+.stat-value.hype {
+  color: #6dff9a;
+  text-shadow: 0 0 8px rgba(109, 255, 154, 0.45), 2px 2px 0 #0b0c18;
 }
