@@ -877,6 +877,21 @@ function buildCity(plan: FloorLayout, stage: number, atlas: Atlas, main: SortedL
     put(kind2, lo - IN - 3 - Math.round(rng(n + 3) * 2), s, rng(n + 9) < 0.5, big(kind2) ? look.scale : 1, kind2 === 'glass_tower' ? look.tint : 0xffffff);
   }
   put(look.back[0]!, lo - IN - 6, lo - IN - 6, false, look.scale * 1.15, look.back[0] === 'glass_tower' ? look.tint : 0xffffff);
+  // a second row further back, dimmer (distance), and a few on the far left and right corners
+  const far = stage >= 5 ? 0xb07070 : 0x9098b0;
+  for (let s = lo - 8 + Math.round(step / 2); s <= hi + 8; s += step) {
+    const kind = look.back[(n + 3) % look.back.length]!;
+    n++;
+    if (!big(kind)) continue;
+    put(kind, s, lo - IN - 3 - step, rng(n + 11) < 0.5, look.scale, far);
+    put(look.back[(n + 1) % look.back.length]!, lo - IN - 3 - step, s, rng(n + 17) < 0.5, look.scale, far);
+  }
+  for (let k = 0; k < 3; k++) {
+    const kind = look.back[(k + 1) % look.back.length]!;
+    if (!big(kind)) continue;
+    put(kind, hi + IN + 3 + k * step, lo - IN - 2 - k * 2, k % 2 === 1, look.scale, 0xffffff);
+    put(look.back[(k + 2) % look.back.length]!, lo - IN - 2 - k * 2, hi + IN + 3 + k * step, k % 2 === 0, look.scale, 0xffffff);
+  }
   // low things along the two front sides, in the band past the road
   n = 0;
   for (let s = lo - 2; s <= hi + 4; s += 5) {
@@ -907,5 +922,38 @@ function buildCity(plan: FloorLayout, stage: number, atlas: Atlas, main: SortedL
     put('car_red', d.i - 3, d.j + 2, true);
     put('mailbox', d.i - 5, d.j + 3, false);
   }
-  return { update(): void {} };
+  // traffic: cars drive down the four roads (sprites only point down-right or down-left, so every road runs that way)
+  const NOSE_RIGHT = new Set(['car_red', 'car_blue', 'taxi']);
+  const movers: Array<{ item: LayerItem; axis: 'i' | 'j'; fixed: number; pos: number; from: number; to: number; speed: number }> = [];
+  const roads: Array<[axis: 'i' | 'j', fixed: number]> = [['i', lo - 4], ['j', lo - 4], ['i', hi + 4], ['j', hi + 4]];
+  const perRoad = stage === 0 ? 1 : 2;
+  n = 0;
+  for (const [axis, fixed] of roads) {
+    for (let k = 0; k < perRoad; k++) {
+      const kind = look.cars[(n + k) % look.cars.length]!;
+      n++;
+      if (!atlas.has(`world:${kind}`)) continue;
+      // down-right (+i) wants the nose on the right; down-left (+j) on the left
+      const mirror = axis === 'i' ? !NOSE_RIGHT.has(kind) : NOSE_RIGHT.has(kind);
+      const from = lo - 10;
+      const to = hi + 10;
+      const pos = from + rng(n * 31 + k) * (to - from);
+      const c = axis === 'i' ? cellCentre(pos, fixed) : cellCentre(fixed, pos);
+      const p = makeParticle(atlas.frame(`world:${kind}`), c.x, c.y, mirror);
+      const item = main.add(p, pos + fixed + 1);
+      movers.push({ item, axis, fixed, pos, from, to, speed: 3 + rng(n * 7) * 3 });
+    }
+  }
+  return {
+    update(dt: number): void {
+      for (const m of movers) {
+        m.pos += m.speed * dt;
+        if (m.pos > m.to) m.pos = m.from;
+        const c = m.axis === 'i' ? cellCentre(m.pos, m.fixed) : cellCentre(m.fixed, m.pos);
+        m.item.p.x = c.x;
+        m.item.p.y = c.y;
+        main.moved(m.item, m.pos + m.fixed + 1);
+      }
+    },
+  };
 }
