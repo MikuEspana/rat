@@ -189,6 +189,26 @@ body {
   width: 92px;
   font-weight: 700;
 }
+/* the bot is not running its loop yet (launch day, a restart): a slow turning arc, on purpose */
+.ring.waiting svg {
+  animation: ring-wait 2.4s linear infinite;
+}
+.ring.waiting .ring-arc {
+  transition: none;
+}
+.ring.waiting .ring-label {
+  color: var(--dim);
+}
+@keyframes ring-wait {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring.waiting svg {
+    animation: none;
+  }
+}
 
 .panel-head {
   display: flex;
@@ -303,6 +323,15 @@ body {
   align-items: center;
   padding: 3px 8px;
 }
+.row.empty,
+.ev.empty {
+  display: block;
+  color: var(--dim);
+  padding: 6px 8px;
+}
+.row.empty:hover {
+  background: none;
+}
 .row.clickable {
   cursor: pointer;
 }
@@ -402,6 +431,9 @@ body {
     display: flex;
     align-items: baseline;
     gap: 10px;
+    /* find-my-rat and the tools wrap to a line of their own instead of running off the right edge */
+    flex-wrap: wrap;
+    row-gap: 4px;
   }
   .title .brand {
     font-size: 16px;
@@ -558,6 +590,23 @@ body {
 }
 .stage-next {
   color: #ffd23f;
+}
+/* phones: shorter bars, so the stage lines stay inside the HUD next to the brand */
+@media (max-width: 480px) {
+  .stage-chip {
+    min-width: 0;
+  }
+  .stage-bar {
+    width: 64px;
+  }
+  .stage-row.room .stage-bar {
+    width: 52px;
+    margin-left: 12px;
+  }
+  .stage-row.desk .stage-bar {
+    width: 40px;
+    margin-left: 24px;
+  }
 }
 .milestone {
   position: absolute;
@@ -1199,8 +1248,9 @@ body {
     bottom: 54px;
     max-height: calc(22vh - 44px);
   }
+  /* the leaderboard sits above the feed (at most 22vh - 44px tall from 54px up), never on top of its rows */
   .board {
-    bottom: 54px;
+    bottom: calc(22vh + 18px);
   }
   .debug {
     bottom: 58px;

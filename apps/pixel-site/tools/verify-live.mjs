@@ -56,13 +56,29 @@ if (state) {
     await page.waitForTimeout(10_000);
     const text = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
     const banner = { dry_run: 'DRY RUN:', paused: 'PAUSED:', live: null }[state.bot.mode];
+    // layout: nothing in the HUD runs off the screen, and the leaderboard never sits on the feed's rows
+    const layout = await page.evaluate(() => {
+      const box = (sel) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+      const off = [...document.querySelectorAll('.hud *')].filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.right > window.innerWidth + 1;
+      }).length;
+      const feed = box('.feed');
+      const board = box('.board');
+      const overlap =
+        feed && board && feed.height > 0 && board.height > 0 &&
+        board.bottom > feed.top + 1 && board.top < feed.bottom - 1 && board.right > feed.left + 1 && board.left < feed.right - 1;
+      return { off, overlap: Boolean(overlap) };
+    });
     const checks = [
       [errors.length === 0, `no console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`],
-      [!/Waiting for the API/.test(text), 'the page reached the API'],
+      [!/Waiting for the API|Connecting to the trading floor|Reconnecting to the trading floor/.test(text), 'the page reached the API'],
       [!/SIMULATION/.test(text), 'no simulator'],
       [banner ? text.includes(banner) : !/DRY RUN:|PAUSED:/.test(text), banner ? `the ${banner.replace(':', '')} banner is shown` : 'no DRY RUN or PAUSED banner (live)'],
       [new RegExp(`RATS HIRED ${state.portfolio.ratCount.toLocaleString('en-US')}\\b`).test(text), `RATS HIRED ${state.portfolio.ratCount}`],
       [state.coin.mint ? true : /pre-launch/.test(text), state.coin.mint ? 'coin launched' : 'market cap says pre-launch'],
+      [layout.off === 0, `nothing in the HUD is off the screen${layout.off ? ` (${layout.off} elements are)` : ''}`],
+      [!layout.overlap, 'the leaderboard does not cover the live feed'],
     ];
     for (const [pass, what] of checks) (pass ? ok : fail)(`${name}: ${what}`);
     await page.screenshot({ path: `site-${name}.png` }).catch(() => {});
