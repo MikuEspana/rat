@@ -370,3 +370,15 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 - Docs: `LAUNCH-DAY.md` and `go-live.md` (fund about 0.3 SOL, dev buy inside the launch, list every creator-signed launch signature), `deploy.md`, `keys.md`.
 
 **Tested without Miguel's accounts:** a harness with fake `railway`, `wrangler` and `brew`, fake Telegram / RPC / Jupiter / healthchecks servers, a local S3 server and a real Postgres 16. It runs the real `rat keys import`, migrations, `backup.sh` and restore drill. First run (with wrong answers first to exercise every retry) and second run (no input at all) both finish; the second one skips every step. No secret appears in either transcript or on any command line. The read-only API user can read and cannot write. A contract test ties the script's two allowed pre-launch FAILs to the real preflight wording.
+
+## Fix: Railway built the worker with Railpack (2026-09-29)
+
+**What happened on the real run:** step 6 stopped. Railway ignored the config file path set in step 3 and auto-detected the build with Railpack ("No start command detected"), so the worker failed.
+
+**What changed in `scripts/setup-mac.sh`**
+- Step 3 sets the build settings on each service itself before its first build: builder Dockerfile, the Dockerfile path, the start command and the restart / health rules, all read from `infra/railway.<service>.json`. The config file path stays, and the documented Dockerfile variable is set too. Railway's answer is read back; nothing is built until it holds the builder, Dockerfile and start command. The read-back holds every variable decrypted, so only the build settings leave that pipe.
+- The check compares with what Railway has, not with a "done" flag, so a re-run repairs a service that was built the wrong way: a connected service whose settings changed or whose last deploy failed gets a fresh build of the latest commit (`redeploy --from-source`, or connecting the repo again on an older CLI), never a replay of the failed build.
+- Every `environment edit` now sends its patch as JSON on stdin (the Railway CLI reads piped stdin in place of flags).
+- Step 5 says DONE when the passwords are already on Railway (they were never overwritten; now the message says so).
+
+**Tested:** the harness's fake Railway now builds like the real one did (config file path ignored, Railpack without a builder setting, a plain redeploy replays the last build). Fresh setup: no build ever fails. Repair: the script from `main` stops exactly like the real run; the new script fixes the settings, rebuilds the worker and finishes without asking any finished step again; a third run changes nothing. The same repair with an older CLI (no `--from-source`, no settings read-back) also finishes. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).

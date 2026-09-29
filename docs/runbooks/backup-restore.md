@@ -38,7 +38,7 @@ Any S3-compatible store: Backblaze B2, Cloudflare R2, AWS S3.
 - Its S3 endpoint and region are shown in the bucket details. Examples: B2 `https://s3.us-west-004.backblazeb2.com` and region `us-west-004`; R2 `https://<account id>.r2.cloudflarestorage.com` and region `auto`.
 
 ### 3. The Railway service
-**+ New > GitHub Repo** (this repo), name it `backup`. Settings > Config file path: `infra/railway.backup.json` (its own image, `infra/backup/Dockerfile`, and no restarts: a failed night alerts and waits for the next one).
+**+ New > GitHub Repo** (this repo), name it `backup`. Settings > Config file path: `/infra/railway.backup.json` (its own image, `infra/backup/Dockerfile`, and no restarts: a failed night alerts and waits for the next one). Also set Settings > Build > Builder: Dockerfile, Dockerfile path `infra/backup/Dockerfile` (the config file path alone can be ignored, and Railway then guesses the build).
 
 Variables (the first three are references, so no password is copied):
 ```

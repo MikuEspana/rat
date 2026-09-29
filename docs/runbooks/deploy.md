@@ -19,15 +19,17 @@ The code only needs plain Postgres through `DATABASE_URL` (node-postgres and pla
 
 ## 2. Railway (worker, API, admin page)
 1. New project from the GitHub repo `MikuEspana/rat`.
-2. Service **worker**: config file path `infra/railway.worker.json`. Exactly 1 replica.
-3. Service **api**: config file path `infra/railway.api.json`. Generate a public domain.
-4. Service **admin** (private admin page, optional but recommended): config file path `infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), `DATABASE_URL=${{Postgres.DATABASE_URL}}` (the kill switch is a database setting), `DRY_RUN` like the worker, and `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` for its worker-down watchdog (a Telegram alert when the worker's loops stop for 3 minutes, since a dead worker cannot alert by itself). It serves HTTPS on Railway; open it, log in with any user name and the password.
+Every service below: Settings > Config file path `/infra/railway.<service>.json`, **and** Settings > Build > Builder **Dockerfile** with the Dockerfile path from that file (`infra/Dockerfile`, or `infra/backup/Dockerfile` for backup) and, for worker / api / admin, its start command. The config file path alone was not enough on a real project: Railway fell back to auto-detection (Railpack, "No start command detected"). `scripts/setup-mac.sh` sets all of it and checks it before the first build.
+
+2. Service **worker**: config file path `/infra/railway.worker.json`. Exactly 1 replica.
+3. Service **api**: config file path `/infra/railway.api.json`. Generate a public domain.
+4. Service **admin** (private admin page, optional but recommended): config file path `/infra/railway.admin.json`. Generate a domain and keep it to yourself. Variables: `ADMIN_PASSWORD` (at least 16 characters, from your password manager), `DATABASE_URL=${{Postgres.DATABASE_URL}}` (the kill switch is a database setting), `DRY_RUN` like the worker, and `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` for its worker-down watchdog (a Telegram alert when the worker's loops stop for 3 minutes, since a dead worker cannot alert by itself). It serves HTTPS on Railway; open it, log in with any user name and the password.
 5. Variables (Railway > Variables), from `.env.example`:
    - both: `DATABASE_URL` (worker) / `DATABASE_URL_READONLY` (api) as references (step 1), `DRY_RUN=true`, `COIN_MINT` (empty until launch), `CREATOR_PUBKEY`, `STOCKS_FILE=config/stocks.json`
    - worker only: `KEY_ENCRYPTION_KEY` (32 random bytes, base64), `KEY_VERSION=1`, `RPC_URL`, `RPC_URL_BACKUP`, `JUPITER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
    - api only: `CORS_ORIGIN` (your site domain), `API_CACHE_SEC=3` (the API listens on the `PORT` Railway injects, `API_PORT` is only a fallback)
 6. Leave `LIVE_CONFIRM` empty until launch.
-7. Service **backup** (nightly encrypted offsite dump): config file path `infra/railway.backup.json`. Variables and schedule: `backup-restore.md`.
+7. Service **backup** (nightly encrypted offsite dump): config file path `/infra/railway.backup.json`, builder Dockerfile, Dockerfile path `infra/backup/Dockerfile`. Variables and schedule: `backup-restore.md`.
 
 Generate the master key on your own machine: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Store it in your password manager too.
 
