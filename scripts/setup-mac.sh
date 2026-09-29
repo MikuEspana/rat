@@ -39,6 +39,11 @@ PROJECT_NAME="wall-street-rats"
 CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot}"
 COLD_WALLET="${WSR_COLD_WALLET:-DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj}"
 SITE_ORIGIN="https://wallstreetrats.world"
+# Every service and Postgres run here: EU West (Amsterdam). Most Solana stake sits in Europe and Helius has nodes in
+# Amsterdam and Frankfurt (docs/runbooks/setup-mac.md, "Region").
+REGION="${WSR_REGION:-europe-west4-drams3a}"
+REGION_NAME="EU West (Amsterdam)"
+ALL_REGIONS="us-west2 us-east4-eqdc4a europe-west4-drams3a asia-southeast1-eqsg3a" # docs.railway.com/deployments/regions
 BACKUP_CRON="30 3 * * *"
 TG_API="${WSR_TELEGRAM_API:-https://api.telegram.org}"
 HC_API="${WSR_HEALTHCHECKS_API:-https://healthchecks.io}"
@@ -153,6 +158,38 @@ wait_deployed() { # wait_deployed service minutes
     [ "$i" -gt $((mins * 6)) ] && die "the $svc service is still not running after $mins minutes (status $s)" "Check the Railway dashboard, service $svc, Deployments."
     sleep "${WSR_POLL_SEC:-10}"
   done
+}
+
+connected() { rw service list --json 2>/dev/null | jq -e --arg n "$1" --arg r "$REPO_SLUG" '.[] | select(.name == $n) | (.source.repo // "" | ascii_downcase) == ($r | ascii_downcase)' >/dev/null 2>&1; }
+connect_source() { # connect_source service: the first deploy starts with every setting already in place
+  if connected "$1"; then return 0; fi
+  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")" # a failed deployment from before is not this build's answer
+  rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null ||
+    die "could not connect $1 to github.com/$REPO_SLUG" "Give Railway access to the repo: https://github.com/apps/railway-app/installations/new"
+}
+# a setting changed on a service that already runs (a re-run): redeploy it so the change applies
+rebuild() { # rebuild service: a fresh build of the latest commit with the current settings (never a replay of the last
+  # one, which would repeat a wrong build). Older Railway CLIs have no --from-source: connecting the repo again also
+  # starts a fresh build.
+  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")"
+  rw redeploy --service "$1" --from-source --yes >/dev/null 2>&1 && return 0
+  if connected "$1"; then
+    rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null 2>&1 && return 0
+  else
+    rw redeploy --service "$1" --yes >/dev/null 2>&1 && return 0 # an image service (Postgres): a redeploy takes the new settings
+  fi
+  die "could not start a new deployment of $1" "Railway dashboard: $1 > Deployments > Redeploy. Then run this again."
+}
+redeploy_changed() { # redeploy_changed service...: services already connected whose settings changed or whose last deploy failed
+  local svc
+  for svc in "$@"; do
+    connected "$svc" || continue
+    case "$CHANGED" in
+      *" $svc "*) rebuild "$svc"; say "rebuilding $svc (its settings changed)" ;;
+      *) case "$(service_status "$svc")" in FAILED | CRASHED) rebuild "$svc"; say "rebuilding $svc (its last deploy failed)" ;; esac ;;
+    esac
+  done
+  return 0
 }
 
 # ---------------------------------------------------------------- 0. sanity + repo ------------------------------------
@@ -279,7 +316,7 @@ DB_REF="\${{$PG.DATABASE_URL}}"
 # latest commit before step 7 (redeploy_changed). The other settings are sent again when infra/railway.*.json changes.
 service_id() { rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | .id // empty' 2>/dev/null; }
 # Railway's answer holds every variable decrypted: only the build settings leave this pipe (no secret in a shell variable)
-env_config() { rw environment config --json 2>/dev/null | jq -ce 'select(type == "object") | {services: ((.services // {}) | map_values({configFile, build, deploy}))}' 2>/dev/null; }
+env_config() { rw environment config --json 2>/dev/null | jq -ce 'select(type == "object") | {services: ((.services // {}) | map_values({configFile, build, deploy, volumeMounts})), volumes: ((.volumes // {}) | map_values({region}))}' 2>/dev/null; }
 build_patch() { # build_patch service id: the settings for Railway, as an environment config patch
   jq -c --arg id "$2" --arg f "/infra/railway.$1.json" '{services: {($id): ({configFile: $f} + {build, deploy})}}' "infra/railway.$1.json"
 }
@@ -323,6 +360,60 @@ for svc in worker api admin backup; do
     ok "$svc builds with $dockerfile (builder, start command and restart rules from infra/railway.$svc.json)"
   fi
   rw_set "$svc" "RAILWAY_DOCKERFILE_PATH=$dockerfile" # Railway's documented Dockerfile setting: a second lock on the same door
+done
+
+# Region: every service, and Postgres with its volume, runs in $REGION_NAME. New services start in the account's
+# default region, so each one is moved right after it is created (the app services before their first build). A
+# service already running elsewhere is redeployed there: Postgres now (its volume migrates with it, while the
+# database is still empty), the others in step 6. Checked against where each deployment really runs.
+service_regions() { # the regions the service's running deployment is in, sorted, comma separated ("" = not deployed)
+  rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | [.regions[]? | select((.configured // 1) > 0) | .name] | sort | join(",")' 2>/dev/null
+}
+region_set() { # region_set service_id config: the configured regions, sorted, comma separated
+  jq -rn --argjson have "$2" --arg id "$1" '($have.services[$id].deploy // {}) as $d
+    | ([($d.multiRegionConfig // {}) | to_entries[] | select(.value != null) | .key] + [($d.region // empty)]) | unique | join(",")'
+}
+region_patch() { # region_patch service_id config actual: only $REGION stays (every other region null), its volumes follow
+  jq -cn --argjson have "$2" --arg id "$1" --arg r "$REGION" --arg actual "$3" --arg all "$ALL_REGIONS" '($have.services[$id] // {}) as $s
+    | ([($s.deploy.multiRegionConfig // {}) | keys[]] + [($s.deploy.region // empty)] + ($actual | split(",")) + ($all | split(" "))
+       | map(select(. != "")) | unique | map(select(. != $r))) as $old
+    | {services: {($id): {deploy: {multiRegionConfig: ({($r): {numReplicas: 1}} + ($old | map({(.): null}) | add // {}))}}},
+       volumes: (($s.volumeMounts // {}) | keys | map({(.): {region: $r}}) | add // {})}'
+}
+NO_CONFIG='{"services":{}}'
+for svc in "$PG" worker api admin backup; do
+  id=$(service_id "$svc")
+  [ -n "$id" ] || die "the $svc service was not found in the service list"
+  actual=$(service_regions "$svc")
+  cfg=$(env_config) || cfg=""
+  if [ -n "$cfg" ]; then configured=$(region_set "$id" "$cfg"); else configured=$(state_get "REGION_$svc"); fi
+  if [ "$configured" = "$REGION" ] && { [ -z "$actual" ] || [ "$actual" = "$REGION" ]; }; then
+    skip "$svc runs in $REGION_NAME"
+    continue
+  fi
+  if [ -z "$cfg" ] && [ "$svc" = "$PG" ] && [ -n "$actual" ] && [ "$actual" != "$REGION" ]; then
+    die "this Railway CLI cannot move Postgres with its volume" "Railway dashboard: Postgres > Settings > Region: $REGION_NAME, and confirm the volume migration. Then run this again."
+  fi
+  if [ "$configured" != "$REGION" ]; then
+    region_patch "$id" "${cfg:-$NO_CONFIG}" "$actual" | rw environment edit -m "setup: $svc runs in $REGION_NAME" --json >/dev/null ||
+      die "could not move $svc to $REGION_NAME" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
+    if [ -n "$cfg" ]; then
+      now=$(region_set "$id" "$(env_config || echo '{"services":{}}')")
+      [ "$now" = "$REGION" ] || die "Railway did not keep the region of $svc (it has: ${now:-none})" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
+    fi
+    state_set "REGION_$svc" "$REGION"
+  fi
+  if [ -n "$actual" ] && [ "$actual" != "$REGION" ]; then
+    if [ "$svc" = "$PG" ]; then
+      say "Moving Postgres from $actual to $REGION_NAME (its volume migrates too, a few minutes while it is still empty)..."
+      rebuild "$PG"
+      wait_deployed "$PG" 20
+      [ "$(service_regions "$PG")" = "$REGION" ] || die "Postgres still runs in $(service_regions "$PG")" "Railway dashboard: Postgres > Settings > Region: $REGION_NAME, confirm the volume migration. Then run this again."
+    else
+      mark_changed "$svc" # redeployed in step 6
+    fi
+  fi
+  ok "$svc runs in $REGION_NAME"
 done
 
 # ---------------------------------------------------------------- 4. R2 bucket ----------------------------------------
@@ -530,33 +621,6 @@ rw_set backup "DATABASE_URL=$DB_REF"
 ok "creator wallet $CREATOR_PUBKEY, cold wallet $COLD_WALLET, DRY_RUN=true everywhere"
 
 # ---------------------------------------------------------------- deploy the worker ------------------------------------
-connected() { rw service list --json 2>/dev/null | jq -e --arg n "$1" --arg r "$REPO_SLUG" '.[] | select(.name == $n) | (.source.repo // "" | ascii_downcase) == ($r | ascii_downcase)' >/dev/null 2>&1; }
-connect_source() { # connect_source service: the first deploy starts with every setting already in place
-  if connected "$1"; then return 0; fi
-  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")" # a failed deployment from before is not this build's answer
-  rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null ||
-    die "could not connect $1 to github.com/$REPO_SLUG" "Give Railway access to the repo: https://github.com/apps/railway-app/installations/new"
-}
-# a setting changed on a service that already runs (a re-run): redeploy it so the change applies
-rebuild() { # rebuild service: a fresh build of the latest commit with the current settings (never a replay of the last
-  # one, which would repeat a wrong build). Older Railway CLIs have no --from-source: connecting the repo again also
-  # starts a fresh build.
-  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")"
-  rw redeploy --service "$1" --from-source --yes >/dev/null 2>&1 ||
-    rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null 2>&1 ||
-    die "could not start a new build of $1" "Railway dashboard: $1 > Deployments > Deploy the latest commit. Then run this again."
-}
-redeploy_changed() { # redeploy_changed service...: services already connected whose settings changed or whose last deploy failed
-  local svc
-  for svc in "$@"; do
-    connected "$svc" || continue
-    case "$CHANGED" in
-      *" $svc "*) rebuild "$svc"; say "rebuilding $svc (its settings changed)" ;;
-      *) case "$(service_status "$svc")" in FAILED | CRASHED) rebuild "$svc"; say "rebuilding $svc (its last deploy failed)" ;; esac ;;
-    esac
-  done
-  return 0
-}
 redeploy_changed worker api admin backup
 connect_source worker
 wait_deployed worker 20
@@ -745,7 +809,12 @@ fi
 
 # ---------------------------------------------------------------- 10. checklist ------------------------------------------
 step "Done"
+for svc in "$PG" worker api admin backup; do # where every deployment really runs
+  r=$(service_regions "$svc")
+  [ -z "$r" ] || [ "$r" = "$REGION" ] || die "$svc runs in $r, not $REGION_NAME" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
+done
 for l in "tools installed, repo at $APP_DIR" \
+  "every service and Postgres run in $REGION_NAME" \
   "Railway project: Postgres, worker, api, admin, backup (DRY RUN)" \
   "R2 bucket $BUCKET, private, backups deleted after 30 days" \
   "secrets in $SECRETS (you saved them in your password manager)" \
