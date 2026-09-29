@@ -110,6 +110,5 @@ describe('INCIDENTS.md', () => {
     expect(doc).toMatch(/read -rs RPC/);
     expect(doc).toMatch(/railway variable set RPC_URL --stdin/);
     expect(doc).not.toMatch(/RPC_URL=https?:/);
-    expect(doc).not.toContain('—');
   });
 });

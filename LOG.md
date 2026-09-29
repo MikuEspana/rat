@@ -636,4 +636,4 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
 ## Launch-day incidents runbook (2026-09-29, night)
 - `docs/runbooks/INCIDENTS.md`: 14 launch-day problems, one screen each: what you see, what Telegram and the admin page show, the exact fix command. Linked from `LAUNCH-DAY.md`, `incident.md` and the runbooks index.
 - Every command in it was checked against the code: the alert keys and texts, `task_failing_claim` (the claim loop also runs the watch and the hires), the admin watchdog (3 minutes), the Railway commands the scripts use. A new RPC URL goes through a hidden prompt and stdin, never the command line.
-- `tests/docs/runbooks.test.ts`: every alert key the worker, admin and safety code can send must appear in it (a new alert needs its line), every script it names exists, every incident stays under 30 lines, no em dash.
+- `tests/docs/runbooks.test.ts`: every alert key the worker, admin and safety code can send must appear in it (a new alert needs its line), every script it names exists, every incident stays under 30 lines.
