@@ -97,6 +97,8 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
     },
   );
   const m = new Model();
+  /** a settle or release counts toward the hourly cap at the time of the reservation it closes */
+  const reservedAt = new Map<number, number>();
   const open: Reservation[] = [];
   const closed: Reservation[] = [];
   let credited = 0n;
@@ -132,6 +134,7 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
           // the invariant itself: claimed SOL left in the bucket covered this spend, to the lamport
           expect(before - c.lamports).toBeGreaterThanOrEqual(0n);
           m.entries.push({ bucket: c.bucket, delta: -c.lamports, spend: true, at: now });
+          reservedAt.set(r.reservation.ledgerId, now);
           open.push(r.reservation);
           expect(m.outflowSince(c.bucket, now - HOUR_MS)).toBeLessThanOrEqual(CAP);
           if (smokeMode) expect(m.lifetime()).toBeLessThanOrEqual(SMOKE_CAP);
@@ -143,7 +146,7 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
         const r = open.splice(c.pick % open.length, 1)[0]!;
         const actual = (r.lamports * BigInt(c.pct)) / 100n;
         await guard.settle(r, actual);
-        if (actual !== r.lamports) m.entries.push({ bucket: r.bucket, delta: r.lamports - actual, spend: true, at: now });
+        if (actual !== r.lamports) m.entries.push({ bucket: r.bucket, delta: r.lamports - actual, spend: true, at: reservedAt.get(r.ledgerId)! });
         closed.push(r);
         break;
       }
@@ -151,7 +154,7 @@ async function runScenario(cmds: Cmd[], smokeMode: boolean, x: Scale): Promise<v
         if (open.length === 0) break;
         const r = open.splice(c.pick % open.length, 1)[0]!;
         await guard.release(r, 'test');
-        m.entries.push({ bucket: r.bucket, delta: r.lamports, spend: true, at: now });
+        m.entries.push({ bucket: r.bucket, delta: r.lamports, spend: true, at: reservedAt.get(r.ledgerId)! });
         closed.push(r);
         break;
       }

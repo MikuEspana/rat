@@ -380,6 +380,25 @@ describe('red team: GuardedSender live checks', () => {
 });
 
 describe('red team: SpendGuard races and overspend', () => {
+
+  it('a released reservation never frees cap room after the reservation itself left the hour (cap exceeded)', async () => {
+    // a dropped hire is reserved at t0 and released ~80 s later when its blockhash expires. Counted at write time,
+    // at t0 + 1 h the -0.03 has left the window but the +0.03 has not: 0.03 SOL of extra room per dropped hire.
+    const cap = 90_000_000n;
+    await credit('hire', SOL);
+    const g = guard({ capPerHour: { hire: cap } });
+    const r = (id: string) => g.authorize({ bucket: 'hire', lamports: 30_000_000n, refType: 'rat', refId: id });
+    const a = await r('A');
+    expect((await r('B')).ok && (await r('C')).ok).toBe(true);
+    clock.advanceSeconds(80);
+    if (!a.ok) throw new Error('A');
+    await g.release(a.reservation, 'expired');
+    expect((await r('D')).ok).toBe(true);
+    clock.advanceSeconds(3_601 - 80);
+    // real outflow in the hour from t0 + 80 s: D, E, F = the cap. G would be 0.12 SOL in one hour.
+    expect((await r('E')).ok && (await r('F')).ok).toBe(true);
+    expect((await r('G')).ok).toBe(false);
+  });
   it('five parallel authorizations with budget for one: exactly one passes', async () => {
     await store.ledger.append({ bucket: 'hire', deltaLamports: 30_000_000n, reason: 'claim_credit' });
     const g = guard();

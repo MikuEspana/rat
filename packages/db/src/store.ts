@@ -211,6 +211,11 @@ export class LedgerRepo implements LedgerStore {
     return toBig(r[0]?.v);
   }
 
+  /**
+   * Net spend in the window. A settle or release counts at the time of the reservation it closes (when the SOL
+   * really left): counted at its own later time, a release would free cap room after its reservation had already
+   * left the window, and the real outflow of an hour could exceed the cap.
+   */
   async netOutflowSince(bucket: Bucket, since: Date): Promise<bigint> {
     const r = await this.db
       .select({ v: sql<string>`coalesce(-sum(${ledgerEntries.deltaLamports}), 0)::text` })
@@ -220,7 +225,9 @@ export class LedgerRepo implements LedgerStore {
           eq(ledgerEntries.mode, this.mode),
           eq(ledgerEntries.bucket, bucket),
           inArray(ledgerEntries.reason, SPEND_REASONS[bucket]),
+          // a closing row is written at or after its reservation, so this only narrows the scan
           gte(ledgerEntries.at, since),
+          sql`coalesce((select o.at from ledger_entries o where o.id = ${ledgerEntries.closesId}), ${ledgerEntries.at}) >= ${since}`,
         ),
       );
     return toBig(r[0]?.v);
