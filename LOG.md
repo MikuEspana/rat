@@ -440,6 +440,24 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
   - the key import goes through the hidden prompt, and the key is stored encrypted and never shown;
   - over 1.4 million process samples, the creator key, the master key and the database password never appeared on any command line.
 
+## Fix: setup step 7 called a stored, working creator key "not usable" (2026-09-29)
+**Root cause:** the key check ran `rat preflight --json` in the worker and looked for `creator key: PASS`. Before launch, preflight always has FAIL lines (no COIN_MINT yet, the creator wallet not funded), so it exits 1. Under `set -o pipefail` that exit code made the whole check fail even when the line said PASS.
+- The owner's first run stored the key and still stopped. The second run was told "a creator key is already stored", then stopped the same way.
+- The harness missed it because its fake preflight always exited 0.
+
+**Fix (`scripts/setup-mac.sh`):**
+- `preflight_json` returns preflight's JSON line and ignores its exit code; step 8 uses it too (it would otherwise have exited silently).
+- Step 7 reads the `creator key` line:
+  - PASS (stored, decrypts with the worker's KEY_ENCRYPTION_KEY, derives CREATOR_PUBKEY) is DONE, with no paste;
+  - "no creator key imported" asks for the key;
+  - "already stored" is checked instead of failing;
+  - a stored key that fails stops with the real reason and never asks to paste again.
+- Three more places could end the script silently under `set -e` plus `pipefail` (the import error line, `domain_of`, the healthchecks call). They are guarded now.
+
+**Tested:** in the harness, preflight now exits like the real CLI.
+- The script from `main` reproduces both of the owner's stops: "not usable" after storing the key, then "already stored" followed by "not usable".
+- The new script counts the stored key as done, asks for nothing, and finishes steps 8 to 10, restore drill included.
+
 ## Rehearsal: rat audit and the rehearsal on SimChain (2026-09-29)
 
 - `rat audit` (read-only, production-safe): every booked claim equals what left the creator's fee vaults in its transaction (and its ledger credit); every hired rat was paid by the creator exactly once and holds what the database says; the creator wallet's SOL change over every bot transaction (and external claims) equals the ledger to the lamport. Owner transactions (launch, dev buy, deposits), seeded SOL and emergency sweeps are kept apart. PASS / FAIL / WAIT (in flight), exit 1 unless PASS, `--json` for scripts. On LAUNCH-DAY.md's end-of-day list.

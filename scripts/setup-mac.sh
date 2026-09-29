@@ -37,6 +37,7 @@ SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
 PROJECT_NAME="wall-street-rats"
 CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot}"
+CREATOR_LABEL="${WSR_CREATOR_LABEL:-creator}"
 COLD_WALLET="${WSR_COLD_WALLET:-DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj}"
 SITE_ORIGIN="https://wallstreetrats.world"
 # Every service and Postgres run here: EU West (Amsterdam). Most Solana stake sits in Europe and Helius has nodes in
@@ -156,6 +157,7 @@ ssh_ready() { # ssh_ready service: dies with the reason (and the link, for an un
 }
 rat_w() { printf '%s\n' "$(worker_env_json)" | rw_ssh worker "$(in_worker_cmd "$@")"; }             # rat <args> in the worker
 rat_w_in() { { printf '%s\n' "$(worker_env_json)"; cat; } | rw_ssh worker "$(in_worker_cmd "$@")"; } # ... with this stdin
+preflight_json() { rat_w preflight --json 2>/dev/null | grep '^{' | tail -1 || true; } # its JSON line (exit code 1 while anything FAILs)
 service_exists() { rw service list --json 2>/dev/null | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1; }
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
@@ -392,7 +394,7 @@ done
 # service already running elsewhere is redeployed there: Postgres now (its volume migrates with it, while the
 # database is still empty), the others in step 6. Checked against where each deployment really runs.
 service_regions() { # the regions the service's running deployment is in, sorted, comma separated ("" = not deployed)
-  rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | [.regions[]? | select((.configured // 1) > 0) | .name] | sort | join(",")' 2>/dev/null
+  rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | [.regions[]? | select((.configured // 1) > 0) | .name] | sort | join(",")' 2>/dev/null || true
 }
 region_set() { # region_set service_id config: the configured regions, sorted, comma separated
   jq -rn --argjson have "$2" --arg id "$1" '($have.services[$id].deploy // {}) as $d
@@ -661,27 +663,41 @@ esac
 
 # ---------------------------------------------------------------- 7. creator key -----------------------------------------
 step "Import the creator wallet key (hidden prompt, straight into Railway)"
-creator_key_ok() { rat_w preflight --json 2>/dev/null | grep '^{' | tail -1 | jq -e '.lines[] | select(.check == "creator key" and .status == "PASS")' >/dev/null 2>&1; }
-if creator_key_ok; then
-  skip "creator key $CREATOR_PUBKEY"
-else
-  say "In Phantom: open the creator account ($CREATOR_PUBKEY), then Settings > Manage Accounts > that account > Show Private Key."
-  say "Type your Phantom password, copy the key, paste it below. It goes into Railway encrypted and is never shown."
-  while :; do
-    ask_secret CREATOR_SECRET "Creator private key"
-    if out=$(printf '%s' "$CREATOR_SECRET" | rat_w_in keys import --role creator 2>&1); then
-      break
-    fi
-    msg=$(printf '%s\n' "$out" | grep -i 'error' | tail -1)
-    note "not imported: ${msg:-the import failed}"
-    case "$msg" in *"already stored"*) break ;; esac
-    say "It must be the private key of $CREATOR_PUBKEY (a key for any other wallet is refused)."
-  done
-  unset CREATOR_SECRET out
-  ${WSR_PBCOPY:-pbcopy} </dev/null 2>/dev/null || true # clear the clipboard: the key was on it
-  creator_key_ok || die "the creator key is not usable" "Run this again and paste the private key of $CREATOR_PUBKEY."
-  ok "creator key imported, encrypted with the master key, matches $CREATOR_PUBKEY (clipboard cleared)"
-fi
+# `rat preflight` exits 1 while any line FAILs, and before launch some always do (no COIN_MINT yet, the creator wallet
+# not funded): only its JSON counts, never its exit code. "creator key: PASS" means the stored key is for
+# CREATOR_PUBKEY, decrypts with the worker's KEY_ENCRYPTION_KEY and derives that public key (packages/keys keystore.ts).
+creator_key_line() { preflight_json | jq -r '.lines[]? | select(.check == "creator key") | "\(.status) \(.detail)"' 2>/dev/null | head -1 || true; }
+key_line=$(creator_key_line)
+case "$key_line" in
+  PASS*) skip "creator key $CREATOR_PUBKEY (stored, decrypts with the master key, matches)" ;;
+  "FAIL no creator key imported"*)
+    say "In Phantom: open the $CREATOR_LABEL account ($CREATOR_PUBKEY), then Settings > Manage Accounts > that account > Show Private Key."
+    say "Type your Phantom password, copy the key, paste it below. It goes into Railway encrypted and is never shown."
+    while :; do
+      ask_secret CREATOR_SECRET "Creator private key"
+      if out=$(printf '%s' "$CREATOR_SECRET" | rat_w_in keys import --role creator 2>&1); then
+        break
+      fi
+      msg=$(printf '%s\n' "$out" | grep -i 'error' | tail -1 || true)
+      case "$msg" in *"already stored"*) note "a creator key is already stored: checking it instead"; break ;; esac
+      note "not imported: ${msg:-the import failed}"
+      say "It must be the private key of $CREATOR_PUBKEY (a key for any other wallet is refused)."
+    done
+    unset CREATOR_SECRET out
+    ${WSR_PBCOPY:-pbcopy} </dev/null 2>/dev/null || true # clear the clipboard: the key was on it
+    key_line=$(creator_key_line)
+    case "$key_line" in
+      PASS*) ok "creator key stored, decrypts with the master key, matches $CREATOR_PUBKEY (clipboard cleared)" ;;
+      *) die "the stored creator key does not work: ${key_line:-rat preflight gave no answer}" \
+        "Check it yourself: scripts/rat.sh preflight (the \"creator key\" line)." ;;
+    esac ;;
+  "")
+    die "rat preflight did not report the creator key, so it cannot be checked" \
+      "Try it yourself: cd $APP_DIR && scripts/rat.sh preflight" ;;
+  *)
+    die "a creator key is stored but does not work: ${key_line#FAIL }" \
+      "Nothing was changed. If KEY_ENCRYPTION_KEY on the worker was replaced, put the original back (it is in $SECRETS)." ;;
+esac
 
 # ---------------------------------------------------------------- read-only user, api, admin ----------------------------
 if [ "$(state_get READONLY_USER)" = 1 ]; then
@@ -714,7 +730,7 @@ connect_source admin
 wait_deployed api 20
 wait_deployed admin 20
 domain_of() { # the service's railway domain (created the first time, listed after)
-  rw domain --service "$1" --json 2>/dev/null | jq -r '.domain // .domains[0] // empty' 2>/dev/null | sed 's#^https://##; s#/$##'
+  rw domain --service "$1" --json 2>/dev/null | jq -r '.domain // .domains[0] // empty' 2>/dev/null | sed 's#^https://##; s#/$##' || true
 }
 API_DOMAIN=$(domain_of api)
 ADMIN_DOMAIN=$(domain_of admin)
@@ -729,7 +745,7 @@ ok "admin page: https://$ADMIN_DOMAIN (any user name, password in ADMIN_PASSWORD
 
 # ---------------------------------------------------------------- 8. preflight + alert ---------------------------------
 step "DRY RUN preflight and a test alert"
-pre=$(rat_w preflight --json 2>/dev/null | grep '^{' | tail -1)
+pre=$(preflight_json)
 [ -n "$pre" ] || die "rat preflight gave no answer" "Try it yourself: railway ssh --service worker, then: cd /app && pnpm --filter @rat/cli rat preflight"
 printf '%s' "$pre" | jq -r '.lines[] | "\(.status)\t\(.check)\t\(.detail)"' | while IFS="$(printf '\t')" read -r st ck dt; do
   case "$st" in PASS) c="$G" ;; WARN) c="$Y" ;; *) c="$R" ;; esac
@@ -803,7 +819,7 @@ elif yes_no "Add a free healthchecks.io check, so a night the backup never start
     ask_secret HC_KEY "healthchecks.io API key"
     ping=$(printf 'header = "X-Api-Key: %s"\n' "$HC_KEY" | curl -sS -m 20 -K - -H 'content-type: application/json' \
       -d "{\"name\":\"wall-street-rats backup\",\"slug\":\"wsr-backup\",\"schedule\":\"$BACKUP_CRON\",\"tz\":\"UTC\",\"grace\":7200,\"channels\":\"*\",\"unique\":[\"slug\"]}" \
-      "$HC_API/api/v3/checks/" 2>/dev/null | jq -r '.ping_url // empty')
+      "$HC_API/api/v3/checks/" 2>/dev/null | jq -r '.ping_url // empty' || true)
     [ -n "$ping" ] && break
     note "healthchecks.io refused that key, paste it again"
   done
