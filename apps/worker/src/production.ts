@@ -1,6 +1,6 @@
 // Production wiring (RPC, Jupiter, Postgres, encrypted keys, Telegram). Shared by main.ts and the smoke test.
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
-import { type AppConfig, type Logger, loadStocksFile, requireConfig, systemClock, systemRng } from '@rat/core';
+import { type AppConfig, type Logger, loadStocksFile, requireConfig, sleep, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, openDatabase } from '@rat/db';
 import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
@@ -11,11 +11,29 @@ import { createJupiterBudget } from './jupiter-budget';
 
 export const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
 
+/**
+ * A fresh setup starts the worker before the creator key exists (it is imported inside the running worker), so the
+ * worker waits here, doing nothing, instead of crash-looping. Only the missing key waits: a wrong key still fails.
+ */
+export async function waitForCreatorKey(store: Store, log: Logger, pause: (ms: number) => Promise<void> = sleep): Promise<void> {
+  if (await store.keys.getRole('creator')) return;
+  log.warn('no creator key imported yet: waiting, nothing runs until then. Import it with: rat keys import --role creator');
+  while (!(await store.keys.getRole('creator'))) await pause(10_000);
+  log.info('creator key imported: starting');
+}
+
 export async function createProductionDeps(
   cfg: AppConfig,
   log: Logger,
-  /** the long-running worker starts with its Jupiter budget spent (a restart loop never bursts); a one-shot run does not */
-  opts: { jupiterStartEmpty?: boolean } = {},
+  opts: {
+    /** the long-running worker starts with its Jupiter budget spent (a restart loop never bursts); a one-shot run does not */
+    jupiterStartEmpty?: boolean;
+    /**
+     * the long-running worker waits, doing nothing, until the creator key is imported (a fresh setup imports it
+     * inside the running worker with `rat keys import`); a one-shot run fails right away instead
+     */
+    waitForCreatorKey?: boolean;
+  } = {},
 ): Promise<{ deps: WorkerDeps; handle: DbHandle }> {
   requireConfig(cfg, ['databaseUrl', 'keyEncryptionKey', 'rpcUrl', 'creatorPubkey']);
   if (!cfg.jupiter.apiKey) throw new Error('JUPITER_API_KEY is required (free key at portal.jup.ag)');
@@ -55,7 +73,8 @@ export async function createProductionDeps(
   );
   const ring = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
   const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey });
-  await keys.creator();
+  if (opts.waitForCreatorKey) await waitForCreatorKey(store, log);
+  await keys.creator(); // a missing, wrong or undecryptable key still stops the worker here
 
   // Every Jupiter request goes through the one budget (no limiter or retries inside the HTTP client): at most
   // JUPITER_MAX_RPM (40) a minute. For the worker it starts spent, so a restarting worker never bursts.

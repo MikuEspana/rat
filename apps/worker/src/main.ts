@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   const cfg = loadConfig();
   const log = createLogger({ level: cfg.logLevel, name: 'rat-worker' });
   log.info(publicConfigSummary(cfg), cfg.dryRun ? 'starting in DRY RUN: nothing will be sent' : 'starting LIVE: transactions will be sent');
-  const { deps, handle } = await createProductionDeps(cfg, log);
+  const { deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true });
   const pre = await runPreflight(deps);
   for (const issue of pre.issues) {
     if (issue.blocking) log.error({ check: issue.check }, issue.message);

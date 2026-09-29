@@ -382,3 +382,7 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 - Step 5 says DONE when the passwords are already on Railway (they were never overwritten; now the message says so).
 
 **Tested:** the harness's fake Railway now builds like the real one did (config file path ignored, Railpack without a builder setting, a plain redeploy replays the last build). Fresh setup: no build ever fails. Repair: the script from `main` stops exactly like the real run; the new script fixes the settings, rebuilds the worker and finishes without asking any finished step again; a third run changes nothing. The same repair with an older CLI (no `--from-source`, no settings read-back) also finishes. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
+
+## Fix: a fresh worker waits for the creator key (2026-09-29)
+
+`setup-mac.sh` starts the worker (step 6) before the creator key is imported inside it (step 7). The worker stopped at startup when no creator key existed, so on a real project it would crash-loop and step 7 could not reach it. Now the long-running worker waits, doing nothing, until the key is imported, then starts. A wrong or undecryptable key still stops it. Proved on the real worker process against Postgres 16: `main` exited with "no creator key imported"; the fix waited, `rat keys import` worked, and the worker started.
