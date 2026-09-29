@@ -1,5 +1,5 @@
 // Display formatting for the HUD, feed, card and leaderboard.
-import type { RatEvent, Tier } from '@rat/contract';
+import type { RatEvent, StateResponse, Tier } from '@rat/contract';
 import { now as clockNow } from '../now';
 
 export function compact(n: number): string {
@@ -113,4 +113,59 @@ export function claimProgress(last: string | null, next: string | null, now = cl
   const b = Date.parse(next);
   if (!(b > a)) return null;
   return Math.min(1, Math.max(0, (now - a) / (b - a)));
+}
+
+/** A claim this long overdue means the bot is not running its loop (starting, restarting or stalled). */
+export const BOT_STALE_SEC = 90;
+
+/**
+ * The next-hire ring. While the bot is not running yet (right after launch the worker takes a few minutes to start)
+ * it says so on purpose, instead of a countdown stuck at "hiring...".
+ */
+export function hireRing(
+  s: { bot: Pick<StateResponse['bot'], 'mode' | 'lastClaimAt' | 'nextClaimAt'>; coin: Pick<StateResponse['coin'], 'mint'> },
+  now = clockNow(),
+  /** seconds overdue before the bot counts as not running (the simulator, whose clock runs up to 300x, turns it off) */
+  staleSec = BOT_STALE_SEC,
+): { label: string; progress: number | null; waiting: boolean } {
+  const { mode, lastClaimAt, nextClaimAt } = s.bot;
+  if (mode === 'paused') return { label: 'paused', progress: claimProgress(lastClaimAt, nextClaimAt, now), waiting: false };
+  if (!s.coin.mint) return { label: 'opens at launch', progress: null, waiting: true };
+  const next = nextClaimAt ? Math.round((Date.parse(nextClaimAt) - now) / 1000) : null;
+  if (next === null || Number.isNaN(next)) {
+    // no claim loop has ever run: the bot is starting. (The simulator, once its launch is over, has claims and no next.)
+    return lastClaimAt ? { label: 'next hire --', progress: null, waiting: false } : { label: 'bot starting', progress: null, waiting: true };
+  }
+  if (next > 0) return { label: `next hire ${next}s`, progress: claimProgress(lastClaimAt, nextClaimAt, now), waiting: false };
+  if (-next <= staleSec) return { label: 'hiring...', progress: 1, waiting: false };
+  return { label: lastClaimAt ? 'back soon' : 'bot starting', progress: null, waiting: true };
+}
+
+/** The banner above the HUD (null: no banner). DRY RUN reads differently before and after the coin exists. */
+export function bannerText(s: { bot: Pick<StateResponse['bot'], 'mode'>; coin: Pick<StateResponse['coin'], 'mint'> }): string | null {
+  if (s.bot.mode === 'paused') return 'PAUSED: the kill switch is on. No claims, no hires.';
+  if (s.bot.mode !== 'dry_run') return null;
+  return s.coin.mint
+    ? 'DRY RUN: the bot is warming up with simulated trades. Real hiring starts when it goes live.'
+    : 'DRY RUN: pre-launch rehearsal with simulated trades. Nothing on this page is real money yet.';
+}
+
+/** Under RATS HIRED. */
+export function ratsSub(p: Pick<StateResponse['portfolio'], 'ratCount' | 'frozenCount'>, mode: StateResponse['bot']['mode']): string {
+  if (p.ratCount === 0) return mode === 'live' ? 'first hire soon' : 'none yet';
+  return p.frozenCount ? `${p.frozenCount} frozen` : 'all at work';
+}
+
+/** 1st, 2nd, 3rd, 4th, 11th, 12th, 13th, 21st ... */
+export function ordinal(n: number): string {
+  const v = Math.abs(Math.trunc(n));
+  const teen = v % 100 >= 11 && v % 100 <= 13;
+  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[v % 10] ?? 'th';
+  return `${n.toLocaleString('en-US')}${suffix}`;
+}
+
+/** The leaderboard with nobody on it. */
+export function emptyBoardText(s: { coin: Pick<StateResponse['coin'], 'mint'>; portfolio: Pick<StateResponse['portfolio'], 'ratCount'> }): string {
+  if (s.portfolio.ratCount > 0) return 'No rats to rank yet.';
+  return s.coin.mint ? 'No rats yet. The first one is hired as soon as the fees cover its salary.' : 'No rats yet. Hiring opens at launch.';
 }

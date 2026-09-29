@@ -6,7 +6,7 @@ import type { Atlas } from '../gfx/atlas';
 import type { Camera } from '../gfx/camera';
 import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
-import { DEBUG_MAX_RATS } from '../config';
+import { DEBUG_MAX_RATS, SIM } from '../config';
 import { now as clockNow } from '../now';
 import { ringOfHires, STAGES } from '../floor/plan';
 import { headlines, type NewsStats } from './news';
@@ -18,7 +18,7 @@ type Progress = ReturnType<Growth['progress']>;
 
 /** Badges by hire order: the ring whose rooms were opening when a rat was hired. */
 const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
-import { ago, claimProgress, describe, pct, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
+import { ago, BOT_STALE_SEC, bannerText, describe, emptyBoardText, hireRing, pct, ratsSub, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
 
@@ -105,7 +105,9 @@ export class Ui {
   };
   private ringArc!: SVGCircleElement;
   private ringLabel = el('div', 'ring-label');
+  private ringEl = el('div', 'ring');
   private feedList = el('ol', 'feed-list');
+  private feedEmpty = el('li', 'ev empty', 'Quiet so far. Claims and hires show up here as they happen.');
   private feedItems: Array<{ li: HTMLLIElement; time: HTMLElement; at: string }> = [];
   private boardList = el('ol', 'board-list');
   private boardMode: 'top' | 'bottom' = 'top';
@@ -213,7 +215,7 @@ export class Ui {
       grid.append(box);
       this.stats.set(key, { value, sub });
     }
-    const ring = el('div', 'ring');
+    const ring = this.ringEl;
     const svgNs = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNs, 'svg');
     svg.setAttribute('viewBox', '0 0 64 64');
@@ -260,7 +262,7 @@ export class Ui {
       st.sub.textContent = sub;
     };
     set('mcap', s.coin.marketCapUsd === null ? 'pre-launch' : usd(s.coin.marketCapUsd), s.coin.priceUsd === null ? '' : `$${s.coin.priceUsd} / RAT`);
-    set('rats', s.portfolio.ratCount.toLocaleString('en-US'), s.portfolio.frozenCount ? `${s.portfolio.frozenCount} frozen` : 'all at work');
+    set('rats', s.portfolio.ratCount.toLocaleString('en-US'), ratsSub(s.portfolio, s.bot.mode));
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
     // the portfolio numbers glide between price updates (every 45 s) instead of jumping
@@ -271,11 +273,10 @@ export class Ui {
     if (pnl) pnl.value.className = `stat-value ${signClass(s.portfolio.pnlUsd)}`;
     this.glides.pnl.set(s.portfolio.pnlUsd);
     this.glides.pnlPct.set(s.portfolio.pnlPct);
-    const mode = s.bot.mode;
-    this.banner.hidden = mode === 'live';
-    this.banner.textContent =
-      mode === 'dry_run' ? 'DRY RUN: simulated trades, nothing on this page is real money.' : mode === 'paused' ? 'PAUSED: the kill switch is on. No claims, no hires.' : '';
-    this.banner.className = `banner ${mode}`;
+    const banner = bannerText(s);
+    this.banner.hidden = banner === null;
+    this.banner.textContent = banner ?? '';
+    this.banner.className = `banner ${s.bot.mode}`;
     this.renderBoard();
     if (this.selected !== null) this.renderCard();
   }
@@ -283,11 +284,12 @@ export class Ui {
   private tick(): void {
     const s = this.d.store.state;
     if (s) {
-      const p = claimProgress(s.bot.lastClaimAt, s.bot.nextClaimAt);
+      const r = hireRing(s, clockNow(), SIM ? Number.POSITIVE_INFINITY : BOT_STALE_SEC);
       const len = 2 * Math.PI * 26;
-      this.ringArc.setAttribute('stroke-dashoffset', String(len * (1 - (p ?? 0))));
-      const next = s.bot.nextClaimAt ? Math.round((Date.parse(s.bot.nextClaimAt) - clockNow()) / 1000) : null;
-      this.ringLabel.textContent = s.bot.mode === 'paused' ? 'paused' : next === null ? 'next hire --' : next > 0 ? `next hire ${next}s` : 'hiring...';
+      // waiting (bot starting, not launched yet): a quarter arc that turns slowly (CSS), not an empty ring
+      this.ringArc.setAttribute('stroke-dashoffset', String(len * (1 - (r.waiting ? 0.25 : (r.progress ?? 0)))));
+      this.ringEl.classList.toggle('waiting', r.waiting);
+      this.ringLabel.textContent = r.label;
     }
     const now = clockNow();
     for (const it of this.feedItems) it.time.textContent = ago(it.at, now);
@@ -319,6 +321,7 @@ export class Ui {
       toggle.textContent = box.classList.contains('folded') ? 'show' : 'hide';
     };
     head.append(toggle);
+    this.feedList.append(this.feedEmpty);
     box.append(head, this.feedList);
     return box;
   }
@@ -344,6 +347,7 @@ export class Ui {
       this.feedList.prepend(li);
       this.feedItems.unshift({ li, time, at: e.at });
     }
+    if (this.feedItems.length > 0) this.feedEmpty.remove();
     while (this.feedItems.length > 60) this.feedItems.pop()!.li.remove();
   }
 
@@ -357,6 +361,7 @@ export class Ui {
       this.feedList.prepend(li);
       this.feedItems.unshift({ li, time, at });
     }
+    if (this.feedItems.length > 0) this.feedEmpty.remove();
     while (this.feedItems.length > 60) this.feedItems.pop()!.li.remove();
   }
 
@@ -523,6 +528,10 @@ export class Ui {
     const s = this.d.store.state;
     if (!s) return;
     const rows: RatView[] = this.boardMode === 'top' ? s.leaderboard.top : s.leaderboard.bottom;
+    if (rows.length === 0) {
+      this.boardList.replaceChildren(el('li', 'row empty', emptyBoardText(s)));
+      return;
+    }
     this.boardList.replaceChildren(
       ...rows.map((r) => {
         const li = el('li', 'row clickable');
