@@ -31,6 +31,9 @@ const SECRET_ENV_KEYS = [
   'JUPITER_API_KEY',
   'TELEGRAM_BOT_TOKEN',
   'LIVE_CONFIRM',
+  'RAT_API_DB_PASSWORD',
+  'BACKUP_S3_ACCESS_KEY_ID',
+  'BACKUP_S3_SECRET_ACCESS_KEY',
 ];
 
 function walk(dir, out = []) {

@@ -19,6 +19,7 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 - [ ] Jupiter: the **Free** key is enough. The worker never makes more than 40 calls in any minute (hard budget; the Free tier allows 60), so your own CLI checks on the same key stay under the limit too. A `jupiter_429` alert means something else is using the key.
 - [ ] `rat alert-test` arrives on your phone. Phone charged, Telegram notifications on, not muted.
 - [ ] `KEY_ENCRYPTION_KEY` backed up offline (without it the rat wallets are lost).
+- [ ] Backups: Railway Daily and Weekly backups on, the nightly encrypted dump has run at least once (a file in your bucket), and you did one restore drill on it: `infra/backup/restore-check.sh` says **PASS** (`docs/runbooks/backup-restore.md`). The age private key (`~/rat-backup.key`) is in your password manager.
 - [ ] Admin service has `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` too: it alerts you if the worker dies (the worker cannot).
 - [ ] Cold wallet address written down (for an emergency sweep). It must NOT be the creator or a rat wallet.
 - [ ] Admin page opens with your password.
