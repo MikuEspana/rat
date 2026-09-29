@@ -132,8 +132,8 @@ export class VaultView {
     p.scaleX = p.scaleY = scale;
   }
 
-  /** Size of the pile now (world px). */
-  private box(): { x: number; y: number; w: number; h: number } {
+  /** Size of the pile now (world px): the middle of its base, its width and its height. */
+  box(): { x: number; y: number; w: number; h: number } {
     const { kind, scale } = this.frameOf(Math.max(0, this.stage));
     const f = this.atlas.frame(`world:${kind}`);
     const p = this.anchor.item.p;

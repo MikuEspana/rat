@@ -382,3 +382,7 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 - Step 5 says DONE when the passwords are already on Railway (they were never overwritten; now the message says so).
 
 **Tested:** the harness's fake Railway now builds like the real one did (config file path ignored, Railpack without a builder setting, a plain redeploy replays the last build). Fresh setup: no build ever fails. Repair: the script from `main` stops exactly like the real run; the new script fixes the settings, rebuilds the worker and finishes without asking any finished step again; a third run changes nothing. The same repair with an older CLI (no `--from-source`, no settings read-back) also finishes. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
+
+## Site: stages by SOL claimed, Company Roadmap (2026-09-29)
+
+The building's stage now goes by `treasury.totalClaimedSol` (0 / 0.25 / 1 / 5 / 20 / 50 SOL, read only through `apps/pixel-site/src/floor/stage-source.ts`, never closes); rooms, desks, landmarks and the sewer still go by rats hired. New Company Roadmap panel (every stage, done / next with "0.62 / 1 SOL" / locked; one line on a phone), kept clear of the Vault and the job-fair line (headless check at every stage, desktop and phone). Details in `apps/pixel-site/NOTES.md`; screenshots in `apps/pixel-site/assets/preview/sol_stages/`.

@@ -1,18 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { Growth } from './growth';
 import { Paths } from './path';
-import { buildMaster, queueCells, STAGES, stageOf } from './plan';
+import { buildMaster, queueCells, ringOfHires, solForRats, STAGES, stageOfSol } from './plan';
+import { stageSourceSol } from './stage-source';
 import { buildCity, carSprite, CITY_KEY } from './city';
 import { LANDMARKS, TOWER_SLOT, towerFloors, unlocked } from './landmarks';
+import { spawnStageOf } from './sewer';
 import { shortUsd, VAULT_STAGES, vaultStageOf } from './vault';
 import { idx, type FloorLayout } from './types';
 
 const SYMBOLS = ['TSLAx', 'MSTRx', 'COINx', 'AMDx', 'NVDAx', 'AAPLx', 'METAx', 'AMZNx', 'GOOGLx', 'SPYx'];
 const stockOf = (id: number): string => SYMBOLS[(id * 7 + (id >> 3)) % SYMBOLS.length]!;
 
+/** A live session: the SOL claimed goes up with the hires (to the stage each hire count used to show), hire by hire. */
 function grow(plan: FloorLayout, n: number): Growth {
   const g = new Growth(plan);
-  for (let id = 1; id <= n; id++) g.add(id, stockOf(id));
+  for (let id = 1; id <= n; id++) {
+    g.setSol(solForRats(id));
+    g.add(id, stockOf(id));
+  }
   return g;
 }
 
@@ -63,25 +69,109 @@ describe('growth (the idle game)', () => {
   const sizes = [1, 10, 25, 60, 100, 300, 500, 1000, 1500, 2200, 3000, 4200, 5000];
   const states = new Map(sizes.map((n) => [n, grow(plan, n)]));
 
-  it('follows the stage thresholds', () => {
-    for (const [n, g] of states) expect(g.stage).toBe(stageOf(n));
-    expect(stageOf(24)).toBe(0);
-    expect(stageOf(25)).toBe(1);
-    expect(stageOf(3000)).toBe(5);
+  it('goes by SOL claimed: 0, 0.25, 1, 5, 20 and 50 SOL, exactly at each edge', () => {
+    expect(STAGES.map((s) => s.name)).toEqual(['GARAGE STARTUP', 'SMALL OFFICE', 'FULL FLOOR', 'CORPORATE FLOOR', 'MEGACORP', 'WALL STREET']);
+    expect(STAGES.map((s) => s.sol)).toEqual([0, 0.25, 1, 5, 20, 50]);
+    const edges: Array<[number, number]> = [
+      [0, 0], [0.2499, 0], [0.25, 1], [0.9999, 1], [1, 2], [4.9999, 2], [5, 3], [19.9999, 3], [20, 4], [49.9999, 4], [50, 5], [1e6, 5],
+    ];
+    for (const [sol, stage] of edges) {
+      expect(stageOfSol(sol), `${sol} SOL`).toBe(stage);
+      const g = new Growth(plan);
+      g.setSol(sol);
+      expect(g.stage, `${sol} SOL`).toBe(stage);
+    }
+    // what the stage reads: the public SOL claimed (not what was hired, not what waits)
+    expect(stageSourceSol({ totalClaimedSol: 0.62, totalHiredSol: 0.3, waitingSol: 0.32 })).toBe(0.62);
+    // a live session: the stage follows the SOL that came with the hires
+    for (const [n, g] of states) expect(g.stage).toBe(stageOfSol(solForRats(n)));
   });
 
-  it('counts the job-fair line toward the stage, and never closes a stage when the line drains', () => {
-    const g = grow(plan, 80);
-    expect(g.stage).toBe(1);
-    const events = g.setApplicants(30);
-    expect(g.stageCount).toBe(110);
-    expect(g.stage).toBe(2);
-    expect(events.some((e) => e.kind === 'stage' && e.stage === 2)).toBe(true);
-    expect(g.count).toBe(80);
-    expect(g.setApplicants(0)).toEqual([]);
-    expect(g.stage).toBe(2);
-    g.setApplicants(3000);
-    expect(g.stage).toBe(STAGES.length - 1);
+  it('opens a stage the moment the SOL claimed reaches it, one event per stage, and hires alone never open one', () => {
+    const g = new Growth(plan);
+    expect(g.setSol(0.2499)).toEqual([]);
+    expect(g.stage).toBe(0);
+    const one = g.setSol(0.25);
+    expect(one.filter((e) => e.kind === 'stage')).toEqual([{ kind: 'stage', stage: 1 }]);
+    expect(g.isBuilt(plan.rooms[plan.rings[1]!.lobby]!)).toBe(true);
+    const jump = g.setSol(20);
+    expect(jump.filter((e) => e.kind === 'stage').map((e) => (e.kind === 'stage' ? e.stage : -1))).toEqual([2, 3, 4]);
+    g.setSol(49.99);
+    expect(g.stage).toBe(4);
+    g.setSol(50);
+    expect(g.stage).toBe(5);
+    // 3,000 hires with nothing claimed: still the garage (the ones without a desk wait outside)
+    const hires = new Growth(plan);
+    for (let id = 1; id <= 3000; id++) hires.add(id, stockOf(id));
+    expect(hires.stage).toBe(0);
+    expect(hires.waitingCount).toBeGreaterThan(2900);
+  });
+
+  it('never closes a stage: less SOL, none, or a bad number changes nothing', () => {
+    const g = grow(plan, 300);
+    g.setSol(5);
+    expect(g.stage).toBe(3);
+    const built = Buffer.from(g.built);
+    for (const sol of [1, 0.1, 0, -3, Number.NaN]) {
+      expect(g.setSol(sol)).toEqual([]);
+      expect(g.stage).toBe(3);
+      expect(g.sol).toBe(5);
+    }
+    expect(Buffer.from(g.built).equals(built)).toBe(true);
+    expect(g.blocked()[idx(plan.W, plan.rings[3]!.spawn.i, plan.rings[3]!.spawn.j)]).toBe(0);
+  });
+
+  it('debug ?rats=N still shows every stage: the count maps to the SOL that shows the stage it used to', () => {
+    for (const st of STAGES) expect(solForRats(st.rats)).toBeCloseTo(st.sol, 9);
+    let last = -1;
+    for (let n = 0; n <= 7000; n += 7) {
+      expect(stageOfSol(solForRats(n)), `${n} rats`).toBe(ringOfHires(n));
+      expect(solForRats(n)).toBeGreaterThan(last);
+      last = solForRats(n);
+    }
+  });
+
+  it('still opens rooms, desks, landmarks and the sewer by rats hired, not by SOL', () => {
+    // Wall Street's SOL with 40 hires: the rings stand, but no amenity opens before its hire count
+    const rich = new Growth(plan);
+    rich.setSol(50);
+    const poor = new Growth(plan);
+    poor.setSol(1);
+    for (let id = 1; id <= 40; id++) {
+      rich.add(id, stockOf(id));
+      poor.add(id, stockOf(id));
+    }
+    expect(rich.stage).toBe(5);
+    expect(poor.stage).toBe(2);
+    for (const r of plan.rooms) if (r.unlockAt !== null) expect(rich.built[r.id], `${r.kind} (${r.unlockAt} rats)`).toBe(0);
+    // desks go by hires: the same 40 rats sit at the same desks whatever the SOL, sharing the garage and open offices
+    expect([...rich.seatOfRat]).toEqual([...poor.seatOfRat]);
+    for (const sid of rich.seatOfRat.values()) expect(['garage', 'open']).toContain(plan.rooms[plan.seats[sid]!.room]!.kind);
+    // the first amenity opens at its hire count, whatever the SOL
+    const first = plan.rooms.filter((r) => r.unlockAt !== null).sort((a, b) => a.unlockAt! - b.unlockAt!)[0]!;
+    for (let id = 41; id < first.unlockAt!; id++) rich.add(id, stockOf(id));
+    expect(rich.isBuilt(first)).toBe(false);
+    rich.add(first.unlockAt!, stockOf(first.unlockAt!));
+    expect(rich.isBuilt(first)).toBe(true);
+    // stocks get desk rooms of their own from the full floor's hire count on
+    for (let id = first.unlockAt! + 1; id <= STAGES[2]!.rats; id++) rich.add(id, stockOf(id));
+    expect(plan.rooms[plan.seats[rich.seatOfRat.get(STAGES[2]!.rats)!]!.room]!.kind).toBe('stock');
+    // landmarks, the sewer and the era badges count hires (a rat count), never SOL: 40 hires at Wall Street's SOL
+    // still have only the espresso shrine and the ping pong table, one manhole, and small-office era badges
+    expect(unlocked(40)).toEqual(new Set(['espresso', 'pingpong']));
+    expect(spawnStageOf(40)).toBe(0);
+    expect(ringOfHires(40)).toBe(1);
+  });
+
+  it('seats a page load (all the SOL first, then the roster) the way a live session did', () => {
+    const live = states.get(1000)!;
+    const load = new Growth(plan);
+    load.setSol(solForRats(1000));
+    for (let id = 1; id <= 1000; id++) load.add(id, stockOf(id));
+    expect(load.stage).toBe(live.stage);
+    const byRat = (g: Growth): Array<[number, number]> => [...g.seatOfRat].sort((a, b) => a[0] - b[0]);
+    expect(byRat(load)).toEqual(byRat(live));
+    expect(Buffer.from(load.built).equals(Buffer.from(live.built))).toBe(true);
   });
 
   it('only ever grows: a room built at N is still built at every larger N', () => {
@@ -239,7 +329,7 @@ describe('landmarks', () => {
     for (const [id, sp] of Object.entries(plan.landmarkSpots)) {
       const def = LANDMARKS.find((l) => l.id === id)!;
       const room = plan.rooms[sp.room]!;
-      expect(stageOf(def.at)).toBeGreaterThanOrEqual(room.ring);
+      expect(ringOfHires(def.at)).toBeGreaterThanOrEqual(room.ring);
       for (let i = sp.i0; i < sp.i0 + sp.w; i++) {
         for (let j = sp.j0; j < sp.j0 + sp.h; j++) expect(plan.blocked[idx(plan.W, i, j)]).toBe(0);
       }
@@ -310,8 +400,8 @@ describe('the job-fair line outside', () => {
 
   it('starts by the lobby door, runs around the block on the street, one rat per cell, walkable and reachable', () => {
     for (let stage = 0; stage < STAGES.length; stage++) {
-      const g = new Growth(plan);
-      for (let id = 1; g.stage < stage; id++) g.add(id, stockOf(id));
+      const g = grow(plan, STAGES[stage]!.rats);
+      expect(g.stage).toBe(stage);
       const blocked = g.blocked();
       const line = queueCells(plan, stage, blocked);
       const ring = plan.rings[stage]!;
@@ -352,13 +442,21 @@ describe('the job-fair line outside', () => {
     const pick = (): string => SYMBOLS[Math.min(9, Math.floor(-Math.log(1 - (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648) * 3))]!;
     let peak = 0;
     for (let id = 1; id <= 499; id++) {
+      g.setSol(solForRats(id));
       g.add(id, pick());
       peak = Math.max(peak, g.waitingCount);
     }
+    expect(g.stage).toBe(2);
     expect(peak).toBeGreaterThan(0);
     const before = g.waitingCount;
-    g.add(500, pick()); // the corporate floor: ring 3 opens and new desk rooms go up for them
+    const movedBefore = g.moved.length;
+    // 5 SOL claimed: the corporate floor opens ring 3 and new desk rooms go up for the rats waiting, before the next hire
+    const opened = g.setSol(5);
+    expect(opened.some((e) => e.kind === 'stage' && e.stage === 3)).toBe(true);
     expect(g.waitingCount).toBeLessThan(before);
+    expect(g.waitingCount).toBe(0);
+    expect(g.moved.length - movedBefore).toBe(before);
+    g.add(500, pick());
     expect(g.waitingCount).toBe(0);
     const full = grow(plan, 7000);
     expect(full.waitingCount).toBeGreaterThan(500);

@@ -12,7 +12,7 @@ import { buildCity, CITY_KEY } from './city';
 import { Growth } from './growth';
 import { layoutLabels, overlaps, type LabelBox } from './labels';
 import { LANDMARKS } from './landmarks';
-import { buildMaster } from './plan';
+import { buildMaster, solForRats } from './plan';
 import { layoutScene } from './scene';
 import { planSigns, ROOMS_FROM_ZOOM, signBoxes, vaultKeepOut, type FrameSize } from './signs';
 import { idx, T } from './types';
@@ -36,7 +36,11 @@ const FRAMES: FrameSize = (kind) => {
 
 function sceneAt(n: number) {
   const g = new Growth(plan);
-  for (let id = 1; id <= n; id++) g.add(id, SYMBOLS[(id * 7 + (id >> 3)) % SYMBOLS.length]!);
+  // the SOL claimed grows with the hires, to the stage each count used to show (the stage goes by SOL)
+  for (let id = 1; id <= n; id++) {
+    g.setSol(solForRats(id));
+    g.add(id, SYMBOLS[(id * 7 + (id >> 3)) % SYMBOLS.length]!);
+  }
   const built = (id: number): boolean => g.built[id] === 1;
   const open = openness(plan, g.stage, built);
   const city = buildCity(plan, g.stage, () => true, () => ({ w: 200, h: 240 }));

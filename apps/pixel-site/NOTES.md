@@ -4,6 +4,13 @@ Running log of decisions and blockers. Newest first inside each section.
 
 ## Decisions
 
+- **Stages by SOL claimed, and the Company Roadmap (owner, 2026-09-29).**
+  - The stage (which ring is open, the stage banner, the building sign, the NEXT FLOOR lots and their scaffolding at 90%, the HUD stage bar) goes by `treasury.totalClaimedSol`: 0, 0.25, 1, 5, 20 and 50 SOL. It is read in one place, `stageSourceSol` in `src/floor/stage-source.ts`, so a later change of source (a staging-only field) is one edit. A stage never closes.
+  - Rooms, desks, landmarks and the sewer still go by rats hired: `STAGES[k].rats` keeps each ring's planned hire range (amenities open at even steps through it), and desks are handed out by hire count (shared garage and open offices until the 100th hire, then stock rooms) instead of by stage, so a page load (all the SOL first, then the roster) seats every rat where a live session did.
+  - The job-fair line no longer counts toward the stage (fees in line are already claimed SOL).
+  - `?rats=N` maps N to the SOL that shows the stage N rats used to (`solForRats`), or `&sol=X` pins it.
+  - The Company Roadmap (`src/ui/roadmap.ts`) sits bottom right on a desktop, in the space the feed leaves free (the rat card takes the corner while open). Under 900 px it is one line between the feed and the news ticker; the feed gives up the rows it moved up, and a phone's establishing shot centres the building in the rows the panels leave free, so the Vault shows. Headless check: the panel never meets the Vault's pile, the JOB FAIR sign or any rat drawn in the line, at every stage, 1440x900 and 375x812 (`window.__site.onScreen()`).
+
 - **Round 4: landmarks and layout variety (owner, 2026-09-28).** Every stage only added a ring of rooms.
   - **Landmark unlocks** (`src/floor/landmarks.ts`, drawn by `src/world/landmarks.ts`), one set piece per milestone:
     - 10 espresso shrine on the garage furnace plaza

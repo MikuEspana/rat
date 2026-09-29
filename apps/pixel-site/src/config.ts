@@ -28,5 +28,10 @@ export const SHOW_PERF = params.has('perf');
 export const DEBUG_MAX_RATS = 7000;
 /** debug: run the idle game at exactly this many rats (1 to DEBUG_MAX_RATS), with a slider to scrub through the stages */
 export const DEBUG_RATS = params.has('rats') ? Math.max(1, Math.min(DEBUG_MAX_RATS, Math.round(num('rats', 1)))) : 0;
+/**
+ * debug, with ?rats= only: pin the SOL claimed that the stage goes by (?rats=800&sol=0.3). Without it the debug rat
+ * count maps to the SOL that shows the stage it used to (plan.ts solForRats), so the slider still scrubs every stage.
+ */
+export const DEBUG_SOL = DEBUG_RATS && params.has('sol') ? Math.max(0, Number(params.get('sol')) || 0) : null;
 /** Stock 24h change beyond this counts as up (cheer) or down (slump). */
 export const MOOD_THRESHOLD_PCT = 0.25;

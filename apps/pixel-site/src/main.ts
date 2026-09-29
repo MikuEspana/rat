@@ -1,13 +1,14 @@
-// WALL STREET RATS pixel site: an idle game at night. The company grows with its rat count, from a garage startup to
-// Wall Street (floor/plan.ts, floor/growth.ts). Rats are hired by creator fees, walk in from the subway, sit at
+// WALL STREET RATS pixel site: an idle game at night. The company grows with the SOL claimed, from a garage startup
+// to Wall Street (floor/plan.ts, floor/growth.ts, floor/stage-source.ts), and its rooms, desks and landmarks with the
+// rats hired. Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
 // from the in-browser launch simulator (sim/, `?sim` or the static demo build) through the same interface.
 import './style.css';
 import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
-  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED, STRESS_RATS,
-  STRESS_WALKERS,
+  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, DEBUG_SOL, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED,
+  STRESS_RATS, STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
 import { Store, type RatRecord } from './data/store';
@@ -17,7 +18,8 @@ import { Camera } from './gfx/camera';
 import { Sky } from './gfx/sky';
 import { cellCentre, screenToCell } from './iso';
 import { Growth, type GrowthEvent } from './floor/growth';
-import { buildMaster, ROOM_LOOK, STAGES } from './floor/plan';
+import { buildMaster, ROOM_LOOK, solForRats, STAGES } from './floor/plan';
+import { stageSourceSol } from './floor/stage-source';
 import { LANDMARKS, unlocked } from './floor/landmarks';
 import { idx, type FloorLayout } from './floor/types';
 import { PerfMeter } from './perf';
@@ -28,7 +30,7 @@ import { SewerView } from './world/sewer';
 import { SPAWN_STAGES, spawnStageOf } from './floor/sewer';
 import { VAULT_STAGES, vaultStageOf } from './floor/vault';
 import { lookKey, RatSystem, type Mood } from './world/rats';
-import { stageLine } from './ui/format';
+import { solAmount, stageLine } from './ui/format';
 import { Ui } from './ui/ui';
 import { sound } from './ui/sound';
 import type { NewsStats } from './ui/news';
@@ -91,12 +93,25 @@ export interface Site {
   /** the sewer rats come out of */
   sewer?: SewerView;
   simPanel?: SimPanel;
+  /**
+   * Layout checks and screenshots: where the Vault's pile, the JOB FAIR sign and every rat drawn in the job-fair line
+   * are on screen, and the roadmap panel (CSS px).
+   */
+  onScreen?: () => { vault: ScreenBox; sign: ScreenBox | null; line: ScreenBox[]; roadmap: ScreenBox };
+}
+
+interface ScreenBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 /** Feed line for something that got built. */
 function buildLine(e: GrowthEvent): { tag: string; text: string } {
   if (e.kind === 'stage') {
-    return { tag: 'STAGE', text: stageLine(STAGES[e.stage]!.name, e.stage === STAGES.length - 1) };
+    const st = STAGES[e.stage]!;
+    return { tag: 'STAGE', text: stageLine(st.name, e.stage === STAGES.length - 1, st.sol) };
   }
   const r = e.room;
   if (r.kind === 'stock') return { tag: 'BUILD', text: e.symbol ? `New desk room for ${e.symbol}` : 'New desk room' };
@@ -125,13 +140,18 @@ async function boot(): Promise<Site> {
   store.initState(state);
   store.loadRoster(DEBUG_RATS ? padRoster(roster, state, DEBUG_MAX_RATS) : STRESS_RATS ? padRoster(roster, state, STRESS_RATS) : roster);
 
-  // the master plan never changes; the growth state replays the roster in hire (id) order
+  // the master plan never changes; the growth state opens the stages the SOL claimed has reached, then replays the
+  // roster in hire (id) order. The stage goes by SOL (floor/stage-source.ts); ?rats= (debug) maps its rat count to
+  // the SOL that shows its old stage, or pins ?sol=.
   const plan = buildMaster();
   const everyone = (): RatRecord[] => [...store.rats.values()].sort((a, b) => a.facts.id - b.facts.id);
   let ratCount = DEBUG_RATS || everyone().length;
+  let liveSol = stageSourceSol(state.treasury);
+  const solAt = (n: number): number => (DEBUG_RATS ? DEBUG_SOL ?? solForRats(n) : liveSol);
   let growth = new Growth(plan);
-  const replay = (n: number): RatRecord[] => {
+  const replay = (n: number, sol = solAt(n)): RatRecord[] => {
     growth = new Growth(plan);
+    growth.setSol(sol);
     const recs = everyone().slice(0, n);
     for (const r of recs) growth.add(r.facts.id, r.facts.stock);
     return recs;
@@ -209,13 +229,27 @@ async function boot(): Promise<Site> {
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
   ui.vaultHit = (x, y) => vault.hit(x, y);
   ui.vaultStage = (v) => VAULT_STAGES[vaultStageOf(v)]!.name;
-  ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
+  /** the stage chip's bars and the roadmap */
+  const showStage = (): void => ui.setStage(growth.stage, ratCount, growth.sol, growth.progress());
+  showStage();
 
   /** Simulator: glide out to show the whole building when it grows into a new stage. */
   /**
    * The establishing shot: the office on the lower-left thirds point, the city's tallest building (placed for this)
-   * on the opposite one. Phones keep it centred (too narrow for thirds).
+   * on the opposite one. Phones keep it centred (too narrow for thirds), in the rows the panels leave free, so the
+   * Vault in the middle shows between the HUD and the feed.
    */
+  const freeBand = (): { top: number; bottom: number } => {
+    let top = 0;
+    let bottom = window.innerHeight;
+    for (const [sel, over] of [['.hud', true], ['.sim-panel', true], ['.feed', false], ['.board', false], ['.roadmap', false]] as const) {
+      const r = document.querySelector(sel)?.getBoundingClientRect();
+      if (!r || r.height === 0) continue;
+      if (over) top = Math.max(top, r.bottom);
+      else bottom = Math.min(bottom, r.top);
+    }
+    return { top, bottom };
+  };
   const composeView = (): { x: number; y: number; zoom: number } => {
     const r = plan.rings[growth.stage]!;
     const pts = [cellCentre(r.i0, r.j0), cellCentre(r.i1, r.j0), cellCentre(r.i0, r.j1), cellCentre(r.i1, r.j1)];
@@ -230,7 +264,9 @@ async function boot(): Promise<Site> {
     const by = (Math.max(...ys) + Math.min(...ys)) / 2 - 30;
     if (small) {
       const zoom = Math.min(1.4, W / w, H / h);
-      return { x: bx, y: by + 40 / zoom, zoom };
+      const band = freeBand();
+      const mid = band.bottom - band.top > 60 ? (band.top + band.bottom) / 2 : window.innerHeight / 2 - 40;
+      return { x: bx, y: by + (window.innerHeight / 2 - mid) / zoom, zoom };
     }
     // our tower rises behind the back corner: leave room above the building for it and its name
     const tower = world.crown ? Math.max(0, Math.min(...ys) - (world.crown.y - 60)) : 0;
@@ -346,10 +382,10 @@ async function boot(): Promise<Site> {
     return true;
   };
 
-  /** Within 10% of the next stage the site gets ready for it. */
+  /** Within 10% of the next stage's SOL the site gets ready for it. */
   const updatePrep = (): void => {
     const next = STAGES[growth.stage + 1];
-    world.setPrep(!!next && growth.stageCount >= next.min * 0.9);
+    world.setPrep(!!next && growth.sol >= next.sol * 0.9);
   };
   updatePrep();
   /** Something got built: rebuild the world, new rooms pop in, tell the feed (and the banner on a new stage). */
@@ -405,10 +441,20 @@ async function boot(): Promise<Site> {
     ui.pushLocal(lines.slice(-12));
     const stage = events.filter((e) => e.kind === 'stage').pop();
     if (stage && stage.kind === 'stage') {
-      ui.milestone(STAGES[stage.stage]!.name, `${ratCount.toLocaleString('en-US')} rats hired, ${rats.applicantCount.toLocaleString('en-US')} in line`);
+      ui.milestone(STAGES[stage.stage]!.name, `${solAmount(STAGES[stage.stage]!.sol)} SOL claimed`);
       if (sim) frameBuilding();
     }
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
+    showStage();
+  };
+
+  /** New SOL claimed (every state poll): open any stage it reached, move the stage bar and the roadmap along. */
+  const updateStage = (s: StateResponse): void => {
+    if (DEBUG_RATS || recording) return; // the debug slider sets the stage; a timelapse puts it back when it ends
+    liveSol = stageSourceSol(s.treasury);
+    const opened = growth.setSol(liveSol);
+    if (opened.length) grew(opened, true);
+    showStage();
+    updatePrep();
   };
 
   /**
@@ -417,13 +463,7 @@ async function boot(): Promise<Site> {
    * empties out.
    */
   let seatlessWas = rats.seatlessCount;
-  const updateLine = (announce = true): void => {
-    // the stage counts the applicants too: a pump opens the next floor before the hires land
-    const opened = growth.setApplicants(rats.applicantCount);
-    if (opened.length) {
-      grew(opened, announce);
-      ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
-    }
+  const updateLine = (): void => {
     world.setJobFair(rats.lineLength, rats.lineHead());
     ui.setLine(rats.lineLength);
     const n = rats.seatlessCount;
@@ -472,7 +512,7 @@ async function boot(): Promise<Site> {
     if (!applicantsSynced) {
       applicantsSynced = true;
       rats.setApplicants(target, false);
-      updateLine(false);
+      updateLine();
       return;
     }
     // Claims and hires already move the line. waitingSol leaves out the salaries of a hire loop in flight (their
@@ -516,7 +556,7 @@ async function boot(): Promise<Site> {
     sound.hire();
     updatePrep();
     checkLandmarks(true);
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
+    showStage();
   };
   // every hire sends its money flying from where the rat came in into the Vault; a burst rains bills from above
   const recentHires: number[] = [];
@@ -562,6 +602,7 @@ async function boot(): Promise<Site> {
         if (!revealing) revealNext();
       }
       syncApplicants(e.state);
+      updateStage(e.state);
     }
   });
 
@@ -630,6 +671,18 @@ async function boot(): Promise<Site> {
   };
   site.skipReveal = (): void => skipReveal?.();
   site.focus = (id: string) => world.landmarkFocus(id);
+  site.onScreen = () => {
+    const at = (x: number, y: number, w: number, h: number): ScreenBox => ({ x: x * camera.zoom + camera.x, y: y * camera.zoom + camera.y, w: w * camera.zoom, h: h * camera.zoom });
+    const v = vault.box();
+    const panel = ui.roadmap.el.getBoundingClientRect();
+    return {
+      vault: at(v.x - v.w / 2, v.y - v.h, v.w, v.h),
+      sign: world.jobFairBox(),
+      // a rat's whole sprite frame (68 px, feet at 84%), scaled for an intern
+      line: rats.linePositions().map((p) => at(p.x - 30, p.y - 50, 60, 60)),
+      roadmap: { x: panel.x, y: panel.y, w: panel.width, h: panel.height },
+    };
+  };
   if (sim) {
     site.sim = sim;
     site.simPanel = new SimPanel({
@@ -643,12 +696,15 @@ async function boot(): Promise<Site> {
     });
   }
 
-  /** Rebuild the whole company at n rats (the debug slider and the timelapse). announce: banner, sounds, dust. */
-  const rebuildAt = (n: number, announce: boolean): void => {
+  /**
+   * Rebuild the whole company at n rats and this much SOL claimed (the debug slider and the timelapse). announce:
+   * banner, sounds, dust.
+   */
+  const rebuildAt = (n: number, announce: boolean, sol?: number): void => {
     const before = new Set(plan.rooms.filter((r) => growth.isBuilt(r)).map((r) => r.id));
     const beforeStage = growth.stage;
     ratCount = Math.max(1, Math.min(Math.max(5000, everyone().length), Math.round(n)));
-    recs = replay(ratCount);
+    recs = replay(ratCount, sol ?? solAt(ratCount));
     const popIn = new Set(plan.rooms.filter((r) => growth.isBuilt(r) && !before.has(r.id)).map((r) => r.id));
     const old = world;
     const nowOn = unlocked(ratCount);
@@ -667,11 +723,11 @@ async function boot(): Promise<Site> {
     site.growth = growth;
     mount();
     old.destroy();
-    ui.setStage(STAGES[growth.stage]!.name, ratCount, growth.progress(), growth.stageCount);
+    showStage();
     updatePrep();
     if (!announce) return;
     if (growth.stage > beforeStage) {
-      ui.milestone(STAGES[growth.stage]!.name, `${ratCount.toLocaleString('en-US')} rats`);
+      ui.milestone(STAGES[growth.stage]!.name, `${solAmount(STAGES[growth.stage]!.sol)} SOL claimed`);
       sound.stage();
       camera.shake(2, 0.45);
     } else if (popIn.size) sound.room();
@@ -757,7 +813,8 @@ async function boot(): Promise<Site> {
     const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
     for (let k = 0; k < steps; k++) {
       const n = Math.max(1, Math.round(Math.exp((Math.log(Math.max(2, live)) * k) / (steps - 1))));
-      rebuildAt(n, false);
+      // the SOL claimed along the way is not kept: the timelapse grows it with the rats, to today's at the end
+      rebuildAt(n, false, DEBUG_RATS ? undefined : (liveSol * n) / Math.max(1, live));
       const v = composeView();
       camera.centerOn(v.x, v.y, v.zoom);
       caption.text = `WALL STREET RATS  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
@@ -794,7 +851,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, true);
       history.replaceState(null, '', `?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(location.search)), rats: String(ratCount) })}`);
     };
-    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.min)).concat(5000, DEBUG_MAX_RATS));
+    ui.debugSlider(ratCount, (n) => site.setRats!(n), STAGES.map((s) => Math.max(1, s.rats)).concat(5000, DEBUG_MAX_RATS));
   }
   (window as unknown as { __site?: Site }).__site = site;
   return site;

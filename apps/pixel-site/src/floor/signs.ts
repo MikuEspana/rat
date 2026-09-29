@@ -201,6 +201,11 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
   return out;
 }
 
+/** The lots the office takes next open at this much SOL claimed: "AT 0.25 SOL". */
+export function nextFloorWhen(sol: number): string {
+  return `AT ${sol.toLocaleString('en-US', { maximumFractionDigits: 2 })} SOL`;
+}
+
 /** Where the company name goes: over the building's back corner, or on tower A's roof once it stands. */
 export function nameSign(o: SignInput): SignSpot {
   const { plan, stage, count } = o;
@@ -252,7 +257,7 @@ export function planSigns(o: SignInput): SignSpot[] {
     city.lots.forEach((l, n) => {
       if (l.use !== 'shell') return;
       const what = 'NEXT FLOOR';
-      const when = `AT ${nextStage.min.toLocaleString('en-US')} RATS`;
+      const when = nextFloorWhen(nextStage.sol);
       const c = cellToScreen(l.i0 + l.w / 2, l.j0 + l.h / 2);
       out.push({ key: `shell:${n}`, kind: 'lock', text: what, sub: when, x: c.x, y: c.y - 34 - 4, ...lockSize(what, when) });
     });

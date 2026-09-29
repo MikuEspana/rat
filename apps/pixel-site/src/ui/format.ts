@@ -64,9 +64,24 @@ export const TIER_LABEL: Record<Tier | 'frozen', string> = {
   frozen: 'Frozen',
 };
 
-/** Feed line for a new stage. The last stage is a place, not a kind of company: the company made it there. */
-export function stageLine(name: string, last: boolean): string {
+/**
+ * A SOL amount for the stage bars and the roadmap: 0.62, 3.2, 72.4. Rounded down, so it never shows a stage's target
+ * before the target is reached (0.2499 reads 0.24).
+ */
+export function solAmount(v: number): string {
+  const a = Number.isFinite(v) ? Math.max(0, v) : 0;
+  const d = a < 1 ? 2 : a < 100 ? 1 : 0;
+  const f = 10 ** d;
+  return (Math.floor(a * f + 1e-7) / f).toLocaleString('en-US', { maximumFractionDigits: d });
+}
+
+/**
+ * Feed line for a new stage: the SOL milestone that opened it ("1 SOL claimed: FULL FLOOR"). The last stage is a
+ * place, not a kind of company: the company made it there.
+ */
+export function stageLine(name: string, last: boolean, sol?: number): string {
   if (last) return 'The company made it to Wall Street';
+  if (sol !== undefined) return `${solAmount(sol)} SOL claimed: ${name}`;
   const n = name.toLowerCase();
   return `The company is now ${/^[aeiou]/.test(n) ? 'an' : 'a'} ${n}`;
 }

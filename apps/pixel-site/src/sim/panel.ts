@@ -168,16 +168,19 @@ export class SimPanel {
 
   start(): void {
     const sim = this.d.sim;
-    if (!sim.isLaunched) {
+    const launch = !sim.isLaunched;
+    if (launch) {
       sim.launch();
       this.d.ui.pushLocal([{ tag: 'LAUNCH', text: `RAT is live on pump.fun (simulated, ${SCENARIOS[this.scenarioId()].label} scenario). Creator fees start flowing.` }]);
-      this.d.onLaunch();
     }
     this.intro.hidden = true;
     this.panel.hidden = false;
     this.running = true;
     this.last = performance.now();
     this.render();
+    this.place();
+    // framed once the panel is in place (a phone centres the building in the rows the panels leave free)
+    if (launch) this.d.onLaunch();
     requestAnimationFrame(() => this.place());
   }
 
@@ -213,6 +216,7 @@ export class SimPanel {
       ['Market cap', s.mcap === null ? 'pre-launch' : usd(s.mcap)],
       ['Rats', s.rats.toLocaleString('en-US')],
       ['Stage', this.d.stage()],
+      ['SOL claimed', `${s.claimedSol.toFixed(2)} SOL`],
       ...(this.d.line() > 0 ? [['In line outside', this.d.line().toLocaleString('en-US')] as [string, string]] : []),
       ['Portfolio value', usd(s.portfolioValueUsd)],
       ['Fees', `${s.feesSol.toFixed(2)} SOL`],
