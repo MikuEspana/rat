@@ -14,3 +14,11 @@ node_modules
 .pglite
 coverage
 tests/smoke/REPORT.md
+# not part of any service image (infra/Dockerfile): the site is built and served by GitHub Pages, the tests and the
+# docs only run on CI and on the Mac
+apps/pixel-site
+tests
+docs
+.github
+**/*.md
+**/*.test.ts

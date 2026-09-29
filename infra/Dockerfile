@@ -10,7 +10,10 @@ ENV CI=true
 RUN npm install -g pnpm@10.33.0
 
 WORKDIR /app
-# Install first (better layer caching), then copy the source. Dev dependencies are needed at runtime (tsx).
+# Install first, then copy the source: a merge that changes no package.json or the lockfile reuses the install layer.
+# Only what the services run (--prod): tsx is a dependency of each app, the test and build tools stay out (about 80 MB
+# less). The site (apps/pixel-site, served by GitHub Pages), the tests and the docs are not in the image
+# (.dockerignore); pnpm skips the workspace packages that are not here.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core/package.json packages/core/
 COPY packages/contract/package.json packages/contract/
@@ -24,8 +27,7 @@ COPY apps/worker/package.json apps/worker/
 COPY apps/api/package.json apps/api/
 COPY apps/cli/package.json apps/cli/
 COPY apps/admin/package.json apps/admin/
-COPY tests/package.json tests/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod
 
 COPY . .
 
