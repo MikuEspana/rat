@@ -90,7 +90,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | Solana | SimChain (real System/ATA/Token semantics) | `RpcChainReader` + `RpcTxSender` | Sender/reader unit-tested with fake connections. Never sent a real tx (by rule). |
 | pump.fun claims | real instruction builders executed by SimChain handlers | same builders on mainnet | Builders match the official IDL. Not executed on mainnet. |
 | Jupiter prices / swaps | `MockPriceSource`, `MockSwapBuilder` | Price v3 + Swap v2 `/build` | Request/response shapes from Jupiter's docs repo. Not called (no network, no key). |
-| Database | PGlite (in-process Postgres) | Railway Postgres 16 (`${{Postgres.DATABASE_URL}}` reference) | Same migrations. The backup self-test runs them on a real Postgres 16, then dumps, encrypts, uploads (local S3 server), restores and compares every table (CI `backup` job). |
+| Database | PGlite (in-process Postgres) | Railway Postgres 18 (`${{Postgres.DATABASE_URL}}` reference) | Same migrations. The backup self-test runs them on a real Postgres 18, then dumps, encrypts, uploads (local S3 server), restores and compares every table (CI `backup` job). |
 | xStocks mints | synthetic mints | the 13 mints in `config/stocks.json` | Not checked on-chain (mainnet RPC blocked here). Run `check:stocks`. |
 | Telegram | recorded alerts | Telegram Bot API | Not called. |
 | Docker image | not built here (no daemon) | Railway | Built and started by the CI `docker` job. |

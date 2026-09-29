@@ -53,20 +53,20 @@ jobs:
         run: docker build -f infra/backup/Dockerfile -t rat-backup:ci .
       - name: The backup image has its tools and refuses to run without settings
         run: |
-          docker run --rm --entrypoint sh rat-backup:ci -c 'age --version && curl --version | head -1 && pg_dump --version'
+          docker run --rm --entrypoint sh rat-backup:ci -c 'age --version && curl --version | head -1 && pg_dump --version | grep "PostgreSQL) 18\."'
           if docker run --rm rat-backup:ci >out.txt 2>&1; then cat out.txt; exit 1; fi
           cat out.txt
           grep -q "FAILED at step 'setup': DATABASE_URL is not set" out.txt
 
   backup:
-    # the nightly backup end to end on a real Postgres 16: a simulated launch, backup.sh (run by busybox, as in the
+    # the nightly backup end to end on a real Postgres 18 (the major of infra/backup/Dockerfile and Railway): a simulated launch, backup.sh (run by busybox, as in the
     # Alpine image), a signed upload to a local S3 server, restore-check.sh, every table compared, and the failure
     # alerts (infra/backup/selftest.sh)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: pg-ci-7f3a91
         ports: ['5432:5432']
@@ -82,11 +82,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Shell scripts (shellcheck is on the runner)
         run: shellcheck scripts/*.sh infra/backup/*.sh
-      - name: Tools (Postgres 16 client, age, busybox, a local S3 server)
+      - name: Tools (Postgres 18 client from the PostgreSQL apt repository, age, busybox, a local S3 server)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-16 age busybox-static
-          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+          sudo apt-get install -y -qq postgresql-client-18 age busybox-static
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/18/bin/pg_dump --version | grep -q "PostgreSQL) 18\."
           python3 -m venv /tmp/moto && /tmp/moto/bin/pip install -q "moto[server]"
           mkdir -p /tmp/bb
           for a in sh timeout sha256sum md5sum wc cut grep tr sed head tail date mkdir rm chmod cat printf; do ln -s "$(command -v busybox)" "/tmp/bb/$a"; done

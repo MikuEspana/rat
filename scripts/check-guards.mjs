@@ -8,6 +8,7 @@
 // 5. No holder payout code paths.
 // 6. No em dashes in authored text (owner preference).
 // 7. No token burn code outside tests: buy and burn was removed, every claimed fee hires rats.
+// 9. One Postgres major: CI and setup follow infra/backup/Dockerfile.
 // 8. Rehearsal-only switches are never turned on in a deploy or setup file (scripts, Railway files, workflows,
 //    Dockerfiles, .env files) except the staging scripts; the runtime also refuses them with the production creator.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -99,6 +100,22 @@ for (const { full, rel } of files) {
   const base = rel.split('/').pop();
   if (!DEPLOY_FILE.test(base) || rel === 'pnpm-lock.yaml' || STAGING_ALLOW.has(rel) || rel.startsWith('tests/')) continue;
   if (STAGING_ON.test(readFileSync(full, 'utf8'))) failures.push(`${rel}: turns on a rehearsal-only switch (STAGING / STAGING_CRASH_AFTER_SEND); only the staging scripts may`);
+}
+
+// 9. One Postgres major everywhere: the backup image (infra/backup/Dockerfile) is the source of truth; CI's
+//    database and client must match it, and setup reads it (never a hard-coded postgresql@N)
+{
+  const major = (readFileSync(join(ROOT, 'infra/backup/Dockerfile'), 'utf8').match(/^FROM postgres:(\d+)-alpine/m) ?? [])[1];
+  if (!major) failures.push('infra/backup/Dockerfile: no FROM postgres:N-alpine line');
+  const ci = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+  for (const [what, re] of [['service image postgres', /image: postgres:(\d+)/g], ['postgresql-client', /postgresql-client-(\d+)/g], ['client path', /\/usr\/lib\/postgresql\/(\d+)\/bin/g]]) {
+    const seen = [...ci.matchAll(re)].map((m) => m[1]);
+    if (seen.length === 0) failures.push(`.github/workflows/ci.yml: no ${what} version found`);
+    for (const v of seen) if (v !== major) failures.push(`.github/workflows/ci.yml: ${what} ${v}, but infra/backup/Dockerfile is Postgres ${major}`);
+  }
+  if (/postgresql@\d+/.test(readFileSync(join(ROOT, 'scripts/setup-mac.sh'), 'utf8'))) {
+    failures.push('scripts/setup-mac.sh: a hard-coded postgresql@N; read the major from infra/backup/Dockerfile');
+  }
 }
 
 if (failures.length) {

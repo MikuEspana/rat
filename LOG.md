@@ -463,3 +463,16 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
 - `rat audit` (read-only, production-safe): every booked claim equals what left the creator's fee vaults in its transaction (and its ledger credit); every hired rat was paid by the creator exactly once and holds what the database says; the creator wallet's SOL change over every bot transaction (and external claims) equals the ledger to the lamport. Owner transactions (launch, dev buy, deposits), seeded SOL and emergency sweeps are kept apart. PASS / FAIL / WAIT (in flight), exit 1 unless PASS, `--json` for scripts. On LAUNCH-DAY.md's end-of-day list.
 - `tests/e2e/rehearsal.test.ts`: the whole rehearsal on SimChain in LIVE mode with STAGING on and the plan's budget: launch with a 0.1 SOL dev buy (never a fee, no kill), a claim of 0.0009 SOL of real fees booked exactly, a seed and 5 hires at the real salary, a burst at 0.01 SOL under a 0.05 SOL/h cap with the worker killed right after one hire was broadcast (recovered, paid once), the cap pausing and resuming, the kill switch tripped by an unexpected creator transaction with nothing sent after, and `rat audit` PASS / PASS / PASS. A second test tampers with the database: the audit catches both.
 - The long CI suite runs with at most 2 workers: four CPU-heavy files in parallel starved a worker past vitest's 60 s RPC timeout once (all tests had passed).
+
+## Fix: Postgres 18 everywhere (the backup stopped at check_versions) (2026-09-29)
+**Root cause:** Railway's Postgres template now runs Postgres 18. The backup image used `postgres:16-alpine`, and `pg_dump` 16 refuses a newer server. The owner's step 9 stopped at `check_versions`, which is the job's own guard.
+
+**Fixes:**
+- `infra/backup/Dockerfile` is `postgres:18-alpine`. It is the one source of truth for the major.
+- `scripts/setup-mac.sh`:
+  - step 1 reads that major and runs `brew install postgresql@18` (client tools; no server is started on the Mac);
+  - it checks that psql, pg_restore and initdb are that major, and uses them for the restore drill and `railway connect`;
+  - at the end of step 3, before anything depends on it, it reads Railway's server version (`\echo :SERVER_VERSION_NUM` over `railway connect`) and stops unless the database, the backup job and the Mac's tools are the same major.
+- CI: the backup self-test runs on a `postgres:18` service with `postgresql-client-18` from the PostgreSQL apt repository, and the backup image test checks `pg_dump` is 18.
+- `scripts/check-guards.mjs` rule 9: CI's service image, client and client path must equal the Dockerfile's major, and setup may not hard-code `postgresql@N`.
+- The docs, `STATUS.md` and the runbook test now say 18.

@@ -5,7 +5,7 @@
 #   infra/backup/restore-check.sh <rat-YYYYMMDD-HHMMSS.dump.age> <age identity file> <scratch database URL>
 #
 # Needs psql, pg_restore (same major as the backup, or newer) and age. A scratch database on your machine:
-#   docker run -d --name rat-drill -e POSTGRES_PASSWORD=drill -p 55432:5432 postgres:16
+#   docker run -d --name rat-drill -e POSTGRES_PASSWORD=drill -p 55432:5432 postgres:18
 #   infra/backup/restore-check.sh rat-20261001-033000.dump.age ~/rat-backup.key postgres://postgres:drill@localhost:55432/postgres
 # It prints PASS or FAIL, the restore time and how old the backup was. See docs/runbooks/backup-restore.md.
 set -eu
