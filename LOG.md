@@ -594,3 +594,13 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
 - **Sweep.** Works when the creator is drained (each rat pays its own fee), moves the SOL of frozen or paused accounts, sweeps rats still being hired only with the kill switch on, exits 1 when anything is left; staging teardown stops before "delete the project" while any rat wallet holds anything.
 - **Worker.** Startup waits out an RPC or database hiccup instead of exiting (Railway gives up after 10 restarts). two_step (the fallback) retries a swap refused before sending instead of raising a false critical alert, and no longer builds a swap for an empty wallet. A stale SOL price stops hires like a stale stock price.
 - **SimChain** now mirrors the network where the chaos run needed it: rejected sends stay unknown, a tx whose blockhash expired never lands.
+
+## Launch dress rehearsal: Railway slow and failing (2026-09-29, night)
+`tests/scripts/launch-rehearsal.sh` (in CI) runs `scripts/launch.sh` against fakes with Railway as slow as during its incidents and failing on purpose, timing every call.
+- **Timing** (scaled 1:20, estimated at incident speed: 2 s per Railway call, 8 s per `railway ssh`, a 5 minute build): about 6 minutes from start to LIVE, almost all of it the one build. 9 Railway calls (18 before: the RPC address was read from Railway before every chain read, and the read-back after setting variables read once per key), 5 ssh calls.
+- **Found and fixed:**
+  - `rat_json` failed when `railway ssh` dropped, and under `set -e` and `pipefail` `launch.sh` then ended **without a word** right after the build. Now an empty answer, and each step says what went wrong.
+  - A second run after a stop halfway was refused ("already set to LIVE") or asked for the launch again. It now finishes: it takes the coin's settings from the worker, confirms the mint, GO, completes what is missing and redeploys. With the worker already LIVE (only the API build failed) it only offers the API redeploy.
+  - Right after the build, `railway ssh` can reach the old DRY RUN container while it drains, or drop: the LIVE check asks for up to two minutes before calling it, and says whether the worker answered DRY RUN or did not answer.
+  - A live preflight that did not answer said "launch txs is not PASS, the line above says why" with no line above: now "the live preflight gave no answer (railway ssh)", nothing changed, run it again.
+- 10 checks: incident-speed timing; reads failing twice; a lost write then the second run; a failed API build then the second run; the old container answering and ssh dropping after the build; ssh down for the preflight.

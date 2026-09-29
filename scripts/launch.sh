@@ -33,12 +33,41 @@ vars=$(rw_vars worker) || die "Railway did not list the worker's variables" "$AP
 [ "$(printf '%s' "$vars" | jq -r '.STAGING // ""')" != true ] || die "STAGING is on for this worker: not the production bot"
 creator=$(printf '%s' "$vars" | jq -r '.CREATOR_PUBKEY // ""')
 [ "$creator" = "$PRODUCTION_CREATOR" ] || die "the worker's CREATOR_PUBKEY is ${creator:-not set}, not the creator wallet $PRODUCTION_CREATOR"
-[ "$(printf '%s' "$vars" | jq -r '.DRY_RUN // "true"')" = true ] || die "the worker is already set to LIVE (DRY_RUN is not true): nothing to launch" "Check it: scripts/rat.sh status"
+# the RPC address, once (its API key stays in this shell's memory): every chain read below reuses it
+RPC_URL=$(printf '%s' "$vars" | jq -r '.RPC_URL // ""')
+# A previous run that stopped halfway (Railway failed a write, a build failed) left the coin's settings on the worker:
+# this run finishes it instead of asking for the launch again.
+set_coin=$(printf '%s' "$vars" | jq -r '.COIN_MINT // ""')
+set_floor=$(printf '%s' "$vars" | jq -r '.WATCH_FROM_SLOT // ""')
+set_sigs=$(printf '%s' "$vars" | jq -r '.KNOWN_OWNER_TX_SIGS // ""')
+set_dry=$(printf '%s' "$vars" | jq -r '.DRY_RUN // "true"')
 unset vars
-mode=$(rat_json status --json | jq -r '.mode // empty' 2>/dev/null || true)
-[ "$mode" = dry_run ] || die "the running worker is not in DRY RUN (${mode:-no answer}): nothing to launch" "Check it: scripts/rat.sh status"
+mode=$(running_mode)
+if [ "$mode" = live ]; then
+  # the worker already runs LIVE: only the API may be left behind (its build failed after the worker's went through)
+  ok "the bot already runs LIVE (coin ${set_coin:-?}): nothing to launch"
+  if [ "$(rw_var api DRY_RUN)" = false ] && yes_no "Redeploy the API too (only needed if its last build failed, so the site still shows DRY RUN)?" n; then
+    (redeploy api) || die "the API did not start" "Railway dashboard: api > Deployments shows why. The bot itself runs LIVE."
+    ok "the API runs with the live settings"
+  fi
+  exit 0
+fi
+[ "$mode" = dry_run ] || die "the running worker did not answer (railway ssh): ${mode:-no answer}" "Check it: scripts/rat.sh status, then run this again."
+if [ -n "$set_coin" ]; then
+  case "$set_floor" in '' | *[!0-9]*) die "the worker has COIN_MINT=$set_coin but no WATCH_FROM_SLOT: a half-finished launch this script cannot resume" "Railway dashboard: worker > Variables: add WATCH_FROM_SLOT (the slot right after the launch), then run this again." ;; esac
+  LAUNCH_MINT=$set_coin
+  LAUNCH_SLOT=$((set_floor - 1))
+  LAUNCH_SIGS=$set_sigs
+  RESUME=y
+  note "a previous run already set the coin $set_coin (watch floor $set_floor) but the bot never went live: this run finishes it"
+elif [ "$set_dry" != true ]; then
+  die "the worker is set to LIVE (DRY_RUN is not true) but has no COIN_MINT: not a launch this script started" "Railway dashboard: worker > Variables: set DRY_RUN=true, then run this again."
+fi
 ok "production project $pname, creator wallet $creator, the bot in DRY RUN"
 
+if [ "${RESUME:-}" = y ]; then
+  yes_no "Is $LAUNCH_MINT your coin (the mint shown on pump.fun)?" y || die "not your coin: nothing was changed" "Railway dashboard: worker > Variables: remove COIN_MINT, set DRY_RUN=true, then run this again."
+else
 # ---------------------------------------------------------------- 1. you launch -----------------------------------------
 bal=$(sol_balance "$creator")
 [ -n "$bal" ] || die "could not read the creator wallet's balance (RPC)"
@@ -62,10 +91,13 @@ else
   note "no new finalized transaction from the creator wallet (was the coin launched before this script started?)"
   ask_launch
 fi
+fi
 
 # ---------------------------------------------------------------- 3. the live preflight, before anything changes --------
 say "Checking the live preflight with the coin's settings (read-only, nothing changes)..."
 pre=$(preflight_launch)
+printf '%s' "$pre" | jq -e '.lines | type == "array"' >/dev/null 2>&1 ||
+  die "the live preflight gave no answer (railway ssh to the worker): nothing was changed" "Run scripts/launch.sh again in a minute: it finds the coin again and asks again."
 show_preflight "$pre"
 for chk in "launch txs" "dev buy"; do preflight_pass "$pre" "$chk" || die "preflight $chk is not PASS with the coin's settings: nothing was changed" "The line above says why."; done
 problems=$(preflight_problems "$pre")
@@ -81,17 +113,31 @@ read -r a || die "no keyboard input (end of input)"
 [ "$a" = GO ] || die "no GO: nothing was changed, the bot stays in DRY RUN"
 
 # ---------------------------------------------------------------- 5. one change, one build -----------------------------
-rat dry-run-reset --yes >/dev/null || die "rat dry-run-reset failed: nothing was changed on Railway" "Run this script again."
-apply_launch
+rat dry-run-reset --yes >/dev/null || die "rat dry-run-reset failed: nothing was changed on Railway" "Run scripts/launch.sh again."
+if ! (apply_launch); then
+  die "Railway did not keep every launch setting: the bot still runs in DRY RUN, nothing was redeployed" \
+    "Run scripts/launch.sh again in a few minutes (status.railway.com): it finds the coin's settings and finishes."
+fi
 ok "every launch setting set on the worker and the API (read back)"
 if ! (redeploy worker api); then
   die "the redeploy did not finish: the settings are LIVE on Railway, the old DRY RUN bot may still be running" \
-    "Railway dashboard: worker and api > Deployments > Deploy the latest commit. Then check: scripts/rat.sh status"
+    "Once Railway builds again (Deployments shows why), run scripts/launch.sh again: it redeploys and checks LIVE."
 fi
 
 # ---------------------------------------------------------------- 6. live -----------------------------------------------
-st=$(rat_json status --json)
-[ "$(printf '%s' "$st" | jq -r '.mode // empty')" = live ] || die "the worker is not LIVE after the redeploy" "Check: scripts/rat.sh status, and the worker's logs on Railway."
+# right after the build, railway ssh can still reach the old DRY RUN container while it drains, or drop: ask for up to
+# two minutes before calling it
+st=""
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  st=$(rat_json status --json)
+  [ "$(printf '%s' "$st" | jq -r '.mode // empty' 2>/dev/null)" = live ] && break
+  [ "$i" = 12 ] || sleep "${WSR_POLL_SEC:-10}"
+done
+case "$(printf '%s' "$st" | jq -r '.mode // empty' 2>/dev/null)" in
+  live) ;;
+  dry_run) die "the worker still runs in DRY RUN two minutes after its build" "Check the worker's variables (DRY_RUN=false, LIVE_CONFIRM) and its logs on Railway, then run scripts/launch.sh again." ;;
+  *) die "the worker did not answer for two minutes after its build (railway ssh)" "Check: scripts/rat.sh status, and the worker's logs on Railway. Running scripts/launch.sh again only redeploys what is left." ;;
+esac
 [ "$(printf '%s' "$st" | jq -r '.killSwitch.on // empty')" = false ] || note "the kill switch is ON: the bot sends nothing until you resume it (admin page, or scripts/rat.sh resume)"
 pre=$(rat_json preflight --live --json)
 problems=$(preflight_problems "$pre")
