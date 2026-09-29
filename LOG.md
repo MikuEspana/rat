@@ -666,3 +666,12 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 - A slow Mac can hit the same thing tomorrow at MORNING.md step 1 (`scripts/staging-local.sh start`).
 - Now, for the first 5 seconds a process that is alive counts as starting. One that is gone, or never becomes the app, still stops the start.
 - `tests/scripts/staging-local-test.sh` forces that moment with a fake `ps`: it fails without the fix.
+
+## P0 from the chaos census: a worker that lost its lease still wrote to the database (2026-09-29, night)
+- Census 2 (seeds 2,001 to 4,000 on main) broke "the creator's own SOL is never spent" and "ledger = chain" three times in 936 seeds (2711, 2789, 3637).
+- What happened: a worker froze mid-tick past its 120 s lease (a hung RPC call, a paused container) and a replacement took over. When the frozen one woke up, the fence refused its sends, but its database writes still went through, made from rows it read before it froze:
+  - it released a reservation the replacement had just paid a hire with (the replacement's settle was then refused as a duplicate);
+  - or it cleared the rat's pointer to that reservation, and the replacement released it as an "orphan".
+  - Either way the ledger counted about 0.03 SOL the chain no longer had, and later hires spent the creator's own SOL.
+- Fix: every database write of a tick now proves the lease first (and renews it), like every send (`apps/worker/src/fenced-store.ts`, wired in `main.ts`). A worker that lost the lease stops at its first write and writes nothing more; reads still work, the lease table itself is not fenced.
+- Tests: three red-team tests (the 2789 release, the 2711 pointer, a whole tick of a worker without the lease writes nothing) fail without the fix; the chaos harness wires its workers like production; seeds 2711, 2789 and 3637 pass. SECURITY-REVIEW.md RT-19.

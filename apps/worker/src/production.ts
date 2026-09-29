@@ -7,6 +7,7 @@ import { DbKeyStore, type MasterKeyRing, masterKeyRing, sameVersionKeysThatFail 
 import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, creatorCoinTokens, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
+import { type LeaseGate, fenceWrites } from './fenced-store';
 import { createJupiterBudget } from './jupiter-budget';
 import { stagingCrashHook } from './staging';
 
@@ -48,6 +49,8 @@ export async function createProductionDeps(
      * inside the running worker with `rat keys import`); a one-shot run fails right away instead
      */
     waitForCreatorKey?: boolean;
+    /** the long-running worker: every database write is fenced by the lease once the runner binds it (fenced-store.ts) */
+    lease?: LeaseGate;
   } = {},
 ): Promise<{ deps: WorkerDeps; handle: DbHandle }> {
   requireConfig(cfg, ['databaseUrl', 'keyEncryptionKey', 'rpcUrl', 'creatorPubkey']);
@@ -55,7 +58,9 @@ export async function createProductionDeps(
 
   const handle = await openDatabase(cfg.databaseUrl!);
   await handle.migrate();
-  const store = new Store(handle.db, cfg.dryRun ? 'paper' : 'live', systemClock);
+  const raw = new Store(handle.db, cfg.dryRun ? 'paper' : 'live', systemClock);
+  const lease = opts.lease;
+  const store = lease ? fenceWrites(raw, () => lease.holds()) : raw;
   const stocks = loadStocksFile(cfg.stocksFile, REPO_ROOT, cfg.approvedStocks);
   await store.stocks.syncConfig(stocks);
 

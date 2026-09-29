@@ -18,7 +18,7 @@ import { LIVE_CONFIRM_PHRASE, NATIVE_SOL_MINT } from '@rat/core';
 import type { Store } from '@rat/db';
 import { JupiterError } from '@rat/jupiter';
 import { collectCreatorFeeV2Ix } from '@rat/pump';
-import { LockedRunner, SOL, type SimWorld, type Worker, type WorkerDeps, type WorldParts, createSimWorld, createWorker } from '@rat/worker';
+import { LockedRunner, SOL, type SimWorld, type Worker, type WorkerDeps, type WorldParts, createSimWorld, createWorker, fenceWrites } from '@rat/worker';
 import { Keypair, SystemProgram } from '@solana/web3.js';
 import { expect } from 'vitest';
 import { type MoneyStart, checkMoney } from '../e2e/money-check';
@@ -137,7 +137,8 @@ class Proc {
 
   private parts(w: SimWorld): WorldParts {
     return {
-      store: this.wrapStore(w.store),
+      // like production (apps/worker/src/main.ts): every write of a tick first proves the lease is still ours
+      store: fenceWrites(this.wrapStore(w.store), () => this.runner.fence()),
       reader: this.wrap(w.reader, 'rpc', 'chain'),
       sender: this.wrap(w.simSender, 'rpc', 'send'),
       swap: this.wrap(w.swap, 'jupiter', 'swap'),

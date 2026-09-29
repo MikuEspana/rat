@@ -1,6 +1,7 @@
 export * from './deps';
 export * from './scheduler';
 export * from './worker';
+export * from './fenced-store';
 export * from './sim-world';
 export * from './steps/prices';
 export * from './steps/mints';
