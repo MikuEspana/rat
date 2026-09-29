@@ -1,17 +1,17 @@
 import { EventsResponseSchema, RatsResponseSchema, StateResponseSchema, type RatEvent } from '@rat/contract';
 import { describe, expect, it } from 'vitest';
 import { Growth } from '../floor/growth';
-import { buildMaster, PLAN_RATS, STAGES } from '../floor/plan';
+import { buildMaster, PLAN_RATS, STAGES, stageOfSol } from '../floor/plan';
+import { stageSourceSol } from '../floor/stage-source';
 import { LaunchSim } from './engine';
 import { RULES } from './rules';
 import { SCENARIOS, type ScenarioId } from './scenarios';
 
 const EPOCH = Date.parse('2026-10-01T12:00:00Z');
 
-function stageOf(rats: number): string {
-  let s = STAGES[0]!.name;
-  for (const st of STAGES) if (rats >= st.min) s = st.name;
-  return s;
+/** The building's stage for a simulator state, the way the site reads it: SOL claimed, through stage-source.ts. */
+function stageOf(sim: LaunchSim): string {
+  return STAGES[stageOfSol(stageSourceSol(sim.stateResponse().treasury))]!.name;
 }
 
 /** Runs a scenario to its end, checking the contract shapes along the way. */
@@ -84,7 +84,7 @@ describe('launch simulator', () => {
       for (const e of events) expect(e.txSig).toBeNull();
       const s = sim.stats();
       console.log(
-        `${id}: ${s.rats} rats (${stageOf(s.rats)}), fees ${s.feesSol.toFixed(1)} SOL, claimed ${s.claimedSol.toFixed(1)}, hired ${s.hiredSol.toFixed(1)}, waiting ${s.hireWaitingSol.toFixed(1)}, portfolio $${Math.round(s.portfolioValueUsd)}, max ${maxHour.toFixed(2)} SOL in an hour, max ${Math.max(0, ...perLoop.values())} per loop`,
+        `${id}: ${s.rats} rats (${stageOf(sim)}), fees ${s.feesSol.toFixed(1)} SOL, claimed ${s.claimedSol.toFixed(1)}, hired ${s.hiredSol.toFixed(1)}, waiting ${s.hireWaitingSol.toFixed(1)}, portfolio $${Math.round(s.portfolioValueUsd)}, max ${maxHour.toFixed(2)} SOL in an hour, max ${Math.max(0, ...perLoop.values())} per loop`,
       );
     });
   }
@@ -94,17 +94,18 @@ describe('launch simulator', () => {
     expect(peak).toBeGreaterThan(1_500_000);
     expect(peak).toBeLessThan(2_300_000);
     expect(mcapAt(180)).toBeGreaterThan(mcapAt(360));
-    expect(stageOf(sim.stats().rats)).toBe('WALL STREET');
+    expect(stageOf(sim)).toBe('WALL STREET');
     expect(sim.stats().rats).toBeLessThanOrEqual(PLAN_RATS); // everyone gets a desk, no line outside
   });
 
   it('mega: runs to about $10M; the building fills up and the rest line up outside', () => {
     const { sim, peak } = get('mega');
-    const s = sim.stats();
     expect(peak).toBeGreaterThan(8_000_000);
-    expect(stageOf(s.rats)).toBe('WALL STREET');
-    // replay the roster through the site's idle game: every desk taken, a few hundred in the job-fair line
+    expect(stageOf(sim)).toBe('WALL STREET');
+    // replay the roster through the site's idle game the way a page load does (the stage from the SOL claimed, then
+    // the rats in hire order): every desk taken, a few hundred in the job-fair line
     const growth = new Growth(buildMaster());
+    growth.setSol(stageSourceSol(sim.stateResponse().treasury));
     for (const r of sim.ratsResponse().rats) growth.add(r.id, r.stock);
     expect(growth.waitingCount).toBeGreaterThan(100);
     expect(growth.waitingCount).toBeLessThan(1500);
@@ -152,6 +153,32 @@ describe('launch simulator', () => {
     expect(s.hireWaitingSol).toBeLessThan(RULES.salarySol);
     expect(s.rats).toBeGreaterThan(5_900);
     console.log(`rush: peak ${Math.round(peak / RULES.salarySol)} rats waiting in line, ${s.rats} rats at the end`);
+  });
+
+  it('rush: the building follows the simulator\'s SOL claimed, minute by minute, through every stage, and never closes one', () => {
+    const sim = new LaunchSim(SCENARIOS.rush, EPOCH);
+    sim.launch();
+    const growth = new Growth(buildMaster());
+    const opened: Array<{ stage: number; min: number; sol: number; rats: number }> = [];
+    let cursor = 0;
+    let last = 0;
+    for (let min = 1; min <= SCENARIOS.rush.minutes; min++) {
+      sim.advanceTo(min * 60_000);
+      const res = sim.eventsResponse(cursor, 100_000);
+      cursor = res.lastId;
+      for (const e of res.events) if (e.type === 'hire') growth.add(e.data.ratId, e.data.stock);
+      const st = sim.stateResponse();
+      if (min % 30 === 0) StateResponseSchema.parse(st);
+      for (const ev of growth.setSol(stageSourceSol(st.treasury))) {
+        if (ev.kind === 'stage') opened.push({ stage: ev.stage, min, sol: st.treasury.totalClaimedSol, rats: st.portfolio.ratCount });
+      }
+      expect(growth.stage).toBe(stageOfSol(st.treasury.totalClaimedSol));
+      expect(growth.stage).toBeGreaterThanOrEqual(last);
+      last = growth.stage;
+    }
+    expect(opened.map((o) => o.stage)).toEqual([1, 2, 3, 4, 5]);
+    for (const o of opened) expect(o.sol).toBeGreaterThanOrEqual(STAGES[o.stage]!.sol);
+    console.log(`rush stages: ${opened.map((o) => `${STAGES[o.stage]!.name} at T+${o.min}m (${o.sol.toFixed(2)} SOL claimed, ${o.rats} rats)`).join(', ')}`);
   });
 
   it('rug: pumps to about $300K, then loses about 80%', () => {

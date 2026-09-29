@@ -1,6 +1,6 @@
 # WALL STREET RATS pixel site
 
-An idle game: an isometric pixel-art office building at night that grows with the rat count, from a garage startup (under 25 rats) to a small office, a full floor, a corporate floor, a megacorp and, past 3,000 rats, Wall Street. Pan around and click into it. Creator fees hire rats; each rat climbs out of the sewer in front of the lobby (one manhole at first, two from 50 hires, a steaming grate from 250, a big sewer entrance from 1,000), shakes itself off, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Money is always moving: every claim and every hire sends bills flying into THE VAULT, the money pile in the middle of the building that shows the Wall Street Rats portfolio in 6 stages, and "+$X" pops up where they land. Nothing is ever burned: every fee hires rats.
+An idle game: an isometric pixel-art office building at night that grows with the creator fees claimed, from a garage startup to a small office (0.25 SOL claimed), a full floor (1 SOL), a corporate floor (5 SOL), a megacorp (20 SOL) and, from 50 SOL, Wall Street; its rooms, desks, landmarks and sewer grow with the rats hired. Pan around and click into it. Creator fees hire rats; each rat climbs out of the sewer in front of the lobby (one manhole at first, two from 50 hires, a steaming grate from 250, a big sewer entrance from 1,000), shakes itself off, walks into the lobby and on to a desk in one of its stock's rooms, and types. Cheers when the stock is up, slumps when it is down, goes grey when frozen, and wears a better suit as it climbs tiers (partners move into the CEO corner office). Around 7% of the rats are always up and about: coffee, the water cooler, a chat, the bathroom queue, the copier, a meeting, a stroll, a box run, a smoke outside, a nap at the desk. Money is always moving: every claim and every hire sends bills flying into THE VAULT, the money pile in the middle of the building that shows the Wall Street Rats portfolio in 6 stages, and "+$X" pops up where they land. Nothing is ever burned: every fee hires rats.
 
 Every claim shows its rats at once. Hires are paced (at most 40 Jupiter calls a minute, 60 SOL an hour), so when fees come in faster than the bot can hire, one applicant per 0.03 SOL waiting to be spent lines up outside the lobby in a job-fair line around the block, under a "JOB FAIR: N IN LINE" sign. Each hire turns the rat at the front of the line into the new hire, who walks straight in to a desk. Applicants come up through the sewer too and walk round the outside to the back of the line; the line only ever stands outside (the apron round the office and the sidewalks, never the road or a tile something else stands on), and past its last place the rest are counted on the sign, not stacked. Early on, with no backlog, a hire just climbs out of the sewer and walks to its desk. When every desk is taken (about 5,800 rats), a hired rat stays in line until a desk is built for it.
 
@@ -52,6 +52,8 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 | Job fair | how many rats are in the job-fair line (applicants waiting for fees to be spent, plus hired rats waiting for a desk), for example "2,041 rats in line", in green. The line follows `treasury.waitingSol` (one applicant per `salarySol`): each claim adds applicants, each hire takes one |
 | The Vault | the money pile in the middle of the building, in 6 stages from loose change to a money bin (`portfolio.valueUsd`); shimmers green when the portfolio is up, dims when it is down; click it for the total, the breakdown by stock and the rat wallets. Bills fly in from the sewer on every claim (a gold "+$X") and every hire (a green "+$X" each); a burst of hires rains bills from above |
 | Next hire ring | fills from `bot.lastClaimAt` to `bot.nextClaimAt` (each claim pays for the next hires), with a countdown |
+| Stage chip | the stage the building is at, and three bars: the desk room filling up and the next room (by rats hired), and the next stage by SOL claimed ("CORPORATE FLOOR: 1.9 / 5 SOL") |
+| Company Roadmap | bottom right: every stage in order with the SOL claimed it takes (`treasury.totalClaimedSol`, read through `src/floor/stage-source.ts`); done ones checked, the next one with a bar ("0.62 / 1 SOL"), the rest locked. "hide" folds it to one line ("NEXT: CORPORATE 3.2 / 5 SOL"), remembered in the browser. Under 900 px wide it is that one line between the feed and the news ticker (tap for the list). It never sits on the Vault or the job-fair line, and gives the corner to an open rat card |
 | Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), claims, freezes, thaws, each with its Solscan tx link |
 | Rat card | name, tier badge, stock, PnL %, value and cost, rank, status, hired, Solscan wallet link; a gold marker bobs over the rat |
 | Leaderboard | `leaderboard.top` (best 10) and `leaderboard.bottom` (worst 10) |
@@ -59,18 +61,22 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 
 Under 900 px wide the HUD compacts, the leaderboard starts folded and the card becomes a bottom sheet.
 
-Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 7000, with a slider and stage buttons; 6500 shows the job-fair line; needs the API, for example `pnpm mock:api`), `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
+Debug URL flags: `?rats=N` (run the idle game at exactly N rats, 1 to 7000, with a slider and stage buttons; 6500 shows the job-fair line; needs the API, for example `pnpm mock:api`. N maps to the SOL claimed that shows the stage N rats used to, so 25, 100, 500, 1500 and 3000 are the stage edges; add `&sol=X` to pin the SOL claimed instead), `?perf=1` (fps, simulation ms, frame CPU ms, particle counts), `?stress=3000` (pad the roster to 3,000 rats), `?walkers=20` (20 extra synthetic hires every 10 s).
 
 ### Stages
 
-| Rats | Stage | What gets built |
-|---|---|---|
-| under 25 | Garage startup | the garage: the Vault, shared desks, couch, boxes, coffee |
-| 25+ | Small office | ring 1: open-plan offices (shared desks), break room, WC, lobby |
-| 100+ | Full floor | ring 2: a desk room per stock (on demand), meeting, server, copy, storage |
-| 500+ | Corporate floor | ring 3: the CEO office (partners move in), more of everything |
-| 1500+ | Megacorp | ring 4 |
-| 3000+ | Evil empire | ring 5: war room, vaults, red sky |
+The stage goes by the SOL claimed (`treasury.totalClaimedSol`, read in one place: `stageSourceSol` in `src/floor/stage-source.ts`) and never closes. A stage opens its ring (corridor and lobby), the building sign, the stage banner ("1 SOL claimed") and the NEXT FLOOR lots; within 10% of the next stage's SOL those lots get scaffolding and a crane. Everything inside still goes by rats hired: each ring's rooms open at their hire counts (the ring's planned range below), desks are handed out hire by hire (everyone shares the garage and open offices until the 100th hire), and the landmarks and the sewer keep their rat counts.
+
+| SOL claimed | Stage | Rooms planned for (hires) | What gets built |
+|---|---|---|---|
+| under 0.25 | Garage startup | under 25 | the garage: the Vault, shared desks, couch, boxes, coffee |
+| 0.25+ | Small office | 25 to 100 | ring 1: open-plan offices (shared desks), break room, WC, lobby |
+| 1+ | Full floor | 100 to 500 | ring 2: a desk room per stock (on demand), meeting, server, copy, storage |
+| 5+ | Corporate floor | 500 to 1,500 | ring 3: the CEO office (partners move in), more of everything |
+| 20+ | Megacorp | 1,500 to 3,000 | ring 4 |
+| 50+ | Wall Street | 3,000 on | ring 5: war room, vaults, red sky |
+
+Screenshots of every stage in the simulator with the roadmap: `assets/preview/sol_stages/`.
 
 Screenshots: `assets/preview/idle_stages_*.png` (every stage at zoom 0.4 and 0.9, and the whole building), `assets/preview/idle_milestone.png`.
 
@@ -107,7 +113,8 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 | File | What |
 |---|---|
 | `src/floor/plan.ts` | The master plan, drawn once: the garage, then one ring per stage (ring corridor, four strips of rooms with shared walls, a lobby with the subway outside), doors that keep each ring connected on its own, amenity thresholds, the build order of desk-room slots. Pure, deterministic and tested. |
-| `src/floor/growth.ts` | The idle game: replays rats in id order, builds stages, amenities and desk rooms on demand, gives every rat a desk, and the walk mask of what stands. |
+| `src/floor/growth.ts` | The idle game: opens the stages the SOL claimed reaches (`setSol`), replays rats in id order, builds amenities and desk rooms on demand by hires, gives every rat a desk, and the walk mask of what stands. |
+| `src/floor/stage-source.ts` | `stageSourceSol(treasury)`: the one place that says what the stage goes by (`treasury.totalClaimedSol`). |
 | `src/floor/pack.ts` | Packs rooms into a rectangle with no gaps (a slicing floor plan), splits chosen for near-square rooms. |
 | `src/floor/furnish.ts` | Fills each room: desk pods facing each other and rows along the front walls, props along walls, activity spots, rugs, worn patches, clutter that never cuts off a chair, things hung on walls. |
 | `src/floor/city.ts` | The city round the office per stage: avenue, cross street and alley, irregular blocks split into lots with a purpose each, falloff and a dithered edge, street furniture by Poisson disk, street scenes, traffic, the landmark on the opposite diagonal. Pure, deterministic, tested. |
@@ -123,7 +130,7 @@ Follows [CONTRACT.md](../../CONTRACT.md) and the owner's rule for the 1.7 MB ros
 | `src/gfx/sky.ts` | The night sky behind the building. |
 | `src/gfx/layer.ts` | Depth-sorted, culled `ParticleContainer`. |
 | `src/data/` | API client, store (roster once, state and events after), stress padding. |
-| `src/ui/` | HUD, ring, feed, rat card, leaderboard, banner (DOM over the canvas; API text always set with `textContent`). |
+| `src/ui/` | HUD, ring, feed, rat card, leaderboard, Company Roadmap (`roadmap.ts`), banner (DOM over the canvas; API text always set with `textContent`). |
 
 ### 3,000 rats at 60 fps
 
