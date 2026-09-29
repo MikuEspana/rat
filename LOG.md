@@ -615,7 +615,8 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
   - It also exposed where SimChain was kinder than the network: rejected sends, and txs sent after their blockhash expired.
 - **Numbers:**
   - on the code before the fixes, about 800 seeds: 35 failures (the bugs above plus harness mistakes, since fixed);
-  - on the fixed code: 679 seeds so far, 0 failures (the run continues through the night).
+  - on the fixed code: 2,000 seeds (1 to 2,000, 3 shards, 95 minutes): 1,998 passed, 2 failed (seeds 306 and 1790);
+  - both were the harness, not the bot: at a 0.05 SOL hourly cap the bot hires about one rat an hour, so two rats still waited in line after the calm hour, correctly (no reservation, no SOL sent). The end check only accepted "budget too small" as a reason to wait; it now also accepts "the hourly cap has no room for one salary", with the same strict conditions. Both seeds pass.
 - CI runs 8 seeds in the long job. Thousands in shards: `CHAOS_RUNS=667 CHAOS_SEED=1 CHAOS_VERBOSE=1 pnpm vitest run tests/chaos/fuzz.test.ts`. Replay one seed step by step: `CHAOS_SEED=<n> CHAOS_RUNS=1 CHAOS_TRACE=1`.
 
 ## Launch dress rehearsal: Railway slow and failing (2026-09-29, night)
