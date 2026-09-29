@@ -160,6 +160,7 @@ program
   .option('--to <address>', 'cold wallet (default: COLD_WALLET)')
   .option('--confirm <phrase>', 'exact phrase printed by the plan')
   .option('--limit <n>', 'only the first n rats', (v) => Number(v))
+  .option('--parallel <n>', 'rats swept at the same time (default 8)', (v) => Number(v))
   .action((o) =>
     withContext(async (ctx, cfg) => {
       requireConfig(cfg, ['rpcUrl']);
@@ -168,9 +169,13 @@ program
       const conn = createConnection(cfg.rpcUrl!);
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       const inner = new RpcTxSender(conn, { dryRun: cfg.dryRun, liveConfirmed: cfg.liveConfirmed, priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax });
-      const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, cfg.killSwitch), dryRun: cfg.dryRun });
+      const killSwitch = new DbKillSwitch(ctx.store.settings, cfg.killSwitch);
+      const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch, dryRun: cfg.dryRun });
       const keyStore = new DbKeyStore(ctx.store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey });
-      await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to, confirm: o.confirm, limit: o.limit });
+      const r = await sweepCommand(ctx, { chain, keys: keyStore, sender, killSwitch }, { to, confirm: o.confirm, limit: o.limit, parallel: o.parallel });
+      // anything left behind (a failed tx, tokens that could not move, rats still being hired): exit 1, so a script
+      // never goes on as if the rats were empty
+      if (r.executed && (r.failed > 0 || r.tokensLeft > 0 || r.skippedHiring > 0)) process.exitCode = 1;
     }),
   );
 
