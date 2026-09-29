@@ -1,7 +1,7 @@
 // Opens Postgres (production, via node-postgres) or PGlite (tests / local dev, in-process).
 //   memory://            in-memory PGlite
 //   pglite://./data/dir  PGlite persisted to a folder
-//   postgres://...       real Postgres (Supabase). Use a DIRECT connection for the worker.
+//   postgres://...       real Postgres (Railway). Use a DIRECT connection for the worker (no PgBouncer).
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';

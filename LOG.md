@@ -342,3 +342,16 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 **Tests**
 - The simulator's engine tests run Rush too: every rule holds, about 180 SOL of fees, more than 1,000 rats waiting at the peak, less than one salary left at the end.
 - Headless browser (Playwright): no console errors; Rush shows the line and the HUD stat (1,662 in line at minute 12); Normal has no line and hires walk straight in; bills and popups on screen; the HUD fits on mobile.
+
+## Miguel's decision: Railway Postgres, nightly encrypted offsite backups (2026-09-29)
+
+**Checked:** the code is plain Postgres. node-postgres through `DATABASE_URL`, plain SQL migrations, a session advisory lock. No Supabase auth, storage, RLS, extensions or pooler. The only Supabase traces were docs, one comment and the read-only role file's name.
+
+**What changed (config, scripts and docs; no app code)**
+- **Wiring:** worker and admin get `DATABASE_URL=${{Postgres.DATABASE_URL}}`; the API gets `DATABASE_URL_READONLY` built from references and one shared variable (`RAT_API_DB_PASSWORD`). The database password is never copied. The CLI runs inside Railway (`railway ssh --service worker`).
+- `infra/supabase-readonly-role.sql` is now `infra/readonly-role.sql` (run in `railway connect Postgres`, password set with `\password`).
+- **Nightly backup** (`infra/backup/`, `infra/railway.backup.json`): a Railway cron service. `pg_dump` over the private network, archive checked, encrypted with `age` to the owner's public key, one signed S3 upload (SHA-256 checked by the store, MD5 ETag checked by the job) to a bucket outside Railway. Every step has a time limit; any failure sends one Telegram `backup_failed` alert naming the step, with no secret in it. It never deletes (bucket lifecycle rule). Optional heartbeat URL for a night that never starts.
+- **Restore drill:** `infra/backup/restore-check.sh` restores one backup into an empty scratch database (refuses any database with tables), checks every table and the migrations, prints PASS and the restore time. On the launch-day checklist.
+- **CI:** a `backup` job runs `infra/backup/selftest.sh` on Postgres 16 (simulated launch, backup under busybox like the Alpine image, a local S3 server that checks signatures, restore, every table compared, the three failure alerts). The `docker` job builds the backup image.
+
+**Test restore (local, nothing real):** 101 rats, 274 ledger entries, 103 encrypted keys, 35 claims dumped, encrypted, uploaded, downloaded and restored: every table has the same rows, the ledger is identical (md5), 3 of 3 migrations. A wrong S3 secret, a database that is down and a private key pasted as the recipient each sent exactly one alert.

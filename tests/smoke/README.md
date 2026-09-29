@@ -10,7 +10,7 @@
 ## Steps
 1. Create a **throwaway** test creator wallet and fund it with ~0.1 SOL.
 2. Launch a **throwaway** coin on pump.fun from the test creator (normal mode: no holder rewards, no fee sharing). Make one small buy so some creator fees exist.
-3. Use a **fresh** database (for example a second Supabase project or `DATABASE_URL=pglite://./smoke-db`).
+3. Use a **fresh** database (for example a second Railway Postgres service or `DATABASE_URL=pglite://./smoke-db`).
 4. Environment:
    ```
    SMOKE_MODE=true

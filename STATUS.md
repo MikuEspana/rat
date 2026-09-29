@@ -6,7 +6,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 - DRY RUN is on by default everywhere.
 - No mainnet transaction was ever sent, Jito was never called (the Jito route is now removed), no smoke test was run.
 - Test keypairs only, no secrets in the repo.
-- Nothing was created on Supabase, Railway or Vercel.
+- Nothing was created on Railway, Vercel or any bucket provider (Supabase is no longer used).
 - No holder payout code (a CI guard forbids it).
 - No em dashes.
 
@@ -34,7 +34,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 |---|---|---|---|
 | 1 | **Nothing has run on mainnet yet.** Jupiter routes into xStocks, the 1-tx hire with a `payer`, pump.fun claims after graduation, real fees and rent. | By rule, no mainnet transaction was sent. Everything is proven on SimChain and against official docs only. | Run the smoke test (`tests/smoke`, 0.1 SOL cap) before launch. If the 1-tx hire fails there: `HIRE_MODE=two_step`. The effects check refuses any tx that would cost more than reserved. |
 | 2 | **Outside parties can cost value inside our limits.** A wrong Jupiter quote or price; the xStocks issuer can pause, freeze or take back tokens (permanent delegate). | We cannot control them. | Worst case per tx: one salary (0.03 SOL). The 60 SOL/h hire cap stops a long bleed. Reconcile freezes and alerts on issuer actions. |
-| 3 | **One worker, one database, one RPC.** | A small project on one host. | Restarts are safe at every step (chaos tests), the watchdog alerts if the worker dies, a backup RPC is supported. Losing the database without a key backup loses every rat wallet: turn on Supabase backups and run `rat keys backup`. |
+| 3 | **One worker, one database, one RPC.** | A small project on one host. | Restarts are safe at every step (chaos tests), the watchdog alerts if the worker dies, a backup RPC is supported. Losing the database without a key backup loses every rat wallet: turn on Railway backups and the nightly encrypted offsite dump (`docs/runbooks/backup-restore.md`), and run `rat keys backup`. |
 | 4 | **Launch-day operator mistakes.** A tx from a bot wallet (trips the kill switch), a wrong `WATCH_FROM_SLOT`, DRY RUN flipped back and forth, the dev buy left in the creator wallet. | People get tired. | `rat preflight --live`, `LAUNCH-DAY.md`, the admin page. Every mistake above stops the bot instead of losing money. |
 | 5 | **A bigger or faster launch than planned.** | The 60 SOL/h hire cap makes money wait during a big rush (180 SOL of fees takes about 3 hours to spend). We stay on Jupiter's Free tier: a hard budget of 40 calls a minute (prices + builds + retries) caps hiring at about 38 rats a minute (about 57 SOL/h in a long rush, a little under the 60 SOL/h cap). In the 3-hour simulation every fee was still spent by minute 189. | Nothing is lost, only delayed: hires wait in line for the next loop. A 429 backs off and alerts. |
 
@@ -90,7 +90,7 @@ Updated 2026-09-28. Everything is in `main`: the backend (queue Q1 to Q12, log i
 | Solana | SimChain (real System/ATA/Token semantics) | `RpcChainReader` + `RpcTxSender` | Sender/reader unit-tested with fake connections. Never sent a real tx (by rule). |
 | pump.fun claims | real instruction builders executed by SimChain handlers | same builders on mainnet | Builders match the official IDL. Not executed on mainnet. |
 | Jupiter prices / swaps | `MockPriceSource`, `MockSwapBuilder` | Price v3 + Swap v2 `/build` | Request/response shapes from Jupiter's docs repo. Not called (no network, no key). |
-| Database | PGlite (in-process Postgres) | Supabase Postgres | Same migrations; Postgres itself not run here. |
+| Database | PGlite (in-process Postgres) | Railway Postgres 16 (`${{Postgres.DATABASE_URL}}` reference) | Same migrations. The backup self-test runs them on a real Postgres 16, then dumps, encrypts, uploads (local S3 server), restores and compares every table (CI `backup` job). |
 | xStocks mints | synthetic mints | the 13 mints in `config/stocks.json` | Not checked on-chain (mainnet RPC blocked here). Run `check:stocks`. |
 | Telegram | recorded alerts | Telegram Bot API | Not called. |
 | Docker image | not built here (no daemon) | Railway | Built and started by the CI `docker` job. |
@@ -141,10 +141,10 @@ Issues #1 to #12 close when the final PR merges into `main`.
 |---|---|
 | Helius (or similar) mainnet RPC URL + a backup | `RPC_URL`, `RPC_URL_BACKUP` |
 | Jupiter API key (free, portal.jup.ag) | `JUPITER_API_KEY` |
-| Supabase project (direct connection + read-only user) | `DATABASE_URL`, `DATABASE_URL_READONLY` |
-| Railway project (3 services: worker, api, admin) | see `docs/runbooks/deploy.md` |
+| Railway Postgres in the same project (references, no copied password) + read-only user | `DATABASE_URL`, `DATABASE_URL_READONLY` (`docs/runbooks/deploy.md` step 1) |
+| Railway project (services: worker, api, admin, backup, Postgres) | see `docs/runbooks/deploy.md` |
 | Admin page password (at least 16 characters) | `ADMIN_PASSWORD` on the admin service (plus the Telegram settings for its watchdog) |
-| Supabase backups turned on, plus `rat keys backup` files kept apart from the master key | the rat wallets' keys exist only in the database |
+| Railway backups on, the nightly encrypted dump to a bucket outside Railway (age key pair, bucket key), one restore drill, plus `rat keys backup` files kept apart from the master key | `docs/runbooks/backup-restore.md`; the rat wallets' keys exist only in the database |
 | Telegram bot token + chat id | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 | Master key (32 random bytes, base64), backed up | `KEY_ENCRYPTION_KEY` |
 | Fresh creator and cold wallets | `CREATOR_PUBKEY`; import the creator key with `rat keys import --role creator` |
