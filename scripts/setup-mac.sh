@@ -5,7 +5,7 @@
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-mac.sh)"
 #
 # What it does (docs/runbooks/setup-mac.md has the long version):
-#   1 tools (Homebrew: railway, node, age, jq, postgresql@16)   2 log in to Railway and Cloudflare (browser)
+#   1 tools (Homebrew: railway, node, age, jq, Postgres client) 2 log in to Railway and Cloudflare (browser)
 #   3 Railway project: Postgres + worker, api, admin, backup     4 private R2 bucket, 30-day delete rule, API token
 #   5 master key, backup key, admin password -> ~/rat-secrets     6 your secrets through hidden prompts
 #   7 creator key import (hidden prompt, straight into Railway)   8 deploy in DRY RUN, preflight, Telegram test
@@ -24,7 +24,7 @@
 #   age             https://github.com/FiloSottile/age
 #   Telegram        https://core.telegram.org/bots/api#getupdates
 #   healthchecks.io https://healthchecks.io/docs/api/
-#   PostgreSQL 16   https://www.postgresql.org/docs/16/app-pgrestore.html
+#   PostgreSQL 18   https://www.postgresql.org/docs/18/app-pgrestore.html
 # shellcheck disable=SC2015,SC2016,SC2153 # literal ${{references}} for Railway; RPC is set by ask_secret
 set -euo pipefail
 
@@ -249,18 +249,14 @@ step "Install what is missing"
 if ! command -v brew >/dev/null 2>&1; then
   die "Homebrew is not installed" "Install it from https://brew.sh (one command), open a new Terminal, then run this again."
 fi
-for f in git railway node age jq postgresql@16; do
+for f in git railway node age jq; do
   bin="$f"
-  case "$f" in node) bin=npx ;; postgresql@16) bin="" ;; esac
-  if [ -n "$bin" ] && command -v "$bin" >/dev/null 2>&1; then continue; fi
-  if [ -z "$bin" ] && brew list --versions postgresql@16 >/dev/null 2>&1; then continue; fi
+  case "$f" in node) bin=npx ;; esac
+  if command -v "$bin" >/dev/null 2>&1; then continue; fi
   say "brew install $f"
   brew install "$f" >/dev/null || die "brew install $f failed" "Run: brew install $f   and read its error."
 done
-PG_BIN="${WSR_PG_BIN:-$(brew --prefix postgresql@16 2>/dev/null)/bin}"
-[ -x "$PG_BIN/psql" ] || die "psql from postgresql@16 was not found in $PG_BIN" "Run: brew reinstall postgresql@16"
-export PATH="$PG_BIN:$PATH" # pg_restore / psql 16 match Railway's Postgres 16 (restore drill, read-only user)
-ok "railway $(rw --version 2>/dev/null | awk '{print $NF}'), node $(node --version 2>/dev/null), $(age --version 2>/dev/null | head -1 | sed 's/^/age /'), psql $(psql --version | awk '{print $3}')"
+ok "railway $(rw --version 2>/dev/null | awk '{print $NF}'), node $(node --version 2>/dev/null), $(age --version 2>/dev/null | head -1 | sed 's/^/age /')"
 
 if [ -z "${WSR_SKIP_CLONE:-}" ]; then
   if [ -d "$APP_DIR/.git" ]; then
@@ -271,6 +267,27 @@ if [ -z "${WSR_SKIP_CLONE:-}" ]; then
 fi
 cd "$APP_DIR"
 ok "repo at $APP_DIR"
+
+# Postgres client tools of the backup job's major (infra/backup/Dockerfile, the one source of truth): the restore
+# drill restores with them and railway connect runs their psql. Railway's database must run that major too (checked
+# at the end of step 3, before anything depends on it).
+PG_MAJOR=$(sed -n 's/^FROM postgres:\([0-9][0-9]*\)-alpine.*/\1/p' infra/backup/Dockerfile | head -1)
+[ -n "$PG_MAJOR" ] || die "infra/backup/Dockerfile names no Postgres major (FROM postgres:N-alpine)" "Run: git -C $APP_DIR pull"
+if [ -z "${WSR_PG_BIN:-}" ] && ! brew list --versions "postgresql@$PG_MAJOR" >/dev/null 2>&1; then
+  say "brew install postgresql@$PG_MAJOR (the client tools; no database server is started on this Mac)"
+  brew install "postgresql@$PG_MAJOR" >/dev/null || die "brew install postgresql@$PG_MAJOR failed" "Run: brew install postgresql@$PG_MAJOR   and read its error."
+fi
+PG_BIN="${WSR_PG_BIN:-$(brew --prefix "postgresql@$PG_MAJOR" 2>/dev/null)/bin}"
+for t in psql pg_restore initdb pg_ctl; do
+  [ -x "$PG_BIN/$t" ] || die "$t from postgresql@$PG_MAJOR was not found in $PG_BIN" "Run: brew reinstall postgresql@$PG_MAJOR"
+done
+pg_major_of() { "$PG_BIN/$1" --version 2>/dev/null | sed -n 's/^[^0-9]*\([0-9][0-9]*\).*/\1/p' | head -1; }
+for t in psql pg_restore initdb; do
+  [ "$(pg_major_of "$t")" = "$PG_MAJOR" ] ||
+    die "$t in $PG_BIN is Postgres $(pg_major_of "$t"), the backup job uses $PG_MAJOR" "Run: brew install postgresql@$PG_MAJOR"
+done
+export PATH="$PG_BIN:$PATH"
+ok "Postgres $PG_MAJOR client tools (psql, pg_restore, initdb), the same major as the backup job"
 
 # ---------------------------------------------------------------- 2. logins -------------------------------------------
 step "Log in to Railway and Cloudflare"
@@ -364,7 +381,7 @@ else
   rw add --database postgres --json >/dev/null || die "could not add Postgres"
   PG=$(rw service list --json 2>/dev/null | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
   [ -n "$PG" ] || die "Postgres was added but not found in the service list"
-  ok "Postgres 16 added (private network only)"
+  ok "Postgres added (private network only)"
 fi
 DB_REF="\${{$PG.DATABASE_URL}}"
 
@@ -475,6 +492,18 @@ for svc in "$PG" worker api admin backup; do
   fi
   ok "$svc runs in $REGION_NAME"
 done
+
+# Railway's Postgres major, before anything depends on it: the backup job's pg_dump refuses a newer server, and the
+# restore drill on this Mac restores with this Mac's tools. All three must be the same major.
+wait_deployed "$PG" 20
+server_num=$(printf '\\echo SERVER_VERSION_NUM :SERVER_VERSION_NUM\n' | rw connect "$PG" 2>/dev/null | sed -n 's/^SERVER_VERSION_NUM \([0-9][0-9]*\).*/\1/p' | tail -1 || true)
+[ -n "$server_num" ] || die "could not read the Postgres version on Railway" "Try it yourself: railway connect $PG, then type: show server_version;"
+server_major=$((server_num / 10000))
+[ "$server_major" = "$PG_MAJOR" ] ||
+  die "Railway's database runs Postgres $server_major, but the backup job (infra/backup/Dockerfile) and this Mac's tools are $PG_MAJOR" \
+    "The nightly backup and the restore drill would fail. infra/backup/Dockerfile must say FROM postgres:$server_major-alpine;" \
+    "once the repo has that, run this again (it installs postgresql@$server_major)."
+ok "versions match: Railway's Postgres $server_major, the backup job's pg_dump $PG_MAJOR, this Mac's tools $PG_MAJOR"
 
 # ---------------------------------------------------------------- 4. R2 bucket ----------------------------------------
 step "Private R2 bucket for the nightly backups"
@@ -828,7 +857,14 @@ fi
 # ---------------------------------------------------------------- 9. backup, schedule, drill ----------------------------
 step "First backup now, then every night, then a restore drill"
 if [ "$(state_get BACKUP_FIRST_OK)" = "" ]; then
-  connect_source backup # without a schedule yet, the first deploy runs one backup and exits
+  # without a schedule yet, each deploy runs one backup and exits. An earlier attempt (a failed backup) is never
+  # read again: the backup is rebuilt from the latest commit and only the new deployment's log counts.
+  if connected backup; then
+    rebuild backup
+    say "running the backup again with the latest code"
+  else
+    connect_source backup
+  fi
   say "Waiting for the first backup (build + run, a few minutes)..."
   i=0
   old=$(replaced_deployment backup)

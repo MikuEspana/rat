@@ -6,7 +6,7 @@ Agents did not create any of these resources. Everything below is done by the ow
 
 ## 1. Postgres (Railway, same project as the bot)
 The code only needs plain Postgres through `DATABASE_URL` (node-postgres and plain SQL migrations, nothing Supabase specific).
-1. In the Railway project (step 2): **+ New > Database > PostgreSQL**. Keep the service name `Postgres`: the references below use it. It runs Postgres 16 and is private by default; leave Public Access off.
+1. In the Railway project (step 2): **+ New > Database > PostgreSQL**. Keep the service name `Postgres`: the references below use it. It runs Postgres 18 and is private by default; leave Public Access off.
 2. On the api service: `RAT_API_DB_PASSWORD` = the output of `openssl rand -hex 32` (hex, so it is safe inside a URL). Keep it in your password manager too.
 3. Service variables are Railway references, so the database password is never copied anywhere:
    - worker and admin: `DATABASE_URL=${{Postgres.DATABASE_URL}}`
