@@ -30,7 +30,7 @@ About 20 to 30 minutes, mostly waiting for builds. Safe to run again at any time
 |---|---|---|
 | 1 Tools | `OK railway ..., node ..., age ..., psql 16...` then `OK repo at ~/wallstreetrats` | Homebrew missing: install it from brew.sh, open a new Terminal, run again. A `brew install` failed: run that one `brew install` yourself and read its error. |
 | 2 Logins | Two browser windows (Railway, then Cloudflare): click Authorize / Allow. Then `OK Cloudflare account ...` and `OK SSH key registered` | Run `railway login` or `npx wrangler login` by hand, then run the command again. |
-| 3 Railway project | `OK project wall-street-rats created`, Postgres 16 and 4 services, then per service `OK worker builds with infra/Dockerfile` (builder, start command and restart rules set on the service and read back before anything is built) | Check railway.com/dashboard: a Hobby plan is needed. "did not keep the build settings": in Railway open that service > Settings > Build, set Builder to Dockerfile and the Dockerfile path shown, then run again. |
+| 3 Railway project | `OK project wall-street-rats created`, Postgres 16 and 4 services, then per service `OK worker builds with infra/Dockerfile` and `OK worker runs in EU West (Amsterdam)` (Postgres moves there right after it is created, its volume too) (builder, start command and restart rules set on the service and read back before anything is built) | Check railway.com/dashboard: a Hobby plan is needed. "did not keep the build settings": in Railway open that service > Settings > Build, set Builder to Dockerfile and the Dockerfile path shown, then run again. |
 | 4 R2 bucket | `OK bucket wsr-db-backups-xxxxxx created`, the 30-day rule, then 6 clicks in the Cloudflare page it opens (the list is on screen) and 2 hidden prompts for the token | "refused that token": make sure it is Object Read & Write and scoped to the bucket name shown, paste both values again. "could not create the R2 bucket": turn on R2 in the Cloudflare dashboard. |
 | 5 Generated secrets | A big box: **SAVE THESE FILES IN YOUR PASSWORD MANAGER NOW**, then 4 file paths in `~/rat-secrets` | Save all 4 files, then press Enter. If it says the worker has a DIFFERENT master key: stop and ask, never replace it (the stored wallet keys depend on it). |
 | 6 Your secrets | Hidden prompts: Helius URL, optional backup RPC, Jupiter key, Telegram token. Then `Detected chat: <your name>. Is that you?` and `OK ... DRY_RUN=true everywhere`, then the worker builds | "did not answer" / "HTTP 401" / "rejected": the value was wrong, paste it again. No chat found: send "hi" to your bot, press Enter. Worker did not start: the last log lines are shown. If they say Railpack or "No start command detected", just run the command again: step 3 fixes the build settings and step 6 rebuilds the worker from the latest commit (`rebuilding worker`). |
@@ -47,6 +47,15 @@ The healthchecks.io check (step 9, optional) alerts you if a night's backup neve
 - The dev buy tokens stay in the creator wallet forever. The bot never counts them as fees, never sells them and refuses any transaction that would move them (go-live.md).
 - Run any `rat` command inside the worker from `~/wallstreetrats`: `scripts/rat.sh status`, `scripts/rat.sh preflight --live`.
 - The script never turns DRY RUN off. That is a step in LAUNCH-DAY.md that you do yourself.
+
+## Region
+Every service and Postgres run in **EU West (Amsterdam)**, Railway region `europe-west4-drams3a`. The script sets it on creation and moves anything that runs elsewhere (Postgres with its volume, while the database is still empty; the other services on their next deploy), then checks where each deployment really runs.
+
+Why EU West and not US East:
+- About 68% of Solana stake is delegated to validators in Europe, so most block leaders are there (REPORTED: [Helius, Measuring Solana's Decentralization](https://www.helius.dev/blog/solana-decentralization-facts-and-figures)).
+- Helius runs RPC nodes in Amsterdam and Frankfurt, next to Railway's EU West (REPORTED: [Helius forum, node locations](https://forum.helius.dev/t/where-are-heliuss-rpc-nodes-located/38)).
+- Railway's EU West region is in Amsterdam (VERIFIED: [Railway regions](https://docs.railway.com/deployments/regions)).
+- The bot is not latency critical (a claim every 35 s, one Jupiter build per hire), so the gain is small either way; staying next to the RPC and the leaders is the safe default.
 
 ## Where things are
 | What | Where |
