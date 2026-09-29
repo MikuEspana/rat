@@ -407,6 +407,12 @@ describe('SimChain', () => {
     chain.advanceBlocks(p4.lastValidBlockHeight - chain.blockHeight + 1);
     expect((await sender.status(p4.signature, p4.lastValidBlockHeight)).status).toBe('expired');
 
+    // a tx sent after its blockhash expired never lands (a worker frozen between prepare and send)
+    const late = await sender.prepare(t());
+    chain.advanceBlocks(late.lastValidBlockHeight - chain.blockHeight + 1);
+    expect(await sender.submit(late)).toMatchObject({ status: 'unknown', error: 'preflight: Blockhash not found' });
+    expect(chain.transaction(late.signature)).toBeUndefined();
+
     sender.failNext('reject_lands');
     const p5 = await sender.prepare(t());
     expect((await sender.submit(p5)).status).toBe('unknown');

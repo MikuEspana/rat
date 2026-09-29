@@ -90,6 +90,10 @@ export class SimTxSender implements TxSender {
 
   async submit(p: PreparedTx): Promise<TxOutcome> {
     this.submitted += 1;
+    // like the real network: a tx whose blockhash has expired never lands (the RPC answers "Blockhash not found")
+    if (this.chain.blockHeight > p.lastValidBlockHeight) {
+      return { status: 'unknown', signature: p.signature, feeLamports: 0n, error: 'preflight: Blockhash not found' };
+    }
     const mode = this.takeInjection(p.request);
     if (mode === 'reject') {
       // like RpcTxSender: a rejected send stays unknown until its blockhash expires (it might have been forwarded)
