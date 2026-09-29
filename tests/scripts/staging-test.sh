@@ -29,6 +29,7 @@ case "$1 $2" in
     cat "$F/worker.json" ;;
   "variable set")
     echo "railway $*" >>"$F/railway.log"
+    echo "set" >>"$F/order.log"
     [ -f "$F/drop_sets" ] && exit 0
     shift 2
     for a in "$@"; do
@@ -58,7 +59,25 @@ case "$1" in
   kill) echo on >"$F/kill"; echo "kill $*" >>"$F/rat.log" ;;
   resume) echo off >"$F/kill"; echo "resume" >>"$F/rat.log" ;;
   audit) cat "$F/audit" ;;
+  --with) # the read-only launch preflight with the coin's settings (scripts/lib/launch.sh)
+    w=""; while [ "${1:-}" = --with ]; do w="$w $2"; shift 2; done
+    echo "preflight-with$w" >>"$F/order.log"; cat "$F/pre-with" ;;
+  preflight) cat "$F/pre-live" ;;
+  dry-run-reset) echo "dry-run-reset" >>"$F/order.log" ;;
   *) echo "rat $*" >>"$F/rat.log" ;;
+esac
+EOF
+# fake Solana RPC behind curl (scripts/lib/wsr.sh rpc): the launch is the one signature after "sigBefore"
+cat >"$W/bin/curl" <<'EOF'
+#!/bin/bash
+d=""; prev=""; for a in "$@"; do [ "$prev" = -d ] && d="$a"; prev="$a"; done
+cat >/dev/null
+case "$d" in
+  *getBalance*) echo '{"result":{"value":470000000}}' ;;
+  *getSignaturesForAddress*'"limit":1}'*) echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' ;;
+  *getSignaturesForAddress*) echo '{"result":[{"signature":"sigLaunch","slot":1000,"err":null},{"signature":"sigBefore","slot":900,"err":null}]}' ;;
+  *getTransaction*) printf '{"result":{"meta":{"postTokenBalances":[{"owner":"%s","mint":"MintTest","uiTokenAmount":{"amount":"1"}}]}}}\n' "$TEST_CREATOR_FAKE" ;;
+  *) exit 7 ;;
 esac
 EOF
 chmod +x "$W/bin/"*
@@ -69,13 +88,15 @@ reset() {
   echo 0 >"$W/fake/claims"
   echo '{"lines":[{"status":"PASS","check":"claims","detail":"ok"},{"status":"PASS","check":"rats","detail":"ok"},{"status":"PASS","check":"money","detail":"ok"}]}' >"$W/fake/audit"
   : >"$W/fake/rat.log"
+  echo '{"lines":[{"status":"PASS","check":"launch txs","detail":"ok"},{"status":"PASS","check":"dev buy","detail":"ok"},{"status":"FAIL","check":"kill switch","detail":"on"}]}' >"$W/fake/pre-with"
+  cp "$W/fake/pre-with" "$W/fake/pre-live"
   rm -f "$W/fake/fail_reads" "$W/fake/drop_sets" "$W/fake/trip" "$W/fake/order.log" "$W/fake/railway.log" "$W/fake/"dep-* "$W/fake/"state-*
   rm -f "$W/home/rat-secrets-staging/rehearsal-results.env"
 }
 run() { # run "<stdin>" args...: scripts/staging.sh with the fakes
   local input="$1"
   shift
-  printf '%s' "$input" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RAT=fake-rat WSR_POLL_SEC=0 WSR_RETRY_SEC=0 \
+  printf '%s' "$input" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RAT=fake-rat WSR_POLL_SEC=0 WSR_RETRY_SEC=0 TEST_CREATOR_FAKE="$TEST_CREATOR" \
     bash "$REPO/scripts/staging.sh" "$@" >"$W/out.txt" 2>&1
 }
 results() { cat "$W/home/rat-secrets-staging/rehearsal-results.env" 2>/dev/null; }
@@ -145,6 +166,20 @@ reset
 printf 'PHASE_1=PASS|t|live\n' >"$W/home/rat-secrets-staging/rehearsal-results.env"
 run $'GO\n\ny\n' 6 --typo; rc=$?
 check "an unknown option: refused before anything" '[ $rc = 1 ] && grep -q "phase 6 takes only --skip-watchdog" "$W/out.txt" && ! grep -q resume "$W/fake/rat.log"'
+
+echo "== phase 1: the launch-day flow (one change, one redeploy)"
+reset
+printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"staging-master-key","RPC_URL":"https://rpc.invalid/?api-key=x"}\n' "$TEST_CREATOR" >"$W/fake/worker.json"
+run $'GO\n\ny\ny\n' 1; rc=$?
+check "PASS" '[ $rc = 0 ] && results | grep -q "^PHASE_1=PASS"'
+check "the live preflight saw the coin's settings before anything changed" 'grep -q "^preflight-with COIN_MINT=MintTest WATCH_FROM_SLOT=1001 KNOWN_OWNER_TX_SIGS=sigLaunch DRY_RUN=false LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS$" "$W/fake/order.log" && [ "$(grep -n "^preflight-with" "$W/fake/order.log" | cut -d: -f1)" -lt "$(grep -n "^set" "$W/fake/order.log" | head -1 | cut -d: -f1)" ]'
+check "one redeploy of the worker and one of the API" '[ "$(grep -c "^redeploy worker" "$W/fake/order.log")" = 1 ] && [ "$(grep -c "^redeploy api" "$W/fake/order.log")" = 1 ]'
+check "the kill switch stayed ON" '[ "$(cat "$W/fake/kill")" = on ] && ! grep -q resume "$W/fake/rat.log"'
+reset
+printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"staging-master-key","RPC_URL":"https://rpc.invalid/?api-key=x"}\n' "$TEST_CREATOR" >"$W/fake/worker.json"
+echo '{"lines":[{"status":"FAIL","check":"launch txs","detail":"1 unlisted"},{"status":"PASS","check":"dev buy","detail":"ok"}]}' >"$W/fake/pre-with"
+run $'GO\n\ny\ny\n' 1; rc=$?
+check "the coin's settings fail the preflight: FAIL before anything changed" '[ $rc = 1 ] && results | grep -q "^PHASE_1=FAIL" && ! grep -q "^set\|^redeploy\|^dry-run-reset" "$W/fake/order.log"'
 
 echo "== the GO gate and the kill switch (phase 2)"
 reset

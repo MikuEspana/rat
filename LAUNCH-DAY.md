@@ -29,25 +29,20 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 - [ ] `scripts/site-go-live.sh` says **SITE READY**: wallstreetrats.world reads the production API and shows the honest pre-launch state (DRY RUN banner, 0 rats, market cap "pre-launch").
 - [ ] Go to sleep.
 
-## T-1 hour: launch the coin (bot still in DRY RUN)
+## T-1 hour: launch the coin, then the bot goes LIVE in ONE build
 
 - [ ] Fund the creator wallet with about **0.3 SOL**: 0.1 dev buy + launch cost + 0.05 reserve + spare. It is the bot's only wallet besides the rats'.
+- [ ] From `~/wallstreetrats`, start **`scripts/launch.sh` BEFORE you launch.** It checks this is the production bot, in DRY RUN, then notes the creator wallet's last transaction and waits.
 - [ ] Launch on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**, dev buy **0.1 SOL** inside the launch.
 - [ ] The dev-buy coins stay in the creator wallet **forever**. Never sell or move them (anything signed by the creator wallet stops the bot). They are never counted as fees and the bot can never move them. Your own trading: your separate wallet only.
-- [ ] Solscan, **creator wallet** page: wait for the launch tx to be **Finalized**. Copy the **signature** of every transaction it signed at launch (usually one) and the **slot** of the last one.
-- [ ] Worker and API settings, from `~/wallstreetrats`:
-  ```
-  railway variable set COIN_MINT=<mint> WATCH_FROM_SLOT=<slot + 1> KNOWN_OWNER_TX_SIGS=<signature> --service worker
-  railway variable set COIN_MINT=<mint> --service api
-  railway redeploy --service worker --yes && railway redeploy --service api --yes
-  ```
-- [ ] Still DRY RUN. `rat preflight`: `launch txs` PASS, `dev buy` PASS (shows the coins it holds). The site shows paper claims from the real vault.
-- [ ] `rat dry-run-reset --yes`.
+- [ ] When Solscan shows the launch **Finalized**, press Enter. The script finds the launch signature(s), the slot and the coin's mint; confirm the mint (or type them by hand from Solscan if it asks).
+- [ ] It checks `rat preflight --live` **with the coin's settings, before anything changes**: `launch txs` PASS, `dev buy` PASS, no FAIL. Any FAIL: it stops and nothing was changed.
+- [ ] **Type GO.** It clears the DRY RUN paper data, sets every launch setting in one change (worker: `COIN_MINT`, `WATCH_FROM_SLOT` = slot + 1, `KNOWN_OWNER_TX_SIGS`, `DRY_RUN=false`, `LIVE_CONFIRM`; API: `COIN_MINT`, `DRY_RUN=false`), then ONE redeploy of the worker and the API, side by side. About 5 minutes plus one Railway build from the coin to the bot live.
+- [ ] It ends with **LIVE** (mode live, kill switch off, `rat preflight --live` READY).
+- The rehearsal runs these exact steps (`scripts/staging.sh 1`, `scripts/lib/launch.sh`). By hand instead: `docs/runbooks/go-live.md`.
 
-## T-0: go live
+## T-0: watch it
 
-- [ ] With the live settings, `rat preflight --live` says **READY**. Any FAIL: stop and fix it.
-- [ ] Worker: `DRY_RUN=false` and `LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS`. API: `DRY_RUN=false`. Redeploy.
 - [ ] Admin page: mode **LIVE**, kill switch off, worker loops a few seconds old.
 - [ ] Solscan: first claim (all of it stays in the creator wallet for hires).
 - [ ] Site: first rats walk in.
