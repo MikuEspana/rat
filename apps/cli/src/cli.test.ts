@@ -62,6 +62,23 @@ describe('keys import', () => {
     expect(stored?.secretEnc).not.toContain(secret);
     expect(lines.join('\n')).not.toContain(secret);
   });
+
+  it('red team: --replace under ANOTHER master key with the same KEY_VERSION is refused (the rat keys would be unreadable)', async () => {
+    // KEY_ENCRYPTION_KEY was changed by mistake, KEY_VERSION still 1: the worker stops on the creator key; the
+    // operator re-imports it. Accepted, the worker would start and new rat keys would be labelled version 1 under
+    // a different key than the old ones: whichever key is kept, some rat wallets could never be signed for again.
+    const kp = Keypair.generate();
+    const secret = bs58.encode(kp.secretKey);
+    const ctx = ctxFor({ CREATOR_PUBKEY: kp.publicKey.toBase58() });
+    await keysImportRoleCommand(ctx, ring, 'creator', secret);
+    const rat = await new DbKeyStore(ctx.store.keys, ring).newRatKey();
+    const other = new MasterKeyRing({ version: 1, base64: randomBytes(32).toString('base64') });
+    await expect(keysImportRoleCommand(ctx, other, 'creator', secret, { replace: true })).rejects.toThrow(/do not decrypt with this KEY_ENCRYPTION_KEY/);
+    expect(await new DbKeyStore(ctx.store.keys, ring).ratSigner(rat)).toBeDefined();
+    // the same master key: --replace is fine. A new KEY_VERSION for a new key: the old rows cannot be confused.
+    await keysImportRoleCommand(ctx, ring, 'creator', secret, { replace: true });
+    await keysImportRoleCommand(ctx, new MasterKeyRing({ version: 2, base64: randomBytes(32).toString('base64') }), 'creator', secret, { replace: true });
+  });
 });
 
 describe('dry-run reset and stocks sync', () => {

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { KeyPoolRecord } from '@rat/core';
-import { type MasterKeyRing, decryptSecret, encryptRoleKey, encryptSecret, parseSecretKey } from '@rat/keys';
+import { type MasterKeyRing, decryptSecret, encryptRoleKey, encryptSecret, parseSecretKey, sameVersionKeysThatFail, verifyKeyRecords } from '@rat/keys';
 import { Keypair } from '@solana/web3.js';
 import type { CliContext } from '../context';
 
@@ -17,6 +17,14 @@ export async function keysImportRoleCommand(
   const kp = parseSecretKey(secretText);
   if (kp.publicKey.toBase58() !== expected) {
     throw new Error(`the ${role} key is ${kp.publicKey.toBase58()} but CREATOR_PUBKEY is ${expected}`);
+  }
+  // the stored keys under this KEY_VERSION must decrypt with this master key: never mix two keys under one version
+  const others = (await ctx.store.keys.all()).filter((r) => !(opts.replace && r.role === role));
+  const bad = sameVersionKeysThatFail(others, ring);
+  if (bad.length > 0) {
+    throw new Error(
+      `${bad.length} stored keys under KEY_VERSION ${ring.currentVersion} do not decrypt with this KEY_ENCRYPTION_KEY (first: ${bad[0]!.pubkey}): the master key was changed. Put the original KEY_ENCRYPTION_KEY back. Nothing was imported.`,
+    );
   }
   await ctx.store.keys.setRoleKey(encryptRoleKey(kp, ring, role), { replace: opts.replace });
   ctx.out(`${role} key ${expected} imported (encrypted, key version ${ring.currentVersion}).`);
@@ -56,26 +64,7 @@ interface KeyBackupFile {
   keys: KeyPoolRecord[];
 }
 
-/**
- * Decrypts every record with the master key ring and checks it matches its public key. Returns only public keys
- * and reasons, never a secret; the decrypted bytes are wiped right away.
- */
-export function verifyKeyRecords(records: KeyPoolRecord[], ring: MasterKeyRing): { ok: number; bad: { pubkey: string; reason: string }[] } {
-  let ok = 0;
-  const bad: { pubkey: string; reason: string }[] = [];
-  for (const rec of records) {
-    try {
-      const secret = decryptSecret(rec.secretEnc, ring.get(rec.keyVersion), rec.pubkey);
-      const matches = Keypair.fromSecretKey(secret).publicKey.toBase58() === rec.pubkey;
-      secret.fill(0);
-      if (matches) ok++;
-      else bad.push({ pubkey: rec.pubkey, reason: 'decrypts to a different key' });
-    } catch (err) {
-      bad.push({ pubkey: rec.pubkey, reason: (err as Error).message });
-    }
-  }
-  return { ok, bad };
-}
+export { verifyKeyRecords } from '@rat/keys';
 
 /**
  * Writes every stored key (rat wallets and the creator) to a file, STILL ENCRYPTED with the master key. The rat
