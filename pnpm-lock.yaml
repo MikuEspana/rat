@@ -88,6 +88,9 @@ importers:
       '@rat/keys':
         specifier: workspace:*
         version: link:../../packages/keys
+      '@rat/pump':
+        specifier: workspace:*
+        version: link:../../packages/pump
       '@rat/safety':
         specifier: workspace:*
         version: link:../../packages/safety
@@ -267,6 +270,9 @@ importers:
       '@rat/api':
         specifier: workspace:*
         version: link:../apps/api
+      '@rat/cli':
+        specifier: workspace:*
+        version: link:../apps/cli
       '@rat/contract':
         specifier: workspace:*
         version: link:../packages/contract

@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --exclude 'tests/chaos/**' --exclude 'tests/sim/**'",
-    "test:long": "vitest run tests/chaos tests/sim",
+    "test:long": "vitest run tests/chaos tests/sim --maxWorkers=2",
     "sim:3h": "WRITE_SIMULATION=1 vitest run tests/sim/launch-3h.test.ts",
     "test:watch": "vitest",
     "check:guards": "node scripts/check-guards.mjs",

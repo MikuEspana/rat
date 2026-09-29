@@ -85,6 +85,7 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 ## End of the day
 
 - [ ] `rat status` and the admin page: claimed vs spent, nothing stuck.
+- [ ] `rat audit` says **AUDIT PASSED**: every claim equals what left the fee vaults on chain, every rat was paid once and holds what the database says, and the creator wallet's SOL over every bot transaction equals the ledger to the lamport. WAIT means a hire is in flight: run it again in a minute. Any FAIL: `rat kill`, then read the line.
 - [ ] `rat keys backup --out rat-keys-<date>.json` (every hour or so while hiring, and once at the end). Store it away from `KEY_ENCRYPTION_KEY`. The rat wallets' keys exist nowhere else.
 - [ ] Coin dying: the bot hires with what is left, then idles. Leave it running, or `rat kill`.
 

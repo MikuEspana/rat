@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@rat/api": "workspace:*",
+    "@rat/cli": "workspace:*",
     "@rat/contract": "workspace:*",
     "@rat/core": "workspace:*",
     "@rat/db": "workspace:*",
