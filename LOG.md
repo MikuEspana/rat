@@ -545,3 +545,19 @@ Miguel wants only the money mechanisms before launch: phases 1, 2, 3 and the kil
 - **`staging.sh 6 --skip-watchdog`:** the kill switch part only (about 5 minutes, no build). Recorded as `PARTIAL`, never `PASS`, so the report can never say GO without the watchdog test. Phase 6 now needs phase 1 (a live worker), not phase 4.
 - Every GO gate, the kill switch per phase, every audit and every check are unchanged.
 - **Tests:** `staging-test.sh`: 26 checks (6 new: both builds start before any wait, a failed build stops; phase 6 without phase 1 refused, `--skip-watchdog` records PARTIAL and never stops the worker, an unknown option refused; PARTIAL makes the report NO-GO).
+
+## Rehearsal: the fast version on the Mac (2026-09-29)
+The rehearsal was slow only because every settings change rebuilt the app on Railway (during a Railway incident). Now the staging worker, API and site can run on Miguel's Mac against mainnet and the staging database: a change is a restart in seconds.
+- **`scripts/staging-local.sh start | restart | stop | status`:**
+  - same guards as `staging.sh` (now shared in `scripts/lib/staging-guard.sh`);
+  - stops the Railway staging worker first (only one worker ever runs, by its lock);
+  - the settings are the staging services' own Railway variables, handed to each app on stdin by `scripts/local-app.cjs`: never on a command line, never printed, never on disk;
+  - the worker reaches the database through Postgres's public address (TLS); the API through it with its own read-only user, never the master key;
+  - stops are graceful (the worker finishes its tick and releases its lock), never a hard kill; a stale process id is never taken for the app.
+- **Local mode** in `staging.sh` and `approve-stocks.sh`: a redeploy is a local restart, `rat` runs through `scripts/rat-local.sh`. Only when the staging state says so AND the folder is linked to that same staging project (a production folder never is).
+- **`STAGING_STAGE_SCALE`** (default 20 on the local API): multiplies the stage source so 3 rats cross a stage. The config refuses it without STAGING, the API applies it only on a marked staging database, the public claimed figure is never scaled, and `check-guards` rule 8 fails any deploy file that sets it above 1. Phase 3 checks the stage source against claimed plus seeded times the scale.
+- **`staging.sh 3 --rats N`** (2 to 5): the seed and the confirmation phrase follow N.
+- **Tests:**
+  - `tests/scripts/staging-local-test.sh` (CI): 18 checks with a fake `railway` and stand-in apps run by the real launcher (guards; the settings each app gets; nothing from the shell; no secret on any command line, log or screen; restart with changed settings; `staging.sh 6` in full using the local worker with no build; stop).
+  - Unit tests: the config refuses the scale without STAGING (also next to the production creator); the API scales the stage source only and never the claimed figure; unscaled and absent on an unmarked database.
+  - In the sandbox, the real worker, API and site ran through the launcher against a real Postgres 18: the API answered with CORS for the local site and the stage source, the worker ran its loops, a stop was graceful and released the lock, and no process was left.

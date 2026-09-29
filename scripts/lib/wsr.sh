@@ -85,6 +85,15 @@ state_set() { # state_set file KEY value
   mv "$1.tmp" "$1"
 }
 
+# The fast rehearsal (scripts/staging-local.sh): the staging state says LOCAL=1 and this folder is linked to that same
+# staging project. Anything else (production, another project) is never local.
+local_mode() { # local_mode staging-state-file
+  local pid
+  [ "$(state_get "$1" LOCAL)" = 1 ] || return 1
+  pid=$(rw status --json 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
+  [ -n "$pid" ] && [ "$pid" = "$(state_get "$1" RAILWAY_PROJECT_ID)" ]
+}
+
 # rat commands run in the worker over railway ssh (scripts/rat.sh). WSR_RAT=scripts/rat-local.sh runs them on this
 # Mac instead (the route without ssh, docs/runbooks/setup-mac.md).
 rat() { command ${WSR_RAT:-scripts/rat.sh} "$@"; }

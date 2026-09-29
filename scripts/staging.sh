@@ -2,7 +2,9 @@
 # The mainnet rehearsal, one phase at a time (docs/runbooks/rehearsal.md). Run it from the staging folder:
 #   ~/wallstreetrats-staging/scripts/staging.sh check      isolation checks (also run before every phase)
 #   ~/wallstreetrats-staging/scripts/staging.sh 1 ... 8    the phases, in order
+#   ~/wallstreetrats-staging/scripts/staging.sh 3 --rats 3          phase 3 with 2 to 5 rats (default 5)
 #   ~/wallstreetrats-staging/scripts/staging.sh 6 --skip-watchdog   phase 6 without the 4-minute worker-down test
+# With scripts/staging-local.sh start first, the worker, API and site run on this Mac: no Railway builds.
 #   ~/wallstreetrats-staging/scripts/staging.sh teardown   get the SOL back, delete the project
 #   ~/wallstreetrats-staging/scripts/staging.sh report     rehearsal-report.md with the GO / NO-GO line
 #
@@ -17,14 +19,30 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/lib/wsr.sh
 . scripts/lib/wsr.sh
+# shellcheck source=scripts/lib/staging-guard.sh
+. scripts/lib/staging-guard.sh
 APP_DIR=$PWD
-SECRETS="${WSR_SECRETS:-$HOME/rat-secrets-staging}"
-PROD_SECRETS="${WSR_PROD_SECRETS:-$HOME/rat-secrets}"
-STATE="$SECRETS/setup-state.env"
 RESULTS="$SECRETS/rehearsal-results.env"
 REPORT="$APP_DIR/rehearsal-report.md"
-PRODUCTION_CREATOR="4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot"
 SITE="https://wallstreetrats.world"
+# The fast rehearsal (scripts/staging-local.sh start): the worker, API and site run on this Mac, so a settings change
+# is a restart in seconds instead of a Railway build, and rat commands run here (scripts/rat-local.sh). Every gate,
+# check and audit is the same.
+if local_mode "$STATE"; then
+  LOCAL=1
+  WSR_RAT="${WSR_RAT:-scripts/rat-local.sh}"
+  API_BASE="http://localhost:$(state_get "$STATE" LOCAL_API_PORT)"
+  SITE_URL="http://localhost:$(state_get "$STATE" LOCAL_SITE_PORT)"
+  STAGE_SCALE=$(state_get "$STATE" LOCAL_STAGE_SCALE)
+  redeploy() { scripts/staging-local.sh restart "$@"; }
+  worker_down() { scripts/staging-local.sh stop worker; }
+else
+  LOCAL=0
+  API_BASE="https://$(state_get "$STATE" API_DOMAIN)"
+  SITE_URL="$SITE"
+  STAGE_SCALE=1
+  worker_down() { rw down --service worker --yes >/dev/null 2>&1; }
+fi
 
 record() { # record PHASE STATUS "detail": one line per phase in the results file (no secrets)
   state_set "$RESULTS" "PHASE_$1" "$2|$(date -u +%Y-%m-%dT%H:%MZ)|$3"
@@ -36,33 +54,6 @@ fail() { record "$PHASE" FAIL "$1"; die "phase $PHASE failed: $1" "Fix it, then 
 # ---------------------------------------------------------------- guards ----------------------------------------------
 st() { rat_json status --json; }                       # rat status --json (no secret in it)
 st_get() { st | jq -r "$1" 2>/dev/null; }
-isolation() { # prints problems, one per line ("" = isolated)
-  local pid prod creator staging mk_s mk_p
-  [ "$(state_get "$STATE" PROFILE)" = staging ] || echo "no staging setup state in $SECRETS: run scripts/setup-staging.sh first"
-  pid=$(rw status --json 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
-  [ -n "$pid" ] || echo "this folder is not linked to a Railway project"
-  [ -z "$pid" ] || [ "$pid" = "$(state_get "$STATE" RAILWAY_PROJECT_ID)" ] || echo "this folder is linked to project $pid, not the staging project"
-  prod=$(state_get "$PROD_SECRETS/setup-state.env" RAILWAY_PROJECT_ID)
-  [ -z "$prod" ] || [ "$pid" != "$prod" ] || echo "this folder is linked to the PRODUCTION project"
-  creator=$(rw_var worker CREATOR_PUBKEY)
-  { [ -n "$creator" ] && [ "$creator" != "$PRODUCTION_CREATOR" ]; } || echo "the worker's CREATOR_PUBKEY is ${creator:-not set} (it must be the test creator)"
-  staging=$(rw_var worker STAGING)
-  [ "$staging" = true ] || echo "STAGING is not true on the worker"
-  if [ -f "$PROD_SECRETS/KEY_ENCRYPTION_KEY.txt" ]; then # compared as hashes: no key leaves its pipe
-    mk_p=$(tr -d '\n' <"$PROD_SECRETS/KEY_ENCRYPTION_KEY.txt" | shasum -a 256 | cut -c1-64)
-    if ! mk_s=$(rw_vars worker | jq -j '.KEY_ENCRYPTION_KEY // ""' | shasum -a 256 | cut -c1-64); then
-      echo "Railway did not list the worker's variables, so its master key could not be compared with production's"
-    elif [ "$mk_s" = "$mk_p" ]; then
-      echo "the staging worker has the PRODUCTION master key"
-    fi
-  fi
-  return 0
-}
-guard() {
-  local p
-  p=$(isolation)
-  [ -z "$p" ] || die "not the staging project, nothing was done" "$(printf '%s' "$p" | head -1)" "All problems: scripts/staging.sh check"
-}
 creator() { rw_var worker CREATOR_PUBKEY; }
 
 # ---------------------------------------------------------------- the GO gate and the kill switch ----------------------
@@ -112,7 +103,18 @@ audit_ok() { # audit_ok: rat audit until PASS (WAIT is retried); prints the line
   done
   return 1
 }
-api_state() { curl -fsS -m 20 "https://$(state_get "$STATE" API_DOMAIN)/api/state" 2>/dev/null || true; }
+local_ready() { # the fast rehearsal: the worker and the API must be running on this Mac
+  local a p
+  [ "$LOCAL" = 1 ] || return 0
+  for a in worker api; do
+    p=$(cat "$SECRETS/local/$a.pid" 2>/dev/null || true)
+    case "$p" in '' | *[!0-9]*) p="" ;; esac
+    if [ -z "$p" ] || ! kill -0 "$p" 2>/dev/null; then
+      die "the fast rehearsal is on, but the $a is not running on this Mac" "Run: scripts/staging-local.sh start"
+    fi
+  done
+}
+api_state() { curl -fsS -m 20 "$API_BASE/api/state" 2>/dev/null || true; }
 approx() { awk -v a="$1" -v b="$2" -v t="${3:-0.000000001}" 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(d <= t) }'; } # |a-b| <= t
 
 # ---------------------------------------------------------------- phases -----------------------------------------------
@@ -218,22 +220,27 @@ phase_2() { # the first fee claim
   record 2 PASS "claimed $(st_get '.claimedSol') SOL, every claim equals what left the fee vaults, to the lamport"
 }
 
-phase_3() { # seed and 5 hires at the real salary
-  local rats0 pre seed st_now claimed seeded api stage
-  title "Phase 3: seed 0.165 SOL, 5 rats at the real 0.03 SOL salary"
+phase_3() { # seed and N hires (5, or --rats 2 to 5) at the real salary
+  local rats0 pre seed st_now claimed seeded api stage n=5 sol phrase
+  case "${1:-}" in "") ;; --rats) n="${2:-}" ;; *) die "phase 3 takes only --rats N (2 to 5)" ;; esac
+  case "$n" in 2 | 3 | 4 | 5) ;; *) die "--rats must be 2, 3, 4 or 5" ;; esac
+  sol=$(awk -v n="$n" 'BEGIN { printf "%.3f", n * 0.033 }') # 0.03 salary plus fees and rent, per rat
+  title "Phase 3: seed $sol SOL, $n rats at the real 0.03 SOL salary"
   [ "$(result_of 2)" = PASS ] || die "run phase 2 first"
   pre=$(rat_json preflight --json)
   printf '%s' "$pre" | jq -e '.lines[] | select(.check == "stocks" and .status == "PASS")' >/dev/null 2>&1 ||
     die "no approved xStock passes the mint check yet" "Run: scripts/approve-stocks.sh (you check each mint on xstocks.fi)"
-  seed=$(rat staging-seed --sol 0.165 2>&1) || fail "staging-seed refused: $(printf '%s' "$seed" | tail -1)"
+  seed=$(rat staging-seed --sol "$sol" 2>&1) || fail "staging-seed refused: $(printf '%s' "$seed" | tail -1)"
   printf '%s\n' "$seed" | sed 's/^/        /'
+  phrase=$(printf '%s\n' "$seed" | sed -n 's/.*--confirm "\(SEED [0-9.]* SOL\)".*/\1/p' | tail -1)
+  [ -n "$phrase" ] || fail "staging-seed did not print its confirmation phrase"
   rats0=$(st_get '[.rats.active // 0, .rats.frozen // 0] | add')
-  go_gate "seed 0.165 SOL of hire budget, then 5 hires: 5 new rat wallets funded by the test creator, each buying an approved xStock on Jupiter" \
-    "about 0.165 SOL leaves the test creator (5 x 0.03 salary plus fees and rent); about 97% comes back at teardown"
-  rat staging-seed --sol 0.165 --confirm "SEED 0.165 SOL" >/dev/null || fail "the seed was not booked"
+  go_gate "seed $sol SOL of hire budget, then $n hires: $n new rat wallets funded by the test creator, each buying an approved xStock on Jupiter" \
+    "about $sol SOL leaves the test creator ($n x 0.03 salary plus fees and rent); about 97% comes back at teardown"
+  rat staging-seed --sol "$sol" --confirm "$phrase" >/dev/null || fail "the seed was not booked"
   gate_open
-  wait_for "5 new rats, nothing in flight" 900 "([.rats.active // 0, .rats.frozen // 0] | add) >= $((rats0 + 5)) and .openReservations == 0" ||
-    fail "5 rats were not hired within 15 minutes"
+  wait_for "$n new rats, nothing in flight" 900 "([.rats.active // 0, .rats.frozen // 0] | add) >= $((rats0 + n)) and .openReservations == 0" ||
+    fail "$n rats were not hired within 15 minutes"
   gate_close
   audit_ok || fail "rat audit is not PASS"
   st_now=$(st)
@@ -243,8 +250,12 @@ phase_3() { # seed and 5 hires at the real salary
   [ -n "$api" ] || fail "the staging API did not answer"
   approx "$(printf '%s' "$api" | jq -r '.treasury.totalClaimedSol')" "$claimed" || fail "the public claimed figure is not the claims only"
   stage=$(printf '%s' "$api" | jq -r '.treasury.stageSol // empty')
-  if [ -z "$stage" ] || ! approx "$stage" "$(awk -v a="$claimed" -v b="$seeded" 'BEGIN { print a + b }')"; then fail "stageSol is not claimed plus seeded"; fi
-  record 3 PASS "5 rats hired, each paid once and holding what the database says; claimed $claimed SOL excludes the $seeded SOL seed"
+  # the stage source: claimed plus seeded, times STAGING_STAGE_SCALE on the local API (1 on Railway)
+  if [ -z "$stage" ] || ! approx "$stage" "$(awk -v a="$claimed" -v b="$seeded" -v k="${STAGE_SCALE:-1}" 'BEGIN { print (a + b) * k }')" 0.000001; then
+    fail "stageSol is not (claimed plus seeded) x ${STAGE_SCALE:-1}"
+  fi
+  say "Stage source: $stage SOL (claimed $claimed + seeded $seeded, x ${STAGE_SCALE:-1}). The site: $SITE_URL/?api=$API_BASE"
+  record 3 PASS "$n rats hired, each paid once and holding what the database says; claimed $claimed SOL excludes the $seeded SOL seed"
 }
 
 phase_4() { # the burst under the cap, with the crash test inside it (phase 5)
@@ -312,7 +323,7 @@ phase_6() { # the watch trips the kill switch; the admin watchdog sees the worke
     return 0
   fi
   say "Now the worker stops for 4 minutes: the admin service must alert that it is down, then that it is back."
-  rw down --service worker --yes >/dev/null 2>&1 || fail "could not stop the worker"
+  worker_down || fail "could not stop the worker"
   say "Worker stopped at $(date +%H:%M). Waiting 4 minutes..."
   sleep "${WSR_DOWN_SEC:-240}"
   yes_no "Did a 'worker down' Telegram alert arrive?" y || fail "no worker down alert"
@@ -329,7 +340,7 @@ phase_7() { # the production site against the staging API, on your phone
   [ "$(result_of 3)" = PASS ] || die "run phase 3 first"
   api=$(api_state)
   [ -n "$api" ] || fail "the staging API did not answer"
-  rats=$(curl -fsS -m 30 "https://$(state_get "$STATE" API_DOMAIN)/api/rats" 2>/dev/null || true)
+  rats=$(curl -fsS -m 30 "$API_BASE/api/rats" 2>/dev/null || true)
   [ -n "$rats" ] || fail "/api/rats did not answer"
   [ "$(printf '%s' "$rats" | jq '.total')" = "$(st_get '[.rats.active // 0, .rats.frozen // 0] | add')" ] || fail "/api/rats does not list every rat"
   printf '%s' "$rats" | jq -e 'all(.rats[]; .solscanUrl == "https://solscan.io/account/" + .wallet)' >/dev/null || fail "a Solscan link points at the wrong wallet"
@@ -343,7 +354,7 @@ phase_7() { # the production site against the staging API, on your phone
   awk -v a="$portfolio" -v b="$sum" 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(b > 0 && d <= b * 0.01) }' ||
     fail "Vault value $portfolio USD vs $sum USD from Jupiter prices (more than 1% apart)"
   ok "Vault value $portfolio USD matches the token amounts x Jupiter prices ($sum USD) within 1%"
-  open_url "$SITE/?api=https://$(state_get "$STATE" API_DOMAIN)"
+  open_url "$SITE_URL/?api=$API_BASE"
   say "Open that link on your phone too."
   yes_no "Do the rats walk in and open a card when you tap them?" y || fail "rats not shown or not clickable"
   yes_no "Tap 2 rats' Solscan links: do they open the right wallet?" y || fail "Solscan links wrong"
@@ -463,10 +474,11 @@ phase_report() {
 PHASE="${1:-}"
 case "$PHASE" in
   check) PHASE=0; phase_check ;;
-  1 | 2 | 3 | 7 | 8) guard; "phase_$PHASE" ;;
-  6) guard; phase_6 "${2:-}" ;;
-  4 | 5) PHASE=4; guard; phase_4 ;;
+  1 | 2 | 7 | 8) guard; local_ready; "phase_$PHASE" ;;
+  3) guard; local_ready; phase_3 "${2:-}" "${3:-}" ;;
+  6) guard; local_ready; phase_6 "${2:-}" ;;
+  4 | 5) PHASE=4; guard; local_ready; phase_4 ;;
   teardown) PHASE=T; guard; phase_teardown ;;
   report) phase_report ;;
-  *) die "which phase? scripts/staging.sh check | 1 ... 8 | 6 --skip-watchdog | teardown | report" ;;
+  *) die "which phase? scripts/staging.sh check | 1 ... 8 | 3 --rats N | 6 --skip-watchdog | teardown | report" ;;
 esac

@@ -28,6 +28,18 @@ describe('treasury.stageSol', () => {
     expect(st.treasury.stageSol).toBeCloseTo(Number(claimed + SOL) / 1e9, 9);
   });
 
+  it('STAGING_STAGE_SCALE multiplies the stage source only; the public claimed figure stays exact', async () => {
+    world = await createSimWorld({ env: { STAGING: 'true', STAGING_STAGE_SCALE: '20' } });
+    await markStagingDatabase(world.store, world.deps.config);
+    world.accrue({ bondingLamports: SOL / 2n });
+    await world.worker.tick();
+    const claimed = (await world.store.claims.totals()).claimed;
+    await world.store.ledger.append({ bucket: 'hire', deltaLamports: SOL / 10n, reason: 'seed_credit', refType: 'staging_seed' });
+    const st = await new StateService(world.store, world.deps.config, world.clock).stateResponse();
+    expect(st.treasury.totalClaimedSol).toBeCloseTo(Number(claimed) / 1e9, 9);
+    expect(st.treasury.stageSol).toBeCloseTo((20 * Number(claimed + SOL / 10n)) / 1e9, 9);
+  });
+
   it('production settings never send it, even if the database had seed entries', async () => {
     world = await createSimWorld();
     world.accrue({ bondingLamports: SOL / 2n });
@@ -40,8 +52,8 @@ describe('treasury.stageSol', () => {
     }
   });
 
-  it('STAGING on an unmarked database does not send it either', async () => {
-    world = await createSimWorld({ env: { STAGING: 'true' } });
+  it('STAGING on an unmarked database does not send it either (scaled or not)', async () => {
+    world = await createSimWorld({ env: { STAGING: 'true', STAGING_STAGE_SCALE: '20' } });
     const st = await new StateService(world.store, world.deps.config, world.clock).stateResponse();
     expect(st.treasury).not.toHaveProperty('stageSol');
   });

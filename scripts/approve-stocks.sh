@@ -13,6 +13,11 @@ cd "$(dirname "$0")/.."
 . scripts/lib/wsr.sh
 for t in jq curl; do command -v "$t" >/dev/null 2>&1 || die "$t is missing" "Run: brew install $t"; done
 command -v "${WSR_RAILWAY:-railway}" >/dev/null 2>&1 || die "the railway CLI is missing" "Run: brew install railway"
+if local_mode "${WSR_STAGING_SECRETS:-$HOME/rat-secrets-staging}/setup-state.env"; then # the fast rehearsal
+  WSR_RAT="${WSR_RAT:-scripts/rat-local.sh}"
+  redeploy() { scripts/staging-local.sh restart worker; }
+  note "fast rehearsal: the worker on this Mac restarts instead of a Railway build"
+fi
 
 project=$(rw status --json 2>/dev/null | jq -r '.name // empty') || project=""
 [ -n "$project" ] || die "this folder ($PWD) is not linked to a Railway project" "Run scripts/setup-mac.sh (or setup-staging.sh) first."

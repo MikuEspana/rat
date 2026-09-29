@@ -87,6 +87,9 @@ const envSchema = z.object({
   STAGING: boolStr('false'),
   // STAGING only: the worker kills itself right after sending this many hires, once, to prove crash recovery.
   STAGING_CRASH_AFTER_SEND: intStr(0, 0, 1000),
+  // STAGING only: the rehearsal API multiplies the stage source (claimed plus seeded SOL) by this, so a test of a few
+  // hundredths of a SOL crosses a stage on the site. 1 = off. The public claimed figure is never scaled.
+  STAGING_STAGE_SCALE: intStr(1, 1, 1000),
 
   DATABASE_URL: optStr,
   DATABASE_URL_READONLY: optStr,
@@ -189,6 +192,8 @@ export interface AppConfig {
   staging: boolean;
   /** rehearsal only: kill the worker once, right after the Nth hire was sent (0 = off) */
   stagingCrashAfterSend: number;
+  /** rehearsal only: the stage source is multiplied by this on a staging database (1 = off) */
+  stagingStageScale: number;
 
   databaseUrl?: string;
   databaseUrlReadonly?: string;
@@ -264,6 +269,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     }
   } else if (e.STAGING_CRASH_AFTER_SEND > 0) {
     throw new ConfigError('STAGING_CRASH_AFTER_SEND only works with STAGING=true (rehearsal only).');
+  } else if (e.STAGING_STAGE_SCALE > 1) {
+    throw new ConfigError('STAGING_STAGE_SCALE only works with STAGING=true (rehearsal only).');
   }
   return {
     nodeEnv: e.NODE_ENV,
@@ -275,6 +282,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     smokeCapLamports: e.SMOKE_CAP_SOL,
     staging: e.STAGING,
     stagingCrashAfterSend: e.STAGING ? e.STAGING_CRASH_AFTER_SEND : 0,
+    stagingStageScale: e.STAGING ? e.STAGING_STAGE_SCALE : 1,
     databaseUrl: e.DATABASE_URL,
     databaseUrlReadonly: e.DATABASE_URL_READONLY,
     keyEncryptionKey: e.KEY_ENCRYPTION_KEY,
