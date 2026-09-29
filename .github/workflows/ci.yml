@@ -26,7 +26,7 @@ jobs:
 
   long:
     # chaos (worker killed before every step of a hire and a burn, RPC / database outages at every call, Jupiter 429
-    # storm) and the 3-hour launch simulation
+    # storm, 8 randomized launches of tests/chaos/fuzz.ts) and the 3-hour launch simulation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
