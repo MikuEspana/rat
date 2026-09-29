@@ -59,3 +59,24 @@ export async function runPreflight(d: WorkerDeps): Promise<PreflightResult> {
 
   return { ok: !issues.some((i) => i.blocking), issues };
 }
+
+/**
+ * The startup preflight, retried while it cannot READ (the RPC or the database is down for a moment). Exiting
+ * instead would make Railway restart the worker a few times, then give up (ON_FAILURE, 10 retries): an RPC outage
+ * of a minute during a redeploy would leave the bot down until someone notices. A preflight that answers with a
+ * blocking issue is returned at once: that is a real problem, and main() refuses to start.
+ */
+export async function runPreflightUntilAnswered(
+  d: WorkerDeps,
+  opts: { sleep: (ms: number) => Promise<void>; onRetry?: (err: unknown, attempt: number, waitMs: number) => void | Promise<void>; maxWaitMs?: number },
+): Promise<PreflightResult> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await runPreflight(d);
+    } catch (err) {
+      const waitMs = Math.min(opts.maxWaitMs ?? 60_000, 5_000 * 2 ** Math.min(attempt - 1, 4));
+      await opts.onRetry?.(err, attempt, waitMs);
+      await opts.sleep(waitMs);
+    }
+  }
+}

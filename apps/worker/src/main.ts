@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { createLogger, loadConfig, publicConfigSummary, sleep, systemClock } from '@rat/core';
 import { isStagingDatabase, stagingProblems } from '@rat/db';
-import { runPreflight } from './preflight';
+import { runPreflightUntilAnswered } from './preflight';
 import { createProductionDeps } from './production';
 import { LockedRunner, createWorker } from './worker';
 
@@ -32,7 +32,14 @@ async function main(): Promise<void> {
     await handle.close();
     process.exit(1);
   }
-  const pre = await runPreflight(deps);
+  // an RPC or database hiccup at startup is waited out (with an alert), never a crash loop Railway gives up on
+  const pre = await runPreflightUntilAnswered(deps, {
+    sleep,
+    onRetry: async (err, attempt, waitMs) => {
+      log.error({ err, attempt }, `startup checks could not read the chain or the database; retrying in ${waitMs / 1000}s`);
+      if (attempt === 3) await deps.alerts.send('warn', 'startup_retrying', `Worker startup: the checks cannot read the chain or the database (${(err as Error).message}). Retrying every minute; nothing runs until they answer.`);
+    },
+  });
   for (const issue of pre.issues) {
     if (issue.blocking) log.error({ check: issue.check }, issue.message);
     else log.warn({ check: issue.check }, issue.message);
