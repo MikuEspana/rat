@@ -280,6 +280,20 @@ describe('red team: GuardedSender live checks', () => {
     expect(alerts.sent.find((a) => a.key === 'effects_claim')?.level).toBe('critical');
   });
 
+  it('a kill switch engaged while the tx is being prepared and simulated stops it before the send', async () => {
+    // the effects simulation can take up to ~30 s under 429 retries: `rat kill` in that window must still win
+    const { sim, gs, req } = setup();
+    const simulateEffects = sim.simulateEffects.bind(sim);
+    sim.simulateEffects = async (p, l) => {
+      await engageKillSwitch(store.settings, 'operator pressed KILL mid-send');
+      return simulateEffects(p, l);
+    };
+    const r = await gs.execute({ request: req(), ref });
+    expect(r).toMatchObject({ status: 'blocked', reason: expect.stringMatching(/kill_switch/) });
+    expect(sim.submitted).toBe(0);
+    expect(await store.attempts.latestForRef('claim', '1')).toBeNull();
+  });
+
   it('within its limits the tx is sent (after one effects simulation)', async () => {
     const { sim, gs, req } = setup();
     const r = await gs.execute({ request: req(), ref });
