@@ -1,13 +1,14 @@
 // Production wiring (RPC, Jupiter, Postgres, encrypted keys, Telegram). Shared by main.ts and the smoke test.
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, sleep, systemClock, systemRng } from '@rat/core';
-import { type DbHandle, Store, openDatabase } from '@rat/db';
+import { type DbHandle, Store, isStagingDatabase, openDatabase } from '@rat/db';
 import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, creatorCoinTokens, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
 import { createJupiterBudget } from './jupiter-budget';
+import { stagingCrashHook } from './staging';
 
 export const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
 
@@ -48,7 +49,7 @@ export async function createProductionDeps(
   const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
   const killSwitch = new DbKillSwitch(store.settings, cfg.killSwitch);
   const sinks = [logSink(log)];
-  if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log }));
+  if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log, staging: cfg.staging }));
   const alerts = new ThrottledAlerts(fanOut(...sinks), systemClock);
   const sender = new GuardedSender(
     new RpcTxSender(conn, {
@@ -56,6 +57,8 @@ export async function createProductionDeps(
       liveConfirmed: cfg.liveConfirmed,
       priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax,
       log,
+      // rehearsal only: never wired unless STAGING is on AND the database is marked as staging
+      afterBroadcast: (await isStagingDatabase(store, cfg)) ? stagingCrashHook(cfg, store, { log }) : undefined,
     }),
     { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log, alerts, protectedTokens: creatorCoinTokens(cfg.creatorPubkey, cfg.coinMint) },
   );
