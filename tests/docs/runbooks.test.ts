@@ -43,7 +43,9 @@ describe('runbooks', () => {
   const commands = new Set<string>();
   for (const m of cli.matchAll(/\.command\('([a-z-]+)/g)) commands.add(m[1]!);
   const env = new Set(read('.env.example').split('\n').map((l) => l.split('=')[0]!.trim()).filter((k) => /^[A-Z0-9_]+$/.test(k)));
-  const extraEnv = new Set(['KEY_ENCRYPTION_KEY_PREVIOUS', 'KEY_VERSION_PREVIOUS', 'PORT', 'DATABASE_URL', 'RUN_SLOW_GRIND']);
+  // not service settings: key rotation inputs, Railway's PORT, the test switch, and SITE_API_BASE (a GitHub repository
+  // variable the pages workflow reads, .github/workflows/pages.yml)
+  const extraEnv = new Set(['KEY_ENCRYPTION_KEY_PREVIOUS', 'KEY_VERSION_PREVIOUS', 'PORT', 'DATABASE_URL', 'RUN_SLOW_GRIND', 'SITE_API_BASE']);
 
   it('every `rat <command>` in the runbooks exists in the CLI', () => {
     for (const f of runbooks) {
