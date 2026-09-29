@@ -46,9 +46,10 @@ const MAX_WALKERS = 80;
 
 const statusEl = document.getElementById('status') as HTMLDivElement;
 
-function setStatus(text: string | null): void {
+function setStatus(text: string | null, detail = ''): void {
   statusEl.hidden = text === null;
   if (text !== null) statusEl.textContent = text;
+  statusEl.title = detail;
 }
 
 async function retry<T>(what: string, fn: () => Promise<T>): Promise<T> {
@@ -56,7 +57,9 @@ async function retry<T>(what: string, fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
     } catch (e) {
-      setStatus(`Waiting for the API at ${API_BASE} (${what}: ${(e as Error).message}). Retrying...`);
+      // the public sees a calm line; the detail is in the console and on hover
+      console.warn(`API ${API_BASE} (${what}): ${(e as Error).message}`);
+      setStatus('Connecting to the trading floor... retrying on its own.', `${API_BASE}: ${(e as Error).message}`);
       await new Promise((r) => setTimeout(r, Math.min(10_000, 1500 * attempt)));
     }
   }
@@ -639,7 +642,8 @@ async function boot(): Promise<Site> {
       store.applyState(await api.state());
       setStatus(null);
     } catch (e) {
-      setStatus(`API unreachable at ${API_BASE}: ${(e as Error).message}. Retrying...`);
+      console.warn(`API ${API_BASE} (state): ${(e as Error).message}`);
+      setStatus('Reconnecting to the trading floor... the numbers resume on their own.', `${API_BASE}: ${(e as Error).message}`);
     }
   };
   const pollEvents = async (): Promise<void> => {

@@ -1,5 +1,7 @@
 // The news ticker: headlines made from the live numbers, in a voice that gets darker with every stage (a cheerful
 // local paper for the garage, corporate spin in the middle, a captured press on Wall Street).
+import { ordinal } from './format';
+
 export interface NewsStats {
   stage: number;
   rats: number;
@@ -21,7 +23,7 @@ const n = (v: number): string => v.toLocaleString('en-US');
 
 const BY_STAGE: Line[][] = [
   [
-    (s) => `LOCAL GARAGE STARTUP HIRES ITS ${n(s.rats)}TH RAT, NEIGHBOURS "MILDLY CONCERNED"`,
+    (s) => `LOCAL GARAGE STARTUP HIRES ITS ${ordinal(s.rats).toUpperCase()} RAT, NEIGHBOURS "MILDLY CONCERNED"`,
     () => 'FOUNDERS COUNT THE LOOSE CHANGE IN THE VAULT TWICE A DAY',
     (s) => `${s.topStock} DESK OVERBOOKED: ${n(s.topRats)} RATS SHARE ONE COFFEE MACHINE`,
     () => 'GARAGE DOOR STAYS OPEN ALL NIGHT, CITY ISSUES FRIENDLY REMINDER',
@@ -59,6 +61,13 @@ const BY_STAGE: Line[][] = [
   ],
 ];
 
+/** Before the first hire (launch day, the first minutes): nothing to count yet, so no "0TH RAT" or "0 RATS". */
+const NO_RATS_YET: Line[] = [
+  () => 'LOCAL GARAGE STARTUP OPENS ITS DOORS. FIRST RAT HIRED AS SOON AS THE FEES COVER ONE SALARY',
+  () => 'FOUNDERS SWEEP THE GARAGE, PRACTICE SAYING "SYNERGY" TO AN EMPTY ROOM',
+  () => 'JOB AD POSTED: "MUST LOVE STOCKS. NO CHEESE BREAKS"',
+];
+
 const ALWAYS: Line[] = [
   (s) => `RAT ${s.price} . MCAP ${s.mcap} . VAULT ${s.fund}`,
   (s) => `TOP DESK: ${s.topStock} WITH ${n(s.topRats)} RATS`,
@@ -66,6 +75,7 @@ const ALWAYS: Line[] = [
 
 /** A fresh set of headlines for the ticker. */
 export function headlines(s: NewsStats): string[] {
+  if (s.rats === 0) return [...NO_RATS_YET, ALWAYS[0]!].map((f) => f(s)).filter((t) => !t.includes('undefined') && !t.includes('NaN'));
   const own = BY_STAGE[Math.max(0, Math.min(BY_STAGE.length - 1, s.stage))]!;
   const prev = s.stage > 0 ? BY_STAGE[s.stage - 1]!.slice(0, 1) : [];
   return [...own, ...prev, ...ALWAYS].map((f) => f(s)).filter((t) => !t.includes('undefined') && !t.includes('NaN'));
