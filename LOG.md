@@ -575,3 +575,7 @@ Launch day used two Railway builds between the coin and a live bot (the coin's s
 - **`check-guards` rule 9** now fails a hard-coded `postgresql@N` in any script (it only looked at `setup-mac.sh`, which is how phase 8 slipped through).
 - **The results file** (`state_set` in `scripts/lib/wsr.sh`): every write used the same temporary file, so two scripts writing at once lost lines (the old version kept 1 of 20 simultaneous writes). Now a lock and its own temporary file per write; a lock left by a killed script is taken over after 10 seconds.
 - **Tests** (`staging-test.sh`, 4 new): 20 simultaneous writes all kept; a stale lock taken over; phase 8 refuses Postgres 16 tools before any backup, accepts Postgres 18 ones.
+
+## Check: production auto-deploy (read only, 2026-09-29)
+- `docs/runbooks/auto-deploy.md`: the repo proves setup connects every production service to `MikuEspana/rat` branch `main`, and worker, api and admin have no watch paths, so if Railway's auto deploy is on (its default) every merge to `main` rebuilds and restarts them. Harmless in DRY RUN; a risk during the launch.
+- Proposal, nothing changed: no merges to `main` from T-1 hour until the bot has run live for an hour; "Wait for CI" on the production worker, api and admin; watch paths after launch; disabling auto deploy only if manual deploys are preferred. Whether auto deploy is on is for Miguel to confirm in the dashboard.
