@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { dryRunResetCommand } from './commands/dry-run';
 import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
-import { statusCommand } from './commands/status';
+import { statusCommand, statusJson } from './commands/status';
 import { stocksSyncCommand } from './commands/stocks';
 import { sweepCommand, sweepPhrase } from './commands/sweep';
 import type { CliContext } from './context';
@@ -75,6 +75,32 @@ describe('dry-run reset and stocks sync', () => {
     const list = await ctx.store.stocks.list();
     expect(list.length).toBeGreaterThanOrEqual(10);
     expect(list.every((s) => s.approved === false)).toBe(true);
+  });
+
+  it('stocks sync approves the APPROVED_STOCKS symbols, and unapproves them once removed', async () => {
+    const root = new URL('../../..', import.meta.url).pathname;
+    await stocksSyncCommand(ctxFor({ APPROVED_STOCKS: 'TSLAx,AAPLx' }), root);
+    const approved = (await ctxFor().store.stocks.list()).filter((s) => s.approved).map((s) => s.symbol);
+    expect(approved.sort()).toEqual(['AAPLx', 'TSLAx']);
+    await stocksSyncCommand(ctxFor(), root);
+    expect((await ctxFor().store.stocks.list()).some((s) => s.approved)).toBe(false);
+    await expect(stocksSyncCommand(ctxFor({ APPROVED_STOCKS: 'TSLA' }), root)).rejects.toThrow(/not in the stocks file/);
+  });
+});
+
+describe('status --json', () => {
+  it('prints one JSON line with the numbers scripts need, and no secret', async () => {
+    const creator = Keypair.generate();
+    const ctx = ctxFor({ CREATOR_PUBKEY: creator.publicKey.toBase58(), TELEGRAM_BOT_TOKEN: 'tg-secret-token', DATABASE_URL: 'postgres://u:pw-secret@h/db' });
+    await keysImportRoleCommand(ctx, ring, 'creator', bs58.encode(creator.secretKey));
+    await killCommand(ctx, 'rehearsal');
+    lines = [];
+    await statusCommand(ctx, { json: true });
+    expect(lines).toHaveLength(1);
+    const st = JSON.parse(lines[0]!) as Awaited<ReturnType<typeof statusJson>>;
+    expect(st).toMatchObject({ mode: 'dry_run', staging: false, killSwitch: { on: true, reason: 'rehearsal' }, creatorKey: creator.publicKey.toBase58(), openReservations: 0, seededSol: '0' });
+    expect(typeof st.hourCapSol).toBe('string');
+    for (const secret of ['tg-secret-token', 'pw-secret', bs58.encode(creator.secretKey)]) expect(lines[0]).not.toContain(secret);
   });
 });
 

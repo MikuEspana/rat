@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig, parseStocks, publicConfigSummary, requireConfig } from './config';
+import { loadConfig, parseStocks, publicConfigSummary, requireConfig, withApprovals } from './config';
 import { LIVE_CONFIRM_PHRASE } from './constants';
 
 const KEY = Buffer.alloc(32, 7).toString('base64');
@@ -112,5 +112,31 @@ describe('parseStocks', () => {
     const e = { symbol: 'A', name: 'A', mint, group: 'steady', enabled: true, approved: true };
     expect(() => parseStocks({ stocks: [e, { ...e, symbol: 'B' }] })).toThrow(/Duplicate stock mint/);
     expect(() => parseStocks({ stocks: [{ ...e, mint: 'bad' }] })).toThrow();
+  });
+});
+
+describe('APPROVED_STOCKS', () => {
+  const mint = 'XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB';
+  const mint2 = 'XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp';
+  const file = parseStocks({
+    stocks: [
+      { symbol: 'TSLAx', name: 'Tesla', mint, group: 'volatile', enabled: true, approved: false },
+      { symbol: 'AAPLx', name: 'Apple', mint: mint2, group: 'steady', enabled: true, approved: false },
+    ],
+  });
+  it('parses a comma list, empty by default', () => {
+    expect(loadConfig({}).approvedStocks).toEqual([]);
+    expect(loadConfig({ APPROVED_STOCKS: ' TSLAx, AAPLx ,' }).approvedStocks).toEqual(['TSLAx', 'AAPLx']);
+  });
+  it('approves only the listed symbols and never changes enabled', () => {
+    const out = withApprovals(file, ['TSLAx']);
+    expect(out.map((s) => [s.symbol, s.enabled, s.approved])).toEqual([
+      ['TSLAx', true, true],
+      ['AAPLx', true, false],
+    ]);
+    expect(withApprovals(file, [])).toEqual(file);
+  });
+  it('refuses a symbol that is not in the stocks file (a typo)', () => {
+    expect(() => withApprovals(file, ['tslax'])).toThrow(/APPROVED_STOCKS names tslax/);
   });
 });

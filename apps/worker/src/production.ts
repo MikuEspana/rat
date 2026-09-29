@@ -42,7 +42,7 @@ export async function createProductionDeps(
   const handle = await openDatabase(cfg.databaseUrl!);
   await handle.migrate();
   const store = new Store(handle.db, cfg.dryRun ? 'paper' : 'live', systemClock);
-  const stocks = loadStocksFile(cfg.stocksFile, REPO_ROOT);
+  const stocks = loadStocksFile(cfg.stocksFile, REPO_ROOT, cfg.approvedStocks);
   await store.stocks.syncConfig(stocks);
 
   const conn = createConnection(cfg.rpcUrl!);

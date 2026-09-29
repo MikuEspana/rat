@@ -166,6 +166,13 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().trim().default('*'),
 
   STOCKS_FILE: z.string().trim().default('config/stocks.json'),
+  // Comma-separated symbols the owner verified on xstocks.fi (for example "TSLAx,AAPLx"): approved on top of the
+  // stocks file. Every approved stock must still pass the on-chain mint check before any rat is hired into it.
+  APPROVED_STOCKS: z
+    .string()
+    .trim()
+    .default('')
+    .transform((v) => v.split(',').map((x) => x.trim()).filter(Boolean)),
 });
 
 export interface AppConfig {
@@ -228,6 +235,8 @@ export interface AppConfig {
   telegram: { botToken?: string; chatId?: string };
   api: { port: number; cacheSec: number; corsOrigin: string };
   stocksFile: string;
+  /** APPROVED_STOCKS: symbols the owner verified, approved on top of the stocks file */
+  approvedStocks: string[];
 }
 
 export type ConfigKey = keyof AppConfig;
@@ -306,6 +315,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     telegram: { botToken: e.TELEGRAM_BOT_TOKEN, chatId: e.TELEGRAM_CHAT_ID },
     api: { port: e.API_PORT, cacheSec: e.API_CACHE_SEC, corsOrigin: e.CORS_ORIGIN },
     stocksFile: e.STOCKS_FILE,
+    approvedStocks: e.APPROVED_STOCKS,
   };
 }
 
@@ -355,9 +365,18 @@ const stockEntrySchema = z.object({
 const stocksFileSchema = z.object({ stocks: z.array(stockEntrySchema) });
 
 /** Reads config/stocks.json. Symbols and mints must be unique. */
-export function loadStocksFile(path: string, cwd = process.cwd()): StockConfigEntry[] {
+export function loadStocksFile(path: string, cwd = process.cwd(), approved: readonly string[] = []): StockConfigEntry[] {
   const raw = JSON.parse(readFileSync(resolve(cwd, path), 'utf8')) as unknown;
-  return parseStocks(raw);
+  return withApprovals(parseStocks(raw), approved);
+}
+
+/** APPROVED_STOCKS on top of the stocks file. A symbol that is not in the file is a configuration error (a typo). */
+export function withApprovals(stocks: StockConfigEntry[], approved: readonly string[]): StockConfigEntry[] {
+  const known = new Set(stocks.map((s) => s.symbol));
+  const unknown = approved.filter((sym) => !known.has(sym));
+  if (unknown.length > 0) throw new ConfigError(`APPROVED_STOCKS names ${unknown.join(', ')}, not in the stocks file (symbols are case sensitive, like TSLAx)`);
+  const set = new Set(approved);
+  return stocks.map((s) => (set.has(s.symbol) ? { ...s, approved: true } : s));
 }
 
 export function parseStocks(raw: unknown): StockConfigEntry[] {
