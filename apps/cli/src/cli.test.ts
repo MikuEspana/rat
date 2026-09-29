@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeClock, LIVE_CONFIRM_PHRASE, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
@@ -231,6 +231,32 @@ describe('keys backup / restore (the rat wallet keys exist nowhere else)', () =>
       await fresh.close();
     }
     expect(lines.join('\n')).not.toContain(secrets[0]!);
+  });
+
+  it('--out - (run inside the Railway worker): the backup goes to stdout between markers, never to the container disk', async () => {
+    const ctx = ctxFor();
+    const notes: string[] = [];
+    const store = new DbKeyStore(ctx.store.keys, ring);
+    await ctx.store.keys.setRoleKey(encryptRoleKey(Keypair.generate(), ring, 'creator'));
+    const wallets = [await store.newRatKey(), await store.newRatKey()];
+    expect(await keysBackupCommand({ ...ctx, err: (l) => notes.push(l) }, ring, '-')).toEqual({ keys: 3 });
+    expect(lines[0]).toBe('-----BEGIN RAT KEY BACKUP-----');
+    expect(lines[2]).toBe('-----END RAT KEY BACKUP-----');
+    expect(lines.length).toBe(3);
+    expect(notes.join('\n')).toMatch(/3 keys \(2 rat wallets, 1 creator\) to stdout/);
+    // what the Mac saves restores into an empty database
+    const dir = mkdtempSync(join(tmpdir(), 'rat-backup-'));
+    writeFileSync(join(dir, 'k.json'), lines[1]!);
+    const fresh = await openMemoryDatabase();
+    try {
+      const ctx2 = { ...ctx, store: new Store(fresh.db, 'paper', clock) };
+      expect(await keysRestoreCommand(ctx2, ring, join(dir, 'k.json'))).toEqual({ restored: 3, skipped: 0 });
+      // `--in -`: the same backup piped in from the Mac
+      expect(await keysRestoreCommand(ctx2, ring, '-', lines[1]!)).toEqual({ restored: 0, skipped: 3 });
+      expect((await new DbKeyStore(ctx2.store.keys, ring).ratSigner(wallets[1]!)).publicKey.toBase58()).toBe(wallets[1]);
+    } finally {
+      await fresh.close();
+    }
   });
 
   it('refuses to back up or restore with the wrong master key, and names keys that do not decrypt', async () => {

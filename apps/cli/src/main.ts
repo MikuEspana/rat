@@ -31,7 +31,7 @@ async function withContext(fn: (ctx: CliContext, cfg: AppConfig) => Promise<void
     // a staging database never runs with production settings, and staging never runs next to the production key
     const problems = await stagingProblems(store, config);
     if (problems.length > 0) throw new Error(problems.join(' '));
-    await fn({ config, store, clock: systemClock, out: (l) => console.log(l) }, config);
+    await fn({ config, store, clock: systemClock, out: (l) => console.log(l), err: (l) => console.error(l) }, config);
   } finally {
     await handle.close();
   }
@@ -87,14 +87,14 @@ keys
 keys
   .command('backup')
   .description('write every stored key (rat wallets, creator) to a file, still encrypted; every key is checked first')
-  .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force)')
+  .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force); - = to stdout, for scripts/keys-backup.sh on the Mac')
   .option('--force', 'overwrite an existing file')
   .action((o) => withContext(async (ctx, cfg) => void (await keysBackupCommand(ctx, ring(cfg), o.out, { force: Boolean(o.force) }))));
 keys
   .command('restore')
   .description('restore keys from a backup file (every key must decrypt with KEY_ENCRYPTION_KEY; existing keys are kept)')
-  .requiredOption('--in <file>', 'backup file')
-  .action((o) => withContext(async (ctx, cfg) => void (await keysRestoreCommand(ctx, ring(cfg), o.in))));
+  .requiredOption('--in <file>', 'backup file; - = from stdin (from the Mac: scripts/rat.sh keys restore --in - < <file>)')
+  .action((o) => withContext(async (ctx, cfg) => void (await keysRestoreCommand(ctx, ring(cfg), o.in, o.in === '-' ? readFileSync(0, 'utf8') : undefined))));
 
 program
   .command('ledger')

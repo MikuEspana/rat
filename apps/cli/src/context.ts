@@ -7,4 +7,6 @@ export interface CliContext {
   store: Store;
   clock: Clock;
   out: (line: string) => void;
+  /** messages for the person, when stdout carries data (for example `keys backup --out -`); default: out */
+  err?: (line: string) => void;
 }

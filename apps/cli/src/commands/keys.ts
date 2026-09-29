@@ -46,6 +46,9 @@ export async function keysRotateCommand(ctx: CliContext, ring: MasterKeyRing): P
 }
 
 export const KEY_BACKUP_FORMAT = 'rat-race-keys-v1';
+/** `keys backup --out -` wraps the JSON in these lines (scripts/keys-backup.sh looks for them) */
+export const KEY_BACKUP_BEGIN = '-----BEGIN RAT KEY BACKUP-----';
+export const KEY_BACKUP_END = '-----END RAT KEY BACKUP-----';
 
 interface KeyBackupFile {
   format: typeof KEY_BACKUP_FORMAT;
@@ -86,18 +89,28 @@ export async function keysBackupCommand(ctx: CliContext, ring: MasterKeyRing, ou
     throw new Error(`${check.bad.length} stored keys do not decrypt with KEY_ENCRYPTION_KEY (first: ${check.bad[0]!.pubkey}: ${check.bad[0]!.reason}). Backup refused.`);
   }
   const file: KeyBackupFile = { format: KEY_BACKUP_FORMAT, createdAt: ctx.clock.now().toISOString(), keys: records };
+  const rats = records.filter((r) => r.role === 'rat').length;
+  if (outPath === '-') {
+    // Inside the Railway worker a file would stay on the container's disk (wiped by the next deploy): the backup
+    // goes to stdout between markers instead, and scripts/keys-backup.sh saves it on the Mac. Still encrypted.
+    ctx.out(KEY_BACKUP_BEGIN);
+    ctx.out(JSON.stringify(file));
+    ctx.out(KEY_BACKUP_END);
+    (ctx.err ?? ctx.out)(`backed up ${records.length} keys (${rats} rat wallets, ${records.length - rats} creator) to stdout, still encrypted.`);
+    return { keys: records.length };
+  }
   writeFileSync(outPath, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600, flag: opts.force ? 'w' : 'wx' });
   const back = JSON.parse(readFileSync(outPath, 'utf8')) as KeyBackupFile;
   if (back.keys.length !== records.length) throw new Error('backup file did not read back completely');
-  const rats = records.filter((r) => r.role === 'rat').length;
   ctx.out(`backed up ${records.length} keys (${rats} rat wallets, ${records.length - rats} creator) to ${outPath}, still encrypted (key versions ${[...new Set(records.map((r) => r.keyVersion))].join(', ')}).`);
   ctx.out('Keep this file and KEY_ENCRYPTION_KEY in two DIFFERENT safe places: one without the other is useless to a thief and to you.');
   return { keys: records.length };
 }
 
 /** Restores keys from a backup file into the database. Every key must decrypt first; existing keys are kept. */
-export async function keysRestoreCommand(ctx: CliContext, ring: MasterKeyRing, inPath: string): Promise<{ restored: number; skipped: number }> {
-  const file = JSON.parse(readFileSync(inPath, 'utf8')) as Partial<KeyBackupFile>;
+export async function keysRestoreCommand(ctx: CliContext, ring: MasterKeyRing, inPath: string, text?: string): Promise<{ restored: number; skipped: number }> {
+  // `--in -`: the backup comes on stdin (from the Mac: scripts/rat.sh keys restore --in - < <file>)
+  const file = JSON.parse(text ?? readFileSync(inPath, 'utf8')) as Partial<KeyBackupFile>;
   if (file.format !== KEY_BACKUP_FORMAT || !Array.isArray(file.keys)) throw new Error(`${inPath} is not a ${KEY_BACKUP_FORMAT} backup`);
   const wellFormed = file.keys.filter(
     (k) => typeof k?.pubkey === 'string' && typeof k.secretEnc === 'string' && Number.isInteger(k.keyVersion) && ['rat', 'creator', 'fund'].includes(k.role as string),

@@ -206,7 +206,7 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
       if (k.bad > 0 || k.ratsWithoutKey > 0) {
         add('FAIL', 'rat keys', `${k.bad} of ${k.total} stored rat keys do not decrypt with KEY_ENCRYPTION_KEY, ${k.ratsWithoutKey} rats have no stored key. Their tokens cannot be moved.`);
       } else {
-        add('PASS', 'rat keys', `${k.total} rat wallet keys stored, all decrypt with the current master key. Back them up: rat keys backup --out <file>.`);
+        add('PASS', 'rat keys', `${k.total} rat wallet keys stored, all decrypt with the current master key. Back them up on your Mac: scripts/keys-backup.sh.`);
       }
     } catch (err) {
       add('FAIL', 'rat keys', `check failed: ${errText(err)}`);

@@ -15,6 +15,13 @@ Every rat gets a brand new wallet at hire time: a fresh keypair is generated, en
 
 There is no key pool to fill and no grinding. `rat status` shows how many rat keys are stored.
 
+## Back up the rat keys (every hour or so while hiring)
+The rat wallets' keys exist only in the database (and in the nightly database backup, up to a day old). From `~/wallstreetrats` on your Mac:
+```
+scripts/keys-backup.sh
+```
+It runs `rat keys backup --out -` inside the worker and saves the answer, still encrypted, in `~/wallstreetrats-key-backups/wallstreetrats/` (folder 0700, files 0600). It refuses to save anything incomplete, or a backup with fewer keys than the last one (keys are never deleted). Keep that folder and `KEY_ENCRYPTION_KEY` in two different places. Restore (every key must decrypt first; existing keys are kept), from the Mac: `scripts/rat.sh keys restore --in - < ~/wallstreetrats-key-backups/wallstreetrats/rat-keys-<date>.json`.
+
 ## Rotate the master key
 1. Generate a new key. In the env set `KEY_ENCRYPTION_KEY_PREVIOUS=<old>`, `KEY_VERSION_PREVIOUS=<old version>`, `KEY_ENCRYPTION_KEY=<new>`, `KEY_VERSION=<old + 1>`.
 2. `rat kill --reason "key rotation"`
