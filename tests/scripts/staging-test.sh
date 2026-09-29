@@ -34,6 +34,12 @@ case "$1 $2" in
     for a in "$@"; do
       case "$a" in --*) break ;; *=*) jq -c --arg k "${a%%=*}" --arg v "${a#*=}" '.[$k] = $v' "$F/worker.json" >"$F/w.tmp" && mv "$F/w.tmp" "$F/worker.json" ;; esac
     done ;;
+  "redeploy --service") # a new deployment of that service; state-<service> (default SUCCESS) is how it ends
+    echo "redeploy $3" >>"$F/order.log"
+    echo $(($(cat "$F/dep-$3" 2>/dev/null || echo 0) + 1)) >"$F/dep-$3" ;;
+  "service status")
+    echo "status $4" >>"$F/order.log"
+    printf '{"status":"%s","deploymentId":"d%s"}\n' "$(cat "$F/state-$4" 2>/dev/null || echo SUCCESS)" "$(cat "$F/dep-$4" 2>/dev/null || echo 0)" ;;
   *) echo "railway $*" >>"$F/railway.log" ;;
 esac
 EOF
@@ -44,6 +50,8 @@ F="$FAKE_DIR"
 kill=$(cat "$F/kill")
 case "$1" in
   status)
+    # trip: the bot saw a creator transaction it did not send and turned the kill switch on by itself
+    if [ "$kill" = off ] && [ -f "$F/trip" ]; then echo on >"$F/kill"; kill=on; fi
     if [ "$kill" = off ]; then echo 1 >"$F/claims"; fi
     printf '{"mode":"live","staging":true,"killSwitch":{"on":%s,"reason":"test"},"claims":%s,"openReservations":0,"claimedSol":"0.0009"}\n' \
       "$([ "$kill" = on ] && echo true || echo false)" "$(cat "$F/claims")" ;;
@@ -61,7 +69,7 @@ reset() {
   echo 0 >"$W/fake/claims"
   echo '{"lines":[{"status":"PASS","check":"claims","detail":"ok"},{"status":"PASS","check":"rats","detail":"ok"},{"status":"PASS","check":"money","detail":"ok"}]}' >"$W/fake/audit"
   : >"$W/fake/rat.log"
-  rm -f "$W/fake/fail_reads" "$W/fake/drop_sets"
+  rm -f "$W/fake/fail_reads" "$W/fake/drop_sets" "$W/fake/trip" "$W/fake/order.log" "$W/fake/railway.log" "$W/fake/"dep-* "$W/fake/"state-*
   rm -f "$W/home/rat-secrets-staging/rehearsal-results.env"
 }
 run() { # run "<stdin>" args...: scripts/staging.sh with the fakes
@@ -115,6 +123,29 @@ touch "$W/fake/drop_sets"
 lib 'set_vars worker COIN_MINT=abc'; rc=$?
 check "set_vars: Railway answers OK but does not keep it: stops" '[ $rc = 1 ] && grep -q "Railway does not show COIN_MINT on worker after setting it" "$W/out.txt"'
 
+echo "== builds side by side (phase 1 builds the worker and the API at once)"
+reset
+lib 'redeploy worker api'; rc=$?
+check "both builds start before any wait, then both run" '[ $rc = 0 ] && [ "$(head -4 "$W/fake/order.log" | tr "\n" " ")" = "status worker redeploy worker status api redeploy api " ] && grep -q "api is running" "$W/out.txt"'
+reset
+echo FAILED >"$W/fake/state-api"
+lib 'redeploy worker api'; rc=$?
+check "one of them fails: stops, naming it" '[ $rc = 1 ] && grep -q "api did not start (status FAILED)" "$W/out.txt"'
+
+echo "== phase 6 --skip-watchdog (the kill switch part only)"
+reset
+run $'GO\n\ny\n' 6 --skip-watchdog; rc=$?
+check "without phase 1: refused, nothing sent" '[ $rc = 1 ] && grep -q "run phase 1 first" "$W/out.txt" && ! grep -q resume "$W/fake/rat.log"'
+reset
+printf 'PHASE_1=PASS|t|live\n' >"$W/home/rat-secrets-staging/rehearsal-results.env"
+touch "$W/fake/trip"
+run $'GO\n\ny\n' 6 --skip-watchdog; rc=$?
+check "the kill switch turned itself on: PARTIAL (never PASS), the worker never stopped" '[ $rc = 0 ] && results | grep -q "^PHASE_6=PARTIAL|.*NOT tested" && [ "$(cat "$W/fake/kill")" = on ] && ! grep -q "railway down" "$W/fake/railway.log" 2>/dev/null'
+reset
+printf 'PHASE_1=PASS|t|live\n' >"$W/home/rat-secrets-staging/rehearsal-results.env"
+run $'GO\n\ny\n' 6 --typo; rc=$?
+check "an unknown option: refused before anything" '[ $rc = 1 ] && grep -q "phase 6 takes only --skip-watchdog" "$W/out.txt" && ! grep -q resume "$W/fake/rat.log"'
+
 echo "== the GO gate and the kill switch (phase 2)"
 reset
 printf 'PHASE_1=PASS|t|launched\n' >"$W/home/rat-secrets-staging/rehearsal-results.env"
@@ -148,6 +179,9 @@ check "every phase PASS but no production site check: NO-GO" 'grep -q "^## NO-GO
 printf 'SITE_GO_LIVE=PASS|site ok\n' >>"$W/home/rat-secrets/setup-state.env"
 run "" report
 check "every phase and the site check PASS: GO" 'grep -q "^## GO$" "$W/out.txt"'
+printf 'PHASE_6=PARTIAL|t|watchdog not tested\n' >>"$W/home/rat-secrets-staging/rehearsal-results.env"
+run "" report
+check "phase 6 PARTIAL (--skip-watchdog): NO-GO" 'grep -q "^## NO-GO" "$W/out.txt" && grep -q "| 6 | PARTIAL" "$W/out.txt"'
 printf 'PHASE_6=FAIL|t|no alert\n' >>"$W/home/rat-secrets-staging/rehearsal-results.env"
 run "" report
 check "any FAIL: NO-GO" 'grep -q "^## NO-GO" "$W/out.txt"'

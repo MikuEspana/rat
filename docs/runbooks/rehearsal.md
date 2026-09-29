@@ -41,17 +41,32 @@ Every phase ends with PASS or FAIL. **Any FAIL means NO-GO:** fix it, pass CI, r
 | Setup | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-staging.sh)"` | Asks for the test creator's public address (a NEW Phantom account), makes the throwaway wallet, then the whole setup with the staging profile: `STAGING=true`, `MIN_CLAIM_SOL=0.0003`, DRY RUN, database marked, kill switch ON | The green checklist |
 | Stocks | `~/wallstreetrats-staging/scripts/approve-stocks.sh` | For each enabled xStock: its mint, xstocks.fi opens, you confirm it matches. Sets `APPROVED_STOCKS`, redeploys, `rat stocks-sync` | The preflight stocks line PASS (on-chain mint check) |
 | 0 | `scripts/staging.sh check` | Isolation checks | Not production, test creator, own master key, STAGING on |
-| 1 | `scripts/staging.sh 1` | GO, then YOU launch the coin in Phantom (0.1 SOL dev buy). The script finds the launch, sets `COIN_MINT` / `WATCH_FROM_SLOT` / `KNOWN_OWNER_TX_SIGS`, then goes LIVE with the kill switch ON | `launch txs` and `dev buy` PASS; `preflight --live` READY except the kill switch; 0 claims |
+| 1 | `scripts/staging.sh 1` | GO, then YOU launch the coin in Phantom (0.1 SOL dev buy). The script finds the launch, sets `COIN_MINT` / `WATCH_FROM_SLOT` / `KNOWN_OWNER_TX_SIGS`, then goes LIVE with the kill switch ON. The worker and the API build side by side (twice); do phase 2's trades during the first build | `launch txs` and `dev buy` PASS; `preflight --live` READY except the kill switch; 0 claims |
 | 2 | `scripts/staging.sh 2` | You trade 2 x 0.05 SOL from your trading wallet; GO; the bot claims | `rat audit`: each claim equals what left the fee vaults, to the lamport |
 | 3 | `scripts/staging.sh 3` | GO: seed 0.165 SOL, 5 hires at 0.03 SOL | Audit PASS (each rat paid once, holds what the database says, creator SOL equals the ledger); the API's claimed figure excludes the seed; `stageSol` is claimed plus seeded |
 | 4 and 5 | `scripts/staging.sh 4` | GO: salary 0.01, a small hourly cap, seed 0.125. The worker kills itself right after hire 6 is broadcast | The crash fires once and the worker comes back; hiring stops at the cap with budget waiting; the job-fair line (`waitingSol`) equals that budget; the rest go after the cap is raised; audit PASS; no Jupiter 429 |
-| 6 | `scripts/staging.sh 6` | GO: kill switch off, YOU send 0.001 SOL from the test creator; then the worker is stopped for 4 minutes | The kill switch turns itself ON; critical alert; "worker down" and "Worker is back" alerts |
+| 6 | `scripts/staging.sh 6` | GO: kill switch off, YOU send 0.001 SOL from the test creator; then the worker is stopped for 4 minutes | The kill switch turns itself ON; critical alert; "worker down" and "Worker is back" alerts. `scripts/staging.sh 6 --skip-watchdog` does the kill switch part only (about 5 minutes, no build) and is recorded as PARTIAL, never PASS |
 | 7 | `scripts/staging.sh 7` | Opens `wallstreetrats.world/?api=<staging API>` | Every rat listed, Solscan links right, Vault value within 1% of token amounts x Jupiter prices; on your phone: rats clickable, stage SMALL OFFICE, the Company Roadmap |
 | 8 | `scripts/staging.sh 8` | One backup, then a restore drill on your Mac | `restore-check` PASS; restored rats and claims equal the staging database |
 | Teardown | `scripts/staging.sh teardown` | GO: sweep the rats to the throwaway wallet. You sell the xStocks and the test coin in Phantom, then empty both wallets to your own | SOL started with vs got back, in the report |
 | Report | `scripts/staging.sh report` | `rehearsal-report.md` | **GO** only if phases 0 to 8 and the production site check PASS |
 
 Each phase can be run again. The results are kept in `~/rat-secrets-staging/rehearsal-results.env`, with no secrets.
+
+## The short version (the money mechanisms only)
+Phases 1, 2 and 3, plus the kill switch part of 6: the launch, the real fee claim and real xStock hires, each audited.
+
+| # | Command | Minutes (one build = B: about 5 normally, 10 to 15 during a Railway incident) |
+|---|---|---|
+| Stocks | `scripts/approve-stocks.sh` | 3 + B |
+| 0 | `scripts/staging.sh check` | 1 |
+| 1 | `scripts/staging.sh 1` (trade for phase 2 while it builds) | 9 + 2B |
+| 2 | `scripts/staging.sh 2` | 3 |
+| 3 | `scripts/staging.sh 3` | 5 |
+| 6 | `scripts/staging.sh 6 --skip-watchdog` (optional) | 5 |
+| Report | `scripts/staging.sh report` | 1 |
+
+Not tested then: the hourly cap and the crash after a hire (4, 5), the site (7), the backup (8), the worker-down watchdog. The report says **NO-GO** because they are missing: judge the phases you ran by their rows in the report (or their lines in `~/rat-secrets-staging/rehearsal-results.env`): phases 1, 2 and 3 PASS, phase 6 PARTIAL.
 
 ## Time
 About 3 hours:
