@@ -108,9 +108,10 @@ async function watchWallet(d: WorkerDeps, role: 'creator', res: WatchResult, flo
     // Signers first: even a FAILED transaction signed by our key proves someone else has the key.
     if (record.signers.includes(wallet)) {
       res.unknownSigned++;
-      await d.store.seen.add(sig, wallet, 'outflow_unknown', now);
+      // kill and alert BEFORE marking it seen: a crash in between must not let the next loop skip it
       await engageKillSwitch(d.store.settings, `unknown transaction signed by the ${role} wallet: ${sig}`);
       await d.alerts.send('critical', `unknown_signed_${sig}`, `A transaction signed by the ${role} wallet was NOT sent by the bot: ${sig}. Kill switch engaged. Check for a key leak.`);
+      await d.store.seen.add(sig, wallet, 'outflow_unknown', now);
       continue;
     }
     if (record.err) {
@@ -120,9 +121,11 @@ async function watchWallet(d: WorkerDeps, role: 'creator', res: WatchResult, flo
     const claim = d.pump.parseClaim(record, d.creator);
     if (claim && claim.totalLamports > 0n) {
       res.externalClaims++;
-      await creditClaim(d, { claimed: claim.totalLamports, fee: 0n, source: 'external', sig });
+      // booked once: a crash before `seen` below retries it, and the retry finds the claim already booked
+      if (await creditClaim(d, { claimed: claim.totalLamports, fee: 0n, source: 'external', sig })) {
+        await d.alerts.send('info', `external_claim_${sig}`, `External claim of our creator fees (${formatSol(claim.totalLamports)} SOL) booked for hires: ${sig}`);
+      }
       await d.store.seen.add(sig, wallet, 'external_claim', now);
-      await d.alerts.send('info', `external_claim_${sig}`, `External claim of our creator fees (${formatSol(claim.totalLamports)} SOL) booked for hires: ${sig}`);
       continue;
     }
     const delta = solDelta(record, wallet);

@@ -148,3 +148,64 @@ describe('preflight: WATCH_FROM_SLOT', () => {
     expect((await runPreflight(w.deps)).issues.filter((i) => i.check === 'watch_from_slot')).toEqual([]);
   });
 });
+
+describe('red team: the watch survives database blips', () => {
+  it('a leaked-key tx still trips the kill switch when the database drops right after marking it seen', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await runWatchStep(w.deps); // the watch floor and cursor
+    const leak = await ownerTx(w);
+    // the kill switch write fails once (a database blip or a restart in the middle of the step)
+    const set = w.deps.store.settings.set.bind(w.deps.store.settings);
+    let failed = false;
+    w.deps.store.settings.set = async (k, v) => {
+      if (!failed && v === 'on') {
+        failed = true;
+        throw new Error('db blip');
+      }
+      return set(k, v);
+    };
+    await expect(runWatchStep(w.deps)).rejects.toThrow(/db blip/);
+    await runWatchStep(w.deps);
+    expect(await killSwitchOn(w)).toBe(true);
+    expect(w.alerts.sent.some((a) => a.key === `unknown_signed_${leak}` && a.level === 'critical')).toBe(true);
+  });
+
+  it('an external claim booked just before a database blip is booked once, and the watch keeps going', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await runWatchStep(w.deps);
+    await externalClaim(w);
+    const add = w.deps.store.seen.add.bind(w.deps.store.seen);
+    let failed = false;
+    w.deps.store.seen.add = async (...a: Parameters<typeof add>) => {
+      if (!failed && a[2] === 'external_claim') {
+        failed = true;
+        throw new Error('db blip');
+      }
+      return add(...a);
+    };
+    await expect(runWatchStep(w.deps)).rejects.toThrow(/db blip/);
+    await runWatchStep(w.deps); // must not throw forever on the claims.sig unique index
+    expect(await w.store.ledger.balance('hire')).toBe(SOL);
+    expect((await w.store.claims.totals()).count).toBe(1);
+    await ownerTx(w);
+    await runWatchStep(w.deps);
+    expect(await killSwitchOn(w)).toBe(true);
+  });
+});
+
+describe('red team: the watch runs even when the claim step fails', () => {
+  it('a claim step that throws every loop (primary RPC down for status checks) does not blind the key-leak watch', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await w.worker.tick(); // first loop: watch floor and cursor
+    // the claim step throws every loop
+    const pump = w.deps.pump;
+    pump.getClaimable = async () => {
+      throw new Error('primary RPC down');
+    };
+    await ownerTx(w);
+    w.clock.advanceSeconds(36);
+    const ran = await w.worker.tick();
+    expect(JSON.stringify(ran.get('claim'))).toMatch(/primary RPC down/);
+    expect(await killSwitchOn(w)).toBe(true);
+  });
+});

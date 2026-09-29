@@ -792,6 +792,11 @@ export class Store {
     });
   }
 
+  /** Runs `fn` in one database transaction: every write in it lands together, or none does. */
+  transaction<T>(fn: (store: Store) => Promise<T>): Promise<T> {
+    return this.db.transaction((tx) => fn(new Store(tx as unknown as Database, this.mode, this.clock)));
+  }
+
   /** Same database, other mode. */
   forMode(mode: Mode): Store {
     return new Store(this.db, mode, this.clock);

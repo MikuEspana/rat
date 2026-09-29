@@ -21,6 +21,7 @@ export type SenderConnection = Pick<
   | 'getRecentPrioritizationFees'
   | 'sendRawTransaction'
   | 'getSignatureStatuses'
+  | 'getBlockHeight'
   | 'getEpochInfo'
   | 'getTransaction'
   | 'simulateTransaction'
@@ -187,7 +188,10 @@ export class RpcTxSender implements TxSender {
     // Height first: if the blockhash is long expired, any landing already happened and must show in the status check.
     // Slot and height come from one call, and the status answer must come from a node at least at that slot: behind
     // a load-balanced RPC the two calls can reach different nodes, and a lagging one does not know a tx that landed.
-    const { absoluteSlot, blockHeight: height } = await this.conn.getEpochInfo('confirmed');
+    const epoch = await this.conn.getEpochInfo('confirmed');
+    const { absoluteSlot } = epoch;
+    // blockHeight is optional in the RPC answer: without it, ask for the height (still at least `absoluteSlot` old)
+    const height = epoch.blockHeight ?? (await this.conn.getBlockHeight('confirmed'));
     const { context, value } = await this.conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
     const s = value[0];
     if (s && (s.confirmationStatus === 'confirmed' || s.confirmationStatus === 'finalized')) {

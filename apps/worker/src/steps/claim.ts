@@ -15,9 +15,24 @@ export interface ClaimResult {
   reason?: string;
 }
 
-/** Books a confirmed claim (ours or external) into the ledger, the claims table and the event feed. */
+/**
+ * Books a confirmed claim (ours or external) into the ledger, the claims table and the event feed, in one database
+ * transaction: a crash never leaves a claim row without its credit. An external claim already booked (a retry after
+ * a crash) is not booked again. Returns false when nothing was booked.
+ */
 export async function creditClaim(
   d: WorkerDeps,
+  args: { claimed: bigint; fee: bigint; source: 'bot' | 'external'; sig: string | null; claimable?: bigint; claimId?: number },
+): Promise<boolean> {
+  return d.store.transaction(async (store) => {
+    if (args.source === 'external' && args.sig && (await store.claims.bySig(args.sig))) return false;
+    await bookClaim({ ...d, store }, args);
+    return true;
+  });
+}
+
+async function bookClaim(
+  d: Pick<WorkerDeps, 'store' | 'clock'>,
   args: { claimed: bigint; fee: bigint; source: 'bot' | 'external'; sig: string | null; claimable?: bigint; claimId?: number },
 ): Promise<void> {
   const row = {
