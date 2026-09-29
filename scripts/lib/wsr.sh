@@ -92,20 +92,36 @@ rat_json() { rat "$@" 2>/dev/null | grep '^{' | tail -1; } # the last JSON line 
 
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
-redeploy() { # redeploy service: a fresh build of the latest commit with the current settings, then wait for it
-  local svc="$1" old s i=0
-  old=$(deployment_id "$svc")
-  rw redeploy --service "$svc" --from-source --yes >/dev/null 2>&1 || die "could not redeploy $svc" "Railway dashboard: $svc > Deployments > Deploy the latest commit."
-  say "Waiting for $svc to build and start (a few minutes)..."
+redeploy() { # redeploy service...: a fresh build of the latest commit with the current settings, every service at
+  # once (they build side by side, one wait instead of one per service), then wait until every one runs
+  local svc s i=0 olds="" old pending left
+  for svc in "$@"; do
+    olds="$olds$svc=$(deployment_id "$svc")"$'\n' # one line per service
+    for i in 1 2 3; do
+      rw redeploy --service "$svc" --from-source --yes >/dev/null 2>&1 && break
+      [ "$i" = "$TRIES" ] && die "could not redeploy $svc ($TRIES tries)" "Railway dashboard: $svc > Deployments > Deploy the latest commit." "$API_HINT"
+      retry_pause "$i"
+    done
+  done
+  say "Waiting for $* to build and start (they build at the same time, a few minutes)..."
+  pending="$*"
+  i=0
   while :; do
-    s=$(service_status "$svc")
-    [ -n "$old" ] && [ "$(deployment_id "$svc")" = "$old" ] && s=QUEUED
-    case "$s" in
-      SUCCESS) ok "$svc is running"; return 0 ;;
-      FAILED | CRASHED | REMOVED) die "$svc did not start (status $s)" "Railway dashboard: $svc > Deployments shows why." ;;
-    esac
+    left=""
+    for svc in $pending; do
+      old=$(printf '%s' "$olds" | sed -n "s/^$svc=//p")
+      s=$(service_status "$svc")
+      [ -n "$old" ] && [ "$(deployment_id "$svc")" = "$old" ] && s=QUEUED # the old deployment is not this build's answer
+      case "$s" in
+        SUCCESS) ok "$svc is running" ;;
+        FAILED | CRASHED | REMOVED) die "$svc did not start (status $s)" "Railway dashboard: $svc > Deployments shows why." ;;
+        *) left="$left $svc" ;;
+      esac
+    done
+    pending=${left# }
+    [ -n "$pending" ] || return 0
     i=$((i + 1))
-    [ "$i" -gt 120 ] && die "$svc is still not running after 20 minutes (status $s)"
+    [ "$i" -gt 180 ] && die "still not running after 30 minutes: $pending" "Railway dashboard: Deployments shows why (status.railway.com for incidents)."
     sleep "${WSR_POLL_SEC:-10}"
   done
 }

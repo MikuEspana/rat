@@ -2,6 +2,7 @@
 # The mainnet rehearsal, one phase at a time (docs/runbooks/rehearsal.md). Run it from the staging folder:
 #   ~/wallstreetrats-staging/scripts/staging.sh check      isolation checks (also run before every phase)
 #   ~/wallstreetrats-staging/scripts/staging.sh 1 ... 8    the phases, in order
+#   ~/wallstreetrats-staging/scripts/staging.sh 6 --skip-watchdog   phase 6 without the 4-minute worker-down test
 #   ~/wallstreetrats-staging/scripts/staging.sh teardown   get the SOL back, delete the project
 #   ~/wallstreetrats-staging/scripts/staging.sh report     rehearsal-report.md with the GO / NO-GO line
 #
@@ -27,7 +28,7 @@ SITE="https://wallstreetrats.world"
 
 record() { # record PHASE STATUS "detail": one line per phase in the results file (no secrets)
   state_set "$RESULTS" "PHASE_$1" "$2|$(date -u +%Y-%m-%dT%H:%MZ)|$3"
-  case "$2" in PASS) ok "phase $1: PASS $3" ;; *) bad "phase $1: $2 $3" ;; esac
+  case "$2" in PASS) ok "phase $1: PASS $3" ;; PARTIAL) note "phase $1: PARTIAL $3" ;; *) bad "phase $1: $2 $3" ;; esac
 }
 result_of() { state_get "$RESULTS" "PHASE_$1" | cut -d'|' -f1; }
 fail() { record "$PHASE" FAIL "$1"; die "phase $PHASE failed: $1" "Fix it, then run this phase again (docs/runbooks/rehearsal.md)."; }
@@ -175,8 +176,9 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   fi
   set_vars worker "COIN_MINT=$mint" "WATCH_FROM_SLOT=$((slot + 1))" "KNOWN_OWNER_TX_SIGS=$new"
   set_vars api "COIN_MINT=$mint"
-  redeploy worker
-  redeploy api
+  say "While the worker and the API build: do phase 2's trades now, from YOUR trading wallet (never the test creator):"
+  say "buy 0.05 SOL of TEST DO NOT BUY, twice, then sell both. The bot sends nothing (kill switch ON, DRY RUN)."
+  redeploy worker api
   pre=$(rat_json preflight --json)
   for chk in "launch txs" "dev buy"; do
     printf '%s' "$pre" | jq -e --arg k "$chk" '.lines[] | select(.check == $k and .status == "PASS")' >/dev/null 2>&1 ||
@@ -188,8 +190,7 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   yes_no "Switch the staging worker and API to LIVE?" y || { record 1 SKIP "stayed in DRY RUN"; exit 1; }
   set_vars worker DRY_RUN=false LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
   set_vars api DRY_RUN=false
-  redeploy worker
-  redeploy api
+  redeploy worker api
   [ "$(st_get '.mode')" = live ] || fail "the worker is not live"
   [ "$(st_get '.killSwitch.on')" = true ] || fail "the kill switch is not ON after going live"
   pre=$(rat_json preflight --live --json)
@@ -205,6 +206,7 @@ phase_2() { # the first fee claim
   [ "$(result_of 1)" = PASS ] || die "run phase 1 first"
   before=$(st_get '.claims')
   say "From YOUR trading wallet (never the test creator): buy 0.05 SOL of TEST DO NOT BUY, twice, then sell both."
+  say "(Already done while phase 1 was building? Then just press Enter.)"
   say "That makes about 0.3 SOL of volume: about 0.0009 SOL of creator fees (0.30%), above MIN_CLAIM_SOL 0.0003."
   pause "Done trading? Press Enter."
   go_gate "the bot claims the creator fees: 1 transaction from the test creator, moving the fees from pump.fun's vault to it" \
@@ -287,9 +289,11 @@ phase_4() { # the burst under the cap, with the crash test inside it (phase 5)
 }
 
 phase_6() { # the watch trips the kill switch; the admin watchdog sees the worker go down and come back
-  local c t0 reason
+  # --skip-watchdog: the kill switch part only (about 5 minutes, no build); recorded as PARTIAL, never as PASS
+  local c t0 reason skip_watchdog=""
+  case "${1:-}" in "") ;; --skip-watchdog) skip_watchdog=1 ;; *) die "phase 6 takes only --skip-watchdog" ;; esac
   title "Phase 6: safety"
-  [ "$(result_of 4)" = PASS ] || die "run phases 4 and 5 first"
+  [ "$(result_of 1)" = PASS ] || die "run phase 1 first (the worker must be live)"
   c=$(creator)
   go_gate "kill switch OFF; YOU send 0.001 SOL from the test creator to your own wallet in Phantom. The bot must see a transaction it did not send and turn the kill switch back ON by itself, with a critical Telegram alert. While it is off the bot may also claim fees and hire with the $(st_get .hireBudgetSol) SOL left." \
     "0.001 SOL (yours, comes back to you) plus a network fee"
@@ -302,6 +306,11 @@ phase_6() { # the watch trips the kill switch; the admin watchdog sees the worke
   reason=$(st_get '.killSwitch.reason')
   ok "kill switch ON after $(($(date +%s) - t0)) s: $reason"
   yes_no "Did a CRITICAL Telegram alert arrive, naming that transaction?" y || fail "no critical alert"
+  if [ -n "$skip_watchdog" ]; then
+    [ "$(st_get '.killSwitch.on')" = true ] || fail "the kill switch is off again"
+    record 6 PARTIAL "unknown creator transaction tripped the kill switch ($reason), critical alert arrived; the worker-down watchdog was NOT tested (--skip-watchdog)"
+    return 0
+  fi
   say "Now the worker stops for 4 minutes: the admin service must alert that it is down, then that it is back."
   rw down --service worker --yes >/dev/null 2>&1 || fail "could not stop the worker"
   say "Worker stopped at $(date +%H:%M). Waiting 4 minutes..."
@@ -454,9 +463,10 @@ phase_report() {
 PHASE="${1:-}"
 case "$PHASE" in
   check) PHASE=0; phase_check ;;
-  1 | 2 | 3 | 6 | 7 | 8) guard; "phase_$PHASE" ;;
+  1 | 2 | 3 | 7 | 8) guard; "phase_$PHASE" ;;
+  6) guard; phase_6 "${2:-}" ;;
   4 | 5) PHASE=4; guard; phase_4 ;;
   teardown) PHASE=T; guard; phase_teardown ;;
   report) phase_report ;;
-  *) die "which phase? scripts/staging.sh check | 1 ... 8 | teardown | report" ;;
+  *) die "which phase? scripts/staging.sh check | 1 ... 8 | 6 --skip-watchdog | teardown | report" ;;
 esac

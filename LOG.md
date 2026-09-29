@@ -536,3 +536,12 @@ Miguel's staging setup stopped twice while Railway reported an "API degradation"
 - **Tests:**
   - Setup harness scenario H: main's script reproduces the stop. The new one finishes with every 4th call failing and every change lost once and applied late. A change Railway never applies still stops, and nothing is built. After a step-5 stop the re-run finishes with every secret file and Railway secret unchanged. An unreadable worker, or one with a different master key, is never overwritten.
   - `staging-test.sh`: 4 new checks.
+
+## Rehearsal: the short version (2026-09-29)
+Miguel wants only the money mechanisms before launch: phases 1, 2, 3 and the kill switch part of 6.
+- **Where the time went:** every `redeploy` is a full build of the repo, one service after the other. A plain `railway redeploy` rebuilds too (Railway docs, `builds/skipped-builds.md`), so the flag alone saves nothing.
+- **`redeploy worker api`** (`scripts/lib/wsr.sh`): every service's build starts first, then one wait for all of them. Phase 1 waits for 2 builds instead of 4. Its triggers are tried 3 times (Railway incident); a failed build still stops, naming the service.
+- **Phase 1** tells you to do phase 2's trades while it builds; phase 2 then only claims.
+- **`staging.sh 6 --skip-watchdog`:** the kill switch part only (about 5 minutes, no build). Recorded as `PARTIAL`, never `PASS`, so the report can never say GO without the watchdog test. Phase 6 now needs phase 1 (a live worker), not phase 4.
+- Every GO gate, the kill switch per phase, every audit and every check are unchanged.
+- **Tests:** `staging-test.sh`: 26 checks (6 new: both builds start before any wait, a failed build stops; phase 6 without phase 1 refused, `--skip-watchdog` records PARTIAL and never stops the worker, an unknown option refused; PARTIAL makes the report NO-GO).
