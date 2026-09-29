@@ -407,11 +407,14 @@ export async function fuzzLaunch(seed: number, trace?: (line: string) => void): 
     const kill = await w.deps.killSwitch.status();
     report.killed = kill.on;
     if (!kill.on) {
-      // a rat may wait in line only while the budget cannot pay its salary: no reservation, no SOL sent to it
+      // a rat may wait in line only while the budget cannot pay its salary, or the rolling-hour cap has no room for
+      // one (a small cap hires about one rat an hour: seeds 306 and 1790 at 0.05 SOL end with two in line after the
+      // calm hour): no reservation, no SOL sent to it
       const waiting = await w.store.rats.listByStatus(['hiring']);
       const budgetShort = (await w.store.ledger.balance('hire')) < salary;
+      const capShort = (await w.deps.guard.remainingCap('hire')) < salary;
       for (const rat of waiting) {
-        const inLine = budgetShort && rat.reserveLedgerId === null && !rat.funded && w.chain.sol(rat.wallet) === 0n;
+        const inLine = (budgetShort || capShort) && rat.reserveLedgerId === null && !rat.funded && w.chain.sol(rat.wallet) === 0n;
         expect(inLine, `seed ${seed} (cap ${capSol}): rat ${rat.id} left half hired`).toBe(true);
       }
     }
