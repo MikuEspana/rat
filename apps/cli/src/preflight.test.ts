@@ -86,7 +86,7 @@ describe('rat preflight', () => {
     const me = creator.publicKey.toBase58();
     const cases: [Uint8Array | null, string, RegExp][] = [
       [encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58() }), PUMP_PROGRAM_ID, /creator fees go to .* not to CREATOR_PUBKEY/],
-      [encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58(), holderRewards: true }), PUMP_PROGRAM_ID, /holder rewards coin/],
+      [encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58(), feesGoToHolders: true }), PUMP_PROGRAM_ID, /holder rewards coin/],
       [encodeBondingCurve({ creator: me, cashback: true }), PUMP_PROGRAM_ID, /cashback coin/],
       [encodeBondingCurve({ creator: me, quoteMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }), PUMP_PROGRAM_ID, /trades against EPjF/],
       [encodeBondingCurve({ creator: me }), SystemProgram.programId.toBase58(), /not by the pump\.fun program/],

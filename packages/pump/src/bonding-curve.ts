@@ -24,7 +24,7 @@ export interface BondingCurveInfo {
   cashback: boolean;
   /** null = SOL-paired */
   quoteMint: string | null;
-  holderRewards: boolean;
+  feesGoToHolders: boolean;
 }
 
 export function parseBondingCurve(data: Uint8Array): BondingCurveInfo | null {
@@ -36,7 +36,7 @@ export function parseBondingCurve(data: Uint8Array): BondingCurveInfo | null {
     complete: byte(48) === 1,
     cashback: byte(82) === 1,
     quoteMint: quote && quote.some((b) => b !== 0) ? new PublicKey(quote).toBase58() : null,
-    holderRewards: byte(124) === 1,
+    feesGoToHolders: byte(124) === 1,
   };
 }
 
@@ -46,7 +46,7 @@ export function coinCreatorProblem(account: { owner: string; data: Uint8Array } 
   if (account.owner !== PUMP_PROGRAM_ID) return `its bonding curve account is owned by ${account.owner}, not by the pump.fun program`;
   const bc = parseBondingCurve(account.data);
   if (!bc) return 'its bonding curve account has an unknown layout';
-  if (bc.holderRewards) return 'it is a holder rewards coin: the creator fee goes to holders, there is nothing to claim';
+  if (bc.feesGoToHolders) return 'it is a holder rewards coin: the creator fee goes to holders, there is nothing to claim';
   if (bc.creator !== creator) {
     return `its creator fees go to ${bc.creator}, not to CREATOR_PUBKEY ${creator} (launched from another wallet, fee sharing, or a takeover): the bot would claim nothing`;
   }
@@ -56,13 +56,13 @@ export function coinCreatorProblem(account: { owner: string; data: Uint8Array } 
 }
 
 /** The account bytes for a bonding curve (tests and the simulation). */
-export function encodeBondingCurve(o: { creator: string; complete?: boolean; cashback?: boolean; quoteMint?: string; holderRewards?: boolean }): Uint8Array {
+export function encodeBondingCurve(o: { creator: string; complete?: boolean; cashback?: boolean; quoteMint?: string; feesGoToHolders?: boolean }): Uint8Array {
   const data = new Uint8Array(151);
   data.set(BONDING_CURVE_DISCRIMINATOR, 0);
   data[48] = o.complete ? 1 : 0;
   data.set(new PublicKey(o.creator).toBytes(), 49);
   data[82] = o.cashback ? 1 : 0;
   if (o.quoteMint) data.set(new PublicKey(o.quoteMint).toBytes(), 83);
-  data[124] = o.holderRewards ? 1 : 0;
+  data[124] = o.feesGoToHolders ? 1 : 0;
   return data;
 }
