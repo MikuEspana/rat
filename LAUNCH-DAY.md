@@ -5,6 +5,8 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 Setup first: `scripts/setup-mac.sh` (one command, `docs/runbooks/setup-mac.md`) ends with a green checklist.
 Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ...` from `~/wallstreetrats` (for example `scripts/rat.sh preflight --live`).
 
+**Something went wrong? `docs/runbooks/INCIDENTS.md`**: one screen per problem, the exact fix command.
+
 **If anything feels wrong: KILL.** `rat kill --reason "why"` or the red KILL button on the admin page. It only stops new transactions. Nothing is lost, nothing is undone. Resume later with `rat resume`.
 
 ## The 3 emergency moves

@@ -1,5 +1,7 @@
 # Incident
 
+Launch day: `INCIDENTS.md` has one screen per problem with the exact fix command.
+
 First move: `rat kill --reason "<what you saw>"`. Then look.
 
 | Symptom | Where to look | Action |
