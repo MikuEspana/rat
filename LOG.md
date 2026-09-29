@@ -409,3 +409,27 @@ For the mainnet dress rehearsal (a separate Railway project, a throwaway test cr
 - The API sends `treasury.stageSol` (claimed + seeded) only on a staging database with STAGING on, so a rehearsal can show a real stage-up; production never sends it.
 - Staging Telegram alerts say STAGING. A fresh staging worker waits, doing nothing, until `rat staging-init`.
 - Guard: no deploy or setup file (scripts, Railway files, workflows, Dockerfiles, .env files) turns STAGING or the crash test on, except the staging scripts.
+
+## Fix: railway ssh never ran anything (unregistered SSH key), and a route without ssh (2026-09-29)
+**Root cause (from the owner's real run and railway CLI 5.63.1's source):**
+- `railway ssh keys list` also prints this Mac's keys that are not registered, under "Local Keys (not registered)". setup-mac.sh looked for the key's fingerprint in the whole list, found it there and skipped `railway ssh keys add`.
+- Railway's relay then refused the unknown key with `{"status":"signup_required", "human_signup_url": ...}` and exit code 0, so no command ever ran in the worker. Setup read the empty answer as "the worker's settings could not be reached".
+
+**Fixes:**
+- Only the "Registered SSH Keys" part of the list counts.
+- `ssh_ready` sends a marker before the first command. The marker must come back; the exit code is never trusted. On `signup_required` it stops and prints Railway's link plus the `railway ssh keys add` line. Other relay answers are retried, then shown.
+- The settings check prints a names-only diagnosis when it fails: the user, whether a settings line arrived on stdin (and which names it lacks), and how many processes had unreadable settings.
+- `scripts/rat.sh` spots `signup_required` too and prints the link.
+
+**New `scripts/rat-local.sh`, the route without railway ssh:** it runs `rat` commands on the Mac against Postgres's public address (TLS).
+- The settings go on stdin to `scripts/in-worker.cjs` (`RAT_SETTINGS_FROM=stdin`: only those count), in a clean environment.
+- `keys import` asks for the key in a hidden prompt and encrypts it on the Mac.
+
+**Tested:**
+- **Harness:** the fake Railway now lists keys and refuses unknown keys exactly like 5.63.1.
+  - The script from `main` reproduces the owner's stop and its cause.
+  - The new script registers the key and finishes.
+  - When registration is impossible, setup and `rat.sh` print the link, and the same command finishes once the key is linked.
+- **`rat-local.sh` against a real Postgres 16 that refuses non-TLS connections, as a non-root user:**
+  - the key import goes through the hidden prompt, and the key is stored encrypted and never shown;
+  - over 1.4 million process samples, the creator key, the master key and the database password never appeared on any command line.

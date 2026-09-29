@@ -3,7 +3,8 @@
 // A `railway ssh` session does not get the service's variables, so a plain `pnpm rat ...` there has no
 // DATABASE_URL or KEY_ENCRYPTION_KEY. This takes them, in order, from:
 //   1. the running worker process (/proc/<pid>/environ: exactly what the worker runs with)
-//   2. the service's variables sent as the FIRST LINE of stdin (JSON from `railway variable list --json`)
+//   2. the service's variables sent as the FIRST LINE of stdin (JSON from `railway variable list --json`); with
+//      RAT_SETTINGS_FROM=stdin (scripts/rat-local.sh) only these count
 // The rest of stdin goes to the rat command (for example the creator key for `rat keys import`). No value is
 // ever printed, logged or put on a command line.
 //
@@ -15,6 +16,7 @@ const { spawnSync } = require('node:child_process');
 const REQUIRED = ['DATABASE_URL', 'KEY_ENCRYPTION_KEY'];
 const complete = (env) => env && REQUIRED.every((k) => typeof env[k] === 'string' && env[k] !== '');
 
+const seen = { processes: 0, unreadable: 0 }; // for the diagnosis (counts only)
 function fromWorkerProcess() {
   let dirs = [];
   try {
@@ -23,10 +25,12 @@ function fromWorkerProcess() {
     return null;
   }
   for (const d of dirs.sort((a, b) => Number(a) - Number(b))) {
+    seen.processes++;
     let raw;
     try {
       raw = fs.readFileSync(`/proc/${d}/environ`, 'utf8');
     } catch {
+      seen.unreadable++;
       continue;
     }
     const env = {};
@@ -58,15 +62,26 @@ if (firstLine.startsWith('{')) {
   }
 }
 
-const proc = fromWorkerProcess();
-const source = complete(process.env) ? 'this session' : proc ? 'the running worker' : complete(sent) ? 'the service variables' : null;
+// scripts/rat-local.sh (on the Mac) sets RAT_SETTINGS_FROM=stdin: only the settings it sends count
+const onlySent = process.env.RAT_SETTINGS_FROM === 'stdin';
+const own = !onlySent && complete(process.env);
+const proc = onlySent || own ? null : fromWorkerProcess();
+const source = own ? 'this session' : proc ? 'the running worker' : complete(sent) ? 'the service variables' : null;
 if (!source) {
+  // what was tried, as names and counts only: never a value
+  const line = !firstLine ? 'no settings line on stdin' : sent ? `settings line received, missing: ${REQUIRED.filter((k) => !sent[k]).join(', ')}` : 'settings line is not JSON';
+  let user = '?';
+  try {
+    user = `${require('node:os').userInfo().username} (uid ${process.getuid()})`;
+  } catch {}
   console.error('rat: the worker settings (DATABASE_URL, KEY_ENCRYPTION_KEY) are not available in this session');
+  console.error(`rat: diagnosis: user ${user}; ${line}; ${seen.processes} other processes, ${seen.unreadable} with unreadable settings`);
   process.exit(3);
 }
-const env = { ...process.env, ...(complete(process.env) ? {} : proc ?? sent) };
+const env = { ...process.env, ...(own ? {} : proc ?? sent) };
 
-const args = process.argv.slice(1);
+// `node -e '<this file>' -- <args>` (inside the worker) or `node scripts/in-worker.cjs <args>` (scripts/rat-local.sh)
+const args = process.argv.slice(process.argv[1] && require('node:path').resolve(process.argv[1]) === __filename ? 2 : 1);
 if (args[0] === '--env-check') {
   console.log(`env-ok (settings from ${source})`);
   process.exit(0);
