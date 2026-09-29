@@ -5,6 +5,7 @@ import { hostname } from 'node:os';
 import { createLogger, loadConfig, publicConfigSummary, sleep, systemClock } from '@rat/core';
 import { isStagingDatabase, stagingProblems } from '@rat/db';
 import { runPreflightUntilAnswered } from './preflight';
+import { LeaseGate } from './fenced-store';
 import { createProductionDeps } from './production';
 import { LockedRunner, createWorker } from './worker';
 
@@ -12,7 +13,9 @@ async function main(): Promise<void> {
   const cfg = loadConfig();
   const log = createLogger({ level: cfg.logLevel, name: 'rat-worker' });
   log.info(publicConfigSummary(cfg), cfg.dryRun ? 'starting in DRY RUN: nothing will be sent' : 'starting LIVE: transactions will be sent');
-  let { deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true });
+  // every database write of a tick first proves this worker still holds the lease (bound below, once the runner exists)
+  const lease = new LeaseGate();
+  let { deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true, lease });
   // staging and production never meet: refused in DRY RUN too
   const staging = await stagingProblems(deps.store, cfg);
   if (cfg.staging && staging.length === 0 && !(await isStagingDatabase(deps.store, cfg))) {
@@ -23,7 +26,7 @@ async function main(): Promise<void> {
       if ((await stagingProblems(deps.store, cfg)).length > 0) break;
     }
     await handle.close();
-    ({ deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true })); // rewired for the staging database
+    ({ deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true, lease })); // rewired for the staging database
     staging.push(...(await stagingProblems(deps.store, cfg)));
   }
   if (staging.length > 0) {
@@ -56,8 +59,10 @@ async function main(): Promise<void> {
     clock: systemClock,
     holder: `${hostname()}:${process.pid}:${randomBytes(4).toString('hex')}`,
   });
-  // every send first proves this worker still holds the lease
+  // every send and every database write first proves this worker still holds the lease: a worker that froze past it
+  // and woke up after a replacement took over sends nothing and writes nothing (apps/worker/src/fenced-store.ts)
   deps.sender.setFence(() => runner.fence());
+  lease.bind(() => runner.fence());
 
   let stopping = false;
   const stop = () => {

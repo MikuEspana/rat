@@ -10,7 +10,8 @@ import { runHireStep } from './steps/hire';
 import { runMintStep } from './steps/mints';
 import { runPriceStep } from './steps/prices';
 import { WATCH_RECORDS_PER_LOOP, runWatchStep } from './steps/watch';
-import { LockedRunner } from './worker';
+import { LeaseLostError, fenceWrites } from './fenced-store';
+import { LockedRunner, createWorker } from './worker';
 
 let w: SimWorld;
 afterEach(async () => w?.close());
@@ -290,6 +291,71 @@ describe('red team: two workers', () => {
     const sent = w.simSender.submitted;
     const r = await runClaimStep(w.deps, w.worker.state);
     expect(r).toMatchObject({ status: 'failed', reason: expect.stringMatching(/lease_lost/) });
+    expect(w.simSender.submitted).toBe(sent);
+  });
+
+  /** Worker A wired like production (main.ts): its sends AND its database writes prove the lease first. */
+  const workerA = () => {
+    let a: LockedRunner | null = null;
+    const deps = w.rebuildDeps({ store: fenceWrites(w.store, () => a!.fence()) });
+    a = new LockedRunner(createWorker(deps), { store: w.store, clock: w.clock, holder: 'A', ttlSec: 120 });
+    deps.sender.setFence(() => a!.fence());
+    return { a, deps };
+  };
+  const takeOver = async () => {
+    w.clock.advanceSeconds(200); // A froze past its lease
+    expect(await w.store.locks.acquire('worker', 'B', w.clock.now(), 120)).toBe(true);
+  };
+
+  it('a worker that woke up after losing the lease cannot release a reservation the new worker pays a hire with (chaos seed 2789)', async () => {
+    await liveWorld();
+    const { a, deps } = workerA();
+    expect(await a.fence()).toBe(true);
+    const wallet = Keypair.generate().publicKey.toBase58();
+    const auth = await deps.guard.authorize({ bucket: 'hire', lamports: w.deps.config.salaryLamports, refType: 'rat_wallet', refId: wallet });
+    if (!auth.ok) throw new Error(auth.reason);
+    await takeOver();
+    // A's send is fenced; the release it then made used to go through, and B's settle of the same reservation was
+    // refused as a duplicate: the hire's SOL left the creator and never reached the ledger
+    await expect(deps.guard.release(auth.reservation, 'lease_lost')).rejects.toBeInstanceOf(LeaseLostError);
+    expect(await w.store.ledger.isOpen(auth.reservation.ledgerId)).toBe(true);
+    await w.deps.guard.settle(auth.reservation, w.deps.config.salaryLamports - 10_000n);
+    expect(await w.store.ledger.isOpen(auth.reservation.ledgerId)).toBe(false);
+  });
+
+  it('nor clear a rat\'s pointer to the new worker\'s reservation, which was then released as an orphan (chaos seed 2711)', async () => {
+    await liveWorld();
+    const { a, deps } = workerA();
+    expect(await a.fence()).toBe(true);
+    const rat = await w.store.rats.create({ wallet: Keypair.generate().publicKey.toBase58(), stockMint: 'mint', salaryLamports: w.deps.config.salaryLamports, avatarSeed: 'x' });
+    await takeOver();
+    const b = await w.deps.guard.authorize({ bucket: 'hire', lamports: w.deps.config.salaryLamports, refType: 'rat_wallet', refId: rat.wallet });
+    if (!b.ok) throw new Error(b.reason);
+    await w.store.rats.update(rat.id, { reserveLedgerId: b.reservation.ledgerId });
+    // A, from the row it read before it froze, books the funding it sees confirmed
+    await expect(deps.store.rats.update(rat.id, { funded: true, reserveLedgerId: null })).rejects.toBeInstanceOf(LeaseLostError);
+    expect((await w.store.rats.get(rat.id))!.reserveLedgerId).toBe(b.reservation.ledgerId);
+    // reads still work: a standby worker may look, never write
+    expect(await deps.store.ledger.isOpen(b.reservation.ledgerId)).toBe(true);
+  });
+
+  it('a whole tick of a worker that lost the lease writes nothing: ledger, rats, attempts and claims unchanged', async () => {
+    await liveWorld({}, 2n * SOL);
+    const { a, deps } = workerA();
+    expect(await a.fence()).toBe(true);
+    await takeOver();
+    w.accrue({ bondingLamports: SOL });
+    const snapshot = async () => ({
+      ledger: (await w.store.ledger.list(100_000)).length,
+      rats: (await w.store.rats.countByStatus()),
+      attempts: (await w.store.attempts.all()).length,
+      claims: (await w.store.claims.all()).length,
+    });
+    const before = await snapshot();
+    const sent = w.simSender.submitted;
+    await runClaimStep(deps, new WorkerState()).catch(() => undefined);
+    await runHireStep(deps, new WorkerState()).catch(() => undefined);
+    expect(await snapshot()).toEqual(before);
     expect(w.simSender.submitted).toBe(sent);
   });
 });
