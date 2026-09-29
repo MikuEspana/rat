@@ -125,11 +125,16 @@ rw_ssh() { # rw_ssh service "command": runs inside the running container
 }
 service_exists() { rw service list --json 2>/dev/null | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1; }
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
+deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
+replaced_deployment() { eval "printf '%s' \"\${OLD_DEPLOY_$1:-}\""; } # the deployment a rebuild replaces (see rebuild)
 wait_deployed() { # wait_deployed service minutes
-  local svc="$1" mins="$2" s i=0
+  local svc="$1" mins="$2" s i=0 old
+  old=$(replaced_deployment "$svc")
   say "Waiting for the $svc service to build and start (can take a few minutes)..."
   while :; do
     s=$(service_status "$svc")
+    # right after a rebuild the old (failed) deployment is still the latest one listed: its status is not the answer
+    if [ -n "$old" ] && [ "$(deployment_id "$svc")" = "$old" ]; then s=QUEUED; fi
     case "$s" in
       SUCCESS) ok "$svc is running"; return 0 ;;
       FAILED | CRASHED | REMOVED)
@@ -258,6 +263,26 @@ else
 fi
 DB_REF="\${{$PG.DATABASE_URL}}"
 
+# Build settings go on each service BEFORE its first build: builder Dockerfile, the Dockerfile path, the start
+# command and the restart / health settings, all read from infra/railway.<service>.json (the one source of truth).
+# The config file path alone is not enough (Railway then fell back to auto-detection, Railpack), so every setting is
+# set on the service itself, then read back. The builder, Dockerfile and start command are compared with what Railway
+# has (not with a "done" flag), so a re-run repairs a service that was built the wrong way: it is rebuilt from the
+# latest commit before step 7 (redeploy_changed). The other settings are sent again when infra/railway.*.json changes.
+service_id() { rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | .id // empty' 2>/dev/null; }
+# Railway's answer holds every variable decrypted: only the build settings leave this pipe (no secret in a shell variable)
+env_config() { rw environment config --json 2>/dev/null | jq -ce 'select(type == "object") | {services: ((.services // {}) | map_values({configFile, build, deploy}))}' 2>/dev/null; }
+build_patch() { # build_patch service id: the settings for Railway, as an environment config patch
+  jq -c --arg id "$2" --arg f "/infra/railway.$1.json" '{services: {($id): ({configFile: $f} + {build, deploy})}}' "infra/railway.$1.json"
+}
+build_wrong() { # build_wrong service id config: the settings a build depends on that Railway does not have ("" = all good)
+  jq -rn --argjson want "$(build_patch "$1" "$2")" --argjson have "$3" --arg id "$2" '
+    def norm: if type == "string" then ltrimstr("/") | ascii_downcase else . end;
+    $want.services[$id] as $w | ($have.services[$id] // {}) as $h
+    | ["build", "builder"], ["build", "dockerfilePath"], ["deploy", "startCommand"]
+    | . as $p | select(($w | getpath($p)) != null and (($w | getpath($p) | norm) != ($h | getpath($p) | norm)))
+    | "\($p | join(".")) is \($h | getpath($p) // "not set" | tostring)"'
+}
 for svc in worker api admin backup; do
   if service_exists "$svc"; then
     skip "service $svc"
@@ -265,13 +290,32 @@ for svc in worker api admin backup; do
     rw add --service "$svc" --json >/dev/null || die "could not create the $svc service"
     ok "service $svc created (no code yet)"
   fi
-  if [ "$(state_get "CONFIG_$svc")" != 1 ]; then
-    rw environment edit --service-config "$svc" configFile "/infra/railway.$svc.json" -m "setup: $svc config file" --json >/dev/null ||
-      die "could not point $svc at infra/railway.$svc.json"
-    state_set "CONFIG_$svc" 1
+  [ -f "infra/railway.$svc.json" ] || die "infra/railway.$svc.json is missing in $APP_DIR" "Run: git -C $APP_DIR pull"
+  id=$(service_id "$svc")
+  [ -n "$id" ] || die "the $svc service was created but not found in the service list"
+  dockerfile=$(jq -r '.build.dockerfilePath' "infra/railway.$svc.json")
+  fix_hint="Railway dashboard: $svc > Settings > Build: Builder Dockerfile, Dockerfile path $dockerfile. Then run this again."
+  want=$(build_patch "$svc" "$id" | shasum -a 256 | awk '{print $1}')
+  cfg=$(env_config) || cfg=""
+  wrong=""
+  [ -z "$cfg" ] || wrong=$(build_wrong "$svc" "$id" "$cfg")
+  if [ -z "$wrong" ] && [ "$(state_get "BUILD_$svc")" = "$want" ]; then
+    skip "$svc builds with $dockerfile"
+  else
+    build_patch "$svc" "$id" | rw environment edit -m "setup: $svc builds with $dockerfile" --json >/dev/null ||
+      die "could not set the build settings of $svc" "$fix_hint"
+    if [ -n "$cfg" ]; then # read them back: nothing is built until Railway holds the Dockerfile settings
+      wrong=$(build_wrong "$svc" "$id" "$(env_config || echo '{"services":{}}')")
+      [ -z "$wrong" ] || die "Railway did not keep the build settings of $svc: $(printf '%s' "$wrong" | tr '\n' ';')" "$fix_hint"
+    else
+      note "this Railway CLI cannot show settings back; the first build of $svc proves them"
+    fi
+    state_set "BUILD_$svc" "$want"
+    mark_changed "$svc"
+    ok "$svc builds with $dockerfile (builder, start command and restart rules from infra/railway.$svc.json)"
   fi
+  rw_set "$svc" "RAILWAY_DOCKERFILE_PATH=$dockerfile" # Railway's documented Dockerfile setting: a second lock on the same door
 done
-ok "each service reads its settings from infra/railway.<service>.json in the repo"
 
 # ---------------------------------------------------------------- 4. R2 bucket ----------------------------------------
 step "Private R2 bucket for the nightly backups"
@@ -369,10 +413,15 @@ else
   ok "master key set on the worker"
 fi
 unset MASTER
-rw_has admin ADMIN_PASSWORD || rw_secret admin ADMIN_PASSWORD "$(tr -d '\n' <"$SECRETS/ADMIN_PASSWORD.txt")"
-rw_has api RAT_API_DB_PASSWORD || rw_secret api RAT_API_DB_PASSWORD "$(tr -d '\n' <"$SECRETS/RAT_API_DB_PASSWORD.txt")"
+# passwords already on Railway are never overwritten
+if rw_has admin ADMIN_PASSWORD && rw_has api RAT_API_DB_PASSWORD && rw_has backup BACKUP_AGE_RECIPIENT; then
+  skip "admin password, read-only database password and backup public key"
+else
+  rw_has admin ADMIN_PASSWORD || rw_secret admin ADMIN_PASSWORD "$(tr -d '\n' <"$SECRETS/ADMIN_PASSWORD.txt")"
+  rw_has api RAT_API_DB_PASSWORD || rw_secret api RAT_API_DB_PASSWORD "$(tr -d '\n' <"$SECRETS/RAT_API_DB_PASSWORD.txt")"
+  ok "admin password, read-only database password and backup public key set on Railway"
+fi
 rw_set backup "BACKUP_AGE_RECIPIENT=$AGE_PUB"
-ok "admin password, read-only database password and backup public key set on Railway"
 
 if [ -n "$new_files" ] || [ "$(state_get SECRETS_SAVED)" != 1 ]; then
   printf '\n%s' "$B$Y"
@@ -473,17 +522,30 @@ rw_set backup "DATABASE_URL=$DB_REF"
 ok "creator wallet $CREATOR_PUBKEY, cold wallet $COLD_WALLET, DRY_RUN=true everywhere"
 
 # ---------------------------------------------------------------- deploy the worker ------------------------------------
-connected() { [ "$(rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | .source.repo // empty')" = "$REPO_SLUG" ]; }
+connected() { rw service list --json 2>/dev/null | jq -e --arg n "$1" --arg r "$REPO_SLUG" '.[] | select(.name == $n) | (.source.repo // "" | ascii_downcase) == ($r | ascii_downcase)' >/dev/null 2>&1; }
 connect_source() { # connect_source service: the first deploy starts with every setting already in place
   if connected "$1"; then return 0; fi
+  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")" # a failed deployment from before is not this build's answer
   rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null ||
     die "could not connect $1 to github.com/$REPO_SLUG" "Give Railway access to the repo: https://github.com/apps/railway-app/installations/new"
 }
 # a setting changed on a service that already runs (a re-run): redeploy it so the change applies
-redeploy_changed() { # redeploy_changed service...: only services already running whose settings changed
+rebuild() { # rebuild service: a fresh build of the latest commit with the current settings (never a replay of the last
+  # one, which would repeat a wrong build). Older Railway CLIs have no --from-source: connecting the repo again also
+  # starts a fresh build.
+  printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")"
+  rw redeploy --service "$1" --from-source --yes >/dev/null 2>&1 ||
+    rw service source connect --repo "$REPO_SLUG" --branch "$BRANCH" --service "$1" --json >/dev/null 2>&1 ||
+    die "could not start a new build of $1" "Railway dashboard: $1 > Deployments > Deploy the latest commit. Then run this again."
+}
+redeploy_changed() { # redeploy_changed service...: services already connected whose settings changed or whose last deploy failed
   local svc
   for svc in "$@"; do
-    case "$CHANGED" in *" $svc "*) connected "$svc" && { rw redeploy --service "$svc" --yes >/dev/null && say "redeploying $svc (a setting changed)"; } ;; esac
+    connected "$svc" || continue
+    case "$CHANGED" in
+      *" $svc "*) rebuild "$svc"; say "rebuilding $svc (its settings changed)" ;;
+      *) case "$(service_status "$svc")" in FAILED | CRASHED) rebuild "$svc"; say "rebuilding $svc (its last deploy failed)" ;; esac ;;
+    esac
   done
   return 0
 }
@@ -601,8 +663,9 @@ if [ "$(state_get BACKUP_FIRST_OK)" = "" ]; then
   connect_source backup # without a schedule yet, the first deploy runs one backup and exits
   say "Waiting for the first backup (build + run, a few minutes)..."
   i=0
+  old=$(replaced_deployment backup)
   while :; do
-    logs=$(rw logs --service backup --latest --lines 80 2>/dev/null || true)
+    if [ -n "$old" ] && [ "$(deployment_id backup)" = "$old" ]; then logs=""; else logs=$(rw logs --service backup --latest --lines 80 2>/dev/null || true); fi
     obj=$(printf '%s\n' "$logs" | sed -n 's/.*backup: ok \(rat\/rat-[0-9-]*\.dump\.age\).*/\1/p' | tail -1)
     [ -n "$obj" ] && break
     if printf '%s\n' "$logs" | grep -q 'backup: FAILED'; then
@@ -621,7 +684,8 @@ fi
 if [ "$(state_get CRON_SET)" = 1 ]; then
   skip "nightly schedule"
 else
-  rw environment edit --service-config backup deploy.cronSchedule "$BACKUP_CRON" -m "setup: nightly backup" --json >/dev/null || die "could not set the backup schedule"
+  jq -nc --arg id "$(service_id backup)" --arg c "$BACKUP_CRON" '{services: {($id): {deploy: {cronSchedule: $c}}}}' |
+    rw environment edit -m "setup: nightly backup" --json >/dev/null || die "could not set the backup schedule"
   state_set CRON_SET 1
   ok "backup runs every night at 03:30 UTC"
 fi
