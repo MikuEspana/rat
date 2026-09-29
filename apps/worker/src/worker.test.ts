@@ -218,6 +218,61 @@ describe('hire state machine', () => {
     });
   }
 
+  it('two_step: a swap refused before sending (stale quote) is retried, never read as a hire with no tokens', async () => {
+    w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1', HIRE_MODE: 'two_step' } });
+    await funded(w);
+    const effects = w.simSender.simulateEffects.bind(w.simSender);
+    let refused = 0;
+    w.simSender.simulateEffects = async (p, l) => {
+      if (refused === 0 && p.request.label.startsWith('buy ')) {
+        refused++;
+        return { error: 'slippage tolerance exceeded', solDelta: [], tokenDelta: [] };
+      }
+      return effects(p, l);
+    };
+    await runHireStep(w.deps, w.worker.state);
+    const [rat] = await w.store.rats.listByStatus(['hiring']);
+    expect(rat?.funded).toBe(true);
+    for (let i = 0; i < 3; i++) {
+      w.clock.advanceSeconds(36);
+      await runHireStep(w.deps, w.worker.state);
+    }
+    expect(w.alerts.sent.filter((a) => a.key.startsWith('hire_no_tokens_'))).toEqual([]);
+    expect((await w.store.rats.get(rat!.id))?.status).toBe('active');
+    expect(w.chain.tokenBalance(rat!.wallet, rat!.stockMint, TOKEN_2022_PROGRAM)).toBeGreaterThan(0n);
+  });
+
+  it('two_step (the fallback for a Jupiter that refuses empty wallets) never asks Jupiter to build for an empty wallet', async () => {
+    w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '2', HIRE_MODE: 'two_step' } });
+    await funded(w);
+    const build = w.swap.build.bind(w.swap);
+    w.swap.build = async (req) => {
+      if (w.chain.sol(req.taker) === 0n) throw new Error('taker has no SOL');
+      return build(req);
+    };
+    const r = await runHireStep(w.deps, w.worker.state);
+    expect(r.hired).toBe(2);
+    expect(r.skipped).toBeUndefined();
+  });
+
+  it('a stale SOL price stops hires (a quote much worse than fair would pass the price guard)', async () => {
+    // quotes 8% worse than fair; while Jupiter leaves SOL out, SOL rises 10%: with the old SOL price the quote
+    // looks fine. Stock prices go stale after PRICE_STALE_SEC; the SOL price now does too.
+    w = await createSimWorld({ dryRun: false, spreadBps: 800, env: { MAX_HIRES_PER_LOOP: '3' } });
+    await funded(w);
+    w.prices.setMissing(NATIVE_SOL_MINT, true);
+    w.prices.set(NATIVE_SOL_MINT, w.prices.price(NATIVE_SOL_MINT)! * 1.1);
+    w.clock.advanceSeconds(w.deps.config.priceStaleSec + 1);
+    await runPriceStep(w.deps, w.worker.state); // stocks fresh again, SOL still missing
+    const r = await runHireStep(w.deps, w.worker.state);
+    expect(r.hired).toBe(0);
+    expect(r.skipped).toMatch(/no fresh SOL price/);
+    // SOL is back (at its real price): the 8% worse quotes are refused by the guard
+    w.prices.setMissing(NATIVE_SOL_MINT, false);
+    await runPriceStep(w.deps, w.worker.state);
+    expect((await runHireStep(w.deps, w.worker.state)).hired).toBe(0);
+  });
+
   it('a dropped hire expires, its reservation is released, and the next loop retries', async () => {
     w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1' } });
     await funded(w);

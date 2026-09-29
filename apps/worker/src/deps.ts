@@ -46,6 +46,8 @@ export interface WorkerDeps {
 /** In-memory state that does not need to survive a restart. */
 export class WorkerState {
   solUsd: number | null = null;
+  /** when solUsd was priced (ms) */
+  solUsdAt = 0;
   coinUsd: number | null = null;
   reconcileCursor = 0;
   lastPriceHistoryAt = new Map<string, number>();
