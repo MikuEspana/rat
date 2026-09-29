@@ -112,9 +112,18 @@ start_app() { # start_app app settings-json: in the background, detached from th
 }
 since_start() { awk -v a="== " -v b=" $1 start" 'index($0, a) == 1 && index($0, b) { buf = ""; next } { buf = buf $0 "\n" } END { printf "%s", buf }' "$RUN/$1.log"; }
 wait_ready() { # wait_ready app: running and answering, or stop with its last log lines
-  local a="$1" i
+  local a="$1" i p
   for i in $(seq 1 90); do
-    running "$a" || die "the local $a stopped right after it started" "Its last lines ($RUN/$a.log):" "$(since_start "$a" | tail -5 | tr '\n' ' ')"
+    if ! running "$a"; then
+      # right after the start the process can still be the forked shell, not node yet (fork before exec): alive is
+      # enough for the first seconds. Only a process that is gone, or never becomes the app, stopped.
+      p=$(pid_of "$a")
+      if [ "$i" -le 5 ] && [ -n "$p" ] && kill -0 "$p" 2>/dev/null; then
+        sleep 1
+        continue
+      fi
+      die "the local $a stopped right after it started" "Its last lines ($RUN/$a.log):" "$(since_start "$a" | tail -5 | tr '\n' ' ')"
+    fi
     case "$a" in
       worker) since_start worker | grep -q 'starting' && [ "$i" -ge 5 ] && return 0 ;;
       api) curl -fsS -m 3 "http://localhost:$API_PORT/api/state" >/dev/null 2>&1 && return 0 ;;

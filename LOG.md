@@ -653,3 +653,10 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
   - the running worker in DRY RUN with loops under 3 minutes old;
   - `rat preflight` with nothing open but the expected pre-launch lines (the same rule as `scripts/setup-mac.sh`).
 - `tests/scripts/morning-test.sh` (22 checks, in CI): GO only when all pass, each problem its own WAIT, never a Railway write.
+
+## Fast rehearsal: `staging-local.sh start` no longer fails at random (2026-09-29, night)
+- CI caught `scripts/staging-local.sh start` stopping with "the local worker stopped right after it started" while the apps were in fact starting.
+- Right after `nohup node ... &` the new process can still be the forked shell, not node yet (fork before exec). The readiness check looked for `scripts/local-app.cjs <app>` in its arguments and took it for a crash.
+- A slow Mac can hit the same thing tomorrow at MORNING.md step 1 (`scripts/staging-local.sh start`).
+- Now, for the first 5 seconds a process that is alive counts as starting. One that is gone, or never becomes the app, still stops the start.
+- `tests/scripts/staging-local-test.sh` forces that moment with a fake `ps`: it fails without the fix.

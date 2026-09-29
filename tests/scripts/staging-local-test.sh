@@ -69,6 +69,18 @@ case "$1 ${2:-}" in
   *) echo "railway $*" >>"$F/railway.log" ;;
 esac
 EOF
+# fake ps: while ps-lag holds N > 0, the next N process lookups see the forked shell, not node yet (the moment
+# between fork and exec right after an app starts, which a slow machine makes seconds long)
+cat >"$W/bin/ps" <<EOF
+#!/bin/bash
+n=\$(cat "\$FAKE_DIR/ps-lag" 2>/dev/null || echo 0)
+if [ "\$n" -gt 0 ]; then
+  echo \$((n - 1)) >"\$FAKE_DIR/ps-lag"
+  echo "bash scripts/staging-local.sh start"
+  exit 0
+fi
+exec $(command -v ps) "\$@"
+EOF
 # fake rat for scripts/staging.sh: a kill switch the bot trips by itself (trip file), loops a few seconds old
 cat >"$W/bin/fake-rat" <<'EOF'
 #!/bin/bash
@@ -164,6 +176,15 @@ run "" staging-local.sh stop; rc=$?
 sleep 1
 check "stop: all three gone, staging.sh back on Railway" '[ $rc = 0 ] && ! alive worker && ! alive api && ! alive site && grep -q "^LOCAL=0$" "$W/home/rat-secrets-staging/setup-state.env"'
 check "no stand-in app left running" '! pgrep -f "$T/apps" >/dev/null && ! pgrep -f "vite.js --port $SITE_PORT" >/dev/null'
+
+echo "== a slow start: an app not node yet right after it starts is starting, not stopped"
+reset
+echo 3 >"$W/fake/ps-lag"
+run "" staging-local.sh start; rc=$?
+check "start waits for it: all three run" '[ $rc = 0 ] && alive worker && alive api && alive site && ! grep -q "stopped right after it started" "$W/out.txt"'
+rm -f "$W/fake/ps-lag"
+run "" staging-local.sh stop
+sleep 1
 
 echo "staging-local-test: $FAILS failed"
 [ "$FAILS" = 0 ]
