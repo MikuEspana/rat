@@ -617,6 +617,7 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
   - on the code before the fixes, about 800 seeds: 35 failures (the bugs above plus harness mistakes, since fixed);
   - on the fixed code: 679 seeds so far, 0 failures (the run continues through the night).
 - CI runs 8 seeds in the long job. Thousands in shards: `CHAOS_RUNS=667 CHAOS_SEED=1 CHAOS_VERBOSE=1 pnpm vitest run tests/chaos/fuzz.test.ts`. Replay one seed step by step: `CHAOS_SEED=<n> CHAOS_RUNS=1 CHAOS_TRACE=1`.
+
 ## Launch dress rehearsal: Railway slow and failing (2026-09-29, night)
 `tests/scripts/launch-rehearsal.sh` (in CI) runs `scripts/launch.sh` against fakes with Railway as slow as during its incidents and failing on purpose, timing every call.
 - **Timing** (scaled 1:20, estimated at incident speed: 2 s per Railway call, 8 s per `railway ssh`, a 5 minute build): about 6 minutes from start to LIVE, almost all of it the one build. 9 Railway calls (18 before: the RPC address was read from Railway before every chain read, and the read-back after setting variables read once per key), 5 ssh calls.
@@ -626,3 +627,8 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
   - Right after the build, `railway ssh` can reach the old DRY RUN container while it drains, or drop: the LIVE check asks for up to two minutes before calling it, and says whether the worker answered DRY RUN or did not answer.
   - A live preflight that did not answer said "launch txs is not PASS, the line above says why" with no line above: now "the live preflight gave no answer (railway ssh)", nothing changed, run it again.
 - 10 checks: incident-speed timing; reads failing twice; a lost write then the second run; a failed API build then the second run; the old container answering and ssh dropping after the build; ssh down for the preflight.
+
+## Faster, smaller service image (2026-09-29, night)
+- `.dockerignore` keeps the site (`apps/pixel-site`, 73 MB of assets, served by GitHub Pages), the tests, the docs and the Markdown out of the image. `infra/Dockerfile` installs only what the services run (`pnpm install --prod`); `tsx` is now a dependency of each app that runs with it, so TypeScript, the test tools, vite and drizzle-kit stay out.
+- Measured here (Docker 29, BuildKit, same machine and network for both): image 761 MB to 545 MB; the install layer 192 MB to 141 MB; the source layer 79 MB to 1.7 MB; a clean build 30 s to 19 s; a rebuild after a code-only change (the usual merge) about 5 s to about 1.3 s. On Railway most of a build is uploading the context and pushing the image, so the smaller layers are what count (ASSUMED: Railway's timings are not measurable from here).
+- CI now starts the worker, the API and the admin in the image with an invalid `DRY_RUN`: reaching that config error proves every import resolved with the production-only install (a module left out fails first; checked with an image missing `hono`: the API fails the step).

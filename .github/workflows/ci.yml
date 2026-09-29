@@ -49,6 +49,21 @@ jobs:
         run: docker build -f infra/Dockerfile -t rat-race:ci .
       - name: The image starts (CLI status on an in-memory database, DRY RUN default)
         run: docker run --rm -e DATABASE_URL=memory:// rat-race:ci pnpm --silent --filter @rat/cli rat status
+      - name: Every service loads in the image (production-only install)
+        # an invalid DRY_RUN stops each service at its first line of code: reaching that error proves every import
+        # resolved (a module left out of the image fails before it, with ERR_MODULE_NOT_FOUND)
+        run: |
+          for svc in worker api admin; do
+            out=$(docker run --rm -e DRY_RUN=maybe rat-race:ci pnpm --silent --filter "@rat/$svc" start 2>&1 || true)
+            if printf '%s' "$out" | grep -qE 'ERR_MODULE_NOT_FOUND|Cannot find (module|package)' || ! printf '%s' "$out" | grep -q 'DRY_RUN: expected true/false'; then
+              printf '%s\n' "$out" | tail -20
+              echo "$svc does not load in the image"
+              exit 1
+            fi
+            echo "$svc loads"
+          done
+      - name: Image size
+        run: docker image ls rat-race:ci --format 'rat-race:ci {{.Size}}'
       - name: Build the backup image
         run: docker build -f infra/backup/Dockerfile -t rat-backup:ci .
       - name: The backup image has its tools and refuses to run without settings
