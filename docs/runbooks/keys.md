@@ -4,10 +4,11 @@ Only one secret lives in the host env: `KEY_ENCRYPTION_KEY`. Every private key i
 
 ## Import the creator key
 `CREATOR_PUBKEY` must be set first; the import refuses a key that does not match. There is no fund wallet (buy and burn was removed).
+`scripts/setup-mac.sh` does this for you with a hidden prompt. By hand, from `~/wallstreetrats` (the key goes straight into the worker on Railway, never onto a command line or the screen):
 ```
-rat keys import --role creator   # paste the private key (base58 or JSON array), then Ctrl-D
+read -rs K && printf '%s' "$K" | scripts/rat.sh keys import --role creator; unset K
 ```
-The key is read from stdin, never from the command line, and never printed.
+`rat keys import --role creator` reads the key (base58 as Phantom shows it, or a JSON array) from stdin and never prints it.
 
 ## Rat wallets (nothing to prepare)
 Every rat gets a brand new wallet at hire time: a fresh keypair is generated, encrypted with the master key, stored in the database and read back (decrypted) **before** its address is used. Only then is the hire transaction built and sent, so a crash right after sending can never lose the key of a funded wallet. Rat keys are never reused: a hire abandoned before any transaction retires its key.

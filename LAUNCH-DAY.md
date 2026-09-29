@@ -2,6 +2,9 @@
 
 Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md`; this page is the short version.
 
+Setup first: `scripts/setup-mac.sh` (one command, `docs/runbooks/setup-mac.md`) ends with a green checklist.
+Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ...` from `~/wallstreetrats` (for example `scripts/rat.sh preflight --live`).
+
 **If anything feels wrong: KILL.** `rat kill --reason "why"` or the red KILL button on the admin page. It only stops new transactions. Nothing is lost, nothing is undone. Resume later with `rat resume`.
 
 ## The 3 emergency moves
@@ -27,12 +30,17 @@ Read top to bottom. One box at a time. Details live in `docs/runbooks/go-live.md
 
 ## T-1 hour: launch the coin (bot still in DRY RUN)
 
-- [ ] Fund the creator wallet (0.05 SOL reserve + launch cost). It is the bot's only wallet besides the rats'.
-- [ ] Launch on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**.
-- [ ] Dev buy: from a **different** wallet (or move those coins out of the creator wallet now).
-- [ ] Solscan: wait for the launch tx to be **Finalized**. Copy its **signature** and **slot**.
-- [ ] Worker settings: `COIN_MINT`, `WATCH_FROM_SLOT` = slot + 1, `KNOWN_OWNER_TX_SIGS` = the launch signature (plus any other tx you signed with a bot wallet since).
-- [ ] Redeploy (still DRY RUN). The site shows paper claims from the real vault.
+- [ ] Fund the creator wallet with about **0.3 SOL**: 0.1 dev buy + launch cost + 0.05 reserve + spare. It is the bot's only wallet besides the rats'.
+- [ ] Launch on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**, dev buy **0.1 SOL** inside the launch.
+- [ ] The dev-buy coins stay in the creator wallet **forever**. Never sell or move them (anything signed by the creator wallet stops the bot). They are never counted as fees and the bot can never move them. Your own trading: your separate wallet only.
+- [ ] Solscan, **creator wallet** page: wait for the launch tx to be **Finalized**. Copy the **signature** of every transaction it signed at launch (usually one) and the **slot** of the last one.
+- [ ] Worker and API settings, from `~/wallstreetrats`:
+  ```
+  railway variable set COIN_MINT=<mint> WATCH_FROM_SLOT=<slot + 1> KNOWN_OWNER_TX_SIGS=<signature> --service worker
+  railway variable set COIN_MINT=<mint> --service api
+  railway redeploy --service worker --yes && railway redeploy --service api --yes
+  ```
+- [ ] Still DRY RUN. `rat preflight`: `launch txs` PASS, `dev buy` PASS (shows the coins it holds). The site shows paper claims from the real vault.
 - [ ] `rat dry-run-reset --yes`.
 
 ## T-0: go live

@@ -1,11 +1,12 @@
 // Coin launch vs the wallet watch: owner transactions before the watch floor (or allowlisted) never trip the
 // kill switch; anything else signed by a bot wallet still does. In memory only (SimChain).
 import type { ChainReader } from '@rat/core';
-import { collectCreatorFeeV2Ix } from '@rat/pump';
-import { Keypair, SystemProgram } from '@solana/web3.js';
+import { collectCreatorFeeV2Ix, creatorAccounts } from '@rat/pump';
+import { Keypair, PublicKey, SystemProgram, type TransactionInstruction } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runPreflight } from './preflight';
 import { SOL, type SimWorld, createSimWorld } from './sim-world';
+import { runClaimStep } from './steps/claim';
 import { runMintStep } from './steps/mints';
 import { runPriceStep } from './steps/prices';
 import { runWatchStep } from './steps/watch';
@@ -14,13 +15,13 @@ let w: SimWorld;
 afterEach(async () => w?.close());
 
 /** A transaction the OWNER signs with the creator wallet (like the coin launch), not sent by the bot. */
-async function ownerTx(world: SimWorld): Promise<string> {
+async function ownerTx(world: SimWorld, instructions?: TransactionInstruction[]): Promise<string> {
   const req = {
     kind: 'claim' as const,
     label: 'owner',
     feePayer: world.creator,
     signers: [],
-    instructions: [SystemProgram.transfer({ fromPubkey: world.creator.publicKey, toPubkey: Keypair.generate().publicKey, lamports: 1_000_000 })],
+    instructions: instructions ?? [SystemProgram.transfer({ fromPubkey: world.creator.publicKey, toPubkey: Keypair.generate().publicKey, lamports: 1_000_000 })],
     computeUnitLimit: 50_000,
   };
   const out = await world.simSender.submit(await world.simSender.prepare(req));
@@ -84,6 +85,32 @@ describe('coin launch vs the wallet watch', () => {
     expect(r).toMatchObject({ beforeFloor: 1, externalClaims: 1, unknownSigned: 0 });
     expect(await w.store.ledger.balance('hire')).toBe(SOL);
     expect(await killSwitchOn(w)).toBe(false);
+  });
+
+  it('the launch with a dev buy is never booked as creator fees: only the claim of the fee vault hires rats', async () => {
+    w = await createSimWorld({ dryRun: false, creatorSol: SOL / 4n }); // funded right before launch
+    await runPriceStep(w.deps, w.worker.state);
+    await runMintStep(w.deps);
+    await runWatchStep(w.deps); // first live run: the floor
+    w.chain.advanceBlocks(10);
+    w.accrue({ bondingLamports: SOL }); // fees from other traders
+    const creator = w.creator.publicKey;
+    const devBuy = SOL / 10n;
+    // pump.fun's creator cut of the dev buy itself lands in our own fee vault: that part is a real creator fee
+    const creatorCut = SOL / 1000n;
+    const launch = await ownerTx(w, [
+      SystemProgram.transfer({ fromPubkey: creator, toPubkey: Keypair.generate().publicKey, lamports: devBuy }), // the bonding curve
+      SystemProgram.transfer({ fromPubkey: creator, toPubkey: new PublicKey(creatorAccounts(creator.toBase58()).bondingVault), lamports: creatorCut }),
+    ]);
+    w.deps.config.knownOwnerTxSigs.push(launch);
+    const r = await runWatchStep(w.deps);
+    expect(r).toMatchObject({ ownerKnown: 1, unknownSigned: 0, externalClaims: 0, unexplainedInflows: 0 });
+    expect(await killSwitchOn(w)).toBe(false);
+    expect(await w.store.ledger.balance('hire')).toBe(0n);
+    const claim = await runClaimStep(w.deps, w.worker.state);
+    expect(claim.claimedLamports).toBe(SOL + creatorCut);
+    // booked as creator fees: exactly what the vault paid out, never the 0.1 SOL the dev buy cost
+    expect((await w.store.ledger.sumByReason()).get('hire:claim_credit')).toBe(SOL + creatorCut);
   });
 
   it('KNOWN_OWNER_TX_SIGS: an allowlisted owner tx after the floor is accepted; an unlisted one still kills', async () => {

@@ -355,3 +355,18 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 - **CI:** a `backup` job runs `infra/backup/selftest.sh` on Postgres 16 (simulated launch, backup under busybox like the Alpine image, a local S3 server that checks signatures, restore, every table compared, the three failure alerts). The `docker` job builds the backup image.
 
 **Test restore (local, nothing real):** 101 rats, 274 ledger entries, 103 encrypted keys, 35 claims dumped, encrypted, uploaded, downloaded and restored: every table has the same rows, the ledger is identical (md5), 3 of 3 migrations. A wrong S3 secret, a database that is down and a private key pasted as the recipient each sent exactly one alert.
+
+## Miguel's decision: Option A, one-command Mac setup, dev buy at launch (2026-09-29)
+
+**Wallets:** creator `4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot` (made in Phantom, funded right before launch), cold wallet `DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj`. The launch includes a 0.1 SOL dev buy from the creator wallet; those coins stay there forever. Miguel trades from a separate wallet.
+
+**What changed**
+- `scripts/setup-mac.sh`: the whole backend setup in one command (tools, Railway and Cloudflare logins, Railway project with Postgres and 4 services wired by references, private R2 bucket with a 30-day rule, generated secrets in `~/rat-secrets`, hidden prompts for every secret, Telegram chat auto-detected, creator key imported inside Railway, DRY RUN preflight, test alert, first backup, nightly schedule, optional healthchecks.io check, restore drill on the real backup). Safe to re-run. Secrets only go through stdin, never a command line, never printed. Runbook: `docs/runbooks/setup-mac.md`.
+- `scripts/rat.sh`: runs a `rat` command inside the Railway worker.
+- **Dev buy never counted as fees:** claims are only credited from pump.fun claim instructions. New worker test: a launch tx that moves SOL (even into the fee vault) is ignored by the watch and the claim books only the claimed fees.
+- **Dev buy coins protected (SECURITY-REVIEW A3 closed):** the effects check now always protects the creator's coin account (both token programs, may not go down). A red-team test (a compromised Jupiter appending a transfer of the dev-buy coins) failed before the fix and passes after.
+- **Preflight:** `launch txs` (every creator-signed tx from `WATCH_FROM_SLOT` on was sent by the bot or is in `KNOWN_OWNER_TX_SIGS`; a listed signature that does not exist is a typo), `dev buy` (coins held by the creator wallet), `cold wallet` (set, not the creator, on-curve, not a bot key). `--json` output for the setup script.
+- `COLD_WALLET` setting: preflight checks it and `rat sweep` uses it when `--to` is left out.
+- Docs: `LAUNCH-DAY.md` and `go-live.md` (fund about 0.3 SOL, dev buy inside the launch, list every creator-signed launch signature), `deploy.md`, `keys.md`.
+
+**Tested without Miguel's accounts:** a harness with fake `railway`, `wrangler` and `brew`, fake Telegram / RPC / Jupiter / healthchecks servers, a local S3 server and a real Postgres 16. It runs the real `rat keys import`, migrations, `backup.sh` and restore drill. First run (with wrong answers first to exercise every retry) and second run (no input at all) both finish; the second one skips every step. No secret appears in either transcript or on any command line. The read-only API user can read and cannot write. A contract test ties the script's two allowed pre-launch FAILs to the real preflight wording.

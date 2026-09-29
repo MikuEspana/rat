@@ -1,7 +1,7 @@
 // Red-team tests (SECURITY-REVIEW.md): each test is one attack or failure on a money path, run against the
 // in-memory SimChain in live mode. Nothing here can reach mainnet.
-import { type SwapBuild, type SwapBuildRequest, TOKEN_2022_PROGRAM } from '@rat/core';
-import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
+import { ASSOCIATED_TOKEN_PROGRAM, type SwapBuild, type SwapBuildRequest, TOKEN_2022_PROGRAM } from '@rat/core';
+import { Keypair, PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WorkerState } from './deps';
 import { SOL, type SimWorld, createSimWorld } from './sim-world';
@@ -35,6 +35,23 @@ function compromiseJupiter(world: SimWorld, tamper: (b: SwapBuild, req: SwapBuil
   return () => {
     world.deps.swap = honest;
   };
+}
+
+const ataProgram = new PublicKey(ASSOCIATED_TOKEN_PROGRAM);
+const ata = (owner: PublicKey, mint: PublicKey, program: PublicKey) => PublicKey.findProgramAddressSync([owner.toBuffer(), program.toBuffer(), mint.toBuffer()], ataProgram)[0];
+/** Token TransferChecked (instruction 12), built by hand. */
+function transferCheckedIx(from: PublicKey, mint: PublicKey, to: PublicKey, owner: PublicKey, amount: bigint, decimals: number, program: PublicKey): TransactionInstruction {
+  const data = Buffer.alloc(10);
+  data[0] = 12;
+  data.writeBigUInt64LE(amount, 1);
+  data[9] = decimals;
+  const keys = [
+    { pubkey: from, isSigner: false, isWritable: true },
+    { pubkey: mint, isSigner: false, isWritable: false },
+    { pubkey: to, isSigner: false, isWritable: true },
+    { pubkey: owner, isSigner: true, isWritable: false },
+  ];
+  return new TransactionInstruction({ programId: program, keys, data });
 }
 
 /** Makes the next submit land on-chain and then hang forever: the process is "killed" mid-send. */
@@ -74,6 +91,29 @@ describe('red team: compromised Jupiter API (live, SimChain)', () => {
     const again = await runHireStep(w.deps, w.worker.state);
     expect(again.hired).toBeGreaterThan(0);
     expect(w.chain.sol(thief.toBase58())).toBe(0n);
+  });
+
+  it('an extra instruction moving the dev-buy coins out of the creator wallet is refused (SECURITY-REVIEW A3)', async () => {
+    await liveWorld();
+    const creator = w.creator.publicKey;
+    const coin = new PublicKey(w.coinMint);
+    const devBuy = 35_000_000n * 1_000_000n; // the coins bought at launch, kept in the creator wallet forever
+    w.chain.setTokenBalance(creator.toBase58(), w.coinMint, devBuy, TOKEN_2022_PROGRAM);
+    const thief = Keypair.generate().publicKey;
+    const program = new PublicKey(TOKEN_2022_PROGRAM);
+    // the thief's account exists already, so the theft costs the creator no SOL at all (the SOL limit cannot see it)
+    w.chain.setTokenBalance(thief.toBase58(), w.coinMint, 0n, TOKEN_2022_PROGRAM);
+    compromiseJupiter(w, (b) => ({
+      ...b,
+      instructions: [...b.instructions, transferCheckedIx(ata(creator, coin, program), coin, ata(thief, coin, program), creator, devBuy, 6, program)],
+    }));
+    const submittedBefore = w.simSender.submitted;
+    const r = await runHireStep(w.deps, w.worker.state);
+    expect(r.hired).toBe(0);
+    expect(w.simSender.submitted).toBe(submittedBefore);
+    expect(w.chain.tokenBalance(creator.toBase58(), w.coinMint, TOKEN_2022_PROGRAM)).toBe(devBuy);
+    expect(w.chain.tokenBalance(thief.toBase58(), w.coinMint, TOKEN_2022_PROGRAM)).toBe(0n);
+    expect(w.alerts.sent.find((a) => a.key === 'effects_hire')?.text).toMatch(new RegExp(w.coinMint));
   });
 
   it('a swap that delivers less than the quoted minimum is refused (rat token check)', async () => {

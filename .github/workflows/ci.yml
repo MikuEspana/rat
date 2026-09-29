@@ -80,6 +80,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Shell scripts (shellcheck is on the runner)
+        run: shellcheck scripts/*.sh infra/backup/*.sh
       - name: Tools (Postgres 16 client, age, busybox, a local S3 server)
         run: |
           sudo apt-get update -qq

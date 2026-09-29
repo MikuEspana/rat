@@ -2,6 +2,7 @@
 
 | Runbook | When |
 |---|---|
+| [setup-mac.md](setup-mac.md) | the whole setup on a Mac in one command (`scripts/setup-mac.sh`): what each step shows, what to do if one fails |
 | [deploy.md](deploy.md) | first setup: Railway (Postgres, worker, API, admin, backup), Vercel, env vars (config only, done by the owner) |
 | [go-live.md](go-live.md) | launch day, step by step |
 | [kill-switch.md](kill-switch.md) | stop everything now |

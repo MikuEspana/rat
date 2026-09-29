@@ -3,6 +3,7 @@
 //   - hires need a spend reservation from the SpendGuard
 //   - live claim / hire: the signed tx is simulated first and refused if it would break its spend limits
 //     (TxRequest.limits), so instructions from an outside API can never drain a wallet
+//   - protected tokens (the creator wallet's own coins, like the dev buy) must not drop in any claim or hire
 //   - lease fence: a worker that lost the single-worker lease sends nothing
 //   - every attempt is written to the database BEFORE it is sent (signature + last valid block height)
 //   - a send that throws after the attempt was written counts as `unknown` (it may still land), never as "not sent"
@@ -12,9 +13,13 @@ import {
   type AttemptStore,
   BlockedError,
   type KillSwitch,
+  TOKEN_2022_PROGRAM,
+  TOKEN_PROGRAM,
   type Logger,
   type PreparedTx,
   SPENDING_TX_KINDS,
+  type Pubkey,
+  type TxLimits,
   type TxOutcome,
   type TxRequest,
   type TxSender,
@@ -37,6 +42,17 @@ export interface GuardedSenderDeps {
   alerts?: Alerts;
   /** false = this process no longer holds the single-worker lease: nothing is sent */
   fence?: () => Promise<boolean>;
+  /**
+   * Token accounts no claim or hire may reduce, whatever its own limits say: the creator wallet's coins (the dev
+   * buy). Added to every live effects check with minDelta 0, so an outside API can never move them.
+   */
+  protectedTokens?: { owner: Pubkey; mint: Pubkey; tokenProgram: Pubkey }[];
+}
+
+/** The creator wallet's own coins (the dev buy), under both token programs: a missing account counts as 0. */
+export function creatorCoinTokens(creator: Pubkey | undefined, coinMint: Pubkey | undefined): { owner: Pubkey; mint: Pubkey; tokenProgram: Pubkey }[] {
+  if (!creator || !coinMint) return [];
+  return [TOKEN_2022_PROGRAM, TOKEN_PROGRAM].map((tokenProgram) => ({ owner: creator, mint: coinMint, tokenProgram }));
 }
 
 export class GuardedSender {
@@ -54,16 +70,26 @@ export class GuardedSender {
     this.deps.fence = fence;
   }
 
+  /** The request's limits plus every protected token account (must not drop). */
+  private withProtected(limits: TxLimits): TxLimits {
+    const own = limits.tokens ?? [];
+    const extra = (this.deps.protectedTokens ?? [])
+      .filter((p) => !own.some((t) => t.owner === p.owner && t.mint === p.mint && t.tokenProgram === p.tokenProgram))
+      .map((p) => ({ ...p, minDelta: 0n }));
+    return extra.length ? { ...limits, tokens: [...own, ...extra] } : limits;
+  }
+
   private async checkEffects(request: TxRequest, prepared: PreparedTx): Promise<string | null> {
     if (!request.limits) return `a live ${request.kind} transaction needs spend limits`;
+    const limits = this.withProtected(request.limits);
     let effects;
     try {
-      effects = await this.inner.simulateEffects(prepared, request.limits);
+      effects = await this.inner.simulateEffects(prepared, limits);
     } catch (err) {
       return `effects_check: simulation unavailable: ${(err as Error).message}`;
     }
     if (effects.error) return `effects_check: simulation failed: ${effects.error}`;
-    const bad = limitViolations(request.limits, effects);
+    const bad = limitViolations(limits, effects);
     if (bad.length === 0) return null;
     await this.deps.alerts?.send(
       'critical',

@@ -5,7 +5,7 @@ import { type DbHandle, Store, openDatabase } from '@rat/db';
 import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
-import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
+import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, creatorCoinTokens, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
 import { createJupiterBudget } from './jupiter-budget';
 
@@ -39,7 +39,7 @@ export async function createProductionDeps(
       priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax,
       log,
     }),
-    { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log, alerts },
+    { attempts: store.attempts, killSwitch, dryRun: cfg.dryRun, log, alerts, protectedTokens: creatorCoinTokens(cfg.creatorPubkey, cfg.coinMint) },
   );
   const guard = new SpendGuard(
     { ledger: store.ledger, killSwitch, alerts, clock: systemClock, chain },

@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { FakeClock, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
 import { SimChain, SimChainReader } from '@rat/chain/sim';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type CheckLine, type PreflightDeps, printPreflight, runPreflightChecks, telegramCheck } from './commands/preflight';
 
@@ -53,7 +55,7 @@ async function setup(env: Record<string, string> = {}, over: Partial<PreflightDe
     now: () => clock.now().getTime(),
     ...over,
   };
-  return { deps, store, chain, creator, stock };
+  return { deps, store, chain, creator, stock, coin };
 }
 
 const byCheck = (lines: CheckLine[], check: string) => lines.find((l) => l.check === check);
@@ -129,6 +131,73 @@ describe('rat preflight', () => {
     await s.store.stocks.syncConfig([{ symbol: 'TSTx', name: 'Test', mint: s.stock, group: 'volatile', enabled: true, approved: false }]);
     expect(byCheck(await runPreflightChecks(s.deps), 'stocks')?.status).toBe('WARN');
     expect(byCheck(await runPreflightChecks(s.deps, { live: true }), 'stocks')?.status).toBe('FAIL');
+  });
+
+  it('launch with a dev buy: every creator-signed tx from the watch floor on must be in KNOWN_OWNER_TX_SIGS', async () => {
+    const s = await setup();
+    const creator = s.creator.publicKey.toBase58();
+    // the launch: the creator wallet signs it, pays for the dev buy and ends up holding the coins
+    const launch = s.chain.newSignature();
+    const out = s.chain.execute(
+      { signature: launch, feePayer: creator, signers: [creator], instructions: [SystemProgram.transfer({ fromPubkey: s.creator.publicKey, toPubkey: Keypair.generate().publicKey, lamports: 1_000_000 })] },
+      { mutate: true },
+    );
+    expect(out.landed).toBe(true);
+    s.chain.setTokenBalance(creator, s.coin, 35_000_000n * 1_000_000n, TOKEN_2022_PROGRAM);
+
+    // unlisted: the live worker would engage the kill switch on it (WARN in DRY RUN, FAIL for a live start)
+    let lines = await runPreflightChecks(s.deps);
+    expect(byCheck(lines, 'launch txs')).toMatchObject({ status: 'WARN', detail: expect.stringContaining(launch) });
+    expect(byCheck(await runPreflightChecks(s.deps, { live: true }), 'launch txs')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/kill switch/) });
+    // the dev buy's coins are shown and never counted as fees
+    expect(byCheck(lines, 'dev buy')).toMatchObject({ status: 'PASS', detail: expect.stringMatching(/holds 35,000,000 coins .* never counted as fees/) });
+
+    // listed: accepted
+    s.deps.config.knownOwnerTxSigs.push(launch);
+    lines = await runPreflightChecks(s.deps, { live: true });
+    expect(byCheck(lines, 'launch txs')).toMatchObject({ status: 'PASS', detail: expect.stringMatching(/1 listed/) });
+    expect(lines.find((l) => l.check === 'owner txs')).toBeUndefined();
+
+    // a typo in KNOWN_OWNER_TX_SIGS is caught (the real launch signature would be unlisted)
+    s.deps.config.knownOwnerTxSigs.push('5'.repeat(88));
+    expect(byCheck(await runPreflightChecks(s.deps, { live: true }), 'owner txs')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/not found on this network/) });
+
+    // before the watch floor nothing needs listing
+    s.deps.config.knownOwnerTxSigs.length = 0;
+    s.deps.config.watchFromSlot = s.chain.slot + 1;
+    expect(byCheck(await runPreflightChecks(s.deps, { live: true }), 'launch txs')?.status).toBe('PASS');
+  });
+
+  it('no dev buy: the creator wallet holds no coins', async () => {
+    const s = await setup();
+    expect(byCheck(await runPreflightChecks(s.deps), 'dev buy')).toMatchObject({ status: 'PASS', detail: expect.stringMatching(/holds no coins/) });
+  });
+
+  it('cold wallet: unset is a warning; the creator wallet or an off-curve address is a FAIL; a normal wallet passes', async () => {
+    const s = await setup();
+    expect(byCheck(await runPreflightChecks(s.deps), 'cold wallet')?.status).toBe('WARN');
+    s.deps.config.coldWallet = s.creator.publicKey.toBase58();
+    expect(byCheck(await runPreflightChecks(s.deps), 'cold wallet')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/creator wallet/) });
+    // a program derived address is off-curve: nobody could sign for tokens sent there
+    s.deps.config.coldWallet = PublicKey.findProgramAddressSync([Buffer.from('x')], SystemProgram.programId)[0].toBase58();
+    expect(byCheck(await runPreflightChecks(s.deps), 'cold wallet')).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(/off-curve/) });
+    const cold = Keypair.generate().publicKey.toBase58();
+    s.deps.config.coldWallet = cold;
+    expect(byCheck(await runPreflightChecks(s.deps), 'cold wallet')).toMatchObject({ status: 'PASS', detail: expect.stringContaining(cold) });
+  });
+
+  it('scripts/setup-mac.sh lets exactly the two expected pre-launch FAILs through, matched on the real wording', async () => {
+    // the state setup-mac.sh leaves: DRY RUN, creator key imported, no coin, no launch slot, creator not funded yet,
+    // stocks not approved yet, no backup RPC
+    const s = await setup({ COIN_MINT: '', WATCH_FROM_SLOT: '', COLD_WALLET: Keypair.generate().publicKey.toBase58() });
+    s.chain.setSol(s.creator.publicKey.toBase58(), 0n);
+    await s.store.stocks.syncConfig([{ symbol: 'TSTx', name: 'Test', mint: s.stock, group: 'volatile', enabled: true, approved: false }]);
+    const failing = (await runPreflightChecks(s.deps)).filter((l) => l.status === 'FAIL');
+    expect(failing.map((l) => l.check).sort()).toEqual(['creator wallet', 'settings']);
+    const settings = byCheck(failing, 'settings');
+    const script = readFileSync(fileURLToPath(new URL('../../../scripts/setup-mac.sh', import.meta.url)), 'utf8');
+    expect(script).toContain(`.check == "settings" and .detail == "${settings?.detail}"`);
+    expect(script).toContain('.check == "creator wallet"');
   });
 
   it('Telegram check: bad token, bot not in the chat, working bot', async () => {

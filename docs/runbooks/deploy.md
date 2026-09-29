@@ -2,13 +2,15 @@
 
 Agents did not create any of these resources. Everything below is done by the owner.
 
+**On a Mac, one command does all of it** (Railway, R2 backups, secrets, the creator key, preflight, a restore drill): `scripts/setup-mac.sh`, see `setup-mac.md`. This page is the same setup by hand.
+
 ## 1. Postgres (Railway, same project as the bot)
 The code only needs plain Postgres through `DATABASE_URL` (node-postgres and plain SQL migrations, nothing Supabase specific).
 1. In the Railway project (step 2): **+ New > Database > PostgreSQL**. Keep the service name `Postgres`: the references below use it. It runs Postgres 16 and is private by default; leave Public Access off.
-2. Project Settings > Shared Variables: `RAT_API_DB_PASSWORD` = the output of `openssl rand -hex 32` (hex, so it is safe inside a URL). Keep it in your password manager too.
+2. On the api service: `RAT_API_DB_PASSWORD` = the output of `openssl rand -hex 32` (hex, so it is safe inside a URL). Keep it in your password manager too.
 3. Service variables are Railway references, so the database password is never copied anywhere:
    - worker and admin: `DATABASE_URL=${{Postgres.DATABASE_URL}}`
-   - api: `DATABASE_URL_READONLY=postgresql://rat_api:${{shared.RAT_API_DB_PASSWORD}}@${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}`
+   - api: `DATABASE_URL_READONLY=postgresql://rat_api:${{RAT_API_DB_PASSWORD}}@${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}`
 
    `DATABASE_URL` is a direct connection over the private network, which the single-worker lock needs (a session advisory lock): never put PgBouncer in front of the worker.
 4. Deploy the worker once (step 2) so it runs the migrations. Then create the API's read-only user: `railway connect Postgres` opens psql without showing you any password; run `\i infra/readonly-role.sql`, then `\password rat_api` and paste `RAT_API_DB_PASSWORD`.

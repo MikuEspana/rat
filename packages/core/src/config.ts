@@ -91,6 +91,8 @@ const envSchema = z.object({
   }),
   KEY_VERSION: intStr(1, 1),
   CREATOR_PUBKEY: optPubkey,
+  // Your cold wallet (a wallet the bot has no key for): the default target of `rat sweep`. Checked by preflight.
+  COLD_WALLET: optPubkey,
 
   RPC_URL: optStr,
   RPC_URL_BACKUP: optStr,
@@ -178,6 +180,8 @@ export interface AppConfig {
   keyEncryptionKey?: string;
   keyVersion: number;
   creatorPubkey?: string;
+  /** the owner's cold wallet: default target of `rat sweep` */
+  coldWallet?: string;
 
   rpcUrl?: string;
   rpcUrlBackup?: string;
@@ -248,6 +252,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     keyEncryptionKey: e.KEY_ENCRYPTION_KEY,
     keyVersion: e.KEY_VERSION,
     creatorPubkey: e.CREATOR_PUBKEY,
+    coldWallet: e.COLD_WALLET,
     rpcUrl: e.RPC_URL,
     rpcUrlBackup: e.RPC_URL_BACKUP,
     coinMint: e.COIN_MINT,
@@ -306,6 +311,7 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
     watchFromSlot: cfg.watchFromSlot || 'first live run',
     knownOwnerTxSigs: cfg.knownOwnerTxSigs.length,
     creatorPubkey: cfg.creatorPubkey ?? null,
+    coldWallet: cfg.coldWallet ?? null,
     hireMode: cfg.hireMode,
     salarySol: cfg.salaryLamports.toString(),
     spendCapLamportsPerHour: { hire: cfg.spendCapLamportsPerHour.hire.toString() },

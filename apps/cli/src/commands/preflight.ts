@@ -4,6 +4,7 @@
 import { type AppConfig, type ChainReader, type KeyStore, SETTINGS, formatSol } from '@rat/core';
 import type { Store } from '@rat/db';
 import { verifyStockMints } from '@rat/safety';
+import { PublicKey } from '@solana/web3.js';
 
 export type CheckStatus = 'PASS' | 'WARN' | 'FAIL';
 
@@ -46,6 +47,62 @@ const REQUIRED: [(c: AppConfig) => unknown, string][] = [
 
 function errText(err: unknown): string {
   return (err as Error)?.message ?? String(err);
+}
+
+/** Creator wallet signatures listed per preflight run, and transaction records fetched to check their signers. */
+const LAUNCH_SCAN_SIGS = 1000;
+const LAUNCH_SCAN_RECORDS = 60;
+
+function short(sigs: string[]): string {
+  return sigs.length <= 2 ? sigs.join(', ') : `${sigs.slice(0, 2).join(', ')} and ${sigs.length - 2} more`;
+}
+
+function formatTokens(amount: bigint, decimals: number): string {
+  return (amount / 10n ** BigInt(decimals)).toLocaleString('en-US');
+}
+
+type AddLine = (status: CheckStatus, check: string, detail: string) => void;
+
+/**
+ * KNOWN_OWNER_TX_SIGS must name real transactions of the creator wallet, and every transaction the creator wallet
+ * signed from the watch floor on that the bot did not send must be listed (the launch with the dev buy). Anything
+ * unlisted would make the live worker engage the kill switch, by design: an unknown signature means a leaked key.
+ */
+async function launchTxChecks(d: PreflightDeps, creator: string, floor: number, add: AddLine, softFail: (check: string, detail: string) => void): Promise<void> {
+  const chain = d.chain!;
+  const known = d.config.knownOwnerTxSigs;
+  const missing: string[] = [];
+  const notCreator: string[] = [];
+  for (const sig of known) {
+    const rec = await chain.getTransactionRecord(sig);
+    if (!rec) missing.push(sig);
+    else if (!rec.signers.includes(creator)) notCreator.push(sig);
+  }
+  if (missing.length) softFail('owner txs', `KNOWN_OWNER_TX_SIGS: ${short(missing)} not found on this network. A typo? Copy the signatures from Solscan again.`);
+  if (notCreator.length) add('WARN', 'owner txs', `KNOWN_OWNER_TX_SIGS: ${short(notCreator)} not signed by the creator wallet, so not needed there.`);
+
+  const sigs = (await chain.getSignaturesSince(creator, null, LAUNCH_SCAN_SIGS)).filter((s) => s.slot >= floor);
+  const listed = new Set(known);
+  const ours = d.store ? await d.store.attempts.signaturesKnown(sigs.map((s) => s.signature)) : new Set<string>();
+  const candidates = sigs.filter((s) => !listed.has(s.signature) && !ours.has(s.signature));
+  const unlisted: string[] = [];
+  let checked = 0;
+  for (const s of candidates) {
+    if (checked >= LAUNCH_SCAN_RECORDS) break;
+    checked++;
+    const rec = await chain.getTransactionRecord(s.signature);
+    if (rec && rec.slot >= floor && rec.signers.includes(creator)) unlisted.push(s.signature);
+  }
+  if (unlisted.length) {
+    softFail(
+      'launch txs',
+      `${unlisted.length} transaction(s) signed by the creator wallet from WATCH_FROM_SLOT on are not in KNOWN_OWNER_TX_SIGS: ${short(unlisted)}. The live worker would engage the kill switch on them. If they are yours (the launch with the dev buy), add them to KNOWN_OWNER_TX_SIGS. If not, the creator key has leaked.`,
+    );
+  } else if (candidates.length > checked || sigs.length >= LAUNCH_SCAN_SIGS) {
+    add('WARN', 'launch txs', `only the newest ${checked} of the creator wallet's transactions from WATCH_FROM_SLOT on were checked; none of them is unlisted.`);
+  } else {
+    add('PASS', 'launch txs', `every transaction the creator wallet signed from WATCH_FROM_SLOT on was sent by the bot or is in KNOWN_OWNER_TX_SIGS (${listed.size} listed).`);
+  }
 }
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ value: T; ms: number }> {
@@ -161,6 +218,19 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
     }
   }
 
+  // 7b. cold wallet: the emergency sweep target must be a normal wallet the bot has no key for
+  if (!c.coldWallet) {
+    add('WARN', 'cold wallet', 'COLD_WALLET not set: rat sweep will need --to <your cold wallet>.');
+  } else if (c.coldWallet === c.creatorPubkey) {
+    add('FAIL', 'cold wallet', 'COLD_WALLET is the creator wallet. It must be a wallet only you control.');
+  } else if (!PublicKey.isOnCurve(new PublicKey(c.coldWallet).toBytes())) {
+    add('FAIL', 'cold wallet', `COLD_WALLET ${c.coldWallet} is not a normal wallet address (off-curve / program address).`);
+  } else if (d.store && (await d.store.keys.get(c.coldWallet))) {
+    add('FAIL', 'cold wallet', `COLD_WALLET ${c.coldWallet} is one of the bot's own wallets. It must be a wallet only you control.`);
+  } else {
+    add('PASS', 'cold wallet', `${c.coldWallet} (rat sweep moves the rats' tokens there in an emergency).`);
+  }
+
   // 8. coin
   if (d.chain && c.coinMint) {
     try {
@@ -198,6 +268,34 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
     add('FAIL', 'watch floor', `WATCH_FROM_SLOT=${c.watchFromSlot} is ahead of the chain (slot ${slot}): the wallet watch would ignore every transaction until then.`);
   } else {
     add('PASS', 'watch floor', `WATCH_FROM_SLOT=${c.watchFromSlot}, ${c.knownOwnerTxSigs.length} known owner tx(s).`);
+  }
+
+  // 10b. launch transactions: the launch (with the dev buy) and anything else YOU signed with the creator wallet from
+  // the watch floor on must be in KNOWN_OWNER_TX_SIGS, or the live worker engages the kill switch on it.
+  if (d.chain && c.creatorPubkey && c.watchFromSlot > 0) {
+    try {
+      await launchTxChecks(d, c.creatorPubkey, c.watchFromSlot, add, softFail);
+    } catch (err) {
+      add('WARN', 'launch txs', `could not check the creator wallet's transactions: ${errText(err)}`);
+    }
+  }
+
+  // 10c. the dev buy: coins the creator wallet bought at launch stay there. They are not fees and never hire rats.
+  if (d.chain && c.creatorPubkey && c.coinMint) {
+    try {
+      const mint = (await d.chain.getMintStates([c.coinMint])).get(c.coinMint);
+      if (mint?.exists && mint.tokenProgram) {
+        const [acct] = await d.chain.getTokenAccounts([{ owner: c.creatorPubkey, mint: c.coinMint, tokenProgram: mint.tokenProgram }]);
+        const amount = acct?.amount ?? 0n;
+        if (amount > 0n) {
+          add('PASS', 'dev buy', `the creator wallet holds ${formatTokens(amount, mint.decimals)} coins from the launch. They stay there, are never counted as fees and never hire rats. Selling or moving them needs the creator key and stops the bot.`);
+        } else {
+          add('PASS', 'dev buy', 'the creator wallet holds no coins (no dev buy).');
+        }
+      }
+    } catch (err) {
+      add('WARN', 'dev buy', `could not read the creator wallet's coins: ${errText(err)}`);
+    }
   }
 
   // 11. kill switch

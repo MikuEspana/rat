@@ -14,15 +14,17 @@
 
 ## T-1 hour: launch the coin, THEN tell the worker about it
 Order matters: the coin launch is a creator-wallet transaction the bot did not send. The wallet watch must know about it before the worker's first live start, or it looks like a leaked key and trips the kill switch.
-1. [ ] Fund the creator wallet with the 0.05 SOL reserve + launch cost (sending SOL **to** it is fine).
-2. [ ] Launch the coin on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**. Do any other manual step with the creator wallet now too.
-   - Dev buy: do it from a **separate** wallet, or move the bought coins out of the creator wallet right now. The bot's spend check protects the creator's SOL, not other tokens sitting in it (SECURITY-REVIEW.md A3).
-3. [ ] Open the launch transaction on Solscan and wait until it shows **Finalized**. Note its **signature** and its **slot** (block).
-4. [ ] On the worker set:
-   - `COIN_MINT` = the coin mint
-   - `WATCH_FROM_SLOT` = the launch slot + 1 (the watch never looks at anything older)
-   - `KNOWN_OWNER_TX_SIGS` = the launch signature, plus any other transaction you signed with the creator wallet after that slot (comma separated)
-5. [ ] Redeploy, still DRY RUN. `rat status` + the site show paper claims reading the real vault.
+1. [ ] Fund the creator wallet (sending SOL **to** it is fine): the dev buy (0.1 SOL) + the launch cost + the 0.05 SOL reserve + a little spare, about 0.3 SOL.
+2. [ ] Launch the coin on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**, with the **dev buy inside the launch** (0.1 SOL). Do any other manual step with the creator wallet now too.
+   - The dev-buy coins stay in the creator wallet forever. They are never counted as fees and never hire rats. Every claim and hire the bot sends must leave them untouched: the effects check refuses anything that would lower them (SECURITY-REVIEW.md A3).
+   - Never sell or move them: that is a transaction signed by the creator wallet, and it stops the bot (see below). Your own trading uses a separate wallet.
+   - pump.fun takes its normal creator fee on every buy, the dev buy included; that small cut (well under 1% of 0.1 SOL) lands in the creator fee vault and hires rats like any fee. The 0.1 SOL itself does not.
+3. [ ] On Solscan, open the **creator wallet** and wait until its launch transaction shows **Finalized**. Note the **signature** of every transaction the creator wallet signed at launch (usually one: create plus dev buy; if pump.fun split them, both) and the **slot** (block) of the last one.
+4. [ ] On the worker set (`railway variable set --service worker ...`, or the Railway dashboard):
+   - `COIN_MINT` = the coin mint (on the api too)
+   - `WATCH_FROM_SLOT` = that slot + 1 (the watch never looks at anything older)
+   - `KNOWN_OWNER_TX_SIGS` = those signature(s), plus any other transaction you signed with the creator wallet after that slot (comma separated)
+5. [ ] Redeploy, still DRY RUN. `rat status` + the site show paper claims reading the real vault. `rat preflight --live` shows `launch txs` PASS (every creator-signed transaction is listed) and `dev buy` PASS with the coins it holds.
 6. [ ] `rat dry-run-reset --yes` to start the live history clean.
 
 ## Important while the bot is live
