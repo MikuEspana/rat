@@ -240,6 +240,19 @@ export class SimChain {
 
   // ---------- direct state helpers (test setup, "the outside world") ----------
 
+  /** raw program accounts (for example a pump.fun bonding curve): test setup only, no program writes them */
+  private readonly rawAccounts = new Map<string, { owner: string; data: Uint8Array }>();
+
+  /** null data removes the account */
+  setAccountData(pubkey: string, owner: string, data: Uint8Array | null): void {
+    if (data) this.rawAccounts.set(pubkey, { owner, data });
+    else this.rawAccounts.delete(pubkey);
+  }
+
+  accountData(pubkey: string): { owner: string; data: Uint8Array } | undefined {
+    return this.rawAccounts.get(pubkey);
+  }
+
   fundAccount(pubkey: string, lamports: bigint): void {
     this.state.sol.set(pubkey, (this.state.sol.get(pubkey) ?? 0n) + lamports);
   }

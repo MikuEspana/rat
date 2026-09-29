@@ -1,12 +1,12 @@
 // Assembles the steps into the loop:
-//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> reconcile (35s)
+//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> reconcile (35s) -> coin creator check (10 min)
 import { redactSecrets } from '@rat/core';
 import type { WorkerDeps } from './deps';
 import { WorkerState } from './deps';
 import { Scheduler } from './scheduler';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
-import { runMintStep } from './steps/mints';
+import { runCoinCheckStep, runMintStep } from './steps/mints';
 import { runPriceStep } from './steps/prices';
 import { runReconcileStep } from './steps/reconcile';
 import { runWatchStep } from './steps/watch';
@@ -48,6 +48,7 @@ export function createWorker(d: WorkerDeps): Worker {
         },
       },
       { name: 'reconcile', everySec: c.intervals.claimSec, run: () => runReconcileStep(d, state) },
+      { name: 'coin', everySec: 600, run: () => runCoinCheckStep(d) },
     ],
     {
       clock: d.clock,

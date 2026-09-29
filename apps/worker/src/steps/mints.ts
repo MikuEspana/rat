@@ -3,6 +3,7 @@
 //  - verifies every stock mint (owner rule #12): Token-2022 + expected mint authority, else rejected
 //  - Pausable: a paused stock freezes all its rats (one event), a resumed stock unfreezes them
 import { SETTINGS } from '@rat/core';
+import { bondingCurveAddress, coinCreatorProblem } from '@rat/pump';
 import { verifyStockMints } from '@rat/safety';
 import type { WorkerDeps } from '../deps';
 
@@ -69,4 +70,17 @@ export async function runMintStep(d: WorkerDeps): Promise<{ verified: number; re
     }
   }
   return { verified, rejected, paused };
+}
+
+/**
+ * Coin check (every 10 minutes): the coin must still pay its creator fees to the creator wallet, in SOL. pump.fun can
+ * move them elsewhere after launch (fee sharing, a holder rewards takeover): the bot would then claim nothing,
+ * silently. Nothing is spent without claims, so this only alerts.
+ */
+export async function runCoinCheckStep(d: WorkerDeps): Promise<{ ok: boolean; problem?: string }> {
+  if (!d.config.coinMint || !d.config.creatorPubkey) return { ok: true };
+  const problem = coinCreatorProblem(await d.chain.getAccountData(bondingCurveAddress(d.config.coinMint)), d.config.creatorPubkey);
+  if (!problem) return { ok: true };
+  await d.alerts.send('critical', 'coin_creator', `The coin ${d.config.coinMint} no longer pays its creator fees to the creator wallet: ${problem}. No new claims will come in.`);
+  return { ok: false, problem };
 }

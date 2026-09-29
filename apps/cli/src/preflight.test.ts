@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { FakeClock, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
 import { SimChain, SimChainReader } from '@rat/chain/sim';
+import { PUMP_PROGRAM_ID, bondingCurveAddress, encodeBondingCurve } from '@rat/pump';
 import { type DbHandle, Store, openMemoryDatabase } from '@rat/db';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
@@ -27,6 +28,7 @@ async function setup(env: Record<string, string> = {}, over: Partial<PreflightDe
   chain.createMint({ mint: coin, decimals: 6, tokenProgram: TOKEN_2022_PROGRAM, supply: 1n });
   chain.createMint({ mint: stock, decimals: 8, tokenProgram: TOKEN_2022_PROGRAM, mintAuthority: authority, supply: 1n });
   chain.fundAccount(creator.publicKey.toBase58(), SOL / 10n);
+  chain.setAccountData(bondingCurveAddress(coin), PUMP_PROGRAM_ID, encodeBondingCurve({ creator: creator.publicKey.toBase58() }));
   const master = randomBytes(32).toString('base64');
   const config = loadConfig({
     DATABASE_URL: 'memory://',
@@ -67,7 +69,7 @@ describe('rat preflight', () => {
     const lines = await runPreflightChecks(deps);
     expect(fails(lines)).toEqual([]);
     expect(lines.map((l) => l.check)).toEqual(
-      expect.arrayContaining(['mode', 'settings', 'database', 'rpc', 'jupiter', 'creator key', 'creator wallet', 'coin', 'stocks', 'watch floor', 'kill switch', 'caps', 'telegram', 'worker']),
+      expect.arrayContaining(['mode', 'settings', 'database', 'rpc', 'jupiter', 'creator key', 'creator wallet', 'coin', 'coin creator', 'stocks', 'watch floor', 'kill switch', 'caps', 'telegram', 'worker']),
     );
     // there is no fund wallet any more: every claimed SOL hires rats
     expect(lines.map((l) => l.check).filter((c) => /fund/.test(c))).toEqual([]);
@@ -77,6 +79,27 @@ describe('rat preflight', () => {
     expect(printPreflight(lines, (l) => out.push(l), 'RAT RACE preflight')).toBe(true);
     expect(out.at(-1)).toMatch(/^READY: /);
     expect(out.some((l) => /^PASS  rpc +slot/.test(l))).toBe(true);
+  });
+
+  it('a coin that does not pay its creator fees to the creator wallet in SOL is a FAIL (the bot would claim nothing)', async () => {
+    const { deps, chain, coin, creator } = await setup();
+    const me = creator.publicKey.toBase58();
+    const cases: [Uint8Array | null, string, RegExp][] = [
+      [encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58() }), PUMP_PROGRAM_ID, /creator fees go to .* not to CREATOR_PUBKEY/],
+      [encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58(), holderRewards: true }), PUMP_PROGRAM_ID, /holder rewards coin/],
+      [encodeBondingCurve({ creator: me, cashback: true }), PUMP_PROGRAM_ID, /cashback coin/],
+      [encodeBondingCurve({ creator: me, quoteMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }), PUMP_PROGRAM_ID, /trades against EPjF/],
+      [encodeBondingCurve({ creator: me }), SystemProgram.programId.toBase58(), /not by the pump\.fun program/],
+      [null, PUMP_PROGRAM_ID, /no pump\.fun bonding curve/],
+    ];
+    for (const [data, owner, why] of cases) {
+      chain.setAccountData(bondingCurveAddress(coin), owner, data);
+      const line = byCheck(await runPreflightChecks(deps), 'coin creator');
+      expect(line).toMatchObject({ status: 'FAIL', detail: expect.stringMatching(why) });
+    }
+    // an older, shorter curve (before quote_mint and holder rewards existed) with our creator passes
+    chain.setAccountData(bondingCurveAddress(coin), PUMP_PROGRAM_ID, encodeBondingCurve({ creator: me }).subarray(0, 81));
+    expect(byCheck(await runPreflightChecks(deps), 'coin creator')?.status).toBe('PASS');
   });
 
   it('--live while DRY RUN is on, and launch blockers become FAIL', async () => {

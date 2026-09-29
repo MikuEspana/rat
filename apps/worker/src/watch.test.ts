@@ -209,3 +209,18 @@ describe('red team: the watch runs even when the claim step fails', () => {
     expect(await killSwitchOn(w)).toBe(true);
   });
 });
+
+describe('red team: the coin stops paying the creator wallet after launch', () => {
+  it('fee sharing or a takeover moves the creator: a critical alert within 10 minutes', async () => {
+    const { PUMP_PROGRAM_ID, bondingCurveAddress, encodeBondingCurve } = await import('@rat/pump');
+    w = await createSimWorld({ dryRun: false });
+    await w.worker.tick();
+    expect(w.alerts.sent.filter((a) => a.key === 'coin_creator')).toEqual([]);
+    w.chain.setAccountData(bondingCurveAddress(w.coinMint), PUMP_PROGRAM_ID, encodeBondingCurve({ creator: Keypair.generate().publicKey.toBase58() }));
+    for (let i = 0; i < 20; i++) {
+      w.clock.advanceSeconds(35);
+      await w.worker.tick();
+    }
+    expect(w.alerts.sent.find((a) => a.key === 'coin_creator')?.level).toBe('critical');
+  });
+});

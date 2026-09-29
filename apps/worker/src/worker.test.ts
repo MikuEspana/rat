@@ -407,7 +407,8 @@ describe('scheduler and single worker', () => {
     expect(counts.get('claim')).toBe(Math.ceil(1200 / 35));
     expect(counts.get('reconcile')).toBe(Math.ceil(1200 / 35));
     const beats = await w.store.heartbeats.all();
-    expect(beats.map((b) => b.loop).sort()).toEqual(['claim', 'mints', 'prices', 'reconcile']);
+    expect(beats.map((b) => b.loop).sort()).toEqual(['claim', 'coin', 'mints', 'prices', 'reconcile']);
+    expect(counts.get('coin')).toBe(2); // every 10 minutes
     expect(beats.every((b) => b.lastError === null)).toBe(true);
   });
 

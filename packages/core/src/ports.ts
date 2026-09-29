@@ -176,6 +176,8 @@ export interface ChainReader {
   getTransactionRecord(signature: string): Promise<TxRecord | null>;
   /** current slot (confirmed) */
   getSlot(): Promise<number>;
+  /** raw data and owner program of one account (null = it does not exist) */
+  getAccountData(pubkey: Pubkey): Promise<{ owner: Pubkey; data: Uint8Array } | null>;
 }
 
 // ---------- sending ----------
