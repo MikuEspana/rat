@@ -41,7 +41,7 @@ Every phase ends with PASS or FAIL. **Any FAIL means NO-GO:** fix it, pass CI, r
 | Setup | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-staging.sh)"` | Asks for the test creator's public address (a NEW Phantom account), makes the throwaway wallet, then the whole setup with the staging profile: `STAGING=true`, `MIN_CLAIM_SOL=0.0003`, DRY RUN, database marked, kill switch ON | The green checklist |
 | Stocks | `~/wallstreetrats-staging/scripts/approve-stocks.sh` | For each enabled xStock: its mint, xstocks.fi opens, you confirm it matches. Sets `APPROVED_STOCKS`, redeploys, `rat stocks-sync` | The preflight stocks line PASS (on-chain mint check) |
 | 0 | `scripts/staging.sh check` | Isolation checks | Not production, test creator, own master key, STAGING on |
-| 1 | `scripts/staging.sh 1` | GO, then YOU launch the coin in Phantom (0.1 SOL dev buy). The script finds the launch, sets `COIN_MINT` / `WATCH_FROM_SLOT` / `KNOWN_OWNER_TX_SIGS`, then goes LIVE with the kill switch ON. The worker and the API build side by side (twice); do phase 2's trades during the first build | `launch txs` and `dev buy` PASS; `preflight --live` READY except the kill switch; 0 claims |
+| 1 | `scripts/staging.sh 1` | GO, then YOU launch the coin in Phantom (0.1 SOL dev buy). Exactly the launch-day steps (`scripts/lib/launch.sh`, as `scripts/launch.sh`): the script finds the launch, checks `rat preflight --live` with the coin's settings before anything changes, then sets every launch setting in one change and redeploys the worker and the API once, side by side: LIVE with the kill switch ON. Do phase 2's trades during that build | `launch txs` and `dev buy` PASS; `preflight --live` READY except the kill switch; 0 claims |
 | 2 | `scripts/staging.sh 2` | You trade 2 x 0.05 SOL from your trading wallet; GO; the bot claims | `rat audit`: each claim equals what left the fee vaults, to the lamport |
 | 3 | `scripts/staging.sh 3` | GO: seed 0.165 SOL, 5 hires at 0.03 SOL | Audit PASS (each rat paid once, holds what the database says, creator SOL equals the ledger); the API's claimed figure excludes the seed; `stageSol` is claimed plus seeded |
 | 4 and 5 | `scripts/staging.sh 4` | GO: salary 0.01, a small hourly cap, seed 0.125. The worker kills itself right after hire 6 is broadcast | The crash fires once and the worker comes back; hiring stops at the cap with budget waiting; the job-fair line (`waitingSol`) equals that budget; the rest go after the cap is raised; audit PASS; no Jupiter 429 |
@@ -83,7 +83,7 @@ Phases 1, 2 and 3, plus the kill switch part of 6: the launch, the real fee clai
 |---|---|---|
 | Stocks | `scripts/approve-stocks.sh` | 3 + B |
 | 0 | `scripts/staging.sh check` | 1 |
-| 1 | `scripts/staging.sh 1` (trade for phase 2 while it builds) | 9 + 2B |
+| 1 | `scripts/staging.sh 1` (trade for phase 2 while it builds) | 9 + B |
 | 2 | `scripts/staging.sh 2` | 3 |
 | 3 | `scripts/staging.sh 3` | 5 |
 | 6 | `scripts/staging.sh 6 --skip-watchdog` (optional) | 5 |

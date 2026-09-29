@@ -21,6 +21,8 @@ cd "$(dirname "$0")/.."
 . scripts/lib/wsr.sh
 # shellcheck source=scripts/lib/staging-guard.sh
 . scripts/lib/staging-guard.sh
+# shellcheck source=scripts/lib/launch.sh
+. scripts/lib/launch.sh
 APP_DIR=$PWD
 RESULTS="$SECRETS/rehearsal-results.env"
 REPORT="$APP_DIR/rehearsal-report.md"
@@ -134,8 +136,8 @@ phase_check() {
   record 0 PASS "separate project, test creator, own master key, STAGING on"
 }
 
-phase_1() { # the launch (yours, in Phantom), then the bot's live settings with the kill switch ON
-  local c before start sigs slot mint i new yes pre bad_lines s chk
+phase_1() { # the launch (yours, in Phantom), then the bot's live settings with the kill switch ON: the launch-day flow
+  local c before start yes pre problems chk
   title "Phase 1: launch the test coin"
   c=$(creator)
   [ "$(st_get '.killSwitch.on')" = true ] || die "the kill switch must be ON before phase 1" "Run: scripts/rat.sh kill --reason staging"
@@ -144,7 +146,7 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   state_get "$RESULTS" CREATOR_START_LAMPORTS | grep -q . || state_set "$RESULTS" CREATOR_START_LAMPORTS "$start"
   say "Test creator $c holds $(lamports_to_sol "$start") SOL."
   [ "$start" -ge 300000000 ] || die "the test creator holds less than 0.3 SOL" "Send it 0.47 SOL from a wallet unrelated to the real launch, then run phase 1 again."
-  before=$(rpc getSignaturesForAddress "[\"$c\",{\"limit\":1}]" | jq -r '.[0].signature // empty')
+  before=$(latest_signature "$c")
   go_gate "YOU launch the test coin on pump.fun from the test creator in Phantom (the bot sends nothing)" \
     "about 0.02 launch cost + 0.1 dev buy = about 0.12 SOL from the test creator"
   say "1. pump.fun > Create coin, connected with the TEST CREATOR account in Phantom."
@@ -152,54 +154,36 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   say "3. No website, no X, no Telegram. Normal mode, no holder rewards, no fee sharing."
   say "4. Dev buy: 0.1 SOL, inside the launch. Confirm in Phantom."
   pause "When Solscan shows the launch as Finalized, press Enter."
-  for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
-    sigs=$(rpc getSignaturesForAddress "[\"$c\",{\"limit\":20,\"commitment\":\"finalized\"}]" |
-      jq -c --arg b "$before" '[.[] | select(.err == null)] | (map(.signature) | index($b)) as $i | if $i == null then . else .[:$i] end')
-    [ "$(printf '%s' "$sigs" | jq 'length')" -gt 0 ] && break
-    sleep 10
-  done
-  [ "$(printf '%s' "$sigs" | jq 'length')" -gt 0 ] || fail "no finalized transaction from the test creator after the launch"
-  slot=$(printf '%s' "$sigs" | jq '[.[].slot] | max')
-  new=$(printf '%s' "$sigs" | jq -r '[.[].signature] | join(",")')
-  mint=""
-  for s in $(printf '%s' "$sigs" | jq -r '.[].signature'); do
-    mint=$(rpc getTransaction "[\"$s\",{\"encoding\":\"jsonParsed\",\"maxSupportedTransactionVersion\":0,\"commitment\":\"finalized\"}]" |
-      jq -r --arg c "$c" '[.meta.postTokenBalances[]? | select(.owner == $c and (.uiTokenAmount.amount | tonumber) > 0) | .mint] | first // empty')
-    [ -n "$mint" ] && break
-  done
-  say "Found: $(printf '%s' "$sigs" | jq length) transaction(s) signed by the test creator, last slot $slot"
-  say "Coin mint: ${mint:-not found}"
+  find_launch "$c" "$before" || fail "no finalized transaction from the test creator after the launch"
+  say "Found: the launch signature(s) $LAUNCH_SIGS, last slot $LAUNCH_SLOT"
+  say "Coin mint: ${LAUNCH_MINT:-not found}"
   yes=n
-  [ -n "$mint" ] && yes_no "Is that your launch (mint shown on pump.fun)?" y && yes=y
-  if [ "$yes" != y ]; then
-    ask mint "Coin mint address (from pump.fun):"
-    ask new "Launch signature(s), comma separated (Solscan, test creator page):"
-    ask slot "Slot of the last one:"
-  fi
-  set_vars worker "COIN_MINT=$mint" "WATCH_FROM_SLOT=$((slot + 1))" "KNOWN_OWNER_TX_SIGS=$new"
-  set_vars api "COIN_MINT=$mint"
-  say "While the worker and the API build: do phase 2's trades now, from YOUR trading wallet (never the test creator):"
-  say "buy 0.05 SOL of TEST DO NOT BUY, twice, then sell both. The bot sends nothing (kill switch ON, DRY RUN)."
-  redeploy worker api
-  pre=$(rat_json preflight --json)
+  [ -n "$LAUNCH_MINT" ] && yes_no "Is that your launch (mint shown on pump.fun)?" y && yes=y
+  [ "$yes" = y ] || ask_launch
+  # the live preflight WITH the coin's settings, before anything changes (read-only), exactly as on launch day
+  pre=$(preflight_launch)
+  show_preflight "$pre"
   for chk in "launch txs" "dev buy"; do
-    printf '%s' "$pre" | jq -e --arg k "$chk" '.lines[] | select(.check == $k and .status == "PASS")' >/dev/null 2>&1 ||
-      fail "preflight $chk is not PASS: $(printf '%s' "$pre" | jq -r --arg k "$chk" '.lines[] | select(.check == $k) | .detail' 2>/dev/null)"
+    preflight_pass "$pre" "$chk" || fail "preflight $chk is not PASS with the coin's settings"
     ok "preflight $chk: PASS"
   done
-  rat dry-run-reset --yes >/dev/null || fail "rat dry-run-reset failed"
+  problems=$(preflight_problems "$pre" "kill switch")
+  [ -z "$problems" ] || fail "preflight --live with the coin's settings: $(printf '%s' "$problems" | head -3 | tr '\n' ';')"
+  ok "preflight --live with the coin's settings: READY (the kill switch aside: it stays ON)"
   say "Now the staging worker goes LIVE with its kill switch ON: it sends nothing until a phase opens it after your GO."
-  yes_no "Switch the staging worker and API to LIVE?" y || { record 1 SKIP "stayed in DRY RUN"; exit 1; }
-  set_vars worker DRY_RUN=false LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
-  set_vars api DRY_RUN=false
+  yes_no "Set every launch setting in one change and switch the staging worker and API to LIVE?" y || { record 1 SKIP "stayed in DRY RUN"; exit 1; }
+  rat dry-run-reset --yes >/dev/null || fail "rat dry-run-reset failed"
+  apply_launch
+  say "While the worker and the API build: do phase 2's trades now, from YOUR trading wallet (never the test creator):"
+  say "buy 0.05 SOL of TEST DO NOT BUY, twice, then sell both. The bot sends nothing (kill switch ON)."
   redeploy worker api
   [ "$(st_get '.mode')" = live ] || fail "the worker is not live"
   [ "$(st_get '.killSwitch.on')" = true ] || fail "the kill switch is not ON after going live"
   pre=$(rat_json preflight --live --json)
-  bad_lines=$(printf '%s' "$pre" | jq -r '.lines[] | select(.status == "FAIL" and .check != "kill switch") | "\(.check): \(.detail)"' 2>/dev/null)
-  if [ -z "$pre" ] || [ -n "$bad_lines" ]; then fail "preflight --live: ${bad_lines:-no answer}"; fi
+  problems=$(preflight_problems "$pre" "kill switch")
+  [ -z "$problems" ] || fail "preflight --live: $(printf '%s' "$problems" | head -3 | tr '\n' ';')"
   [ "$(st_get '.claims')" = 0 ] || fail "the live ledger already has claims"
-  record 1 PASS "coin $mint, launch txs and dev buy PASS, live with the kill switch ON, preflight --live READY but the switch"
+  record 1 PASS "coin $LAUNCH_MINT, launch txs and dev buy PASS before any change, one change and one redeploy, live with the kill switch ON, preflight --live READY but the switch"
 }
 
 phase_2() { # the first fee claim

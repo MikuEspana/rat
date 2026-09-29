@@ -81,7 +81,30 @@ if (!source) {
 const env = { ...process.env, ...(own ? {} : proc ?? sent) };
 
 // `node -e '<this file>' -- <args>` (inside the worker) or `node scripts/in-worker.cjs <args>` (scripts/rat-local.sh)
-const args = process.argv.slice(process.argv[1] && require('node:path').resolve(process.argv[1]) === __filename ? 2 : 1);
+let args = process.argv.slice(process.argv[1] && require('node:path').resolve(process.argv[1]) === __filename ? 2 : 1);
+// `--with KEY=VALUE ... preflight ...`: the launch (scripts/launch.sh, scripts/staging.sh 1) checks the live preflight
+// with the coin's settings BEFORE anything changes on Railway. Only these public launch settings, and only for the
+// read-only preflight: no other command ever runs with them.
+const WITH_KEYS = ['COIN_MINT', 'WATCH_FROM_SLOT', 'KNOWN_OWNER_TX_SIGS', 'DRY_RUN', 'LIVE_CONFIRM'];
+const overrides = {};
+while (args[0] === '--with') {
+  const kv = args[1] ?? '';
+  const i = kv.indexOf('=');
+  const key = i > 0 ? kv.slice(0, i) : '';
+  if (!WITH_KEYS.includes(key)) {
+    console.error(`rat: --with takes only ${WITH_KEYS.join(', ')} (KEY=VALUE)`);
+    process.exit(2);
+  }
+  overrides[key] = kv.slice(i + 1);
+  args = args.slice(2);
+}
+if (Object.keys(overrides).length > 0) {
+  if (args[0] !== 'preflight') {
+    console.error('rat: --with is only for `preflight` (read-only)');
+    process.exit(2);
+  }
+  Object.assign(env, overrides);
+}
 if (args[0] === '--env-check') {
   console.log(`env-ok (settings from ${source})`);
   process.exit(0);
