@@ -30,7 +30,7 @@ describe('infra config', () => {
     expect(j.build.dockerfilePath).toBe('infra/backup/Dockerfile');
     expect(j.deploy.restartPolicyType).toBe('NEVER');
     expect(j.deploy.startCommand).toBeUndefined();
-    expect(read('infra/backup/Dockerfile')).toMatch(/^FROM postgres:16-alpine$/m);
+    expect(read('infra/backup/Dockerfile')).toMatch(/^FROM postgres:18-alpine$/m);
     const script = read('infra/backup/backup.sh');
     expect(script).toContain('never a private key');
     // it never deletes from the bucket (retention is the bucket's lifecycle rule)

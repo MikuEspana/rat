@@ -59,7 +59,7 @@ Settings > **Cron Schedule**:
 2. See one alert: set `BACKUP_S3_BUCKET` to a wrong name, wait for the next run, expect `backup_failed ... at step 'upload'` in Telegram. Put the right name back.
 3. Then `30 3 * * *` (03:30 UTC every night).
 
-If you ever upgrade the database past Postgres 16, change `infra/backup/Dockerfile` to the same major (`postgres:17-alpine`, ...). If you forget, the job alerts at step `check_versions`.
+Railway's database runs Postgres 18 and `infra/backup/Dockerfile` uses `postgres:18-alpine`. If the database major ever changes, change the Dockerfile to the same major (`postgres:19-alpine`, ...): setup-mac.sh then installs the matching client on the Mac, CI tests on it (`scripts/check-guards.mjs` keeps them equal), and setup stops at step 3 if Railway and the Dockerfile disagree. If you forget, the job alerts at step `check_versions`.
 
 ### Missed nights
 The job alerts whenever it runs and fails. If it never starts at all (service removed, schedule cleared), nothing inside Railway can tell you. For that, optional: a free check at healthchecks.io (it has a Telegram integration) with a 1 day period, and its ping URL in `BACKUP_HEARTBEAT_URL`. The job pings it after every good backup; a missed day alerts you.
@@ -69,7 +69,7 @@ Proves the backups really restore, and times it. Nothing touches production.
 1. Download the newest `rat/rat-YYYYMMDD-HHMMSS.dump.age` from the bucket's web console.
 2. An empty scratch Postgres on your machine:
    ```
-   docker run -d --name rat-drill -e POSTGRES_PASSWORD=drill -p 55432:5432 postgres:16
+   docker run -d --name rat-drill -e POSTGRES_PASSWORD=drill -p 55432:5432 postgres:18
    ```
 3. From the repo (needs `psql`, `pg_restore` and `age`):
    ```
