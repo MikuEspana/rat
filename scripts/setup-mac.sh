@@ -35,7 +35,13 @@ BRANCH="main"
 APP_DIR="${WSR_DIR:-$HOME/wallstreetrats}"
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
-PROJECT_NAME="wall-street-rats"
+# The rehearsal uses this same script with the staging profile (scripts/setup-staging.sh sets every WSR_ value
+# below). Production never takes extra settings, never links to the staging project, and the reverse.
+PROFILE="${WSR_PROFILE:-production}"
+PROJECT_NAME="${WSR_PROJECT_NAME:-wall-street-rats}"
+EXTRA_VARS="${WSR_EXTRA_VARS:-}" # KEY=VALUE ... for worker, admin and api (the staging profile only)
+BUCKET_PREFIX="${WSR_BUCKET_PREFIX:-wsr-db-backups}"
+FORBIDDEN_PROJECT_ID="${WSR_FORBIDDEN_PROJECT_ID:-}"
 CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot}"
 CREATOR_LABEL="${WSR_CREATOR_LABEL:-creator}"
 COLD_WALLET="${WSR_COLD_WALLET:-DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj}"
@@ -132,8 +138,10 @@ rw_ssh() { # rw_ssh service "command": runs inside the running container
 # command with the settings of the running worker process, or else with the service variables sent as the first line
 # of stdin. Values never go on a command line and are never printed.
 worker_env_json() { rw variable list --service worker --json 2>/dev/null | jq -c 'with_entries(select(.value | type == "string"))' 2>/dev/null || echo '{}'; }
-in_worker_cmd() { # the remote shell line: no secret in it
-  printf "cd /app && exec node -e 'eval(Buffer.from(\"%s\",\"base64\").toString())' -- %s" "$(base64 <"$APP_DIR/scripts/in-worker.cjs" | tr -d '\n')" "$*"
+in_worker_cmd() { # the remote shell line: no secret in it; every argument quoted for the remote shell
+  local a args=""
+  for a in "$@"; do args="$args $(printf '%q' "$a")"; done
+  printf "cd /app && exec node -e 'eval(Buffer.from(\"%s\",\"base64\").toString())' --%s" "$(base64 <"$APP_DIR/scripts/in-worker.cjs" | tr -d '\n')" "$args"
 }
 # The relay answers some refusals with a JSON status and exit code 0 (for example "signup_required": Railway does not
 # know this SSH key), so success is a marker coming back, never the exit code.
@@ -220,6 +228,18 @@ if [ ! -t 0 ] && [ -z "${WSR_TEST:-}" ]; then
   die "the prompts need your keyboard" 'Run it exactly like this: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-mac.sh)"'
 fi
 umask 077
+case "$PROFILE" in
+  production)
+    [ -z "$EXTRA_VARS" ] || die "extra settings (WSR_EXTRA_VARS) are for the staging profile only"
+    # never the rehearsal's project (scripts/setup-staging.sh keeps its state in ~/rat-secrets-staging)
+    [ -n "$FORBIDDEN_PROJECT_ID" ] || FORBIDDEN_PROJECT_ID=$(sed -n 's/^RAILWAY_PROJECT_ID=//p' "$HOME/rat-secrets-staging/setup-state.env" 2>/dev/null | tail -1 || true)
+    ;;
+  staging)
+    [ "$CREATOR_PUBKEY" != "4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot" ] || die "the staging profile never uses the production creator wallet"
+    [ "$SECRETS" != "$HOME/rat-secrets" ] || die "the staging profile never uses the production secrets folder"
+    ;;
+  *) die "unknown profile $PROFILE" ;;
+esac
 
 printf '%s\n' "${B}WALL STREET RATS setup${N}  (DRY RUN only. Nothing here can send a mainnet transaction.)"
 say "Secrets are only typed into hidden prompts. Never paste a seed phrase anywhere."
@@ -339,7 +359,20 @@ else
   rw init --name "$PROJECT_NAME" --workspace "$ws" --json >/dev/null || die "could not create the Railway project"
   ok "project $PROJECT_NAME created and linked to $APP_DIR"
 fi
-state_set RAILWAY_PROJECT_ID "$(rw status --json 2>/dev/null | jq -r '.id // empty')"
+project_json=$(rw status --json 2>/dev/null || echo '{}')
+project_id=$(printf '%s' "$project_json" | jq -r '.id // empty' 2>/dev/null || true)
+project_name=$(printf '%s' "$project_json" | jq -r '.name // empty' 2>/dev/null || true)
+if [ -n "$FORBIDDEN_PROJECT_ID" ] && [ "$project_id" = "$FORBIDDEN_PROJECT_ID" ]; then
+  die "$APP_DIR is linked to the $([ "$PROFILE" = staging ] && echo PRODUCTION || echo staging) project ($project_name): nothing was changed" \
+    "Unlink it: cd $APP_DIR && railway unlink, then run this again."
+fi
+case "$PROFILE:$project_name" in
+  staging:"$PROJECT_NAME" | production:*) ;;
+  staging:*) die "$APP_DIR is linked to project $project_name, not $PROJECT_NAME" "Unlink it: cd $APP_DIR && railway unlink, then run this again." ;;
+esac
+case "$PROFILE:$project_name" in production:*-staging) die "$APP_DIR is linked to the staging project $project_name" "Unlink it: cd $APP_DIR && railway unlink" ;; esac
+state_set RAILWAY_PROJECT_ID "$project_id"
+state_set PROFILE "$PROFILE"
 
 PG=$(rw service list --json 2>/dev/null | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
 if [ -n "$PG" ]; then
@@ -476,7 +509,7 @@ ok "versions match: Railway's Postgres $server_major, the backup job's pg_dump $
 step "Private R2 bucket for the nightly backups"
 BUCKET=$(state_get R2_BUCKET)
 if [ -z "$BUCKET" ]; then
-  BUCKET="wsr-db-backups-$(openssl rand -hex 3)"
+  BUCKET="$BUCKET_PREFIX-$(openssl rand -hex 3)"
   state_set R2_BUCKET "$BUCKET"
 fi
 if wr r2 bucket info "$BUCKET" --json >/dev/null 2>&1; then
@@ -669,12 +702,15 @@ else
   ok "Telegram alerts go to $who"
 fi
 for svc in admin backup; do rw_set "$svc" 'TELEGRAM_BOT_TOKEN=${{worker.TELEGRAM_BOT_TOKEN}}' 'TELEGRAM_CHAT_ID=${{worker.TELEGRAM_CHAT_ID}}'; done
-rw_set worker "DATABASE_URL=$DB_REF" DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY" "COLD_WALLET=$COLD_WALLET"
-rw_set admin "DATABASE_URL=$DB_REF" DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY"
+# shellcheck disable=SC2086 # EXTRA_VARS: space-separated KEY=VALUE words (staging profile only)
+rw_set worker "DATABASE_URL=$DB_REF" DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY" "COLD_WALLET=$COLD_WALLET" $EXTRA_VARS
+# shellcheck disable=SC2086
+rw_set admin "DATABASE_URL=$DB_REF" DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY" $EXTRA_VARS
+# shellcheck disable=SC2086
 rw_set api "DATABASE_URL_READONLY=postgresql://rat_api:\${{RAT_API_DB_PASSWORD}}@\${{$PG.PGHOST}}:\${{$PG.PGPORT}}/\${{$PG.PGDATABASE}}" \
-  DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY" "CORS_ORIGIN=$SITE_ORIGIN" API_CACHE_SEC=3
+  DRY_RUN=true "CREATOR_PUBKEY=$CREATOR_PUBKEY" "CORS_ORIGIN=$SITE_ORIGIN" API_CACHE_SEC=3 $EXTRA_VARS
 rw_set backup "DATABASE_URL=$DB_REF"
-ok "creator wallet $CREATOR_PUBKEY, cold wallet $COLD_WALLET, DRY_RUN=true everywhere"
+ok "creator wallet $CREATOR_PUBKEY, cold wallet $COLD_WALLET, DRY_RUN=true everywhere${EXTRA_VARS:+ ($EXTRA_VARS)}"
 
 # ---------------------------------------------------------------- deploy the worker ------------------------------------
 redeploy_changed worker api admin backup
@@ -689,6 +725,18 @@ case "$envc" in
     "Check both are set: Railway dashboard, worker, Variables." \
     "Route without railway ssh: cd $APP_DIR && scripts/rat-local.sh keys import --role creator (docs/runbooks/setup-mac.md)" ;;
 esac
+if [ "$PROFILE" = staging ]; then
+  init=$(rat_w staging-init 2>&1) || true
+  case "$init" in
+    *"Staging database marked"* | *"Already a staging database"*) ok "staging database marked for the test creator $CREATOR_PUBKEY" ;;
+    *) die "rat staging-init refused" "$(printf '%s' "$init" | grep -i 'error\|refused' | tail -1)" ;;
+  esac
+  if [ "$(state_get STAGING_KILL)" != 1 ]; then
+    rat_w kill --reason "staging: every phase waits for GO" >/dev/null 2>&1 || die "could not turn the staging kill switch on"
+    state_set STAGING_KILL 1
+    ok "kill switch ON: nothing is sent until a phase of scripts/staging.sh gets your GO"
+  fi
+fi
 
 # ---------------------------------------------------------------- 7. creator key -----------------------------------------
 step "Import the creator wallet key (hidden prompt, straight into Railway)"
@@ -792,7 +840,7 @@ printf '%s' "$pre" | jq -e '.lines[] | select(.check == "creator wallet" and .st
 printf '%s' "$pre" | jq -e '.lines[] | select(.check == "settings" and .status == "FAIL")' >/dev/null &&
   note "COIN_MINT is empty: expected, it is set right after the launch (LAUNCH-DAY.md)"
 printf '%s' "$pre" | jq -e '.lines[] | select(.check == "stocks" and .status != "PASS")' >/dev/null &&
-  note "no stock is approved yet: before launch, verify the mints on xstocks.fi, set approved=true in config/stocks.json, then rat stocks-sync"
+  note "no stock is approved yet: before launch, verify the mints on xstocks.fi with: scripts/approve-stocks.sh"
 ok "preflight: nothing else blocks"
 if [ "$(state_get ALERT_OK)" = 1 ]; then
   skip "Telegram test alert"
@@ -837,7 +885,9 @@ if [ "$(state_get BACKUP_FIRST_OK)" = "" ]; then
 else
   skip "first backup ($(state_get BACKUP_FIRST_OK))"
 fi
-if [ "$(state_get CRON_SET)" = 1 ]; then
+if [ "$PROFILE" = staging ]; then
+  note "staging: no nightly schedule (scripts/staging.sh 8 runs a backup when you ask)"
+elif [ "$(state_get CRON_SET)" = 1 ]; then
   skip "nightly schedule"
 else
   jq -nc --arg id "$(service_id backup)" --arg c "$BACKUP_CRON" '{services: {($id): {deploy: {cronSchedule: $c}}}}' |
@@ -845,7 +895,9 @@ else
   state_set CRON_SET 1
   ok "backup runs every night at 03:30 UTC"
 fi
-if [ -n "$(state_get HEARTBEAT)" ]; then
+if [ "$PROFILE" = staging ]; then
+  : # no schedule, so no missed-night check
+elif [ -n "$(state_get HEARTBEAT)" ]; then
   skip "missed-night check ($(state_get HEARTBEAT))"
 elif yes_no "Add a free healthchecks.io check, so a night the backup never starts also alerts you on Telegram?" n; then
   say "1. Sign up (free) at healthchecks.io.  2. Integrations > Telegram: add it (their bot sends you a link)."
@@ -905,10 +957,15 @@ for l in "tools installed, repo at $APP_DIR" \
   "Helius, Jupiter and Telegram set; alerts arrive" \
   "creator key imported for $CREATOR_PUBKEY; cold wallet $COLD_WALLET" \
   "preflight: only the expected pre-launch items open" \
-  "backup ran, nightly at 03:30 UTC, restore drill PASSED"; do
+  "backup ran$([ "$PROFILE" = staging ] || echo ", nightly at 03:30 UTC"), restore drill PASSED"; do
   printf '  %s[x]%s %s\n' "$G" "$N" "$l"
 done
 printf '\n  %sAdmin page%s  https://%s\n  %sPublic API%s  https://%s/api/state\n' "$B" "$N" "$(state_get ADMIN_DOMAIN)" "$B" "$N" "$(state_get API_DOMAIN)"
-printf '\n  %sNEXT STEP%s  Open %s/LAUNCH-DAY.md and do "The night before".\n' "$B$G" "$N" "$APP_DIR"
-say "Then, right before launch: send about 0.3 SOL to $CREATOR_PUBKEY (0.1 dev buy, launch cost, 0.05 reserve)."
-say "Everything stays in DRY RUN until you follow T-0 in LAUNCH-DAY.md yourself."
+if [ "$PROFILE" = staging ]; then
+  printf '\n  %sNEXT STEP%s  The rehearsal: docs/runbooks/rehearsal.md. Start with: %s/scripts/staging.sh check\n' "$B$G" "$N" "$APP_DIR"
+  say "The staging worker is in DRY RUN with its kill switch ON. Every mainnet transaction waits for your GO."
+else
+  printf '\n  %sNEXT STEP%s  Open %s/LAUNCH-DAY.md and do "The night before".\n' "$B$G" "$N" "$APP_DIR"
+  say "Then, right before launch: send about 0.3 SOL to $CREATOR_PUBKEY (0.1 dev buy, launch cost, 0.05 reserve)."
+  say "Everything stays in DRY RUN until you follow T-0 in LAUNCH-DAY.md yourself."
+fi

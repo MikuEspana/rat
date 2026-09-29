@@ -478,6 +478,35 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
 - The docs, `STATUS.md` and the runbook test now say 18.
 - Step 9 re-run: until a first backup has succeeded, setup rebuilds the backup service from the latest commit and reads only the new deployment's log. A failed attempt from before (like the owner's `check_versions` stop) is never read again, even if Railway has not redeployed the backup yet.
 
+## Rehearsal: the staging scripts (2026-09-29)
+- **`scripts/setup-staging.sh`:** the rehearsal's setup is `setup-mac.sh` with the staging profile.
+  - Its own project `wall-street-rats-staging`, folder `~/wallstreetrats-staging`, secrets `~/rat-secrets-staging`, master key, Postgres and R2 bucket (`wsr-staging-backups-...`).
+  - It asks for the test creator's public address and refuses production's wallets.
+  - It makes a throwaway sweep wallet with Node's ed25519: the key goes in a mode 600 file and is never printed.
+  - Settings: `STAGING=true` and `MIN_CLAIM_SOL=0.0003` on the worker, admin and api.
+  - No nightly schedule and no healthchecks question.
+  - `rat staging-init`, then the kill switch ON, before the key import.
+- **`setup-mac.sh` profile hooks** (`WSR_PROFILE`, `WSR_EXTRA_VARS` and others; no `STAGING=true` in it):
+  - production refuses extra settings and the staging project;
+  - staging refuses the production creator, the production secrets folder and the production project.
+- **`scripts/staging.sh check | 1 ... 8 | teardown | report`:** the rehearsal, one phase at a time.
+  - Each phase shows what it sends and the SOL, waits for the exact word GO, and opens the kill switch only for that phase. The switch closes on exit, also on FAIL or Ctrl-C.
+  - Isolation checks run before every phase: the linked project, STAGING on the worker, the test creator, and a master key compared by hash with production's.
+  - The report writes `rehearsal-report.md`. GO only if phases 0 to 8 and the production site check PASS.
+- **`scripts/approve-stocks.sh`:** for each enabled xStock it shows the mint and opens xstocks.fi, and you confirm it matches. It then sets `APPROVED_STOCKS` (loaded on top of `config/stocks.json`; an unknown symbol is a config error), redeploys the worker and runs `rat stocks-sync`. The on-chain mint check still applies.
+- **`rat status --json`:** one line for scripts, with no secret in it.
+- **Fixed along the way:** setup's remote `rat` commands joined their arguments without quoting, so an argument with spaces or parentheses broke the worker's shell (no current command passed one). Each argument is quoted now, as `scripts/rat.sh` already did.
+- **Docs:** `docs/runbooks/rehearsal.md`.
+
+**Tested:**
+- `tests/scripts/staging-test.sh` (in CI): 16 checks with fake `rat` and `railway`, covering the isolation refusals, the GO gate (anything but GO sends nothing), the kill switch back ON after a PASS and after a FAIL, and GO / NO-GO.
+- Setup harness scenario F:
+  - `setup-staging.sh` finishes with its own project, STAGING, the test creator, the throwaway cold wallet, a marked database and the kill switch on;
+  - it refuses the production creator at the prompt;
+  - staging refuses a folder linked to production, and production refuses the staging project;
+  - the throwaway key is never shown, and no secret leaks.
+- Unit tests for `APPROVED_STOCKS` and `status --json`.
+
 ## Site go-live check (2026-09-29)
 - **`pages.yml`:** with the repository variable `SITE_API_BASE` set, wallstreetrats.world is built against the production API, and the build must contain it. Without it, the site stays the simulator demo, as before. The simulator stays at `?sim` either way.
 - **A new `verify` job** runs after a production build. `apps/pixel-site/tools/verify-live.mjs`:

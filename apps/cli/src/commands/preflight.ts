@@ -254,7 +254,7 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
     const all = await d.store.stocks.list();
     const approved = all.filter((s) => s.enabled && s.approved);
     if (approved.length === 0) {
-      softFail('stocks', `0 of ${all.filter((s) => s.enabled).length} enabled stocks are approved: no rat can be hired live. Approve them in ${c.stocksFile}, then: rat stocks-sync.`);
+      softFail('stocks', `0 of ${all.filter((s) => s.enabled).length} enabled stocks are approved: no rat can be hired live. Verify the mints on xstocks.fi, then run scripts/approve-stocks.sh (APPROVED_STOCKS).`);
     } else if (d.chain) {
       try {
         const v = verifyStockMints(await d.chain.getMintStates(approved.map((s) => s.mint)), c.xstocksMintAuthority);

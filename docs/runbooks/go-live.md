@@ -3,7 +3,7 @@
 ## T-1 day
 - [ ] Integration PR merged into `main`, CI green.
 - [ ] Smoke test done on a throwaway coin (`tests/smoke/README.md`), `tests/smoke/REPORT.md` reviewed. If the 1-tx hire failed there, set `HIRE_MODE=two_step`.
-- [ ] `pnpm --filter @rat/jupiter check:stocks` looks right; mints verified on xstocks.fi; `approved: true` in `config/stocks.json` for the ones you want; `rat stocks-sync`.
+- [ ] `pnpm --filter @rat/jupiter check:stocks` looks right; mints verified on xstocks.fi one by one with `scripts/approve-stocks.sh` (it sets `APPROVED_STOCKS` on the worker and shows `rat stocks-sync`).
 - [ ] `pnpm --filter @rat/jupiter check:scaled-ui` run once (OPEN-QUESTIONS #3).
 - [ ] `XSTOCKS_MINT_AUTHORITY` set to the confirmed xStocks mint authority (optional, recommended).
 - [ ] Worker + API deployed in DRY RUN (`deploy.md`).

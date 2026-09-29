@@ -10,7 +10,7 @@ import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimit
 const cfg = loadConfig();
 requireConfig(cfg, ['rpcUrl']);
 if (!cfg.jupiter.apiKey) throw new Error('JUPITER_API_KEY is required');
-const stocks = loadStocksFile(cfg.stocksFile, new URL('../../..', import.meta.url).pathname);
+const stocks = loadStocksFile(cfg.stocksFile, new URL('../../..', import.meta.url).pathname, cfg.approvedStocks);
 const symbol = process.argv[2] ?? stocks[0]!.symbol;
 const stock = stocks.find((s) => s.symbol === symbol);
 if (!stock) throw new Error(`unknown symbol ${symbol}`);

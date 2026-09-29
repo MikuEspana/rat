@@ -42,7 +42,7 @@ export async function runPreflight(d: WorkerDeps): Promise<PreflightResult> {
     issues.push({
       check: 'approved_stocks',
       blocking: live,
-      message: `0 of ${enabled.length} enabled stocks are approved in ${d.config.stocksFile}, so no rat could ever be hired and the hire budget would sit idle. Verify the mints on xstocks.fi, set "approved": true for each stock you want, then run: rat stocks-sync. Not approved: ${enabled.map((s) => s.symbol).join(', ') || 'none configured'}.`,
+      message: `0 of ${enabled.length} enabled stocks are approved in ${d.config.stocksFile}, so no rat could ever be hired and the hire budget would sit idle. Verify the mints on xstocks.fi, then approve them: scripts/approve-stocks.sh (it sets APPROVED_STOCKS), or "approved": true in the stocks file and rat stocks-sync. Not approved: ${enabled.map((s) => s.symbol).join(', ') || 'none configured'}.`,
     });
   } else {
     const states = await d.chain.getMintStates(all.map((s) => s.mint));
