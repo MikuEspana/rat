@@ -595,6 +595,28 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
 - **Worker.** Startup waits out an RPC or database hiccup instead of exiting (Railway gives up after 10 restarts). two_step (the fallback) retries a swap refused before sending instead of raising a false critical alert, and no longer builds a swap for an empty wallet. A stale SOL price stops hires like a stale stock price.
 - **SimChain** now mirrors the network where the chaos run needed it: rejected sends stay unknown, a tx whose blockhash expired never lands.
 
+## Chaos run: thousands of randomized launches on SimChain (2026-09-29, night)
+- `tests/chaos/fuzz.ts`: one seed is one launch (20 to 90 loops of 35 s, then calm until every hire settles). At random:
+  - fee bursts, strangers claiming our vault, 0 to 60% of claims and hires dropped, failed, timed out or rejected;
+  - RPC, database and Jupiter outages; stocks with no route or no price; price shocks;
+  - random hourly caps (0.05 to 60 SOL), a transaction signed by the creator key that the bot did not send (a leak);
+  - the worker killed in the middle of any operation (a crash mid-send), and a worker frozen mid-operation that wakes up after its replacement took the lease (a redeploy overlap).
+- Every worker process runs behind the real lease and send fence.
+- Checked after every loop:
+  - the creator's own SOL is never spent;
+  - the rolling-hour spend stays under the cap;
+  - spend never exceeds claims;
+  - nothing is sent once the kill switch is on;
+  - a leaked-key tx turns the kill switch on within 3 loops of a live worker holding the lease.
+- At the end: the full money check against the chain (every lamport that left our vaults booked once, ledger equals chain to the lamport, no rat funded twice) and no rat left half hired.
+- **What it found** (fixed in the red team PR, each with a regression test):
+  - two workers in a redeploy overlap both booked one claim (seed 37);
+  - a claim pending when the kill switch went on was never booked (seed 1).
+  - It also exposed where SimChain was kinder than the network: rejected sends, and txs sent after their blockhash expired.
+- **Numbers:**
+  - on the code before the fixes, about 800 seeds: 35 failures (the bugs above plus harness mistakes, since fixed);
+  - on the fixed code: 679 seeds so far, 0 failures (the run continues through the night).
+- CI runs 8 seeds in the long job. Thousands in shards: `CHAOS_RUNS=667 CHAOS_SEED=1 CHAOS_VERBOSE=1 pnpm vitest run tests/chaos/fuzz.test.ts`. Replay one seed step by step: `CHAOS_SEED=<n> CHAOS_RUNS=1 CHAOS_TRACE=1`.
 ## Launch dress rehearsal: Railway slow and failing (2026-09-29, night)
 `tests/scripts/launch-rehearsal.sh` (in CI) runs `scripts/launch.sh` against fakes with Railway as slow as during its incidents and failing on purpose, timing every call.
 - **Timing** (scaled 1:20, estimated at incident speed: 2 s per Railway call, 8 s per `railway ssh`, a 5 minute build): about 6 minutes from start to LIVE, almost all of it the one build. 9 Railway calls (18 before: the RPC address was read from Railway before every chain read, and the read-back after setting variables read once per key), 5 ssh calls.
