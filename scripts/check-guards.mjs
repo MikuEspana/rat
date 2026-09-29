@@ -27,6 +27,7 @@ const PAYOUT_PATTERN = /\b(airdrop\w*|payout\w*|distributeToHolders|holderReward
 const BURN_PATTERN = /\b(createBurn\w*Instruction|buildBurnInstruction|burnIx)\b/;
 const SECRET_ENV_KEYS = [
   'KEY_ENCRYPTION_KEY',
+  'KEY_ENCRYPTION_KEY_PREVIOUS',
   'DATABASE_URL',
   'DATABASE_URL_READONLY',
   'RPC_URL',

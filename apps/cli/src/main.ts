@@ -5,7 +5,7 @@ import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, NATIVE_SOL_MINT, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
 import { JupiterHttp, JupiterPriceSource, SlidingWindowLimiter } from '@rat/jupiter';
 import { Store, openDatabase, stagingProblems } from '@rat/db';
-import { DbKeyStore, MasterKeyRing } from '@rat/keys';
+import { DbKeyStore, type MasterKeyRing, masterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
@@ -39,7 +39,7 @@ async function withContext(fn: (ctx: CliContext, cfg: AppConfig) => Promise<void
 
 function ring(cfg: AppConfig): MasterKeyRing {
   requireConfig(cfg, ['keyEncryptionKey']);
-  return new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
+  return masterKeyRing(cfg);
 }
 
 async function readStdin(): Promise<string> {
@@ -75,12 +75,8 @@ keys
   .action(() =>
     withContext(async (ctx, cfg) => {
       requireConfig(cfg, ['keyEncryptionKey']);
-      const prev = process.env.KEY_ENCRYPTION_KEY_PREVIOUS;
-      const prevVersion = Number(process.env.KEY_VERSION_PREVIOUS);
-      if (!prev || !Number.isInteger(prevVersion)) throw new Error('set KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS');
-      if (prevVersion === cfg.keyVersion) throw new Error('KEY_VERSION must differ from KEY_VERSION_PREVIOUS');
-      const r = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! }, [{ version: prevVersion, base64: prev }]);
-      await keysRotateCommand(ctx, r);
+      if (!cfg.keyEncryptionKeyPrevious) throw new Error('set KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS (docs/runbooks/keys.md)');
+      await keysRotateCommand(ctx, ring(cfg));
     }),
   );
 

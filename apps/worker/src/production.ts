@@ -3,7 +3,7 @@ import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, sleep, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, isStagingDatabase, openDatabase } from '@rat/db';
 import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
-import { DbKeyStore, MasterKeyRing, sameVersionKeysThatFail } from '@rat/keys';
+import { DbKeyStore, type MasterKeyRing, masterKeyRing, sameVersionKeysThatFail } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, creatorCoinTokens, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
@@ -88,7 +88,8 @@ export async function createProductionDeps(
       checkWallets: !cfg.dryRun,
     },
   );
-  const ring = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
+  // with the previous key too while a rotation is under way (KEY_ENCRYPTION_KEY_PREVIOUS): the worker keeps running
+  const ring = masterKeyRing(cfg);
   const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey });
   if (opts.waitForCreatorKey) await waitForCreatorKey(store, log);
   await keys.creator(); // a missing, wrong or undecryptable key still stops the worker here

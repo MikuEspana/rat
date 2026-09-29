@@ -164,3 +164,26 @@ describe('DbKeyStore', () => {
     expect((await ks.ratSigner(kp.publicKey.toBase58())).publicKey.equals(kp.publicKey)).toBe(true);
   });
 });
+
+describe('master key rotation', () => {
+  it('mid-rotation the ring from the settings reads keys stored under the old key (the worker keeps running)', async () => {
+    const { loadConfig } = await import('@rat/core');
+    const { masterKeyRing, encryptRoleKey, DbKeyStore } = await import('./index');
+    const { openMemoryDatabase, Store } = await import('@rat/db');
+    const handle = await openMemoryDatabase();
+    try {
+      const store = new Store(handle.db, 'live');
+      const oldKey = master();
+      const newKey = master();
+      const creator = Keypair.generate();
+      await store.keys.setRoleKey(encryptRoleKey(creator, new MasterKeyRing({ version: 1, base64: oldKey }), 'creator'));
+      const cfg = loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_VERSION: '2', KEY_ENCRYPTION_KEY_PREVIOUS: oldKey, KEY_VERSION_PREVIOUS: '1' });
+      const ks = new DbKeyStore(store.keys, masterKeyRing(cfg));
+      expect((await ks.creator()).publicKey.equals(creator.publicKey)).toBe(true);
+      expect(() => loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_ENCRYPTION_KEY_PREVIOUS: oldKey })).toThrow(/go together/);
+      expect(() => loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_VERSION: '1', KEY_ENCRYPTION_KEY_PREVIOUS: oldKey, KEY_VERSION_PREVIOUS: '1' })).toThrow(/must differ/);
+    } finally {
+      await handle.close();
+    }
+  });
+});

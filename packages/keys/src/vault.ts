@@ -57,3 +57,14 @@ export class MasterKeyRing {
     return k;
   }
 }
+
+/**
+ * The master key ring from the settings: KEY_ENCRYPTION_KEY / KEY_VERSION, plus the previous key while a rotation
+ * is under way (KEY_ENCRYPTION_KEY_PREVIOUS / KEY_VERSION_PREVIOUS). The worker and the CLI both use this, so the
+ * running worker keeps reading its keys in the middle of a rotation.
+ */
+export function masterKeyRing(cfg: { keyVersion: number; keyEncryptionKey?: string; keyVersionPrevious?: number; keyEncryptionKeyPrevious?: string }): MasterKeyRing {
+  if (!cfg.keyEncryptionKey) throw new Error('KEY_ENCRYPTION_KEY is not set');
+  const previous = cfg.keyEncryptionKeyPrevious && cfg.keyVersionPrevious ? [{ version: cfg.keyVersionPrevious, base64: cfg.keyEncryptionKeyPrevious }] : [];
+  return new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey }, previous);
+}
