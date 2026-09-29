@@ -48,9 +48,12 @@ isolation() { # prints problems, one per line ("" = isolated)
   staging=$(rw_var worker STAGING)
   [ "$staging" = true ] || echo "STAGING is not true on the worker"
   if [ -f "$PROD_SECRETS/KEY_ENCRYPTION_KEY.txt" ]; then # compared as hashes: no key leaves its pipe
-    mk_s=$(rw variable list --service worker --json 2>/dev/null | jq -j '.KEY_ENCRYPTION_KEY // ""' | shasum -a 256 | cut -c1-64)
     mk_p=$(tr -d '\n' <"$PROD_SECRETS/KEY_ENCRYPTION_KEY.txt" | shasum -a 256 | cut -c1-64)
-    [ "$mk_s" != "$mk_p" ] || echo "the staging worker has the PRODUCTION master key"
+    if ! mk_s=$(rw_vars worker | jq -j '.KEY_ENCRYPTION_KEY // ""' | shasum -a 256 | cut -c1-64); then
+      echo "Railway did not list the worker's variables, so its master key could not be compared with production's"
+    elif [ "$mk_s" = "$mk_p" ]; then
+      echo "the staging worker has the PRODUCTION master key"
+    fi
   fi
   return 0
 }
@@ -109,11 +112,6 @@ audit_ok() { # audit_ok: rat audit until PASS (WAIT is retried); prints the line
   return 1
 }
 api_state() { curl -fsS -m 20 "https://$(state_get "$STATE" API_DOMAIN)/api/state" 2>/dev/null || true; }
-setvars() { # setvars service KEY=VALUE...: non-secret settings, applied by the next redeploy
-  local svc="$1"
-  shift
-  rw variable set "$@" --service "$svc" --skip-deploys >/dev/null || die "could not set $* on $svc"
-}
 approx() { awk -v a="$1" -v b="$2" -v t="${3:-0.000000001}" 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(d <= t) }'; } # |a-b| <= t
 
 # ---------------------------------------------------------------- phases -----------------------------------------------
@@ -175,8 +173,8 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
     ask new "Launch signature(s), comma separated (Solscan, test creator page):"
     ask slot "Slot of the last one:"
   fi
-  setvars worker "COIN_MINT=$mint" "WATCH_FROM_SLOT=$((slot + 1))" "KNOWN_OWNER_TX_SIGS=$new"
-  setvars api "COIN_MINT=$mint"
+  set_vars worker "COIN_MINT=$mint" "WATCH_FROM_SLOT=$((slot + 1))" "KNOWN_OWNER_TX_SIGS=$new"
+  set_vars api "COIN_MINT=$mint"
   redeploy worker
   redeploy api
   pre=$(rat_json preflight --json)
@@ -188,8 +186,8 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   rat dry-run-reset --yes >/dev/null || fail "rat dry-run-reset failed"
   say "Now the staging worker goes LIVE with its kill switch ON: it sends nothing until a phase opens it after your GO."
   yes_no "Switch the staging worker and API to LIVE?" y || { record 1 SKIP "stayed in DRY RUN"; exit 1; }
-  setvars worker DRY_RUN=false LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
-  setvars api DRY_RUN=false
+  set_vars worker DRY_RUN=false LIVE_CONFIRM=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
+  set_vars api DRY_RUN=false
   redeploy worker
   redeploy api
   [ "$(st_get '.mode')" = live ] || fail "the worker is not live"
@@ -257,7 +255,7 @@ phase_4() { # the burst under the cap, with the crash test inside it (phase 5)
   seed=$(rat staging-seed --sol 0.125 2>&1) || fail "staging-seed refused: $(printf '%s' "$seed" | tail -1)"
   go_gate "salary 0.01 SOL, hourly cap $cap SOL; seed 0.125 SOL, then up to 12 hires. The cap stops them part way, then the script raises it and the rest go. The worker kills itself right after the 6th hire is broadcast and Railway restarts it." \
     "about 0.125 SOL leaves the test creator; about 95% comes back at teardown"
-  setvars worker SALARY_SOL=0.01 "SPEND_CAP_SOL_PER_HOUR_HIRE=$cap" STAGING_CRASH_AFTER_SEND=6
+  set_vars worker SALARY_SOL=0.01 "SPEND_CAP_SOL_PER_HOUR_HIRE=$cap" STAGING_CRASH_AFTER_SEND=6
   redeploy worker
   rat staging-seed --sol 0.125 --confirm "SEED 0.125 SOL" >/dev/null || fail "the seed was not booked"
   gate_open
@@ -272,7 +270,7 @@ phase_4() { # the burst under the cap, with the crash test inside it (phase 5)
   budget=$(printf '%s' "$st_now" | jq -r .hireBudgetSol)
   approx "$(api_state | jq -r '.treasury.waitingSol')" "$budget" 0.000001 || fail "the job-fair line (waitingSol) is not the waiting budget"
   ok "cap held: $(printf '%s' "$st_now" | jq -r .hourOutflowSol) of $cap SOL, $budget SOL waiting in the job-fair line"
-  setvars worker SPEND_CAP_SOL_PER_HOUR_HIRE=60
+  set_vars worker SPEND_CAP_SOL_PER_HOUR_HIRE=60
   redeploy worker
   wait_for "the rest to be hired" 900 '(.hireBudgetSol | tonumber) < (.salarySol | tonumber) and .openReservations == 0' ||
     fail "the rest were not hired after the cap was raised"

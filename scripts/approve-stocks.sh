@@ -18,7 +18,7 @@ project=$(rw status --json 2>/dev/null | jq -r '.name // empty') || project=""
 [ -n "$project" ] || die "this folder ($PWD) is not linked to a Railway project" "Run scripts/setup-mac.sh (or setup-staging.sh) first."
 title "Approve xStocks for $project"
 say "You check each mint yourself on xstocks.fi. Only the ones you confirm are approved."
-current=$(rw_var worker APPROVED_STOCKS)
+current=$(rw_vars worker | jq -r '.APPROVED_STOCKS // ""') || die "Railway did not list the worker's variables" "$API_HINT"
 
 approved=""
 n=0
@@ -46,9 +46,9 @@ else
   say "Approved: ${approved:-none}"
   yes_no "Set APPROVED_STOCKS=${approved:-(empty)} on the $project worker and redeploy it?" y || die "nothing was changed"
   if [ -n "$approved" ]; then
-    rw variable set "APPROVED_STOCKS=$approved" --service worker --skip-deploys >/dev/null || die "could not set APPROVED_STOCKS"
+    set_vars worker "APPROVED_STOCKS=$approved"
   else
-    rw variable delete APPROVED_STOCKS --service worker >/dev/null 2>&1 || true
+    unset_var worker APPROVED_STOCKS
   fi
   redeploy worker
 fi

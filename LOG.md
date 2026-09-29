@@ -519,3 +519,20 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
   - asks you to check it on the phone;
   - records `SITE_GO_LIVE` in `~/rat-secrets/setup-state.env`, which the rehearsal report's GO / NO-GO reads.
 - **Tested against the real API** (DRY RUN, an empty Postgres, no coin), with the site built against it in Chromium: 15 of 15 checks passed on desktop and phone, including the DRY RUN banner, RATS HIRED 0 and "pre-launch". A site built for another API fails.
+
+## Fix: setup stops during a Railway API incident (2026-09-29)
+Miguel's staging setup stopped twice while Railway reported an "API degradation" incident.
+- **Stop 1, step 3:** "Railway did not keep the build settings of backup: build.builder is RAILPACK", while the dashboard showed Dockerfile.
+  - Cause (Railway CLI 5.63.1 source): `railway environment edit` returns as soon as Railway has queued the change; a background workflow applies it ("returns its id as soon as the workflow STARTS"). The read right after it saw the old settings.
+  - Not a wrong environment or service: the service list, the edit and the read all use the linked environment, and the CLI caches nothing.
+  - Fix: after each change (build settings, region, nightly schedule) the settings are read again for up to 5 minutes (`WSR_APPLY_WAIT_SEC`), and the change is sent once more halfway. The comparison is unchanged. If it still differs, the stop names the project, environment and service id and prints that service's exact dashboard page.
+- **Stop 2, step 5:** `railway variable set BACKUP_AGE_RECIPIENT` failed with "error decoding response body".
+  - Fix: every `railway variable set` (setup, `staging.sh`, `approve-stocks.sh`) and `environment edit` is tried 3 times, then read back.
+- **Found while fixing:** a failed read was taken for "not set".
+  - In setup this could have written the local master key over a different one on Railway, skipping the "never replace it" check. Now every read that decides something is retried and otherwise stops the script. The same goes for the service list (no second service with the same name) and `environment config` (an older CLI is recognized from its help, not from a failure).
+  - In `staging.sh`, a failed read counted as "not the production master key". Now it fails the isolation check.
+  - `approve-stocks.sh` confirms APPROVED_STOCKS is really removed.
+- **Re-running never regenerates a secret:** secret files are only created when missing, and Railway's secrets are only set when Railway lists the variables without them.
+- **Tests:**
+  - Setup harness scenario H: main's script reproduces the stop. The new one finishes with every 4th call failing and every change lost once and applied late. A change Railway never applies still stops, and nothing is built. After a step-5 stop the re-run finishes with every secret file and Railway secret unchanged. An unreadable worker, or one with a different master key, is never overwritten.
+  - `staging-test.sh`: 4 new checks.

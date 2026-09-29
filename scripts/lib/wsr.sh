@@ -34,7 +34,49 @@ ask() { # ask VAR "question": a plain (visible) answer, for public values only
 open_url() { say "Opening $1"; ${WSR_OPEN:-open} "$1" >/dev/null 2>&1 || say "(open it yourself: $1)"; }
 
 rw() { ${WSR_RAILWAY:-railway} "$@"; }
-rw_var() { rw variable list --service "$1" --json 2>/dev/null | jq -r --arg k "$2" '.[$k] // empty' 2>/dev/null; } # non-secret values only
+# Railway's API fails now and then, more during an incident ("error decoding response body"): reads and writes are
+# tried up to 3 times, 5 then 10 seconds apart, every write is read back, and a failed read is never taken for an
+# answer (a check on it fails).
+TRIES=3
+retry_pause() { sleep "${WSR_RETRY_SEC:-$(($1 * 5))}"; }
+API_HINT="Railway's API is not answering properly (status.railway.com). Run it again in a few minutes."
+rw_vars() { # rw_vars service: its variables as JSON (secret values: only into jq or shasum, never printed); 1 = no answer
+  local out i
+  for i in 1 2 3; do
+    if out=$(rw variable list --service "$1" --json 2>/dev/null) && printf '%s' "$out" | jq -e 'type == "object"' >/dev/null 2>&1; then
+      printf '%s\n' "$out"
+      return 0
+    fi
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  return 1
+}
+rw_var() { rw_vars "$1" | jq -r --arg k "$2" '.[$k] // empty' 2>/dev/null || true; } # "" = not set, or Railway did not answer
+set_vars() { # set_vars service KEY=VALUE...: non-secret settings (applied by the next redeploy), then read back, or stop
+  local svc="$1" kv i
+  shift
+  for i in 1 2 3; do
+    rw variable set "$@" --service "$svc" --skip-deploys >/dev/null 2>&1 && break
+    [ "$i" = "$TRIES" ] && die "could not set $* on $svc ($TRIES tries)" "$API_HINT"
+    retry_pause "$i"
+  done
+  for kv in "$@"; do
+    for i in 1 2 3; do
+      [ "$(rw_var "$svc" "${kv%%=*}")" = "${kv#*=}" ] && continue 2
+      [ "$i" = "$TRIES" ] || retry_pause "$i"
+    done
+    die "Railway does not show ${kv%%=*} on $svc after setting it" "Check it in the Railway dashboard: $svc > Variables. $API_HINT"
+  done
+}
+unset_var() { # unset_var service KEY: removed, and Railway lists the variables without it (3 tries), or stop
+  local i
+  for i in 1 2 3; do
+    rw variable delete "$2" --service "$1" >/dev/null 2>&1 || true # it fails when the variable is not there
+    rw_vars "$1" | jq -e --arg k "$2" 'has($k) | not' >/dev/null 2>&1 && return 0
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  die "could not remove $2 from $1" "Railway dashboard: $1 > Variables: delete $2. $API_HINT"
+}
 state_get() { if [ -f "$1" ]; then sed -n "s/^$2=//p" "$1" | tail -1; fi; }
 state_set() { # state_set file KEY value
   touch "$1"
