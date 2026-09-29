@@ -75,7 +75,7 @@ Proves the backups really restore, and times it. Nothing touches production.
    ```
    infra/backup/restore-check.sh rat-YYYYMMDD-HHMMSS.dump.age ~/rat-backup.key postgres://postgres:drill@localhost:55432/postgres
    ```
-   It refuses any database that already has tables (so it can never write over production), decrypts, restores, checks every table and the migrations, and prints each table's rows, the newest ledger entry and `PASS` with the restore time.
+   It refuses any database that already has tables (so it can never write over production), decrypts, restores, checks every table and the migrations, and prints each table's rows, the newest ledger entry and PASS with the restore time.
 4. Compare the rats count with `rat status` on production (the backup is up to a day old).
 5. `docker rm -f rat-drill` and delete the downloaded file.
 

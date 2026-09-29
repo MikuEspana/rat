@@ -24,6 +24,18 @@ describe('infra config', () => {
       expect(docker, dir).toContain(`COPY ${dir}/package.json ${dir}/`);
     }
   });
+
+  it('the backup cron service builds its own image, never restarts, and only ever holds a public key', () => {
+    const j = JSON.parse(read('infra/railway.backup.json')) as { build: { dockerfilePath: string }; deploy: Record<string, unknown> };
+    expect(j.build.dockerfilePath).toBe('infra/backup/Dockerfile');
+    expect(j.deploy.restartPolicyType).toBe('NEVER');
+    expect(j.deploy.startCommand).toBeUndefined();
+    expect(read('infra/backup/Dockerfile')).toMatch(/^FROM postgres:16-alpine$/m);
+    const script = read('infra/backup/backup.sh');
+    expect(script).toContain('never a private key');
+    // it never deletes from the bucket (retention is the bucket's lifecycle rule)
+    expect(script).not.toMatch(/-X\s*DELETE|--request\s+DELETE/);
+  });
 });
 
 describe('runbooks', () => {
