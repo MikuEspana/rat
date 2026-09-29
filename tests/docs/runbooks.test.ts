@@ -16,12 +16,21 @@ describe('infra config', () => {
     }
     expect(JSON.parse(read('infra/railway.worker.json')).deploy.numReplicas).toBe(1);
     const docker = read('infra/Dockerfile');
-    expect(docker).toContain('pnpm install --frozen-lockfile');
+    expect(docker).toContain('pnpm install --frozen-lockfile --prod');
     expect(docker).toMatch(/DRY_RUN=true/);
     expect(docker).toContain('USER node');
-    // every workspace package.json is copied before the install
-    for (const dir of ['packages/core', 'packages/contract', 'packages/db', 'packages/keys', 'packages/chain', 'packages/pump', 'packages/jupiter', 'packages/safety', 'apps/worker', 'apps/api', 'apps/cli', 'apps/admin', 'tests']) {
+    // every package the services use is copied before the install (every packages/* dir, so a new one is never
+    // forgotten, and the four service apps); the site and the tests stay out of the image
+    const packages = readdirSync(new URL('packages/', root)).map((d) => `packages/${d}`);
+    for (const dir of [...packages, 'apps/worker', 'apps/api', 'apps/cli', 'apps/admin']) {
       expect(docker, dir).toContain(`COPY ${dir}/package.json ${dir}/`);
+    }
+    const ignored = read('.dockerignore').split('\n');
+    for (const dir of ['apps/pixel-site', 'tests', 'docs']) expect(ignored, dir).toContain(dir);
+    // tsx runs every service: with a production-only install it must be a dependency of each app, not a dev one
+    for (const app of ['worker', 'api', 'cli', 'admin']) {
+      const pkg = JSON.parse(read(`apps/${app}/package.json`)) as { dependencies?: Record<string, string> };
+      expect(pkg.dependencies?.tsx, `apps/${app} depends on tsx`).toBeDefined();
     }
   });
 
