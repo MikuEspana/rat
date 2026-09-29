@@ -395,6 +395,10 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 
 **Tested:** the harness's fake Railway now runs ssh commands without the service variables, like the real one. The script from `main` stops exactly like the real run; the new script finishes, imports the key through the hidden prompt (a wrong key refused first), asks nothing again before step 7 and rebuilds nothing. Also: a fresh setup, the older-CLI repair, a setup with no readable worker process (settings over stdin), and `scripts/rat.sh status`. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
 
+## Region: everything in EU West (Amsterdam) (2026-09-29)
+
+The first real run put every service and Postgres in Southeast Asia (the account's default region). `setup-mac.sh` now sets region `europe-west4-drams3a` on every service as soon as it exists (the app services before their first build) and moves anything running elsewhere: Postgres right away with its volume (the database is still empty), the other services on their next deploy. It checks where each deployment really runs (`railway service list --json`) and stops at the end if anything is outside EU West. Why EU West: most Solana stake and Helius nodes (Amsterdam, Frankfurt) are in Europe; details in `docs/runbooks/setup-mac.md`. The staging setup uses the same code.
+
 ## Rehearsal: STAGING mode (2026-09-29)
 
 For the mainnet dress rehearsal (a separate Railway project, a throwaway test creator, a test coin). Every test-only feature is impossible in production, each rule with a test:
