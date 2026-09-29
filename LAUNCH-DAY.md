@@ -39,6 +39,7 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 - [ ] It checks `rat preflight --live` **with the coin's settings, before anything changes**: `launch txs` PASS, `dev buy` PASS, no FAIL. Any FAIL: it stops and nothing was changed.
 - [ ] **Type GO.** It clears the DRY RUN paper data, sets every launch setting in one change (worker: `COIN_MINT`, `WATCH_FROM_SLOT` = slot + 1, `KNOWN_OWNER_TX_SIGS`, `DRY_RUN=false`, `LIVE_CONFIRM`; API: `COIN_MINT`, `DRY_RUN=false`), then ONE redeploy of the worker and the API, side by side. About 5 minutes plus one Railway build from the coin to the bot live.
 - [ ] It ends with **LIVE** (mode live, kill switch off, `rat preflight --live` READY).
+- **It stopped halfway** (Railway lost a setting, a build failed, `railway ssh` did not answer)? **Run `scripts/launch.sh` again.** It finds the coin's settings already on the worker, asks you to confirm the mint and type GO again, completes what is missing and redeploys; it never asks for the launch again. If the worker already runs LIVE, it says so and only offers to redeploy the API.
 - The rehearsal runs these exact steps (`scripts/staging.sh 1`, `scripts/lib/launch.sh`). By hand instead: `docs/runbooks/go-live.md`.
 
 ## T-0: watch it
