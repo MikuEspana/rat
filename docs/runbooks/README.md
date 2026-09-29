@@ -12,6 +12,7 @@
 | [kill-switch.md](kill-switch.md) | stop everything now |
 | [keys.md](keys.md) | import, rotate, back up keys; how rat wallets are created |
 | [backup-restore.md](backup-restore.md) | database backups (Railway plus a nightly encrypted dump outside Railway), restore drill, restore |
+| [INCIDENTS.md](INCIDENTS.md) | launch day: one screen per problem, with what Telegram and the admin page show and the exact fix command |
 | [incident.md](incident.md) | something looks wrong |
 
 All commands run from the repo root. `rat` means `pnpm --filter @rat/cli rat` with the production env loaded.

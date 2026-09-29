@@ -1,5 +1,5 @@
 // Runbooks and infra config must only reference things that exist.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const root = new URL('../../', import.meta.url);
@@ -79,5 +79,36 @@ describe('runbooks', () => {
       expect(text).not.toMatch(/KEY_ENCRYPTION_KEY=[A-Za-z0-9+/]{20,}/);
       expect(text).not.toMatch(/JUPITER_API_KEY=[A-Za-z0-9-]{8,}/);
     }
+  });
+});
+
+describe('INCIDENTS.md', () => {
+  const doc = read('docs/runbooks/INCIDENTS.md');
+  const sources = (dir: string): string[] =>
+    readdirSync(new URL(dir, root), { recursive: true, encoding: 'utf8' })
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.includes('node_modules'))
+      .map((f) => `${dir}${f}`);
+
+  it('names every alert the bot can send (a new alert needs its incident line)', () => {
+    const keys = new Set<string>();
+    for (const f of [...sources('apps/worker/src/'), ...sources('apps/admin/src/'), ...sources('packages/safety/src/')]) {
+      // alerts.send('critical', `cap_reached_${bucket}`, ...): the key, or its fixed prefix before the first ${
+      for (const m of read(f).matchAll(/'(?:info|warn|critical)',\s*[`']([a-z][a-z0-9_]*)/g)) keys.add(m[1]!);
+    }
+    expect(keys.size).toBeGreaterThan(20);
+    for (const k of keys) expect(doc, k).toContain(k);
+  });
+
+  it('every script it runs exists, and every incident fits on one screen', () => {
+    for (const m of doc.matchAll(/scripts\/[a-z-]+\.sh/g)) expect(existsSync(new URL(m[0], root)), m[0]).toBe(true);
+    const sections = doc.split(/\n(?=## )/).slice(1);
+    expect(sections.length).toBeGreaterThanOrEqual(12);
+    for (const s of sections) expect(s.trimEnd().split('\n').length, s.split('\n')[0]).toBeLessThanOrEqual(30);
+  });
+
+  it('never puts a secret on a command line: the RPC URL goes through a hidden prompt and stdin', () => {
+    expect(doc).toMatch(/read -rs RPC/);
+    expect(doc).toMatch(/railway variable set RPC_URL --stdin/);
+    expect(doc).not.toMatch(/RPC_URL=https?:/);
   });
 });

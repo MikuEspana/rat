@@ -655,6 +655,11 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
   - `rat preflight` with nothing open but the expected pre-launch lines (the same rule as `scripts/setup-mac.sh`).
 - `tests/scripts/morning-test.sh` (22 checks, in CI): GO only when all pass, each problem its own WAIT, never a Railway write.
 
+## Launch-day incidents runbook (2026-09-29, night)
+- `docs/runbooks/INCIDENTS.md`: 14 launch-day problems, one screen each: what you see, what Telegram and the admin page show, the exact fix command. Linked from `LAUNCH-DAY.md`, `incident.md` and the runbooks index.
+- Every command in it was checked against the code: the alert keys and texts, `task_failing_claim` (the claim loop also runs the watch and the hires), the admin watchdog (3 minutes), the Railway commands the scripts use. A new RPC URL goes through a hidden prompt and stdin, never the command line.
+- `tests/docs/runbooks.test.ts`: every alert key the worker, admin and safety code can send must appear in it (a new alert needs its line), every script it names exists, every incident stays under 30 lines.
+
 ## Fast rehearsal: `staging-local.sh start` no longer fails at random (2026-09-29, night)
 - CI caught `scripts/staging-local.sh start` stopping with "the local worker stopped right after it started" while the apps were in fact starting.
 - Right after `nohup node ... &` the new process can still be the forked shell, not node yet (fork before exec). The readiness check looked for `scripts/local-app.cjs <app>` in its arguments and took it for a crash.
