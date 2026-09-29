@@ -122,9 +122,12 @@ export class StateService {
 
     const claims = await this.store.claims.totals();
     const byReason = await this.store.ledger.sumByReason();
-    // rehearsal only: the stage source also counts seeded SOL, so a staging run shows a real stage-up. The public
-    // claimed figure never includes it, and without STAGING on a marked staging database the field is not sent.
-    const stageSol = (await isStagingDatabase(this.store, this.cfg)) ? lamportsToSol(claims.claimed + (byReason.get('hire:seed_credit') ?? 0n)) : undefined;
+    // rehearsal only: the stage source also counts seeded SOL (times STAGING_STAGE_SCALE), so a staging run shows a
+    // real stage-up. The public claimed figure never includes it, and without STAGING on a marked staging database
+    // the field is not sent.
+    const stageSol = (await isStagingDatabase(this.store, this.cfg))
+      ? lamportsToSol(claims.claimed + (byReason.get('hire:seed_credit') ?? 0n)) * this.cfg.stagingStageScale
+      : undefined;
     // SOL spent on hires: salaries plus their fees, rent and tips (in-flight reservations included)
     const hiredLamports = -(['hire_reserve', 'hire_settle', 'hire_release'] as const).reduce((a, r) => a + (byReason.get(`hire:${r}`) ?? 0n), 0n);
     const waitingLamports = await this.store.ledger.balance('hire');

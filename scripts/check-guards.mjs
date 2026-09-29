@@ -93,13 +93,13 @@ for (const line of envExample.split('\n')) {
 }
 
 // 8. rehearsal-only switches in deploy and setup files
-const STAGING_ON = /\bSTAGING['"]?\s*[=:]\s*['"]?(true|1|yes)\b|\bSTAGING_CRASH_AFTER_SEND['"]?\s*[=:]\s*['"]?[1-9]/i;
+const STAGING_ON = /\bSTAGING['"]?\s*[=:]\s*['"]?(true|1|yes)\b|\bSTAGING_CRASH_AFTER_SEND['"]?\s*[=:]\s*['"]?[1-9]|\bSTAGING_STAGE_SCALE['"]?\s*[=:]\s*['"]?([2-9]|1\d)/i;
 const DEPLOY_FILE = /\.(sh|json|ya?ml|toml)$|^\.env|Dockerfile/;
-const STAGING_ALLOW = new Set(['scripts/setup-staging.sh', 'scripts/staging.sh']);
+const STAGING_ALLOW = new Set(['scripts/setup-staging.sh', 'scripts/staging.sh', 'scripts/staging-local.sh']);
 for (const { full, rel } of files) {
   const base = rel.split('/').pop();
   if (!DEPLOY_FILE.test(base) || rel === 'pnpm-lock.yaml' || STAGING_ALLOW.has(rel) || rel.startsWith('tests/')) continue;
-  if (STAGING_ON.test(readFileSync(full, 'utf8'))) failures.push(`${rel}: turns on a rehearsal-only switch (STAGING / STAGING_CRASH_AFTER_SEND); only the staging scripts may`);
+  if (STAGING_ON.test(readFileSync(full, 'utf8'))) failures.push(`${rel}: turns on a rehearsal-only switch (STAGING / STAGING_CRASH_AFTER_SEND / STAGING_STAGE_SCALE); only the staging scripts may`);
 }
 
 // 9. One Postgres major everywhere: the backup image (infra/backup/Dockerfile) is the source of truth; CI's

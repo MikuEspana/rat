@@ -52,12 +52,17 @@ describe('STAGING config', () => {
     expect(() => cfg({ STAGING: 'true' })).toThrow(/needs CREATOR_PUBKEY/);
     expect(() => cfg({ STAGING_CRASH_AFTER_SEND: '3', CREATOR_PUBKEY: PRODUCTION_CREATOR_PUBKEY })).toThrow(/only works with STAGING=true/);
     expect(() => cfg({ STAGING_CRASH_AFTER_SEND: '1' })).toThrow(/only works with STAGING=true/);
+    expect(() => cfg({ STAGING_STAGE_SCALE: '20', CREATOR_PUBKEY: PRODUCTION_CREATOR_PUBKEY })).toThrow(/STAGING_STAGE_SCALE only works with STAGING=true/);
+    expect(() => cfg({ STAGING_STAGE_SCALE: '2' })).toThrow(/only works with STAGING=true/);
+    expect(() => cfg({ STAGING: 'true', CREATOR_PUBKEY: PRODUCTION_CREATOR_PUBKEY, STAGING_STAGE_SCALE: '20' })).toThrow(/production creator/);
   });
 
   it('is off by default, and the production creator loads normally without it', () => {
     const c = cfg({ CREATOR_PUBKEY: PRODUCTION_CREATOR_PUBKEY });
     expect(c.staging).toBe(false);
     expect(c.stagingCrashAfterSend).toBe(0);
+    expect(c.stagingStageScale).toBe(1);
+    expect(cfg({ CREATOR_PUBKEY: PRODUCTION_CREATOR_PUBKEY, STAGING_STAGE_SCALE: '1' }).stagingStageScale).toBe(1);
     const s = cfg({ STAGING: 'true', CREATOR_PUBKEY: Keypair.generate().publicKey.toBase58(), STAGING_CRASH_AFTER_SEND: '6' });
     expect(s.staging).toBe(true);
     expect(s.stagingCrashAfterSend).toBe(6);

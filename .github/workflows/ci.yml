@@ -84,6 +84,8 @@ jobs:
         run: shellcheck -x scripts/*.sh scripts/lib/*.sh infra/backup/*.sh tests/scripts/*.sh
       - name: Rehearsal script (staging.sh with fake rat and railway)
         run: bash tests/scripts/staging-test.sh
+      - name: Fast rehearsal script (staging-local.sh with fake railway and stand-in apps)
+        run: bash tests/scripts/staging-local-test.sh
       - name: Tools (Postgres 18 client from the PostgreSQL apt repository, age, busybox, a local S3 server)
         run: |
           sudo apt-get update -qq
