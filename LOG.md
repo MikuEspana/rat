@@ -583,7 +583,7 @@ Launch day used two Railway builds between the coin and a live bot (the coin's s
 ## Docs: the morning checklist (2026-09-29)
 - `docs/runbooks/MORNING.md`: status.railway.com first, pull, finish the staging setup, the fast rehearsal (commands, minutes and what PASS looks like for each), production prep (stock approval, preflight, site go-live, the auto-deploy decision, funding), then `scripts/launch.sh`. Listed in `docs/runbooks/README.md` with `rehearsal.md` and `auto-deploy.md`.
 
-## Red team: the money paths against mainnet failure modes (2026-09-30, night)
+## Red team: the money paths against mainnet failure modes (2026-09-29, night)
 Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus the randomized chaos run (`tests/chaos/fuzz.ts`, next PR). Every fix has a test that fails without it.
 - **Sending.** The expiry check read the block height and the signature status in two calls: behind a load-balanced RPC a lagging status node called a landed hire expired, and the rat was paid twice. Now one `getEpochInfo` and a status answer from a node at least that far. A rejected send (any JSON-RPC error, another node may have forwarded it) stays `unknown` until its blockhash expires and is never rebroadcast. The kill switch is checked again right before the send.
 - **Hourly cap.** A release counted at its own time freed cap room after its reservation had left the window (about 2% over the cap under drops). Settles and releases now count at the reservation's time.
