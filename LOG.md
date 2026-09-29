@@ -579,3 +579,6 @@ Launch day used two Railway builds between the coin and a live bot (the coin's s
 ## Check: production auto-deploy (read only, 2026-09-29)
 - `docs/runbooks/auto-deploy.md`: the repo proves setup connects every production service to `MikuEspana/rat` branch `main`, and worker, api and admin have no watch paths, so if Railway's auto deploy is on (its default) every merge to `main` rebuilds and restarts them. Harmless in DRY RUN; a risk during the launch.
 - Proposal, nothing changed: no merges to `main` from T-1 hour until the bot has run live for an hour; "Wait for CI" on the production worker, api and admin; watch paths after launch; disabling auto deploy only if manual deploys are preferred. Whether auto deploy is on is for Miguel to confirm in the dashboard.
+
+## Docs: the morning checklist (2026-09-29)
+- `docs/runbooks/MORNING.md`: status.railway.com first, pull, finish the staging setup, the fast rehearsal (commands, minutes and what PASS looks like for each), production prep (stock approval, preflight, site go-live, the auto-deploy decision, funding), then `scripts/launch.sh`. Listed in `docs/runbooks/README.md` with `rehearsal.md` and `auto-deploy.md`.
