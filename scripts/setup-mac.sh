@@ -43,7 +43,6 @@ BACKUP_CRON="30 3 * * *"
 TG_API="${WSR_TELEGRAM_API:-https://api.telegram.org}"
 HC_API="${WSR_HEALTHCHECKS_API:-https://healthchecks.io}"
 JUP_API="${WSR_JUPITER_API:-https://api.jup.ag}"
-RAT="cd /app && pnpm --silent --filter @rat/cli rat"
 
 # ---------------------------------------------------------------- output ----------------------------------------------
 if [ -t 1 ]; then B=$'\033[1m'; G=$'\033[32m'; Y=$'\033[33m'; R=$'\033[31m'; C=$'\033[36m'; N=$'\033[0m'; else B=; G=; Y=; R=; C=; N=; fi
@@ -123,6 +122,15 @@ rw_secret() { # rw_secret service KEY value: the value goes through stdin, never
 rw_ssh() { # rw_ssh service "command": runs inside the running container
   rw ssh --service "$1" -i "$SSH_KEY" -- sh -c "$2"
 }
+# A `railway ssh` session does not get the service's variables. scripts/in-worker.cjs (sent as base64) runs the rat
+# command with the settings of the running worker process, or else with the service variables sent as the first line
+# of stdin. Values never go on a command line and are never printed.
+worker_env_json() { rw variable list --service worker --json 2>/dev/null | jq -c 'with_entries(select(.value | type == "string"))' 2>/dev/null || echo '{}'; }
+in_worker_cmd() { # the remote shell line: no secret in it
+  printf "cd /app && exec node -e 'eval(Buffer.from(\"%s\",\"base64\").toString())' -- %s" "$(base64 <"$APP_DIR/scripts/in-worker.cjs" | tr -d '\n')" "$*"
+}
+rat_w() { printf '%s\n' "$(worker_env_json)" | rw_ssh worker "$(in_worker_cmd "$@")"; }             # rat <args> in the worker
+rat_w_in() { { printf '%s\n' "$(worker_env_json)"; cat; } | rw_ssh worker "$(in_worker_cmd "$@")"; } # ... with this stdin
 service_exists() { rw service list --json 2>/dev/null | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1; }
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
@@ -552,12 +560,12 @@ redeploy_changed() { # redeploy_changed service...: services already connected w
 redeploy_changed worker api admin backup
 connect_source worker
 wait_deployed worker 20
-rw_ssh worker 'test -n "$DATABASE_URL" && test -n "$KEY_ENCRYPTION_KEY" && echo env-ok' 2>/dev/null | grep -q env-ok ||
-  die "railway ssh into the worker works, but its settings are not visible there" "Open the worker in the Railway dashboard and check Variables."
+rat_w --env-check 2>/dev/null | grep -q env-ok ||
+  die "the worker's settings could not be reached over railway ssh" "Check that the worker is running and has DATABASE_URL and KEY_ENCRYPTION_KEY (Railway dashboard, worker, Variables)."
 
 # ---------------------------------------------------------------- 7. creator key -----------------------------------------
 step "Import the creator wallet key (hidden prompt, straight into Railway)"
-creator_key_ok() { rw_ssh worker "$RAT preflight --json" 2>/dev/null | grep '^{' | tail -1 | jq -e '.lines[] | select(.check == "creator key" and .status == "PASS")' >/dev/null 2>&1; }
+creator_key_ok() { rat_w preflight --json 2>/dev/null | grep '^{' | tail -1 | jq -e '.lines[] | select(.check == "creator key" and .status == "PASS")' >/dev/null 2>&1; }
 if creator_key_ok; then
   skip "creator key $CREATOR_PUBKEY"
 else
@@ -565,7 +573,7 @@ else
   say "Type your Phantom password, copy the key, paste it below. It goes into Railway encrypted and is never shown."
   while :; do
     ask_secret CREATOR_SECRET "Creator private key"
-    if out=$(printf '%s' "$CREATOR_SECRET" | rw_ssh worker "$RAT keys import --role creator" 2>&1); then
+    if out=$(printf '%s' "$CREATOR_SECRET" | rat_w_in keys import --role creator 2>&1); then
       break
     fi
     msg=$(printf '%s\n' "$out" | grep -i 'error' | tail -1)
@@ -625,7 +633,7 @@ ok "admin page: https://$ADMIN_DOMAIN (any user name, password in ADMIN_PASSWORD
 
 # ---------------------------------------------------------------- 8. preflight + alert ---------------------------------
 step "DRY RUN preflight and a test alert"
-pre=$(rw_ssh worker "$RAT preflight --json" 2>/dev/null | grep '^{' | tail -1)
+pre=$(rat_w preflight --json 2>/dev/null | grep '^{' | tail -1)
 [ -n "$pre" ] || die "rat preflight gave no answer" "Try it yourself: railway ssh --service worker, then: cd /app && pnpm --filter @rat/cli rat preflight"
 printf '%s' "$pre" | jq -r '.lines[] | "\(.status)\t\(.check)\t\(.detail)"' | while IFS="$(printf '\t')" read -r st ck dt; do
   case "$st" in PASS) c="$G" ;; WARN) c="$Y" ;; *) c="$R" ;; esac
@@ -648,7 +656,7 @@ ok "preflight: nothing else blocks"
 if [ "$(state_get ALERT_OK)" = 1 ]; then
   skip "Telegram test alert"
 else
-  rw_ssh worker "$RAT alert-test" >/dev/null 2>&1 || die "the test alert could not be sent" "Check TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID on the worker."
+  rat_w alert-test >/dev/null 2>&1 || die "the test alert could not be sent" "Check TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID on the worker."
   if yes_no "A test alert was sent to Telegram. Did it arrive on your phone?" y; then
     state_set ALERT_OK 1
     ok "Telegram alerts arrive"
