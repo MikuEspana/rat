@@ -52,7 +52,12 @@ export async function checkMoney(w: SimWorld, start: MoneyStart): Promise<void> 
   const totals = await w.store.claims.totals();
   const sums = await w.store.ledger.sumByReason();
   let outstanding = 0n;
-  for (const rat of rats) if (rat.status === 'hiring' && rat.reserveLedgerId !== null) outstanding += rat.salaryLamports;
+  // money in flight: a hiring rat's reservation that is still open. A pointer to a closed one (a crash between
+  // "release" and "forget it on the rat", cleared at the rat's next attempt, which the kill switch may prevent) is
+  // not money in flight: chaos seed 2246.
+  for (const rat of rats) {
+    if (rat.status === 'hiring' && rat.reserveLedgerId !== null && (await w.store.ledger.isOpen(rat.reserveLedgerId))) outstanding += rat.salaryLamports;
+  }
 
   expect(totals.claimed, 'claimed = what left our vaults').toBe(start.accrued - vaultLeft);
   expect(totals.hireShare, 'the whole claim goes to hires').toBe(totals.claimed);

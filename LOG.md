@@ -675,3 +675,7 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
   - Either way the ledger counted about 0.03 SOL the chain no longer had, and later hires spent the creator's own SOL.
 - Fix: every database write of a tick now proves the lease first (and renews it), like every send (`apps/worker/src/fenced-store.ts`, wired in `main.ts`). A worker that lost the lease stops at its first write and writes nothing more; reads still work, the lease table itself is not fenced.
 - Tests: three red-team tests (the 2789 release, the 2711 pointer, a whole tick of a worker without the lease writes nothing) fail without the fix; the chaos harness wires its workers like production; seeds 2711, 2789 and 3637 pass. SECURITY-REVIEW.md RT-19.
+
+## Chaos census 3 (seeds 2,001 to 4,000 on the fenced-writes fix)
+- Seed 2246 failed "ledger hire spend = creator SOL out" by exactly one salary, and it was the harness, not the bot. A worker released a reservation (its tx expired, nothing landed), then crashed one step before clearing the rat's pointer to it. The pointer is cleared at the rat's next attempt, but the kill switch (a leaked-key tx) meant none came.
+- The money check counted every hiring rat with a pointer as money in flight; it now counts only open reservations. The ledger equals the chain in that seed. `rat audit` already used the open reservations.
