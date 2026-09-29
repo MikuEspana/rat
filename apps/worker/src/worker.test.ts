@@ -193,6 +193,31 @@ describe('hire state machine', () => {
     });
   }
 
+  for (const mode of ['single', 'two_step'] as const) {
+    it(`${mode}: a hire the RPC rejected but another node forwarded lands once, is booked, and is never paid twice`, async () => {
+      w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1', HIRE_MODE: mode } });
+      await funded(w);
+      const creator = w.creator.publicKey.toBase58();
+      const start = w.chain.sol(creator);
+      const ledgerStart = await w.store.ledger.balance('hire');
+      w.simSender.failNext('reject_lands', 'hire');
+      await runHireStep(w.deps, w.worker.state);
+      for (let i = 0; i < 6; i++) {
+        w.clock.advanceSeconds(36);
+        w.chain.advanceBlocks(90);
+        await runHireStep(w.deps, w.worker.state);
+      }
+      const rats = await w.store.rats.listByStatus(['active', 'hiring', 'failed']);
+      const first = rats.find((r) => r.id === Math.min(...rats.map((x) => x.id)))!;
+      expect(first.status).toBe('active');
+      // every rat wallet was funded once: the creator's SOL out equals the ledger's spend, to the lamport
+      const spent = ledgerStart - (await w.store.ledger.balance('hire'));
+      expect(start - w.chain.sol(creator)).toBe(spent);
+      const funds = (await w.store.attempts.forRef('rat', String(first.id))).filter((a) => w.chain.transaction(a.signature) && !w.chain.transaction(a.signature)!.err);
+      expect(funds.length).toBe(mode === 'single' ? 1 : 2);
+    });
+  }
+
   it('a dropped hire expires, its reservation is released, and the next loop retries', async () => {
     w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1' } });
     await funded(w);
