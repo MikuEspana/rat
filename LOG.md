@@ -409,3 +409,9 @@ For the mainnet dress rehearsal (a separate Railway project, a throwaway test cr
 - The API sends `treasury.stageSol` (claimed + seeded) only on a staging database with STAGING on, so a rehearsal can show a real stage-up; production never sends it.
 - Staging Telegram alerts say STAGING. A fresh staging worker waits, doing nothing, until `rat staging-init`.
 - Guard: no deploy or setup file (scripts, Railway files, workflows, Dockerfiles, .env files) turns STAGING or the crash test on, except the staging scripts.
+
+## Site: stages by SOL claimed, Company Roadmap (2026-09-29)
+
+The building's stage now goes by `treasury.totalClaimedSol` (0 / 0.25 / 1 / 5 / 20 / 50 SOL, read only through `apps/pixel-site/src/floor/stage-source.ts`, never closes); rooms, desks, landmarks and the sewer still go by rats hired. New Company Roadmap panel (every stage, done / next with "0.62 / 1 SOL" / locked; one line on a phone), kept clear of the Vault and the job-fair line (headless check at every stage, desktop and phone). Details in `apps/pixel-site/NOTES.md`; screenshots in `apps/pixel-site/assets/preview/sol_stages/`.
+
+Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehearsal seed). The site uses it for the stage only on a page opened with `?api=<staging API>`; the production build ignores it, and the HUD's claimed figure is always `totalClaimedSol` (`floor.test.ts`).

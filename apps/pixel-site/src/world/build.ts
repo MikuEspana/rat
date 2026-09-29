@@ -15,7 +15,7 @@ import { layoutScene, type Scene } from '../floor/scene';
 import type { SewerPart } from '../floor/sewer';
 import { openness } from '../floor/zones';
 import { layoutLabels } from '../floor/labels';
-import { planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, TOP_SIGN, vaultKeepOut, type SignKind } from '../floor/signs';
+import { nextFloorWhen, planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, TOP_SIGN, vaultKeepOut, type SignKind } from '../floor/signs';
 import { type Focus, renderLandmarks } from './landmarks';
 import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
@@ -76,6 +76,8 @@ export interface World {
   hoverRoom(roomId: number | null): void;
   /** the JOB FAIR sign over the head of the line outside (hidden when nobody is waiting) */
   setJobFair(count: number, head: Cell | null): void;
+  /** where the JOB FAIR sign is on screen (CSS px), null while it is hidden: layout checks keep the HUD off it */
+  jobFairBox(): { x: number; y: number; w: number; h: number } | null;
   destroy(): void;
 }
 
@@ -1019,6 +1021,11 @@ export function buildWorld(
       signBase.set(fair, c.y - 56);
       if (moved) relayout();
     },
+    jobFairBox() {
+      if (!fair || !fairOn || !fair.visible) return null;
+      const b = fair.getBounds();
+      return { x: b.x, y: b.y, w: b.width, h: b.height };
+    },
     destroy(): void {
       const free = (c: Container): void => {
         for (const ch of c.children) {
@@ -1211,7 +1218,7 @@ function renderCity(
     g.poly([t2.x, t2.y, t1.x, t1.y, up(t1).x, up(t1).y, up(t2).x, up(t2).y]).fill({ color: 0x6a7390, alpha: 0.28 }).stroke({ color: 0xb8c6ee, width: 1, alpha: 0.7 });
     g.poly([up(t0).x, up(t0).y, up(t1).x, up(t1).y, up(t2).x, up(t2).y, up(t3).x, up(t3).y]).fill({ color: 0xaab4cc, alpha: 0.22 }).stroke({ color: 0xd8e2ff, width: 1, alpha: 0.8 });
     if (next) {
-      const s = new Sprite(lockTexture('NEXT FLOOR', `AT ${next.min.toLocaleString('en-US')} RATS`));
+      const s = new Sprite(lockTexture('NEXT FLOOR', nextFloorWhen(next.sol)));
       const c = up(P(l.i0 + l.w / 2, l.j0 + l.h / 2));
       s.anchor.set(0.5, 1);
       s.position.set(c.x, c.y - 4);

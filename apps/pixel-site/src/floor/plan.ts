@@ -17,22 +17,53 @@ import { type LandmarkSpot, TOWER_SLOT } from './landmarks';
 import { Rng } from './rng';
 import { CORRIDOR_REGION, FLOOR_STYLES, T, idx, type Actor, type FloorLayout, type FloorStyle, type Ring, type Room, type RoomKind, type Spot } from './types';
 
-export const STAGES: ReadonlyArray<{ name: string; min: number }> = [
-  { name: 'GARAGE STARTUP', min: 0 },
-  { name: 'SMALL OFFICE', min: 25 },
-  { name: 'FULL FLOOR', min: 100 },
-  { name: 'CORPORATE FLOOR', min: 500 },
-  { name: 'MEGACORP', min: 1500 },
-  { name: 'WALL STREET', min: 3000 },
+/**
+ * The building's stages. A stage opens when the SOL claimed (stage-source.ts) reaches `sol`, and never closes.
+ * `rats` is the hire count each ring's rooms are planned around: rooms, landmarks, desks and the sewer still go by
+ * hires, so a ring's amenities open at even steps from its `rats` to the next ring's. `short` fits a phone's one-line
+ * roadmap.
+ */
+export const STAGES: ReadonlyArray<{ name: string; short: string; sol: number; rats: number }> = [
+  { name: 'GARAGE STARTUP', short: 'GARAGE', sol: 0, rats: 0 },
+  { name: 'SMALL OFFICE', short: 'SMALL OFFICE', sol: 0.25, rats: 25 },
+  { name: 'FULL FLOOR', short: 'FULL FLOOR', sol: 1, rats: 100 },
+  { name: 'CORPORATE FLOOR', short: 'CORPORATE', sol: 5, rats: 500 },
+  { name: 'MEGACORP', short: 'MEGACORP', sol: 20, rats: 1500 },
+  { name: 'WALL STREET', short: 'WALL STREET', sol: 50, rats: 3000 },
 ];
 /** the plan is drawn for about this many rats (it has a few hundred desks more); beyond its desks new hires line up
  * outside the lobby (queueCells) */
 export const PLAN_RATS = 5200;
 
-export function stageOf(ratCount: number): number {
+/** The stage for this much SOL claimed. */
+export function stageOfSol(sol: number): number {
   let s = 0;
-  for (let k = 0; k < STAGES.length; k++) if (ratCount >= STAGES[k]!.min) s = k;
+  for (let k = 0; k < STAGES.length; k++) if (sol >= STAGES[k]!.sol) s = k;
   return s;
+}
+
+/** The ring whose rooms a hire count is planned for (amenity spacing, era badges). The stage goes by SOL. */
+export function ringOfHires(ratCount: number): number {
+  let s = 0;
+  for (let k = 0; k < STAGES.length; k++) if (ratCount >= STAGES[k]!.rats) s = k;
+  return s;
+}
+
+/**
+ * Debug and tests only: the SOL claimed that puts the company at the stage it used to reach at this many hires
+ * (linear between the stages' `rats` and `sol`, and on at the last step's rate), so `?rats=N` and the "company at
+ * N rats" tests still show every stage.
+ */
+export function solForRats(ratCount: number): number {
+  const n = Math.max(0, ratCount);
+  for (let k = 1; k < STAGES.length; k++) {
+    const a = STAGES[k - 1]!;
+    const b = STAGES[k]!;
+    if (n < b.rats) return a.sol + ((n - a.rats) * (b.sol - a.sol)) / (b.rats - a.rats);
+  }
+  const a = STAGES[STAGES.length - 2]!;
+  const b = STAGES[STAGES.length - 1]!;
+  return b.sol + ((n - b.rats) * (b.sol - a.sol)) / (b.rats - a.rats);
 }
 
 export const STREET_MARGIN = 8;
@@ -308,7 +339,7 @@ export function buildMaster(): FloorLayout {
   }
 
   // kinds: amenities must open straight onto the corridor; the lobby is the front-most such room on the outer wall
-  const stageRange = (k: number): [number, number] => [STAGES[k]!.min, STAGES[k + 1]?.min ?? PLAN_RATS];
+  const stageRange = (k: number): [number, number] => [STAGES[k]!.rats, STAGES[k + 1]?.rats ?? PLAN_RATS];
   const centre = C + (GARAGE + 2) / 2;
   const angle = (r: Room): number => {
     const a = Math.atan2(r.j0 + r.h / 2 - centre, r.i0 + r.w / 2 - centre) - Math.PI / 4; // 0 = the front corner

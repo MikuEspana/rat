@@ -985,4 +985,9 @@ export class RatSystem {
     const a = this.agents.get(id);
     return a ? { x: a.item.p.x, y: a.item.p.y } : null;
   }
+
+  /** Where every rat drawn in the job-fair line is (world px, at its feet), for layout checks. */
+  linePositions(): Array<{ x: number; y: number }> {
+    return this.queue.map((a) => ({ x: a.item.p.x, y: a.item.p.y }));
+  }
 }

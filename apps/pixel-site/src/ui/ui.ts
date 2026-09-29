@@ -8,16 +8,17 @@ import type { RatRecord, Store } from '../data/store';
 import { TIER_SCALE, type RatSystem } from '../world/rats';
 import { DEBUG_MAX_RATS } from '../config';
 import { now as clockNow } from '../now';
-import { STAGES, stageOf } from '../floor/plan';
+import { ringOfHires, STAGES } from '../floor/plan';
 import { headlines, type NewsStats } from './news';
 import type { Growth } from '../floor/growth';
 import { sound } from './sound';
+import { RoadmapPanel } from './roadmap';
 
 type Progress = ReturnType<Growth['progress']>;
 
-/** Badges by the stage the company was in when a rat was hired. */
+/** Badges by hire order: the ring whose rooms were opening when a rat was hired. */
 const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
-import { ago, claimProgress, describe, pct, signClass, TIER_COLOR, TIER_LABEL, usd } from './format';
+import { ago, claimProgress, describe, pct, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
 
 type Look = keyof typeof TIER_COLOR;
 
@@ -128,10 +129,13 @@ export class Ui {
   private spotOn = false;
   /** extra HUD buttons (timelapse) */
   readonly tools = el('div', 'hud-tools');
+  /** the Company Roadmap: every stage and the SOL claimed it takes (bottom right, one line on a phone) */
+  readonly roadmap = new RoadmapPanel();
 
   constructor(private readonly d: UiDeps) {
     document.body.appendChild(this.root);
-    this.root.append(this.spot, this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.vaultCard, this.milestoneEl, this.news);
+    // the roadmap comes after the rat card: while a card is open the card has that corner (style.css)
+    this.root.append(this.spot, this.banner, this.buildHud(), this.buildFeed(), this.buildBoard(), this.card, this.roadmap.el, this.vaultCard, this.milestoneEl, this.news);
     this.vaultCard.hidden = true;
     this.spot.hidden = true;
     this.milestoneEl.hidden = true;
@@ -358,11 +362,13 @@ export class Ui {
 
   // ------------------------------------------------------------------ idle game
   /**
-   * Stage name and three nested bars: the desk room filling up, the next room to unlock, the next stage
-   * ("FULL FLOOR: 88 / 100 rats"). Bars that have nothing left to count hide.
+   * Stage name and three nested bars: the desk room filling up, the next room to unlock (both by rats hired), and the
+   * next stage by SOL claimed ("FULL FLOOR: 0.62 / 1 SOL"). Bars that have nothing left to count hide. The roadmap
+   * follows along.
    */
-  /** rats: hired (the room bar). stageRats: hired plus applicants in line, what the stage goes by (the stage bar). */
-  setStage(name: string, rats: number, progress?: Progress, stageRats = rats): void {
+  setStage(stage: number, rats: number, sol: number, progress?: Progress): void {
+    const name = STAGES[stage]?.name ?? '';
+    this.roadmap.set(stage, sol);
     const bars = el('div', 'stage-bars');
     const row = (cls: string, fill: number, label: string): void => {
       const r = el('div', `stage-row ${cls}`);
@@ -377,13 +383,11 @@ export class Ui {
     const p = progress;
     if (p?.desk) row('desk', p.desk.filled / Math.max(1, p.desk.total), `${p.desk.label}: ${n(p.desk.filled)} / ${n(p.desk.total)} seats`);
     if (p?.room) row('room', (rats - p.room.from) / Math.max(1, p.room.at - p.room.from), `${p.room.label}: ${n(rats)} / ${n(p.room.at)} rats`);
-    const line = stageRats > rats ? ' with the line' : '';
-    if (p?.stage) row('stage', (stageRats - p.stage.from) / Math.max(1, p.stage.at - p.stage.from), `${p.stage.label}: ${n(stageRats)} / ${n(p.stage.at)} rats${line}`);
-    else if (!p) {
-      const k = Math.max(0, STAGES.findIndex((s) => s.name === name));
-      const next = STAGES[k + 1];
-      if (next) row('stage', (rats - STAGES[k]!.min) / (next.min - STAGES[k]!.min), `${next.name}: ${n(rats)} / ${n(next.min)} rats`);
-    } else row('stage', 1, `${name}: ${n(rats)} rats, the top`);
+    const next = STAGES[stage + 1];
+    if (next) {
+      const from = STAGES[stage]!.sol;
+      row('stage', (sol - from) / Math.max(1e-9, next.sol - from), `${next.name}: ${solAmount(sol)} / ${solAmount(next.sol)} SOL`);
+    } else row('stage', 1, `${name}: ${solAmount(sol)} SOL, the top`);
     this.stageChip.replaceChildren(el('span', 'stage-now', name), bars, this.soundBtn);
   }
 
@@ -437,7 +441,7 @@ export class Ui {
   eraOf(id: number): string {
     let before = 0;
     for (const r of this.d.store.rats.keys()) if (r < id) before++;
-    return ERAS[stageOf(before + 1)] ?? '';
+    return ERAS[ringOfHires(before + 1)] ?? '';
   }
 
   /** Big banner for a new stage (or a landmark: kicker 'UNLOCKED'); fades out on its own. */

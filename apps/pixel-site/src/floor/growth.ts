@@ -1,18 +1,22 @@
 // The idle game: which rooms of the master plan stand, and which desk each rat has. Deterministic: rats are
 // replayed in id order, so a page load and a live session that grew hire by hire end in the same building.
 //
-// - The stage follows the rats hired plus the applicants in the job-fair line (plan.ts STAGES), so the building keeps
-//   up with a pump. A new stage builds its ring corridor and lobby. A stage never closes when the line drains.
-// - Amenities open at their set rat count.
+// - The stage follows the SOL claimed (plan.ts STAGES, given to setSol from stage-source.ts), so the building keeps
+//   up with the fees. A new stage builds its ring corridor and lobby. A stage never closes.
+// - Everything else goes by hires. Amenities open at their set rat count, once their ring is open.
 // - Desks on demand: a rat takes a free desk in its stock's rooms; when there is none, the next desk-room slot is
-//   built and handed to that stock. Before the full-floor stage everyone shares the garage and open offices.
+//   built and handed to that stock. Until the full floor's planned hire count (STAGES[2].rats), or while the full
+//   floor is not open yet, everyone shares the garage and open offices.
 // - No desk left: the rat waits (in the job-fair line outside, rats.ts) and is seated as soon as a room is built
 //   for it, usually when the next stage opens its ring. Once the last ring is full, the line only grows.
-import { ROOM_LOOK, STAGES } from './plan';
+import { ROOM_LOOK, STAGES, stageOfSol } from './plan';
 import { CORRIDOR_REGION, T, idx, type FloorLayout, type Room, type Seat } from './types';
 import { hash32 } from './rng';
 
 export type GrowthEvent = { kind: 'stage'; stage: number } | { kind: 'room'; room: Room; symbol: string | null };
+
+/** From this many hires on (and with the full floor open), stocks get desk rooms of their own. */
+const STOCK_ROOMS_FROM = STAGES[2]!.rats;
 
 export class Growth {
   readonly built: Uint8Array;
@@ -23,8 +27,8 @@ export class Growth {
   stage = -1;
   /** rats hired */
   count = 0;
-  /** applicants in the job-fair line (claimed salaries not hired yet): they count toward the stage */
-  private applicants = 0;
+  /** SOL claimed (what the stage goes by, from stage-source.ts); only ever goes up */
+  sol = 0;
   private readonly roomsOf = new Map<string, Room[]>();
   private readonly order: number[][]; // per room: seat ids in fill order
   private readonly next: Int32Array; // per room: fill pointer
@@ -54,23 +58,37 @@ export class Growth {
     return this.waiting.length;
   }
 
-  /** what the stage goes by: rats hired plus applicants in line */
-  get stageCount(): number {
-    return this.count + this.applicants;
-  }
-
-  /** The job-fair line changed: open any stage that hires plus the line have reached. Returns what got built. */
-  setApplicants(n: number): GrowthEvent[] {
-    this.applicants = Math.max(0, Math.floor(n));
+  /**
+   * SOL claimed (stage-source.ts): opens every stage it reaches, with the amenities and desks the hires so far are
+   * owed in the rings it opens. A stage never closes (a lower value changes nothing). Returns what got built.
+   */
+  setSol(sol: number): GrowthEvent[] {
+    if (Number.isFinite(sol)) this.sol = Math.max(this.sol, sol);
     this.events = [];
-    this.openStages();
+    const target = stageOfSol(this.sol);
+    if (target > this.stage) {
+      while (this.stage < target) this.startStage(this.stage + 1);
+      this.openAmenities();
+      this.seatWaiting(null);
+    }
     const events = this.events;
     this.events = [];
     return events;
   }
 
-  private openStages(): void {
-    while (this.stage + 1 < STAGES.length && this.stageCount >= STAGES[this.stage + 1]!.min) this.startStage(this.stage + 1);
+  /** Stocks get desk rooms of their own (before that, everyone shares the garage and the open offices). */
+  private get stockRooms(): boolean {
+    return this.stage >= 2 && this.count >= STOCK_ROOMS_FROM;
+  }
+
+  /** Amenities whose hire count is reached, in rings that are open. */
+  private openAmenities(): void {
+    while (this.amenityAt < this.amenities.length) {
+      const r = this.amenities[this.amenityAt]!;
+      if (r.unlockAt! > this.count || r.ring > this.stage) break;
+      this.build(r);
+      this.amenityAt++;
+    }
   }
 
   get stageName(): string {
@@ -94,10 +112,11 @@ export class Growth {
     const next = this.amenities[this.amenityAt];
     const prev = this.amenities[this.amenityAt - 1];
     const room = next && next.ring <= this.stage + 1
-      ? { from: prev?.unlockAt ?? STAGES[this.stage]!.min, at: next.unlockAt!, label: ROOM_LOOK[next.kind].label }
+      ? { from: prev?.unlockAt ?? 0, at: next.unlockAt!, label: ROOM_LOOK[next.kind].label }
       : null;
+    // the stage bar counts SOL claimed
     const ns = STAGES[this.stage + 1];
-    const stage = ns ? { from: STAGES[this.stage]!.min, at: ns.min, label: ns.name } : null;
+    const stage = ns ? { from: STAGES[this.stage]!.sol, at: ns.sol, label: ns.name } : null;
     return { desk, room, stage };
   }
 
@@ -162,16 +181,10 @@ export class Growth {
   add(ratId: number, stock: string): { seat: Seat | null; events: GrowthEvent[] } {
     this.events = [];
     this.count++;
-    this.openStages();
-    while (this.amenityAt < this.amenities.length) {
-      const r = this.amenities[this.amenityAt]!;
-      if (r.unlockAt! > this.count || r.ring > this.stage) break;
-      this.build(r);
-      this.amenityAt++;
-    }
+    this.openAmenities();
     let seat: Seat | null = null;
     for (const r of this.roomsOf.get(stock) ?? []) if ((seat = this.take(r, ratId))) break;
-    if (!seat && this.stage <= 1) {
+    if (!seat && !this.stockRooms) {
       for (const r of this.sharedRooms()) if ((seat = this.take(r, ratId))) break;
       const slot = seat ? null : this.nextSlot('open');
       if (slot) {
@@ -179,7 +192,7 @@ export class Growth {
         seat = this.take(slot, ratId);
       }
     }
-    if (!seat && this.stage >= 2) {
+    if (!seat && this.stockRooms) {
       const slot = this.nextSlot('stock');
       if (slot) {
         if (this.built[slot.id]) this.assign(slot, stock);
@@ -189,27 +202,30 @@ export class Growth {
     }
     if (!seat) for (const r of this.sharedRooms()) if ((seat = this.take(r, ratId))) break;
     if (!seat) this.waiting.push({ id: ratId, stock });
-    // anyone still waiting gets a desk in a room that was just built for their stock (or a shared one)
-    if (this.waiting.length && this.events.some((e) => e.kind === 'room')) {
-      this.waiting = this.waiting.filter((w) => {
-        let s: Seat | null = null;
-        for (const r of this.roomsOf.get(w.stock) ?? []) if ((s = this.take(r, w.id))) break;
-        if (!s && this.stage >= 2) {
-          const slot = this.nextSlot('stock');
-          if (slot) {
-            if (this.built[slot.id]) this.assign(slot, w.stock);
-            else this.build(slot, w.stock);
-            s = this.take(slot, w.id);
-          }
-        }
-        if (!s) for (const r of this.sharedRooms()) if ((s = this.take(r, w.id))) break;
-        if (s && w.id !== ratId) this.moved.push(w.id);
-        return !s;
-      });
-    }
+    this.seatWaiting(ratId);
     const events = this.events;
     this.events = [];
     return { seat, events };
+  }
+
+  /** Anyone still waiting gets a desk in a room that was just built for their stock (or a shared one). */
+  private seatWaiting(newRat: number | null): void {
+    if (!this.waiting.length || !this.events.some((e) => e.kind === 'room')) return;
+    this.waiting = this.waiting.filter((w) => {
+      let s: Seat | null = null;
+      for (const r of this.roomsOf.get(w.stock) ?? []) if ((s = this.take(r, w.id))) break;
+      if (!s && this.stockRooms) {
+        const slot = this.nextSlot('stock');
+        if (slot) {
+          if (this.built[slot.id]) this.assign(slot, w.stock);
+          else this.build(slot, w.stock);
+          s = this.take(slot, w.id);
+        }
+      }
+      if (!s) for (const r of this.sharedRooms()) if ((s = this.take(r, w.id))) break;
+      if (s && w.id !== newRat) this.moved.push(w.id);
+      return !s;
+    });
   }
 
   /** Cells rats cannot walk on right now: the plan's walls and furniture plus everything not built yet. */

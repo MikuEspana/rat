@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { RatEvent } from '@rat/contract';
 import eventsJson from '@rat/contract/mock/events.json';
 import { STAGES } from '../floor/plan';
-import { ago, claimProgress, compact, describe as line, pct, stageLine, usd } from './format';
+import { ago, claimProgress, compact, describe as line, pct, solAmount, stageLine, usd } from './format';
 
 describe('format', () => {
   it('formats money, percentages and big numbers compactly', () => {
@@ -70,5 +70,37 @@ describe('format', () => {
       expect(l).not.toMatch(/now an? wall street/i);
       expect(l).not.toMatch(/evil empire/i);
     }
+  });
+
+  it('states the SOL milestone of a stage-up in the feed, never a rat count', () => {
+    const lines = STAGES.map((st, k) => stageLine(st.name, k === STAGES.length - 1, st.sol));
+    expect(lines.slice(1)).toEqual([
+      '0.25 SOL claimed: SMALL OFFICE',
+      '1 SOL claimed: FULL FLOOR',
+      '5 SOL claimed: CORPORATE FLOOR',
+      '20 SOL claimed: MEGACORP',
+      'The company made it to Wall Street',
+    ]);
+    for (const l of lines) {
+      expect(l).not.toMatch(/rats|in line/i);
+      expect(l).not.toContain(String.fromCharCode(0x2014));
+    }
+  });
+
+  it('shows SOL amounts rounded down, so a stage never looks reached early', () => {
+    expect(solAmount(0)).toBe('0');
+    expect(solAmount(0.2499)).toBe('0.24');
+    expect(solAmount(0.25)).toBe('0.25');
+    expect(solAmount(0.29)).toBe('0.29');
+    expect(solAmount(0.62)).toBe('0.62');
+    expect(solAmount(0.9999)).toBe('0.99');
+    expect(solAmount(1)).toBe('1');
+    expect(solAmount(3.26)).toBe('3.2');
+    expect(solAmount(49.99)).toBe('49.9');
+    expect(solAmount(50)).toBe('50');
+    expect(solAmount(72.44)).toBe('72.4');
+    expect(solAmount(1234.5)).toBe('1,234');
+    expect(solAmount(-1)).toBe('0');
+    expect(solAmount(Number.NaN)).toBe('0');
   });
 });
