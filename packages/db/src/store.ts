@@ -584,6 +584,19 @@ export class ClaimRepo {
     await this.db.update(claims).set(patch).where(and(eq(claims.id, id), eq(claims.mode, this.mode)));
   }
 
+  /**
+   * Changes a claim only while its status is still one of `from` (default: open). Returns false when another worker
+   * got there first: exactly once, like a reservation's settle, even with two workers during a redeploy overlap.
+   */
+  async closeOpen(id: number, patch: Partial<Omit<ClaimRow, 'id' | 'mode'>>, from: ClaimRow['status'][] = ['pending', 'unknown']): Promise<boolean> {
+    const r = await this.db
+      .update(claims)
+      .set(patch)
+      .where(and(eq(claims.id, id), eq(claims.mode, this.mode), inArray(claims.status, from)))
+      .returning({ id: claims.id });
+    return r.length > 0;
+  }
+
   async bySig(sig: string): Promise<ClaimRow | null> {
     const r = await this.db.select().from(claims).where(eq(claims.sig, sig)).limit(1);
     return r[0] ?? null;

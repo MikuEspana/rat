@@ -446,4 +446,39 @@ describe('claim reconciliation', () => {
     expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
     expect(await w.store.claims.totals()).toEqual(t);
   });
+
+  it('two workers booking the same claim (a redeploy overlap) credit it once', async () => {
+    // chaos run seed 37: the old worker stalled after sending claim #5, the new one booked it from the attempt
+    // log, then the old one woke up and booked it again: the hire budget grew by a claim that never happened
+    w = await createSimWorld({ dryRun: false });
+    const { creditClaim } = await import('./steps/claim');
+    const id = await w.store.claims.insert({ source: 'bot', status: 'pending', claimableLamports: SOL });
+    const book = () => creditClaim(w.deps, { claimed: SOL, fee: 5_000n, source: 'bot', sig: 'sig5', claimId: id });
+    expect(await Promise.all([book(), book()])).toEqual(expect.arrayContaining([true, false]));
+    expect(await book()).toBe(false);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - 5_000n);
+    expect((await w.store.claims.totals()).claimed).toBe(SOL);
+    // a late "confirmation unknown" from the old worker never reopens a booked claim
+    expect(await w.store.claims.closeOpen(id, { status: 'unknown' }, ['pending'])).toBe(false);
+    expect(await w.store.claims.openBot()).toEqual([]);
+  });
+
+  it('a claim that lands while the kill switch is on is still booked (nothing new is sent)', async () => {
+    // chaos run seed 1: the confirmation was lost, then a leaked-key tx engaged the kill switch. The claim step
+    // stopped before re-checking it, the wallet watch skips our own signatures: the claim stayed unbooked.
+    w = await createSimWorld({ dryRun: false });
+    await prime(w);
+    w.accrue({ bondingLamports: SOL });
+    w.simSender.failNext('land_timeout', 'claim');
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('pending');
+    const { engageKillSwitch } = await import('@rat/safety');
+    await engageKillSwitch(w.store.settings, 'test');
+    w.accrue({ bondingLamports: SOL / 2n });
+    const sent = w.simSender.submitted;
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
+    expect(w.simSender.submitted, 'nothing sent under the kill switch').toBe(sent);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: SOL, hireShare: SOL, count: 1 });
+    expect(await w.store.claims.openBot()).toEqual([]);
+  });
 });
