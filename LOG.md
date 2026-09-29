@@ -394,3 +394,14 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 **What changed:** `scripts/in-worker.cjs` runs every `rat` command sent over ssh (by `setup-mac.sh` and `scripts/rat.sh`). It takes the settings from the running worker process (`/proc/<pid>/environ`), or else from the service variables sent as the first line of stdin (`railway variable list --json`, rendered values). The rest of stdin goes to the command, so the creator key still comes only from the hidden prompt through stdin. No value is printed or put on a command line.
 
 **Tested:** the harness's fake Railway now runs ssh commands without the service variables, like the real one. The script from `main` stops exactly like the real run; the new script finishes, imports the key through the hidden prompt (a wrong key refused first), asks nothing again before step 7 and rebuilds nothing. Also: a fresh setup, the older-CLI repair, a setup with no readable worker process (settings over stdin), and `scripts/rat.sh status`. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
+
+## Rehearsal: STAGING mode (2026-09-29)
+
+For the mainnet dress rehearsal (a separate Railway project, a throwaway test creator, a test coin). Every test-only feature is impossible in production, each rule with a test:
+- `STAGING=true` is refused at config load with the production creator wallet (`PRODUCTION_CREATOR_PUBKEY`) and without a creator; `STAGING_CRASH_AFTER_SEND` is refused without STAGING.
+- A staging database is marked once by `rat staging-init` (only with STAGING on, only on an empty database, never next to the production creator key). The worker, the API and every CLI command refuse a marked database with production settings, and staging settings on a database holding the production key.
+- `rat staging-seed --sol X --confirm "SEED X SOL"`: books SOL already sent to the test creator as hire budget (`hire:seed_credit`), at most 0.5 SOL per seed and 1 SOL in total, never more than the wallet really holds above its reserve. It is never a creator fee: the public claimed figure comes from the claims table only.
+- `STAGING_CRASH_AFTER_SEND=N`: the worker kills itself (SIGKILL) right after the Nth hire is broadcast, once per database, to prove crash recovery on mainnet.
+- The API sends `treasury.stageSol` (claimed + seeded) only on a staging database with STAGING on, so a rehearsal can show a real stage-up; production never sends it.
+- Staging Telegram alerts say STAGING. A fresh staging worker waits, doing nothing, until `rat staging-init`.
+- Guard: no deploy or setup file (scripts, Railway files, workflows, Dockerfiles, .env files) turns STAGING or the crash test on, except the staging scripts.

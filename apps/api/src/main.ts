@@ -1,7 +1,7 @@
 // Public read-only state API (CONTRACT.md). Use a read-only database user (DATABASE_URL_READONLY).
 import { serve } from '@hono/node-server';
 import { createLogger, loadConfig, systemClock } from '@rat/core';
-import { Store, openDatabase } from '@rat/db';
+import { Store, openDatabase, stagingProblems } from '@rat/db';
 import { createApp } from './app';
 import { StateService } from './state-service';
 
@@ -11,6 +11,12 @@ const url = cfg.databaseUrlReadonly ?? cfg.databaseUrl;
 if (!url) throw new Error('DATABASE_URL_READONLY (or DATABASE_URL) is required');
 const handle = await openDatabase(url, { maxConnections: 10 });
 const store = new Store(handle.db, cfg.dryRun ? 'paper' : 'live', systemClock);
+// a staging database is never served with production settings (and the reverse)
+const stagingIssues = await stagingProblems(store, cfg);
+if (stagingIssues.length > 0) {
+  log.fatal({ reasons: stagingIssues }, 'refusing to start: staging check failed');
+  process.exit(1);
+}
 const app = createApp({ service: new StateService(store, cfg, systemClock), clock: systemClock, cacheSec: cfg.api.cacheSec, corsOrigin: cfg.api.corsOrigin });
 // Railway (and most hosts) inject PORT; API_PORT is the fallback.
 const port = Number(process.env.PORT) || cfg.api.port;

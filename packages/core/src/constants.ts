@@ -8,6 +8,15 @@ export const SYSTEM_PROGRAM = '11111111111111111111111111111111';
 /** Exact phrase that must be in LIVE_CONFIRM (together with DRY_RUN=false) before anything is sent. */
 export const LIVE_CONFIRM_PHRASE = 'I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS';
 
+/**
+ * The real launch's creator wallet. STAGING mode refuses it everywhere (config, database, seed), so no test-only
+ * feature can ever run next to it. If the production creator ever changes, change it here too.
+ */
+export const PRODUCTION_CREATOR_PUBKEY = '4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot';
+/** `rat staging-seed` limits, hard-coded so no setting can raise them: per call, and in total per database. */
+export const STAGING_SEED_MAX_LAMPORTS = 500_000_000n;
+export const STAGING_SEED_TOTAL_MAX_LAMPORTS = 1_000_000_000n;
+
 /** Settings keys stored in the database. */
 export const SETTINGS = {
   killSwitch: 'kill_switch',
@@ -25,6 +34,10 @@ export const SETTINGS = {
   /** JSON { mint, decimals, supplyRaw, tokenProgram } */
   coinInfo: 'coin_info',
   expectedMintAuthority: 'expected_mint_authority',
+  /** STAGING only: "staging:<test creator pubkey>", written once by `rat staging-init` on an empty database */
+  stagingMarker: 'staging_marker',
+  /** STAGING only: set right before the one-shot crash test kills the worker, so it never fires twice */
+  stagingCrashDone: 'staging_crash_done',
 } as const;
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;

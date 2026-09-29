@@ -158,6 +158,8 @@ export const StateResponseSchema = z
         totalClaimedSol: finite,
         totalHiredSol: finite,
         waitingSol: finite,
+        /** rehearsal (STAGING) API only: claimed plus seeded SOL, the site's stage source. Production never sends it. */
+        stageSol: finite.optional(),
       })
       .strict(),
     portfolio: PortfolioSchema,

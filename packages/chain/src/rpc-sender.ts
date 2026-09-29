@@ -39,6 +39,8 @@ export interface RpcTxSenderOptions {
   expiryMarginBlocks?: number;
   sleep?: (ms: number) => Promise<void>;
   log?: Logger;
+  /** rehearsal only (STAGING crash test): runs once the tx is broadcast, before waiting for confirmation */
+  afterBroadcast?: (tx: PreparedTx) => Promise<void>;
 }
 
 const DEFAULT_PRIORITY_FALLBACK = 10_000;
@@ -118,6 +120,7 @@ export class RpcTxSender implements TxSender {
       }
       this.opts.log?.warn({ err, sig: p.signature }, 'send error, tx may or may not have been broadcast; polling');
     }
+    if (this.opts.afterBroadcast) await this.opts.afterBroadcast(p);
     const started = Date.now();
     for (;;) {
       await this.wait(this.pollMs);
