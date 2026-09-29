@@ -10,7 +10,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "rat": "tsx src/main.ts"
+    "rat": "tsx src/main.ts",
+    "verify-mainnet": "tsx src/verify-mainnet.ts"
   },
   "dependencies": {
     "@rat/chain": "workspace:*",

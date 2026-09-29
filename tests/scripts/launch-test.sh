@@ -95,7 +95,12 @@ check "another project: refused, nothing changed" '[ $rc = 1 ] && ! changed'
 reset
 jq -c '.DRY_RUN = "false"' "$W/fake/vars-worker.json" >"$W/fake/x" && mv "$W/fake/x" "$W/fake/vars-worker.json"
 run $'\ny\nGO\n'; rc=$?
-check "a worker already set to LIVE: refused" '[ $rc = 1 ] && grep -q "already set to LIVE" "$W/out.txt" && ! changed'
+check "a worker set to LIVE without a coin (not a launch this script started): refused" '[ $rc = 1 ] && grep -q "is set to LIVE (DRY_RUN is not true) but has no COIN_MINT" "$W/out.txt" && ! changed'
+reset
+jq -c '.DRY_RUN = "false" | .COIN_MINT = "MintLaunch"' "$W/fake/vars-worker.json" >"$W/fake/x" && mv "$W/fake/x" "$W/fake/vars-worker.json"
+echo live >"$W/fake/mode"
+run $'n\n'; rc=$?
+check "a bot already running LIVE: nothing to launch, nothing changed" '[ $rc = 0 ] && grep -q "already runs LIVE" "$W/out.txt" && ! changed'
 reset
 jq -c '.CREATOR_PUBKEY = "CCtCZryKG3cdEFUAYPd5S1kFVhJ3mpEy2ciDqu59CvWT"' "$W/fake/vars-worker.json" >"$W/fake/x" && mv "$W/fake/x" "$W/fake/vars-worker.json"
 run $'\ny\nGO\n'; rc=$?

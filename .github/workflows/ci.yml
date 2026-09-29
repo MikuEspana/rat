@@ -26,7 +26,7 @@ jobs:
 
   long:
     # chaos (worker killed before every step of a hire and a burn, RPC / database outages at every call, Jupiter 429
-    # storm) and the 3-hour launch simulation
+    # storm, 8 randomized launches of tests/chaos/fuzz.ts) and the 3-hour launch simulation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -103,6 +103,8 @@ jobs:
         run: bash tests/scripts/staging-local-test.sh
       - name: Launch script (launch.sh in one build, with fake railway, rat and RPC)
         run: bash tests/scripts/launch-test.sh
+      - name: Launch dress rehearsal (Railway slow and failing, railway ssh dropping, a failed build, a second run)
+        run: bash tests/scripts/launch-rehearsal.sh
       - name: Key backup to the Mac (scripts/keys-backup.sh)
         run: bash tests/scripts/keys-backup-test.sh
       - name: Tools (Postgres 18 client from the PostgreSQL apt repository, age, busybox, a local S3 server)

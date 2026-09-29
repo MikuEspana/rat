@@ -53,20 +53,27 @@ rw_vars() { # rw_vars service: its variables as JSON (secret values: only into j
 }
 rw_var() { rw_vars "$1" | jq -r --arg k "$2" '.[$k] // empty' 2>/dev/null || true; } # "" = not set, or Railway did not answer
 set_vars() { # set_vars service KEY=VALUE...: non-secret settings (applied by the next redeploy), then read back, or stop
-  local svc="$1" kv i
+  local svc="$1" kv i vars missing=""
   shift
   for i in 1 2 3; do
     rw variable set "$@" --service "$svc" --skip-deploys >/dev/null 2>&1 && break
     [ "$i" = "$TRIES" ] && die "could not set $* on $svc ($TRIES tries)" "$API_HINT"
     retry_pause "$i"
   done
-  for kv in "$@"; do
-    for i in 1 2 3; do
-      [ "$(rw_var "$svc" "${kv%%=*}")" = "${kv#*=}" ] && continue 2
-      [ "$i" = "$TRIES" ] || retry_pause "$i"
-    done
-    die "Railway does not show ${kv%%=*} on $svc after setting it" "Check it in the Railway dashboard: $svc > Variables. $API_HINT"
+  # one read per try for every key (not one per key): a slow Railway answers in seconds per call
+  for i in 1 2 3; do
+    missing=""
+    if vars=$(rw_vars "$svc"); then
+      for kv in "$@"; do
+        [ "$(printf '%s' "$vars" | jq -r --arg k "${kv%%=*}" '.[$k] // empty')" = "${kv#*=}" ] || missing="$missing ${kv%%=*}"
+      done
+      [ -z "$missing" ] && return 0
+    else
+      missing=" (the variables could not be read)"
+    fi
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
   done
+  die "Railway does not show${missing} on $svc after setting it" "Check it in the Railway dashboard: $svc > Variables. $API_HINT"
 }
 unset_var() { # unset_var service KEY: removed, and Railway lists the variables without it (3 tries), or stop
   local i
@@ -106,7 +113,9 @@ local_mode() { # local_mode staging-state-file
 # rat commands run in the worker over railway ssh (scripts/rat.sh). WSR_RAT=scripts/rat-local.sh runs them on this
 # Mac instead (the route without ssh, docs/runbooks/setup-mac.md).
 rat() { command ${WSR_RAT:-scripts/rat.sh} "$@"; }
-rat_json() { rat "$@" 2>/dev/null | grep '^{' | tail -1; } # the last JSON line a rat command printed
+# the last JSON line a rat command printed; empty when it failed (railway ssh down), never an error: under set -e and
+# pipefail a failing call would otherwise end the calling script without a word
+rat_json() { rat "$@" 2>/dev/null | grep '^{' | tail -1 || true; }
 
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }

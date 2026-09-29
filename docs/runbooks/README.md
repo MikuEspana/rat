@@ -3,6 +3,7 @@
 | Runbook | When |
 |---|---|
 | [MORNING.md](MORNING.md) | the morning of the launch: the fast rehearsal, production prep, the launch, in order with minutes |
+| [verify-mainnet.md](verify-mainnet.md) | before the launch: a read-only check of the stocks, Jupiter routes and the pump.fun claim on live mainnet (nothing signed or sent) |
 | [rehearsal.md](rehearsal.md) | the mainnet rehearsal (the fast version on your Mac, or on Railway) |
 | [auto-deploy.md](auto-deploy.md) | what a merge to `main` does to production, and what to switch on before the launch |
 | [setup-mac.md](setup-mac.md) | the whole setup on a Mac in one command (`scripts/setup-mac.sh`): what each step shows, what to do if one fails |

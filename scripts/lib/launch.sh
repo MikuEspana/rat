@@ -15,6 +15,15 @@ LAUNCH_MINT=""
 # shellcheck disable=SC2034 # read by scripts/launch.sh (minutes from the coin to the bot live)
 LAUNCH_TIME=""
 
+running_mode() { # the running worker's mode (dry_run, live) through railway ssh, asked up to 3 times; "" = no answer
+  local i m
+  for i in 1 2 3; do
+    m=$(rat_json status --json | jq -r '.mode // empty' 2>/dev/null || true)
+    [ -n "$m" ] && { printf '%s' "$m"; return 0; }
+    [ "$i" = 3 ] || retry_pause "$i"
+  done
+}
+
 latest_signature() { rpc getSignaturesForAddress "[\"$1\",{\"limit\":1}]" | jq -r '.[0].signature // empty'; }
 
 find_launch() { # find_launch creator signature-before-the-launch: sets LAUNCH_SIGS, LAUNCH_SLOT, LAUNCH_MINT, LAUNCH_TIME

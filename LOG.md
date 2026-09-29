@@ -595,6 +595,39 @@ Four read-only audits (claim, hire and Jupiter, sending and recovery, keys) plus
 - **Worker.** Startup waits out an RPC or database hiccup instead of exiting (Railway gives up after 10 restarts). two_step (the fallback) retries a swap refused before sending instead of raising a false critical alert, and no longer builds a swap for an empty wallet. A stale SOL price stops hires like a stale stock price.
 - **SimChain** now mirrors the network where the chaos run needed it: rejected sends stay unknown, a tx whose blockhash expired never lands.
 
+## Chaos run: thousands of randomized launches on SimChain (2026-09-29, night)
+- `tests/chaos/fuzz.ts`: one seed is one launch (20 to 90 loops of 35 s, then calm until every hire settles). At random:
+  - fee bursts, strangers claiming our vault, 0 to 60% of claims and hires dropped, failed, timed out or rejected;
+  - RPC, database and Jupiter outages; stocks with no route or no price; price shocks;
+  - random hourly caps (0.05 to 60 SOL), a transaction signed by the creator key that the bot did not send (a leak);
+  - the worker killed in the middle of any operation (a crash mid-send), and a worker frozen mid-operation that wakes up after its replacement took the lease (a redeploy overlap).
+- Every worker process runs behind the real lease and send fence.
+- Checked after every loop:
+  - the creator's own SOL is never spent;
+  - the rolling-hour spend stays under the cap;
+  - spend never exceeds claims;
+  - nothing is sent once the kill switch is on;
+  - a leaked-key tx turns the kill switch on within 3 loops of a live worker holding the lease.
+- At the end: the full money check against the chain (every lamport that left our vaults booked once, ledger equals chain to the lamport, no rat funded twice) and no rat left half hired.
+- **What it found** (fixed in the red team PR, each with a regression test):
+  - two workers in a redeploy overlap both booked one claim (seed 37);
+  - a claim pending when the kill switch went on was never booked (seed 1).
+  - It also exposed where SimChain was kinder than the network: rejected sends, and txs sent after their blockhash expired.
+- **Numbers:**
+  - on the code before the fixes, about 800 seeds: 35 failures (the bugs above plus harness mistakes, since fixed);
+  - on the fixed code: 679 seeds so far, 0 failures (the run continues through the night).
+- CI runs 8 seeds in the long job. Thousands in shards: `CHAOS_RUNS=667 CHAOS_SEED=1 CHAOS_VERBOSE=1 pnpm vitest run tests/chaos/fuzz.test.ts`. Replay one seed step by step: `CHAOS_SEED=<n> CHAOS_RUNS=1 CHAOS_TRACE=1`.
+
+## Launch dress rehearsal: Railway slow and failing (2026-09-29, night)
+`tests/scripts/launch-rehearsal.sh` (in CI) runs `scripts/launch.sh` against fakes with Railway as slow as during its incidents and failing on purpose, timing every call.
+- **Timing** (scaled 1:20, estimated at incident speed: 2 s per Railway call, 8 s per `railway ssh`, a 5 minute build): about 6 minutes from start to LIVE, almost all of it the one build. 9 Railway calls (18 before: the RPC address was read from Railway before every chain read, and the read-back after setting variables read once per key), 5 ssh calls.
+- **Found and fixed:**
+  - `rat_json` failed when `railway ssh` dropped, and under `set -e` and `pipefail` `launch.sh` then ended **without a word** right after the build. Now an empty answer, and each step says what went wrong.
+  - A second run after a stop halfway was refused ("already set to LIVE") or asked for the launch again. It now finishes: it takes the coin's settings from the worker, confirms the mint, GO, completes what is missing and redeploys. With the worker already LIVE (only the API build failed) it only offers the API redeploy.
+  - Right after the build, `railway ssh` can reach the old DRY RUN container while it drains, or drop: the LIVE check asks for up to two minutes before calling it, and says whether the worker answered DRY RUN or did not answer.
+  - A live preflight that did not answer said "launch txs is not PASS, the line above says why" with no line above: now "the live preflight gave no answer (railway ssh)", nothing changed, run it again.
+- 10 checks: incident-speed timing; reads failing twice; a lost write then the second run; a failed API build then the second run; the old container answering and ssh dropping after the build; ssh down for the preflight.
+
 ## Faster, smaller service image (2026-09-29, night)
 - `.dockerignore` keeps the site (`apps/pixel-site`, 73 MB of assets, served by GitHub Pages), the tests, the docs and the Markdown out of the image. `infra/Dockerfile` installs only what the services run (`pnpm install --prod`); `tsx` is now a dependency of each app that runs with it, so TypeScript, the test tools, vite and drizzle-kit stay out.
 - Measured here (Docker 29, BuildKit, same machine and network for both): image 761 MB to 545 MB; the install layer 192 MB to 141 MB; the source layer 79 MB to 1.7 MB; a clean build 30 s to 19 s; a rebuild after a code-only change (the usual merge) about 5 s to about 1.3 s. On Railway most of a build is uploading the context and pushing the image, so the smaller layers are what count (ASSUMED: Railway's timings are not measurable from here).

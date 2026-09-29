@@ -42,6 +42,7 @@ All from `~/wallstreetrats-staging`. Every mainnet transaction waits for your **
 
 ## 3. Production, before the coin (about 25 min plus 1 build)
 All from `~/wallstreetrats`.
+- [ ] `scripts/verify-mainnet.sh --sample <any pump.fun coin mint> --payer <your wallet address>`: read-only, nothing signed or sent. Every stock mint, a Jupiter quote for 0.03 SOL into each, the claim and one swap simulated on live mainnet. Ends with `OK: no FAIL`; approve only stocks whose `mint` and `quote` lines PASS (`docs/runbooks/verify-mainnet.md`). 2.
 - [ ] `scripts/approve-stocks.sh`: check each mint on xstocks.fi. 5 + B.
 - [ ] `scripts/rat.sh preflight`: only the expected "not yet" lines (no `COIN_MINT` yet, the creator wallet not funded, the watch floor). 2.
 - [ ] `scripts/site-go-live.sh`: two clicks on GitHub, then check the site on your phone (DRY RUN banner, 0 rats, "pre-launch"). 10.
