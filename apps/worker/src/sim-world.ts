@@ -24,7 +24,7 @@ import { createJupiterBudget } from './jupiter-budget';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { accrueCreatorFees, registerPumpSimPrograms } from '@rat/pump/sim';
-import { DbKillSwitch, GuardedSender, RecordingAlerts, SpendGuard } from '@rat/safety';
+import { DbKillSwitch, GuardedSender, RecordingAlerts, SpendGuard, creatorCoinTokens } from '@rat/safety';
 import { Keypair } from '@solana/web3.js';
 import type { WorkerDeps } from './deps';
 import { type Worker, createWorker } from './worker';
@@ -172,7 +172,7 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     const st = o.store ?? store;
     const chain = o.reader ?? reader;
     const killSwitch = new DbKillSwitch(st.settings, config.killSwitch);
-    const sender = new GuardedSender(o.sender ?? simSender, { attempts: st.attempts, killSwitch, dryRun: config.dryRun, alerts });
+    const sender = new GuardedSender(o.sender ?? simSender, { attempts: st.attempts, killSwitch, dryRun: config.dryRun, alerts, protectedTokens: creatorCoinTokens(config.creatorPubkey, config.coinMint) });
     const guard = new SpendGuard(
       { ledger: st.ledger, killSwitch, alerts, clock, chain },
       {

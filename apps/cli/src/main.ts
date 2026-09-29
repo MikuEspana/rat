@@ -113,18 +113,20 @@ program
 program
   .command('sweep')
   .description('EMERGENCY: move every live rat token + SOL to a cold wallet (typed confirmation required)')
-  .requiredOption('--to <address>', 'cold wallet')
+  .option('--to <address>', 'cold wallet (default: COLD_WALLET)')
   .option('--confirm <phrase>', 'exact phrase printed by the plan')
   .option('--limit <n>', 'only the first n rats', (v) => Number(v))
   .action((o) =>
     withContext(async (ctx, cfg) => {
       requireConfig(cfg, ['rpcUrl']);
+      const to: string | undefined = o.to ?? cfg.coldWallet;
+      if (!to) throw new Error('sweep: pass --to <your cold wallet> or set COLD_WALLET');
       const conn = createConnection(cfg.rpcUrl!);
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       const inner = new RpcTxSender(conn, { dryRun: cfg.dryRun, liveConfirmed: cfg.liveConfirmed, priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax });
       const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, cfg.killSwitch), dryRun: cfg.dryRun });
       const keyStore = new DbKeyStore(ctx.store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey });
-      await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to: o.to, confirm: o.confirm, limit: o.limit });
+      await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to, confirm: o.confirm, limit: o.limit });
     }),
   );
 
@@ -132,15 +134,19 @@ program
   .command('preflight')
   .description('PASS / WARN / FAIL for every launch check (read-only, never sends). Exit code 1 if anything FAILs.')
   .option('--live', 'check for a live start: DRY RUN still on, no watch floor, kill switch on or no Telegram become FAIL')
+  .option('--json', 'print {"ready": bool, "lines": [{"status", "check", "detail"}]} instead of the table (for scripts)')
   .action(async (o) => {
     const out = (l: string) => console.log(l);
     let cfg: AppConfig;
     try {
       cfg = loadConfig();
     } catch (err) {
-      out(`FAIL  config  ${(err as Error).message}`);
-      out('');
-      out('NOT READY: fix the configuration first.');
+      if (o.json) out(JSON.stringify({ ready: false, lines: [{ status: 'FAIL', check: 'config', detail: (err as Error).message }] }));
+      else {
+        out(`FAIL  config  ${(err as Error).message}`);
+        out('');
+        out('NOT READY: fix the configuration first.');
+      }
       process.exitCode = 1;
       return;
     }
@@ -189,8 +195,10 @@ program
         },
         { live: Boolean(o.live) },
       );
-      const title = `RAT RACE preflight (${cfg.dryRun ? 'DRY RUN' : 'LIVE'}${o.live ? ', checking for a live start' : ''})`;
-      if (!printPreflight(lines, out, title)) process.exitCode = 1;
+      const ready = !lines.some((l) => l.status === 'FAIL');
+      if (o.json) out(JSON.stringify({ ready, lines }));
+      else printPreflight(lines, out, `RAT RACE preflight (${cfg.dryRun ? 'DRY RUN' : 'LIVE'}${o.live ? ', checking for a live start' : ''})`);
+      if (!ready) process.exitCode = 1;
     } finally {
       await handle?.close();
     }
