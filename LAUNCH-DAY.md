@@ -26,6 +26,7 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 - [ ] Admin service has `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` too: it alerts you if the worker dies (the worker cannot).
 - [ ] Cold wallet address written down (for an emergency sweep). It must NOT be the creator or a rat wallet.
 - [ ] Admin page opens with your password.
+- [ ] `scripts/site-go-live.sh` says **SITE READY**: wallstreetrats.world reads the production API and shows the honest pre-launch state (DRY RUN banner, 0 rats, market cap "pre-launch").
 - [ ] Go to sleep.
 
 ## T-1 hour: launch the coin (bot still in DRY RUN)

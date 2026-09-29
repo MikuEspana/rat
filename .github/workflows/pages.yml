@@ -1,9 +1,15 @@
 name: pages
 
-# The launch simulator demo: the pixel site built as a static site (VITE_SIM=1: the simulator runs in the browser,
-# no server, no API, no keys), published on every push to main to the gh-pages branch, which GitHub Pages serves at
-# the custom domain https://wallstreetrats.world (built for the root path; the CNAME file keeps the domain set on every
-# deploy). The same folder is kept as the rat-race-demo artifact (Netlify Drop, Vercel).
+# The site at https://wallstreetrats.world, published to the gh-pages branch on every push to main (GitHub Pages
+# serves it at the custom domain; the CNAME file keeps the domain set on every deploy).
+#
+# Which site is built depends on the repository variable SITE_API_BASE (Settings > Secrets and variables > Actions >
+# Variables), the production API's address (https://....up.railway.app, printed at the end of scripts/setup-mac.sh):
+#   - set:   the real site against the production API. Before launch it shows the honest state (DRY RUN banner,
+#            0 rats, market cap "pre-launch"); after launch the live bot. The simulator stays at ?sim.
+#   - unset: the launch simulator demo (VITE_SIM=1: the simulator runs in the browser, no server, no API).
+# After a production build the verify job opens the published site in a real browser and checks it talks to that
+# API (docs/runbooks/go-live.md, "The site"; scripts/site-go-live.sh runs the same checks from the Mac).
 on:
   push:
     branches: [main]
@@ -28,11 +34,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build the static demo (launch simulator, no API)
-        run: pnpm --filter @rat/pixel-site build
+      - name: Build the site (production API when SITE_API_BASE is set, else the simulator demo)
         env:
-          VITE_SIM: '1'
+          SITE_API_BASE: ${{ vars.SITE_API_BASE }}
           VITE_BASE: /
+        run: |
+          if [ -n "$SITE_API_BASE" ]; then
+            case "$SITE_API_BASE" in https://*) ;; *) echo "SITE_API_BASE must be an https:// address" >&2; exit 1 ;; esac
+            VITE_API_BASE="${SITE_API_BASE%/}" pnpm --filter @rat/pixel-site build
+            grep -lqF "${SITE_API_BASE%/}" apps/pixel-site/dist/assets/*.js || { echo "the build does not contain $SITE_API_BASE" >&2; exit 1; }
+            echo "Built against the production API ${SITE_API_BASE%/}" >>"$GITHUB_STEP_SUMMARY"
+          else
+            VITE_SIM=1 pnpm --filter @rat/pixel-site build
+            echo "Built the launch simulator demo (SITE_API_BASE is not set)" >>"$GITHUB_STEP_SUMMARY"
+          fi
       - name: Keep the folder for manual hosting
         uses: actions/upload-artifact@v4
         with:
@@ -48,5 +63,28 @@ jobs:
           git init -q -b gh-pages
           git add -A
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -q -m "Launch simulator demo from ${GITHUB_SHA}"
+            commit -q -m "Site from ${GITHUB_SHA}"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+
+  verify:
+    # the published site, in a real browser: it must talk to the production API and show what that API says
+    needs: publish
+    if: vars.SITE_API_BASE != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Browser (in its own folder, since npm cannot install into this pnpm workspace)
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm install --no-audit --no-fund playwright@1 >/dev/null
+          npx playwright install --with-deps chromium
+      - name: The live site uses the production API and shows its state
+        env:
+          SITE_API_BASE: ${{ vars.SITE_API_BASE }}
+          SITE_URL: https://wallstreetrats.world/
+          PLAYWRIGHT_PATH: /tmp/pw/node_modules/playwright/index.mjs
+        run: node apps/pixel-site/tools/verify-live.mjs
+
