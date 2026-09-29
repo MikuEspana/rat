@@ -763,7 +763,7 @@ printf '%s' "$pre" | jq -e '.lines[] | select(.check == "creator wallet" and .st
 printf '%s' "$pre" | jq -e '.lines[] | select(.check == "settings" and .status == "FAIL")' >/dev/null &&
   note "COIN_MINT is empty: expected, it is set right after the launch (LAUNCH-DAY.md)"
 printf '%s' "$pre" | jq -e '.lines[] | select(.check == "stocks" and .status != "PASS")' >/dev/null &&
-  note "no stock is approved yet: before launch, verify the mints on xstocks.fi, set approved=true in config/stocks.json, then rat stocks-sync"
+  note "no stock is approved yet: before launch, verify the mints on xstocks.fi with: scripts/approve-stocks.sh"
 ok "preflight: nothing else blocks"
 if [ "$(state_get ALERT_OK)" = 1 ]; then
   skip "Telegram test alert"

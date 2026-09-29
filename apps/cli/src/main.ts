@@ -49,7 +49,11 @@ async function readStdin(): Promise<string> {
 
 const program = new Command().name('rat').description('RAT RACE operator CLI');
 
-program.command('status').description('mode, kill switch, buckets, caps, keys, rats, loops').action(() => withContext((ctx) => statusCommand(ctx)));
+program
+  .command('status')
+  .description('mode, kill switch, buckets, caps, keys, rats, loops')
+  .option('--json', 'one JSON line (for scripts)')
+  .action((o) => withContext((ctx) => statusCommand(ctx, { json: Boolean(o.json) })));
 program.command('kill').description('engage the kill switch').option('-r, --reason <text>', 'reason', 'manual').action((o) => withContext((ctx) => killCommand(ctx, o.reason)));
 program.command('resume').description('release the database kill switch').action(() => withContext((ctx) => resumeCommand(ctx)));
 

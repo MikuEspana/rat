@@ -9,7 +9,7 @@ import { JupiterHttp, JupiterPriceSource, JupiterSwapBuilder, SlidingWindowLimit
 const cfg = loadConfig();
 requireConfig(cfg, ['rpcUrl']);
 if (!cfg.jupiter.apiKey) throw new Error('JUPITER_API_KEY is required');
-const stocks = loadStocksFile(cfg.stocksFile, new URL('../../..', import.meta.url).pathname);
+const stocks = loadStocksFile(cfg.stocksFile, new URL('../../..', import.meta.url).pathname, cfg.approvedStocks);
 const reader = new RpcChainReader(createConnection(cfg.rpcUrl!));
 const http = new JupiterHttp({ baseUrl: cfg.jupiter.baseUrl, apiKey: cfg.jupiter.apiKey, limiter: new SlidingWindowLimiter(cfg.jupiter.maxRpm) });
 const mints = await reader.getMintStates(stocks.map((s) => s.mint));
