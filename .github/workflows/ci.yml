@@ -107,6 +107,8 @@ jobs:
         run: bash tests/scripts/launch-rehearsal.sh
       - name: Key backup to the Mac (scripts/keys-backup.sh)
         run: bash tests/scripts/keys-backup-test.sh
+      - name: scripts/morning.sh says GO only when every morning check passes, and changes nothing
+        run: bash tests/scripts/morning-test.sh
       - name: Tools (Postgres 18 client from the PostgreSQL apt repository, age, busybox, a local S3 server)
         run: |
           sudo apt-get update -qq
