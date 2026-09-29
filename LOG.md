@@ -641,6 +641,19 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 - **Phones:** the leaderboard sat on top of the live feed's rows (a later CSS rule put both at the same height), and "find my rat" and TIMELAPSE ran off the right edge of the HUD. Both fixed; `tools/verify-live.mjs` now fails on either.
 - **API down** (a redeploy): the page says "Reconnecting to the trading floor..." instead of the raw API address and error (still in the console and on hover).
 
+## scripts/morning.sh: the morning checks, GO or WAIT (2026-09-29, night)
+- One command for `docs/runbooks/MORNING.md` step 0, from `~/wallstreetrats`. Read-only: it changes nothing on Railway, signs and sends nothing, prints no secret.
+- It stops at once in the wrong folder (not the production project, a STAGING worker, another creator wallet), like `scripts/launch.sh`.
+- Then one line per check, OK or WAIT with the fix:
+  - the scripts up to date with main;
+  - status.railway.com has no incident (its `summary.json`);
+  - the "Limited Access" banner gone (you answer: Railway shows it only on the dashboard);
+  - worker, api and admin deployed;
+  - production in DRY RUN with no `LIVE_CONFIRM`;
+  - the running worker in DRY RUN with loops under 3 minutes old;
+  - `rat preflight` with nothing open but the expected pre-launch lines (the same rule as `scripts/setup-mac.sh`).
+- `tests/scripts/morning-test.sh` (22 checks, in CI): GO only when all pass, each problem its own WAIT, never a Railway write.
+
 ## Launch-day incidents runbook (2026-09-29, night)
 - `docs/runbooks/INCIDENTS.md`: 14 launch-day problems, one screen each: what you see, what Telegram and the admin page show, the exact fix command. Linked from `LAUNCH-DAY.md`, `incident.md` and the runbooks index.
 - Every command in it was checked against the code: the alert keys and texts, `task_failing_claim` (the claim loop also runs the watch and the hires), the admin watchdog (3 minutes), the Railway commands the scripts use. A new RPC URL goes through a hidden prompt and stdin, never the command line.
