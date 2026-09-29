@@ -477,3 +477,16 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
 - `scripts/check-guards.mjs` rule 9: CI's service image, client and client path must equal the Dockerfile's major, and setup may not hard-code `postgresql@N`.
 - The docs, `STATUS.md` and the runbook test now say 18.
 - Step 9 re-run: until a first backup has succeeded, setup rebuilds the backup service from the latest commit and reads only the new deployment's log. A failed attempt from before (like the owner's `check_versions` stop) is never read again, even if Railway has not redeployed the backup yet.
+
+## Site go-live check (2026-09-29)
+- **`pages.yml`:** with the repository variable `SITE_API_BASE` set, wallstreetrats.world is built against the production API, and the build must contain it. Without it, the site stays the simulator demo, as before. The simulator stays at `?sim` either way.
+- **A new `verify` job** runs after a production build. `apps/pixel-site/tools/verify-live.mjs`:
+  - waits for the published bundle to be the one built against that API;
+  - checks the API answers and allows the site's origin (CORS);
+  - opens the site in Chromium (desktop and phone) and checks: no console errors, the page reached the API, no simulator, the banner the API's mode calls for, RATS HIRED equal to the API's count, and "pre-launch" while there is no coin.
+- **`scripts/site-go-live.sh`** (the Mac):
+  - checks the API and CORS;
+  - shows the two clicks that switch the site and waits for it;
+  - asks you to check it on the phone;
+  - records `SITE_GO_LIVE` in `~/rat-secrets/setup-state.env`, which the rehearsal report's GO / NO-GO reads.
+- **Tested against the real API** (DRY RUN, an empty Postgres, no coin), with the site built against it in Chromium: 15 of 15 checks passed on desktop and phone, including the DRY RUN banner, RATS HIRED 0 and "pre-launch". A site built for another API fails.
