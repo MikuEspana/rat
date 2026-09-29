@@ -7,7 +7,9 @@ import { JupiterHttp, JupiterPriceSource, SlidingWindowLimiter } from '@rat/jupi
 import { Store, openDatabase, stagingProblems } from '@rat/db';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
+import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
+import { printAudit, runAudit } from './commands/audit';
 import { dryRunResetCommand } from './commands/dry-run';
 import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
 import { killCommand, resumeCommand } from './commands/kill';
@@ -115,6 +117,23 @@ program
       const conn = createConnection(cfg.rpcUrl!);
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       await stagingSeedCommand(ctx, { chain }, { sol: o.sol, confirm: o.confirm });
+    }),
+  );
+program
+  .command('audit')
+  .description('the ledger against the chain, read-only: claims, rats paid once, creator SOL equals the ledger. Exit 1 unless PASS')
+  .option('--rats <n>', 'check only the newest n rats (default: all)', (v) => Number(v))
+  .option('--json', 'print {"passed": bool, "lines": [...]} (for scripts)')
+  .action((o) =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['rpcUrl', 'creatorPubkey']);
+      const conn = createConnection(cfg.rpcUrl!);
+      const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
+      const lines = await runAudit({ store: ctx.store, chain, pump: new PumpFunClient(chain), creator: cfg.creatorPubkey!, ratLimit: o.rats });
+      const passed = !lines.some((l) => l.status !== 'PASS');
+      if (o.json) ctx.out(JSON.stringify({ passed, lines }));
+      else printAudit(lines, ctx.out);
+      if (!passed) process.exitCode = 1;
     }),
   );
 const REPO_ROOT = new URL('../../..', import.meta.url).pathname;

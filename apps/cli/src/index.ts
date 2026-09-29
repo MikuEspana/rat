@@ -2,3 +2,4 @@
 export type { CliContext } from './context';
 export { killCommand, resumeCommand } from './commands/kill';
 export { statusCommand } from './commands/status';
+export { type AuditLine, printAudit, runAudit } from './commands/audit';

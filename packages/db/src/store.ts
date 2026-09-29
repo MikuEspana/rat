@@ -283,6 +283,11 @@ export class AttemptRepo implements AttemptStore {
       .where(eq(txAttempts.id, id));
   }
 
+  /** Every attempt of this mode, oldest first (rat audit). */
+  async all(): Promise<AttemptRow[]> {
+    return this.db.select().from(txAttempts).where(eq(txAttempts.mode, this.mode)).orderBy(txAttempts.id);
+  }
+
   /** The newest attempts of this mode (admin page). */
   async latest(limit: number): Promise<AttemptRow[]> {
     return this.db.select().from(txAttempts).where(eq(txAttempts.mode, this.mode)).orderBy(desc(txAttempts.id)).limit(limit);
@@ -546,6 +551,11 @@ export class ClaimRepo {
     readonly mode: Mode,
     private readonly clock: Clock,
   ) {}
+
+  /** Every claim of this mode, oldest first (rat audit). */
+  async all(): Promise<ClaimRow[]> {
+    return this.db.select().from(claims).where(eq(claims.mode, this.mode)).orderBy(claims.id);
+  }
 
   /** Bot claims whose transaction may still land (pending or unknown). */
   async openBot(): Promise<ClaimRow[]> {
