@@ -38,6 +38,7 @@ case "$1 $2" in
   "redeploy --service") # a new deployment of that service; state-<service> (default SUCCESS) is how it ends
     echo "redeploy $3" >>"$F/order.log"
     echo $(($(cat "$F/dep-$3" 2>/dev/null || echo 0) + 1)) >"$F/dep-$3" ;;
+  "logs --service") [ -f "$F/backup-log" ] && cat "$F/backup-log" ;;
   "service status")
     echo "status $4" >>"$F/order.log"
     printf '{"status":"%s","deploymentId":"d%s"}\n' "$(cat "$F/state-$4" 2>/dev/null || echo SUCCESS)" "$(cat "$F/dep-$4" 2>/dev/null || echo 0)" ;;
@@ -97,7 +98,7 @@ run() { # run "<stdin>" args...: scripts/staging.sh with the fakes
   local input="$1"
   shift
   printf '%s' "$input" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RAT=fake-rat WSR_POLL_SEC=0 WSR_RETRY_SEC=0 TEST_CREATOR_FAKE="$TEST_CREATOR" \
-    bash "$REPO/scripts/staging.sh" "$@" >"$W/out.txt" 2>&1
+    ${WSR_PG_BIN:+WSR_PG_BIN="$WSR_PG_BIN"} bash "$REPO/scripts/staging.sh" "$@" >"$W/out.txt" 2>&1
 }
 results() { cat "$W/home/rat-secrets-staging/rehearsal-results.env" 2>/dev/null; }
 
@@ -180,6 +181,35 @@ printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"staging-ma
 echo '{"lines":[{"status":"FAIL","check":"launch txs","detail":"1 unlisted"},{"status":"PASS","check":"dev buy","detail":"ok"}]}' >"$W/fake/pre-with"
 run $'GO\n\ny\ny\n' 1; rc=$?
 check "the coin's settings fail the preflight: FAIL before anything changed" '[ $rc = 1 ] && results | grep -q "^PHASE_1=FAIL" && ! grep -q "^set\|^redeploy\|^dry-run-reset" "$W/fake/order.log"'
+
+echo "== the results file: two scripts writing at once"
+reset
+f="$W/fake/results.env"
+rm -f "$f"
+lib "for i in \$(seq 1 20); do state_set '$f' KEY_\$i v\$i & done; wait"; rc=$?
+check "20 writes at the same moment: every one kept" '[ $rc = 0 ] && [ "$(grep -c "^KEY_" "$f")" = 20 ] && [ ! -e "$f.lock" ] && ! ls "$f".?????? >/dev/null 2>&1'
+mkdir "$f.lock"
+lib "state_set '$f' KEY_LATE yes"; rc=$?
+check "a lock left by a killed script: taken over, the write kept" '[ $rc = 0 ] && grep -q "^KEY_LATE=yes$" "$f" && [ ! -e "$f.lock" ]'
+
+echo "== phase 8: the restore drill with the backup job's Postgres major"
+mkdir -p "$W/pg16" "$W/pg18"
+for t in initdb pg_ctl pg_restore; do
+  printf '#!/bin/sh\necho "%s (PostgreSQL) 16.4"\n' "$t" >"$W/pg16/$t"
+  printf '#!/bin/sh\necho "%s (PostgreSQL) 18.1"\n' "$t" >"$W/pg18/$t"
+done
+chmod +x "$W/pg16/"* "$W/pg18/"*
+reset
+printf 'R2_BUCKET=wsr-staging-backups-test\n' >>"$W/home/rat-secrets-staging/setup-state.env"
+WSR_PG_BIN="$W/pg16" run "" 8; rc=$?
+check "Postgres 16 tools: refused before any backup is started" '[ $rc = 1 ] && grep -q "is not Postgres 18" "$W/out.txt" && ! grep -q "^redeploy backup" "$W/fake/order.log" 2>/dev/null'
+reset
+printf 'R2_BUCKET=wsr-staging-backups-test\n' >>"$W/home/rat-secrets-staging/setup-state.env"
+echo "backup: FAILED at step 'upload': test" >"$W/fake/backup-log"
+WSR_PG_BIN="$W/pg18" run "" 8; rc=$?
+check "Postgres 18 tools: accepted, the backup starts (here it fails, so the phase FAILs)" '[ $rc = 1 ] && grep -q "^redeploy backup" "$W/fake/order.log" && results | grep -q "^PHASE_8=FAIL"'
+rm -f "$W/fake/backup-log"
+sed -i.bak '/^R2_BUCKET=/d' "$W/home/rat-secrets-staging/setup-state.env" && rm -f "$W/home/rat-secrets-staging/setup-state.env.bak"
 
 echo "== the GO gate and the kill switch (phase 2)"
 reset
