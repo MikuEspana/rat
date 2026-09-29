@@ -103,7 +103,7 @@ for (const { full, rel } of files) {
 }
 
 // 9. One Postgres major everywhere: the backup image (infra/backup/Dockerfile) is the source of truth; CI's
-//    database and client must match it, and setup reads it (never a hard-coded postgresql@N)
+//    database and client must match it, and every script reads it (never a hard-coded postgresql@N)
 {
   const major = (readFileSync(join(ROOT, 'infra/backup/Dockerfile'), 'utf8').match(/^FROM postgres:(\d+)-alpine/m) ?? [])[1];
   if (!major) failures.push('infra/backup/Dockerfile: no FROM postgres:N-alpine line');
@@ -113,8 +113,10 @@ for (const { full, rel } of files) {
     if (seen.length === 0) failures.push(`.github/workflows/ci.yml: no ${what} version found`);
     for (const v of seen) if (v !== major) failures.push(`.github/workflows/ci.yml: ${what} ${v}, but infra/backup/Dockerfile is Postgres ${major}`);
   }
-  if (/postgresql@\d+/.test(readFileSync(join(ROOT, 'scripts/setup-mac.sh'), 'utf8'))) {
-    failures.push('scripts/setup-mac.sh: a hard-coded postgresql@N; read the major from infra/backup/Dockerfile');
+  for (const f of readdirSync(join(ROOT, 'scripts')).filter((n) => n.endsWith('.sh'))) {
+    if (/postgresql@\d+/.test(readFileSync(join(ROOT, 'scripts', f), 'utf8'))) {
+      failures.push(`scripts/${f}: a hard-coded postgresql@N; read the major from infra/backup/Dockerfile`);
+    }
   }
 }
 

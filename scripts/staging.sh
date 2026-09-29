@@ -348,13 +348,21 @@ phase_7() { # the production site against the staging API, on your phone
 }
 
 phase_8() { # one backup now, then a restore drill on this Mac, row counts compared
-  local bucket obj i logs drill port rows_rats rows_claims st_now old
+  local bucket obj i logs drill port rows_rats rows_claims st_now old pg_major t
   title "Phase 8: backup and restore drill"
   bucket=$(state_get "$STATE" R2_BUCKET)
   [ -n "$bucket" ] || die "no R2 bucket in the staging setup state"
   st_now=$(st)
-  PATH="${WSR_PG_BIN:-$(brew --prefix postgresql@16 2>/dev/null)/bin}:$PATH" # initdb, pg_ctl, pg_restore 16 (setup installed them)
-  command -v initdb >/dev/null 2>&1 || die "postgresql@16 is missing" "Run: brew install postgresql@16"
+  # the restore drill uses the Postgres major of the backup job (infra/backup/Dockerfile), as setup does: a pg_restore
+  # older than the dump cannot read it
+  pg_major=$(sed -n 's/^FROM postgres:\([0-9][0-9]*\)-alpine.*/\1/p' infra/backup/Dockerfile | head -1)
+  [ -n "$pg_major" ] || die "infra/backup/Dockerfile names no Postgres major (FROM postgres:N-alpine)" "Run: git pull"
+  PATH="${WSR_PG_BIN:-$(brew --prefix "postgresql@$pg_major" 2>/dev/null)/bin}:$PATH" # initdb, pg_ctl, pg_restore (setup installed them)
+  for t in initdb pg_ctl pg_restore; do
+    command -v "$t" >/dev/null 2>&1 || die "$t is missing (Postgres $pg_major client tools)" "Run: brew install postgresql@$pg_major"
+    [ "$("$t" --version 2>/dev/null | sed -n 's/^[^0-9]*\([0-9][0-9]*\).*/\1/p' | head -1)" = "$pg_major" ] ||
+      die "$t here is not Postgres $pg_major (the backup job's major): the drill could not read the backup" "Run: brew install postgresql@$pg_major"
+  done
   # a backup service without a schedule runs one backup per deploy, then exits: follow its log, not its status
   old=$(deployment_id backup)
   rw redeploy --service backup --from-source --yes >/dev/null 2>&1 || fail "could not start a backup (redeploy of the backup service)"

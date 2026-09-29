@@ -78,11 +78,20 @@ unset_var() { # unset_var service KEY: removed, and Railway lists the variables 
   die "could not remove $2 from $1" "Railway dashboard: $1 > Variables: delete $2. $API_HINT"
 }
 state_get() { if [ -f "$1" ]; then sed -n "s/^$2=//p" "$1" | tail -1; fi; }
-state_set() { # state_set file KEY value
+state_set() { # state_set file KEY value: under a lock with its own temporary file, so two scripts writing at once
+  # (for example two rehearsal phases in two windows) never lose each other's line
+  local lock="$1.lock" tmp i
+  for i in $(seq 1 100); do
+    mkdir "$lock" 2>/dev/null && break
+    [ "$i" = 100 ] && { rmdir "$lock" 2>/dev/null || true; mkdir "$lock" 2>/dev/null || die "could not lock $1"; } # a lock left by a killed script
+    sleep 0.1
+  done
   touch "$1"
-  grep -v "^$2=" "$1" >"$1.tmp" || true
-  printf '%s=%s\n' "$2" "$3" >>"$1.tmp"
-  mv "$1.tmp" "$1"
+  tmp=$(mktemp "$1.XXXXXX")
+  grep -v "^$2=" "$1" >"$tmp" || true
+  printf '%s=%s\n' "$2" "$3" >>"$tmp"
+  mv "$tmp" "$1"
+  rmdir "$lock"
 }
 
 # The fast rehearsal (scripts/staging-local.sh): the staging state says LOCAL=1 and this folder is linked to that same
