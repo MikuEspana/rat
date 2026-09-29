@@ -120,8 +120,9 @@ expect_alert() {
   grep -q '^/bot123:selftest-token/sendMessage	chat=42	' "$work/telegram.log" || die "the alert went to the wrong place"
   grep -q 'backup_failed' "$work/telegram.log" || die "the alert does not say backup_failed"
   grep -q "$1" "$work/telegram.log" || die "the alert does not name the step $1: $(cat "$work/telegram.log")"
+  # the message text only (the path carries the bot token by design)
   for s in "$SECRET" "$(printf '%s' "$SELFTEST_PG_URL" | sed -n 's#.*://[^:]*:\([^@]*\)@.*#\1#p')"; do
-    [ -z "$s" ] || ! grep -qF "$s" "$work/telegram.log" || die "the alert leaks a secret"
+    [ -z "$s" ] || ! cut -f3 "$work/telegram.log" | grep -qF "$s" || die "the alert leaks a secret"
   done
   echo "   alert: $(cut -f3 "$work/telegram.log")"
   : >"$work/telegram.log"

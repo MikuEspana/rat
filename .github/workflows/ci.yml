@@ -68,7 +68,7 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_PASSWORD: selftest
+          POSTGRES_PASSWORD: pg-ci-7f3a91
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
@@ -90,7 +90,7 @@ jobs:
           for a in sh timeout sha256sum md5sum wc cut grep tr sed head tail date mkdir rm chmod cat printf; do ln -s "$(command -v busybox)" "/tmp/bb/$a"; done
       - name: Backup self-test
         env:
-          SELFTEST_PG_URL: postgres://postgres:selftest@localhost:5432/postgres
+          SELFTEST_PG_URL: postgres://postgres:pg-ci-7f3a91@localhost:5432/postgres
           SELFTEST_SH: /tmp/bb/sh
           SELFTEST_BACKUP_PATH: /tmp/bb
           SELFTEST_PYTHON: /tmp/moto/bin/python
