@@ -99,10 +99,25 @@ export class PumpFunClient implements PumpClient {
       return false;
     });
     if (!hasClaim) return null;
+    // Measured over both vaults together: AMM fees moved into the bonding vault in the same tx
+    // (transfer_creator_fees_to_pump) are claimed once, not once per vault. AMM fees sent to a token account that is
+    // not OUR WSOL ATA are not ours to spend (the bot only unwraps its ATA): the destination of
+    // collect_coin_creator_fee has no seeds constraint (pump_amm IDL; COLLECT_CREATOR_FEE.md).
+    const elsewhere = new Set(
+      record.instructions
+        .filter((ix) => ix.programId === PUMP_AMM_PROGRAM_ID && hasDiscriminator(ix.data, DISCRIMINATORS.collectCoinCreatorFee) && ix.accounts[2] === creator)
+        .map((ix) => ix.accounts[5])
+        .filter((dest): dest is string => Boolean(dest) && dest !== a.creatorWsolAta),
+    );
+    let strayed = 0n;
+    for (const dest of elsewhere) {
+      const d = tokenAccountDelta(record, dest);
+      if (d > 0n) strayed += d;
+    }
     const bondingOut = -solDelta(record, a.bondingVault);
-    const ammOut = -tokenAccountDelta(record, a.ammVaultAta);
-    const bondingLamports = bondingOut > 0n ? bondingOut : 0n;
-    const ammLamports = ammOut > 0n ? ammOut : 0n;
-    return { bondingLamports, ammLamports, totalLamports: bondingLamports + ammLamports };
+    const ammOut = -tokenAccountDelta(record, a.ammVaultAta) - strayed;
+    const total = bondingOut + ammOut > 0n ? bondingOut + ammOut : 0n;
+    const ammLamports = ammOut > 0n ? (ammOut < total ? ammOut : total) : 0n;
+    return { bondingLamports: total - ammLamports, ammLamports, totalLamports: total };
   }
 }

@@ -1,4 +1,4 @@
-import { NATIVE_SOL_MINT, TOKEN_2022_PROGRAM, TOKEN_PROGRAM, type TxRequest } from '@rat/core';
+import { NATIVE_SOL_MINT, TOKEN_2022_PROGRAM, TOKEN_PROGRAM, type TxRecord, type TxRequest } from '@rat/core';
 import { SIGNATURE_FEE, SimChain, SimChainReader, SimTxSender } from '@rat/chain/sim';
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { describe, expect, it } from 'vitest';
@@ -157,5 +157,57 @@ describe('coin info', () => {
   it('rejects unknown coin mints', async () => {
     const { pump } = world();
     await expect(pump.getCoinInfo(Keypair.generate().publicKey.toBase58())).rejects.toThrow(/not found/);
+  });
+});
+
+describe('red team: what a stranger-built claim tx really paid us', () => {
+  const creator = Keypair.generate().publicKey.toBase58();
+  const a = creatorAccounts(creator);
+  const pump = new PumpFunClient(new SimChainReader(new SimChain()));
+  const record = (o: { instructions: TxRecord['instructions']; bonding?: [bigint, bigint]; amm?: [bigint, bigint]; dest?: [string, bigint] }): TxRecord => ({
+    signature: 'sig',
+    slot: 1,
+    blockTime: null,
+    err: null,
+    feePayer: 'stranger',
+    signers: ['stranger'],
+    feeLamports: 5_000n,
+    accountKeys: [a.bondingVault],
+    preBalances: [o.bonding?.[0] ?? 0n],
+    postBalances: [o.bonding?.[1] ?? 0n],
+    preTokenBalances: [
+      ...(o.amm ? [{ accountIndex: 1, account: a.ammVaultAta, owner: a.ammVaultAuthority, mint: NATIVE_SOL_MINT, amount: o.amm[0] }] : []),
+      ...(o.dest ? [{ accountIndex: 2, account: o.dest[0], owner: creator, mint: NATIVE_SOL_MINT, amount: 0n }] : []),
+    ],
+    postTokenBalances: [
+      ...(o.amm ? [{ accountIndex: 1, account: a.ammVaultAta, owner: a.ammVaultAuthority, mint: NATIVE_SOL_MINT, amount: o.amm[1] }] : []),
+      ...(o.dest ? [{ accountIndex: 2, account: o.dest[0], owner: creator, mint: NATIVE_SOL_MINT, amount: o.dest[1] }] : []),
+    ],
+    instructions: o.instructions,
+    logs: [],
+  });
+  const v2 = { programId: PUMP_PROGRAM_ID, accounts: [creator], data: Uint8Array.from(DISCRIMINATORS.collectCreatorFeeV2), inner: false };
+  const amm = (dest: string) => ({
+    programId: PUMP_AMM_PROGRAM_ID,
+    accounts: ['quoteMint', 'tokenProgram', creator, a.ammVaultAuthority, a.ammVaultAta, dest],
+    data: Uint8Array.from(DISCRIMINATORS.collectCoinCreatorFee),
+    inner: false,
+  });
+
+  it('AMM fees moved INTO the bonding vault in the same tx (transfer_creator_fees_to_pump) are not counted twice', () => {
+    // bonding vault R+B -> R+A (B claimed to us, A moved in from the AMM vault), AMM vault A -> 0: we got B only
+    const R = 890_880n;
+    const B = SOL / 10n;
+    const A = SOL / 2n;
+    const m = pump.parseClaim(record({ instructions: [v2], bonding: [R + B, R + A], amm: [A, 0n] }), creator);
+    expect(m?.totalLamports).toBe(B);
+  });
+
+  it('an AMM claim into a token account that is not our WSOL ATA is not ours to spend', () => {
+    const stray = Keypair.generate().publicKey.toBase58();
+    const m = pump.parseClaim(record({ instructions: [amm(stray)], amm: [SOL, 0n], dest: [stray, SOL] }), creator);
+    expect(m?.totalLamports ?? 0n).toBe(0n);
+    const ours = pump.parseClaim(record({ instructions: [amm(a.creatorWsolAta)], amm: [SOL, 0n], dest: [a.creatorWsolAta, SOL] }), creator);
+    expect(ours?.totalLamports).toBe(SOL);
   });
 });
