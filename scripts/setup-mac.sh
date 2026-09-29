@@ -134,6 +134,26 @@ worker_env_json() { rw variable list --service worker --json 2>/dev/null | jq -c
 in_worker_cmd() { # the remote shell line: no secret in it
   printf "cd /app && exec node -e 'eval(Buffer.from(\"%s\",\"base64\").toString())' -- %s" "$(base64 <"$APP_DIR/scripts/in-worker.cjs" | tr -d '\n')" "$*"
 }
+# The relay answers some refusals with a JSON status and exit code 0 (for example "signup_required": Railway does not
+# know this SSH key), so success is a marker coming back, never the exit code.
+ssh_ready() { # ssh_ready service: dies with the reason (and the link, for an unknown key) unless a command runs there
+  local out="" i status url
+  for i in 1 2 3 4 5 6; do
+    out=$(rw_ssh "$1" 'echo RAT_SSH_OK' </dev/null 2>&1) || true
+    case "$out" in *RAT_SSH_OK*) return 0 ;; esac
+    status=$(printf '%s\n' "$out" | grep -o '{.*}' | jq -r '.status // empty' 2>/dev/null | head -1)
+    if [ "$status" = signup_required ]; then
+      url=$(printf '%s\n' "$out" | grep -o '{.*}' | jq -r '.human_signup_url // empty' 2>/dev/null | head -1)
+      die "Railway does not know this SSH key yet ($SSH_KEY.pub): railway ssh cannot run anything in the $1 service" \
+        "Link it to your Railway account: open ${url:-https://railway.com/account/ssh-keys} and sign in with your Railway account." \
+        "Or run: railway ssh keys add --key $(basename "$SSH_KEY") --name \"wall-street-rats setup\"" \
+        "Then run this again."
+    fi
+    [ "$i" -lt 6 ] && sleep "${WSR_POLL_SEC:-10}"
+  done
+  die "railway ssh into the $1 service gave no answer" "What Railway said: $(printf '%s' "$out" | tail -3 | tr '\n' ' ')" \
+    "Try it yourself: railway ssh --service $1 -i $SSH_KEY -- echo hello"
+}
 rat_w() { printf '%s\n' "$(worker_env_json)" | rw_ssh worker "$(in_worker_cmd "$@")"; }             # rat <args> in the worker
 rat_w_in() { { printf '%s\n' "$(worker_env_json)"; cat; } | rw_ssh worker "$(in_worker_cmd "$@")"; } # ... with this stdin
 service_exists() { rw service list --json 2>/dev/null | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1; }
@@ -270,11 +290,16 @@ if [ ! -f "$SSH_KEY" ]; then
   mkdir -p "$(dirname "$SSH_KEY")"
   ssh-keygen -q -t ed25519 -N "" -C "wall-street-rats setup" -f "$SSH_KEY"
 fi
-if rw ssh keys list 2>/dev/null | grep -q "$(ssh-keygen -lf "$SSH_KEY.pub" | awk '{print $2}')"; then
+SSH_FP=$(ssh-keygen -lf "$SSH_KEY.pub" | awk '{print $2}')
+# `railway ssh keys list` also lists this Mac's keys that are NOT registered ("Local Keys (not registered)"): only the
+# part before that counts. Whether ssh really works is proven later by ssh_ready, before the first command.
+ssh_key_registered() { rw ssh keys list 2>/dev/null | awk '/^(GitHub SSH Keys|Local Keys)/ { exit } { print }' | grep -qF "$SSH_FP"; }
+if ssh_key_registered; then
   skip "SSH key for railway ssh"
-else
-  rw ssh keys add --key "$(basename "$SSH_KEY")" --name "wall-street-rats setup" >/dev/null || die "could not register the SSH key with Railway" "Run: railway ssh keys add"
+elif rw ssh keys add --key "$(basename "$SSH_KEY")" --name "wall-street-rats setup" >/dev/null 2>&1 && ssh_key_registered; then
   ok "SSH key registered with Railway (for running commands inside the worker)"
+else
+  note "could not confirm the SSH key registration; the first railway ssh command below will tell"
 fi
 
 # ---------------------------------------------------------------- 3. Railway project ----------------------------------
@@ -624,8 +649,15 @@ ok "creator wallet $CREATOR_PUBKEY, cold wallet $COLD_WALLET, DRY_RUN=true every
 redeploy_changed worker api admin backup
 connect_source worker
 wait_deployed worker 20
-rat_w --env-check 2>/dev/null | grep -q env-ok ||
-  die "the worker's settings could not be reached over railway ssh" "Check that the worker is running and has DATABASE_URL and KEY_ENCRYPTION_KEY (Railway dashboard, worker, Variables)."
+ssh_ready worker
+envc=$(rat_w --env-check 2>&1) || true
+case "$envc" in
+  *env-ok*) ok "railway ssh reaches the worker and its settings ($(printf '%s' "$envc" | sed -n 's/.*env-ok (settings from \(.*\)).*/\1/p' | head -1))" ;;
+  *) die "railway ssh reaches the worker, but its settings (DATABASE_URL, KEY_ENCRYPTION_KEY) could not be handed to the rat command" \
+    "What the worker said (names only, no values): $(printf '%s' "$envc" | tail -2 | tr '\n' ' ')" \
+    "Check both are set: Railway dashboard, worker, Variables." \
+    "Route without railway ssh: cd $APP_DIR && scripts/rat-local.sh keys import --role creator (docs/runbooks/setup-mac.md)" ;;
+esac
 
 # ---------------------------------------------------------------- 7. creator key -----------------------------------------
 step "Import the creator wallet key (hidden prompt, straight into Railway)"
