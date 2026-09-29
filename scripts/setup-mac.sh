@@ -809,7 +809,14 @@ fi
 # ---------------------------------------------------------------- 9. backup, schedule, drill ----------------------------
 step "First backup now, then every night, then a restore drill"
 if [ "$(state_get BACKUP_FIRST_OK)" = "" ]; then
-  connect_source backup # without a schedule yet, the first deploy runs one backup and exits
+  # without a schedule yet, each deploy runs one backup and exits. An earlier attempt (a failed backup) is never
+  # read again: the backup is rebuilt from the latest commit and only the new deployment's log counts.
+  if connected backup; then
+    rebuild backup
+    say "running the backup again with the latest code"
+  else
+    connect_source backup
+  fi
   say "Waiting for the first backup (build + run, a few minutes)..."
   i=0
   old=$(replaced_deployment backup)

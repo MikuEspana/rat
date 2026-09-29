@@ -476,3 +476,4 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
 - CI: the backup self-test runs on a `postgres:18` service with `postgresql-client-18` from the PostgreSQL apt repository, and the backup image test checks `pg_dump` is 18.
 - `scripts/check-guards.mjs` rule 9: CI's service image, client and client path must equal the Dockerfile's major, and setup may not hard-code `postgresql@N`.
 - The docs, `STATUS.md` and the runbook test now say 18.
+- Step 9 re-run: until a first backup has succeeded, setup rebuilds the backup service from the latest commit and reads only the new deployment's log. A failed attempt from before (like the owner's `check_versions` stop) is never read again, even if Railway has not redeployed the backup yet.
