@@ -3,16 +3,20 @@
 One box at a time. Minutes are yours (typing, clicking, waiting). B = one Railway build: about 5 minutes normally, 10 to 15 during a Railway incident.
 
 ## 0. Before anything (5 min)
-- [ ] **status.railway.com is green AND the "Limited Access" banner is gone** from your Railway dashboard (it said "Deploys have been paused temporarily"). Not yet: wait. The rehearsal reads its settings from Railway, and the staging setup and the launch each need a Railway build.
-- [ ] **Production after last night's merges.** When Railway deployed again, the production worker, api and admin rebuilt from `main`. That is safe (DRY RUN, nothing sent, the bot's behavior unchanged: `docs/runbooks/auto-deploy.md`, "Last night's merges"). Check:
-  1. Railway dashboard, production project: worker, api and admin each show their latest deployment **Success**.
-  2. `scripts/rat.sh status` (from `~/wallstreetrats`): mode **dry_run**, the loops a few seconds old.
-  3. `scripts/rat.sh preflight`: only the expected "not yet" lines.
 - [ ] Pull the latest scripts into both folders:
   ```
   git -C ~/wallstreetrats-staging pull
   git -C ~/wallstreetrats pull
   ```
+- [ ] **One command, GO or WAIT**, from `~/wallstreetrats`:
+  ```
+  scripts/morning.sh
+  ```
+  It asks one thing (is the "Limited Access" banner, "Deploys have been paused temporarily", gone from your Railway dashboard?) and checks the rest itself: status.railway.com has no incident, the production worker, api and admin each deployed **Success**, production still in DRY RUN with no coin, the running worker answers in DRY RUN with its loops a few seconds old, and `rat preflight` has nothing open but the expected "not yet" lines. Read-only: it changes nothing. 1 min.
+  - **GO**: go on with step 1.
+  - **WAIT**: each WAIT line says what to wait for or fix. Then run it again. Not green yet on Railway: wait. The rehearsal reads its settings from Railway, and the staging setup and the launch each need a Railway build.
+  - Why production rebuilt overnight is safe: `docs/runbooks/auto-deploy.md`, "Last night's merges".
+  - By hand instead: status.railway.com, the dashboard (banner gone, worker, api and admin **Success**), `scripts/rat.sh status` (mode **dry_run**, loops a few seconds old), `scripts/rat.sh preflight` (only the expected "not yet" lines).
 
 ## 1. Staging, in this order
 - [ ] **Finish the staging setup** (skip if it already ended with the green checklist): `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-staging.sh)"`. Finished steps are skipped. Keys only in its hidden prompts. 10 to 30 min, mostly Railway.
