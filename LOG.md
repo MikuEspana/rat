@@ -383,6 +383,18 @@ The backend is unchanged (40 Jupiter calls a minute, one call per hire). Only th
 
 **Tested:** the harness's fake Railway now builds like the real one did (config file path ignored, Railpack without a builder setting, a plain redeploy replays the last build). Fresh setup: no build ever fails. Repair: the script from `main` stops exactly like the real run; the new script fixes the settings, rebuilds the worker and finishes without asking any finished step again; a third run changes nothing. The same repair with an older CLI (no `--from-source`, no settings read-back) also finishes. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
 
+## Fix: a fresh worker waits for the creator key (2026-09-29)
+
+`setup-mac.sh` starts the worker (step 6) before the creator key is imported inside it (step 7). The worker stopped at startup when no creator key existed, so on a real project it would crash-loop and step 7 could not reach it. Now the long-running worker waits, doing nothing, until the key is imported, then starts. A wrong or undecryptable key still stops it. Proved on the real worker process against Postgres 16: `main` exited with "no creator key imported"; the fix waited, `rat keys import` worked, and the worker started.
+
+## Fix: rat commands over railway ssh get the worker's settings (2026-09-29)
+
+**What happened on the real run:** step 6 stopped right before the creator key import: "railway ssh into the worker works, but its settings are not visible there". A `railway ssh` session does not get the service's variables, so `rat` inside it had no DATABASE_URL or KEY_ENCRYPTION_KEY.
+
+**What changed:** `scripts/in-worker.cjs` runs every `rat` command sent over ssh (by `setup-mac.sh` and `scripts/rat.sh`). It takes the settings from the running worker process (`/proc/<pid>/environ`), or else from the service variables sent as the first line of stdin (`railway variable list --json`, rendered values). The rest of stdin goes to the command, so the creator key still comes only from the hidden prompt through stdin. No value is printed or put on a command line.
+
+**Tested:** the harness's fake Railway now runs ssh commands without the service variables, like the real one. The script from `main` stops exactly like the real run; the new script finishes, imports the key through the hidden prompt (a wrong key refused first), asks nothing again before step 7 and rebuilds nothing. Also: a fresh setup, the older-CLI repair, a setup with no readable worker process (settings over stdin), and `scripts/rat.sh status`. No secret in any transcript or on any command line (railway, wrangler, brew, jq, curl).
+
 ## Site: stages by SOL claimed, Company Roadmap (2026-09-29)
 
 The building's stage now goes by `treasury.totalClaimedSol` (0 / 0.25 / 1 / 5 / 20 / 50 SOL, read only through `apps/pixel-site/src/floor/stage-source.ts`, never closes); rooms, desks, landmarks and the sewer still go by rats hired. New Company Roadmap panel (every stage, done / next with "0.62 / 1 SOL" / locked; one line on a phone), kept clear of the Vault and the job-fair line (headless check at every stage, desktop and phone). Details in `apps/pixel-site/NOTES.md`; screenshots in `apps/pixel-site/assets/preview/sol_stages/`.
