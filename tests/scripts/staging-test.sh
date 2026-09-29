@@ -16,13 +16,24 @@ printf 'PROFILE=staging\nRAILWAY_PROJECT_ID=proj-staging\nAPI_DOMAIN=api.invalid
 printf 'RAILWAY_PROJECT_ID=proj-production\n' >"$W/home/rat-secrets/setup-state.env"
 printf 'production-master-key\n' >"$W/home/rat-secrets/KEY_ENCRYPTION_KEY.txt"
 
-# fake railway: the linked project and the worker's variables come from files the test changes
+# fake railway: the linked project and the worker's variables come from files the test changes. fail_reads: that many
+# `variable list` calls fail like Railway's did during an incident; drop_sets: `variable set` answers OK, keeps nothing
 cat >"$W/bin/railway" <<'EOF'
 #!/bin/bash
 F="$FAKE_DIR"
 case "$1 $2" in
   "status --json") cat "$F/linked" ;;
-  "variable list") cat "$F/worker.json" ;;
+  "variable list")
+    n=$(cat "$F/fail_reads" 2>/dev/null || echo 0)
+    if [ "$n" -gt 0 ]; then echo $((n - 1)) >"$F/fail_reads"; echo "Failed to fetch: error decoding response body" >&2; exit 1; fi
+    cat "$F/worker.json" ;;
+  "variable set")
+    echo "railway $*" >>"$F/railway.log"
+    [ -f "$F/drop_sets" ] && exit 0
+    shift 2
+    for a in "$@"; do
+      case "$a" in --*) break ;; *=*) jq -c --arg k "${a%%=*}" --arg v "${a#*=}" '.[$k] = $v' "$F/worker.json" >"$F/w.tmp" && mv "$F/w.tmp" "$F/worker.json" ;; esac
+    done ;;
   *) echo "railway $*" >>"$F/railway.log" ;;
 esac
 EOF
@@ -50,12 +61,13 @@ reset() {
   echo 0 >"$W/fake/claims"
   echo '{"lines":[{"status":"PASS","check":"claims","detail":"ok"},{"status":"PASS","check":"rats","detail":"ok"},{"status":"PASS","check":"money","detail":"ok"}]}' >"$W/fake/audit"
   : >"$W/fake/rat.log"
+  rm -f "$W/fake/fail_reads" "$W/fake/drop_sets"
   rm -f "$W/home/rat-secrets-staging/rehearsal-results.env"
 }
 run() { # run "<stdin>" args...: scripts/staging.sh with the fakes
   local input="$1"
   shift
-  printf '%s' "$input" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RAT=fake-rat WSR_POLL_SEC=0 \
+  printf '%s' "$input" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RAT=fake-rat WSR_POLL_SEC=0 WSR_RETRY_SEC=0 \
     bash "$REPO/scripts/staging.sh" "$@" >"$W/out.txt" 2>&1
 }
 results() { cat "$W/home/rat-secrets-staging/rehearsal-results.env" 2>/dev/null; }
@@ -79,6 +91,29 @@ reset
 printf '{"CREATOR_PUBKEY":"%s","KEY_ENCRYPTION_KEY":"x"}\n' "$TEST_CREATOR" >"$W/fake/worker.json"
 run "" 2; rc=$?
 check "a phase without STAGING on the worker: refused before anything" '[ $rc = 1 ] && grep -q "STAGING is not true" "$W/out.txt" && [ ! -s "$W/fake/rat.log" ]'
+
+echo "== Railway's API failing (an incident)"
+reset
+echo 2 >"$W/fake/fail_reads"
+run "" check; rc=$?
+check "two failed reads, then an answer: retried, the checks pass" '[ $rc = 0 ] && results | grep -q "^PHASE_0=PASS"'
+reset
+printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"production-master-key"}\n' "$TEST_CREATOR" >"$W/fake/worker.json"
+echo 99 >"$W/fake/fail_reads"
+run "" check; rc=$?
+check "the worker's variables never readable: refused (a failed read never counts as a different master key)" '[ $rc = 1 ] && grep -q "its master key could not be compared" "$W/out.txt"'
+lib() { # lib 'commands': scripts/lib/wsr.sh with the fakes
+  env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" WSR_RAILWAY=railway WSR_RETRY_SEC=0 \
+    bash -c "set -euo pipefail; source '$REPO/scripts/lib/wsr.sh'; $1" >"$W/out.txt" 2>&1
+}
+reset
+echo 1 >"$W/fake/fail_reads"
+lib 'set_vars worker COIN_MINT=abc WATCH_FROM_SLOT=7'; rc=$?
+check "set_vars: written, then read back (a failed read retried)" '[ $rc = 0 ] && [ "$(jq -r .COIN_MINT "$W/fake/worker.json")" = abc ] && [ "$(jq -r .WATCH_FROM_SLOT "$W/fake/worker.json")" = 7 ]'
+reset
+touch "$W/fake/drop_sets"
+lib 'set_vars worker COIN_MINT=abc'; rc=$?
+check "set_vars: Railway answers OK but does not keep it: stops" '[ $rc = 1 ] && grep -q "Railway does not show COIN_MINT on worker after setting it" "$W/out.txt"'
 
 echo "== the GO gate and the kill switch (phase 2)"
 reset

@@ -107,28 +107,79 @@ state_set() {
 # ---------------------------------------------------------------- tool wrappers ---------------------------------------
 rw() { ${WSR_RAILWAY:-railway} "$@"; }
 wr() { if [ -n "${WSR_WRANGLER:-}" ]; then $WSR_WRANGLER "$@"; else npx --yes wrangler@4 "$@"; fi; }
-rw_json() { rw "$@" --json 2>/dev/null; }
-# variable names set on a service (values are read into jq only, never printed)
-rw_has() { rw variable list --service "$1" --json 2>/dev/null | jq -e --arg k "$2" 'has($k) and .[$k] != ""' >/dev/null 2>&1; }
+# Railway's API fails now and then, more during an incident ("error decoding response body", timeouts). A call that is
+# safe to repeat is tried up to 3 times, 5 then 10 seconds apart. A read that decides something never takes a failed
+# call for an answer: "not set" counts only when Railway really listed the service's variables without it, otherwise
+# the script stops. So a failed read can never lead to replacing a secret already on Railway (the master key!), nor
+# to a second service with the same name. Every variable written is read back.
+TRIES=3
+retry_pause() { sleep "${WSR_RETRY_SEC:-$(($1 * 5))}"; }
+API_HINT="Railway's API is not answering properly (status.railway.com). Run the same command again in a few minutes: finished steps are skipped."
+rw_read() { # rw_read args...: a Railway read that answers a JSON object or list; stops the script after 3 failures
+  local out i
+  for i in 1 2 3; do
+    if out=$(rw "$@" 2>/dev/null) && printf '%s' "$out" | jq -e 'type == "object" or type == "array"' >/dev/null 2>&1; then
+      printf '%s\n' "$out"
+      return 0
+    fi
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  die "Railway did not answer: railway $* ($TRIES tries)" "$API_HINT"
+}
+RW_ERR=""
+rw_write() { # rw_write "stdin" args...: a Railway change that is safe to repeat, 3 tries (RW_ERR: Railway's last complaint)
+  local input="$1" i
+  shift
+  for i in 1 2 3; do
+    RW_ERR=$(printf '%s' "$input" | rw "$@" 2>&1 >/dev/null) && return 0
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  RW_ERR=$(printf '%s\n' "$RW_ERR" | grep -v '^>' | grep . | tail -1 | cut -c1-200 || true)
+  return 1
+}
+# a service's variables, as JSON: the values are secrets, they only ever go into jq or shasum, never printed
+rw_vars() { rw_read variable list --service "$1" --json; }
+var_is() { # var_is variables-json KEY VALUE: Railway holds that value (a ${{reference}}: holds the key, listed resolved)
+  case "$3" in
+    *'${{'*) printf '%s' "$1" | jq -e --arg k "$2" 'has($k)' >/dev/null 2>&1 ;;
+    *) [ "$(printf '%s' "$1" | jq -j --arg k "$2" '.[$k] // ""' | shasum -a 256)" = "$(printf '%s' "$3" | shasum -a 256)" ] ;;
+  esac
+}
+rw_has() { # rw_has service KEY: 0 = set, 1 = Railway listed the variables without it; stops if Railway cannot say
+  local r
+  r=$(rw_vars "$1" | jq -r --arg k "$2" 'if has($k) and .[$k] != "" then "yes" else "no" end') || exit 1
+  [ "$r" = yes ]
+}
+var_confirm() { # var_confirm service KEY value: Railway lists that value now (read back up to 3 times), or stop
+  local i cur
+  for i in 1 2 3; do
+    cur=$(rw_vars "$1") || exit 1
+    var_is "$cur" "$2" "$3" && return 0
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  die "Railway does not show the $2 that setup just set on the $1 service" \
+    "Check it in the Railway dashboard: $1 > Variables. $API_HINT"
+}
 CHANGED=" "
 mark_changed() { case "$CHANGED" in *" $1 "*) ;; *) CHANGED="$CHANGED$1 " ;; esac; }
 rw_set() { # rw_set service KEY=VALUE ...: non-secret values and ${{references}}, written only when they differ
   local svc="$1" cur kv k v
   shift
-  cur=$(rw variable list --service "$svc" --json 2>/dev/null || echo '{}')
+  cur=$(rw_vars "$svc") || exit 1
   for kv in "$@"; do
     k=${kv%%=*}
     v=${kv#*=}
-    case "$v" in
-      *'${{'*) printf '%s' "$cur" | jq -e --arg k "$k" 'has($k)' >/dev/null 2>&1 && continue ;; # Railway lists the resolved value
-      *) printf '%s' "$cur" | jq -e --arg k "$k" --arg v "$v" '.[$k] == $v' >/dev/null 2>&1 && continue ;;
-    esac
-    rw variable set "$kv" --service "$svc" --skip-deploys >/dev/null || die "could not set $k on the $svc service" "Check: railway variable list --service $svc"
+    var_is "$cur" "$k" "$v" && continue
+    rw_write "" variable set "$kv" --service "$svc" --skip-deploys ||
+      die "could not set $k on the $svc service ($TRIES tries): $RW_ERR" "$API_HINT"
+    var_confirm "$svc" "$k" "$v"
     mark_changed "$svc"
   done
 }
-rw_secret() { # rw_secret service KEY value: the value goes through stdin, never on a command line
-  printf '%s' "$3" | rw variable set "$2" --stdin --service "$1" --skip-deploys >/dev/null || die "could not set $2 on the $1 service"
+rw_secret() { # rw_secret service KEY value: the value goes through stdin, never on a command line; then read back
+  rw_write "$3" variable set "$2" --stdin --service "$1" --skip-deploys ||
+    die "could not set $2 on the $1 service ($TRIES tries)" "$API_HINT"
+  var_confirm "$1" "$2" "$3"
   mark_changed "$1"
 }
 rw_ssh() { # rw_ssh service "command": runs inside the running container
@@ -137,7 +188,7 @@ rw_ssh() { # rw_ssh service "command": runs inside the running container
 # A `railway ssh` session does not get the service's variables. scripts/in-worker.cjs (sent as base64) runs the rat
 # command with the settings of the running worker process, or else with the service variables sent as the first line
 # of stdin. Values never go on a command line and are never printed.
-worker_env_json() { rw variable list --service worker --json 2>/dev/null | jq -c 'with_entries(select(.value | type == "string"))' 2>/dev/null || echo '{}'; }
+worker_env_json() { rw_vars worker 2>/dev/null | jq -c 'with_entries(select(.value | type == "string"))' 2>/dev/null || echo '{}'; }
 in_worker_cmd() { # the remote shell line: no secret in it; every argument quoted for the remote shell
   local a args=""
   for a in "$@"; do args="$args $(printf '%q' "$a")"; done
@@ -166,7 +217,12 @@ ssh_ready() { # ssh_ready service: dies with the reason (and the link, for an un
 rat_w() { printf '%s\n' "$(worker_env_json)" | rw_ssh worker "$(in_worker_cmd "$@")"; }             # rat <args> in the worker
 rat_w_in() { { printf '%s\n' "$(worker_env_json)"; cat; } | rw_ssh worker "$(in_worker_cmd "$@")"; } # ... with this stdin
 preflight_json() { rat_w preflight --json 2>/dev/null | grep '^{' | tail -1 || true; } # its JSON line (exit code 1 while anything FAILs)
-service_exists() { rw service list --json 2>/dev/null | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1; }
+services_json() { rw_read service list --json; }
+service_exists() { # 0 = listed, 1 = Railway listed the services without it (a failed read stops: no second service)
+  local l
+  l=$(services_json) || exit 1
+  printf '%s' "$l" | jq -e --arg n "$1" 'map(.name) | index($n) != null' >/dev/null 2>&1
+}
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
 replaced_deployment() { eval "printf '%s' \"\${OLD_DEPLOY_$1:-}\""; } # the deployment a rebuild replaces (see rebuild)
@@ -190,7 +246,7 @@ wait_deployed() { # wait_deployed service minutes
   done
 }
 
-connected() { rw service list --json 2>/dev/null | jq -e --arg n "$1" --arg r "$REPO_SLUG" '.[] | select(.name == $n) | (.source.repo // "" | ascii_downcase) == ($r | ascii_downcase)' >/dev/null 2>&1; }
+connected() { local l; l=$(services_json) || exit 1; printf '%s' "$l" | jq -e --arg n "$1" --arg r "$REPO_SLUG" '.[] | select(.name == $n) | (.source.repo // "" | ascii_downcase) == ($r | ascii_downcase)' >/dev/null 2>&1; }
 connect_source() { # connect_source service: the first deploy starts with every setting already in place
   if connected "$1"; then return 0; fi
   printf -v "OLD_DEPLOY_$1" '%s' "$(deployment_id "$1")" # a failed deployment from before is not this build's answer
@@ -374,12 +430,12 @@ case "$PROFILE:$project_name" in production:*-staging) die "$APP_DIR is linked t
 state_set RAILWAY_PROJECT_ID "$project_id"
 state_set PROFILE "$PROFILE"
 
-PG=$(rw service list --json 2>/dev/null | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
+PG=$(services_json | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
 if [ -n "$PG" ]; then
   skip "Postgres ($PG)"
 else
   rw add --database postgres --json >/dev/null || die "could not add Postgres"
-  PG=$(rw service list --json 2>/dev/null | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
+  PG=$(services_json | jq -r 'map(select(.name | test("^Postgres"))) | .[0].name // empty')
   [ -n "$PG" ] || die "Postgres was added but not found in the service list"
   ok "Postgres added (private network only)"
 fi
@@ -391,9 +447,76 @@ DB_REF="\${{$PG.DATABASE_URL}}"
 # set on the service itself, then read back. The builder, Dockerfile and start command are compared with what Railway
 # has (not with a "done" flag), so a re-run repairs a service that was built the wrong way: it is rebuilt from the
 # latest commit before step 7 (redeploy_changed). The other settings are sent again when infra/railway.*.json changes.
-service_id() { rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | .id // empty' 2>/dev/null; }
+service_id() { # the id of the one service with this name in the linked environment (two with one name: stop)
+  local ids
+  ids=$(services_json | jq -r --arg n "$1" '.[] | select(.name == $n) | .id // empty') || exit 1
+  [ "$(printf '%s\n' "$ids" | grep -c .)" -le 1 ] ||
+    die "project $project_name has more than one service named $1 (ids: $(printf '%s' "$ids" | tr '\n' ' '))" \
+      "Railway dashboard: delete the extra $1 service, then run this again."
+  printf '%s' "$ids"
+}
 # Railway's answer holds every variable decrypted: only the build settings leave this pipe (no secret in a shell variable)
 env_config() { rw environment config --json 2>/dev/null | jq -ce 'select(type == "object") | {services: ((.services // {}) | map_values({configFile, build, deploy, volumeMounts})), volumes: ((.volumes // {}) | map_values({region}))}' 2>/dev/null; }
+# Older Railway CLIs have no `environment config`: then the first build proves the settings. Asked from the CLI's own
+# help (no API call), so a Railway failure is never mistaken for an older CLI.
+ENV_HELP=$(rw environment --help 2>/dev/null || true)
+if grep -qE '^ +config( |$)' <<<"$ENV_HELP"; then HAS_ENV_CONFIG=1; else HAS_ENV_CONFIG=""; fi
+env_settings() { # the settings (3 tries, then stop); nothing only when this CLI has no `environment config`
+  local i
+  [ -n "$HAS_ENV_CONFIG" ] || return 0
+  for i in 1 2 3; do
+    env_config && return 0
+    [ "$i" = "$TRIES" ] || retry_pause "$i"
+  done
+  die "Railway did not answer: railway environment config ($TRIES tries)" "$API_HINT"
+}
+# `railway environment edit` returns once Railway has QUEUED a change, not once it holds it (the CLI's own source: the
+# commit "returns its id as soon as the workflow STARTS"). A read right after it can still show the old settings, for
+# minutes while Railway's API is degraded. So a change counts only when Railway shows it back, compared exactly as
+# strictly as before: the read is only repeated, for up to WSR_APPLY_WAIT_SEC (default 5 minutes), and the change is
+# sent once more halfway (in case it was lost). The service list, the edit and the read all use the environment this
+# folder is linked to (railway link), so they always look at the same service.
+APPLY_WAIT_SEC="${WSR_APPLY_WAIT_SEC:-300}"
+case "$APPLY_WAIT_SEC" in '' | *[!0-9]*) die "WSR_APPLY_WAIT_SEC must be a number of seconds" ;; esac
+LEFT="" # what Railway still shows, when wait_applied gives up
+wait_words() { if [ "$APPLY_WAIT_SEC" -ge 120 ]; then echo "$((APPLY_WAIT_SEC / 60)) minutes"; else echo "$APPLY_WAIT_SEC seconds"; fi; }
+send_patch() { rw_write "$2" environment edit -m "$1" --json; } # send_patch "commit message" patch
+wait_applied() { # wait_applied "commit message" patch check args...: until `check args... <config>` prints nothing
+  local msg="$1" patch="$2" start=$SECONDS delay=5 resent="" told="" cfg
+  shift 2
+  while :; do
+    if cfg=$(env_config) && LEFT=$("$@" "$cfg"); then
+      [ -n "$LEFT" ] || return 0
+      LEFT=$(printf '%s' "$LEFT" | tr '\n' ';' | sed 's/;/; /g')
+    else
+      LEFT="Railway's settings could not be read"
+    fi
+    [ $((SECONDS - start)) -lt "$APPLY_WAIT_SEC" ] || return 1
+    if [ -z "$told" ]; then
+      say "Railway has not applied it yet ($LEFT). It applies changes in the background, slower during an"
+      say "incident (status.railway.com). Reading it again for up to $(wait_words)..."
+      told=1
+    fi
+    if [ -z "$resent" ] && [ $((SECONDS - start)) -ge $((APPLY_WAIT_SEC / 2)) ]; then
+      resent=1
+      send_patch "$msg" "$patch" || true
+    fi
+    sleep "${WSR_APPLY_POLL_SEC:-$delay}"
+    [ "$delay" -ge 30 ] || delay=$((delay + 5))
+  done
+}
+not_applied() { # not_applied service id "what" "how to set it by hand": Railway still shows something else, so stop
+  local env_id="" env_name=""
+  read -r env_id env_name <<EOF || true
+$(rw environment list --json 2>/dev/null | jq -r '.environments[]? | select(.isLinked) | "\(.id) \(.name)"' 2>/dev/null | head -1 || true)
+EOF
+  die "after $(wait_words) Railway still does not show $3 of $1 that setup sent. It shows: $LEFT" \
+    "Setup reads project ${project_name:-?}, environment ${env_name:-(linked)}, service $1 (id $2). That exact page:" \
+    "https://railway.com/project/$project_id/service/$2/settings${env_id:+?environmentId=$env_id}" \
+    "Right settings on that page? Railway has not finished applying them (status.railway.com): run this again later." \
+    "To read for longer, put WSR_APPLY_WAIT_SEC=900 in front of the same command." \
+    "Other settings there, or another project or environment than the one you looked at? $4"
+}
 build_patch() { # build_patch service id: the settings for Railway, as an environment config patch
   jq -c --arg id "$2" --arg f "/infra/railway.$1.json" '{services: {($id): ({configFile: $f} + {build, deploy})}}' "infra/railway.$1.json"
 }
@@ -417,18 +540,18 @@ for svc in worker api admin backup; do
   [ -n "$id" ] || die "the $svc service was created but not found in the service list"
   dockerfile=$(jq -r '.build.dockerfilePath' "infra/railway.$svc.json")
   fix_hint="Railway dashboard: $svc > Settings > Build: Builder Dockerfile, Dockerfile path $dockerfile. Then run this again."
-  want=$(build_patch "$svc" "$id" | shasum -a 256 | awk '{print $1}')
-  cfg=$(env_config) || cfg=""
+  patch=$(build_patch "$svc" "$id")
+  want=$(printf '%s\n' "$patch" | shasum -a 256 | awk '{print $1}')
+  cfg=$(env_settings)
   wrong=""
   [ -z "$cfg" ] || wrong=$(build_wrong "$svc" "$id" "$cfg")
   if [ -z "$wrong" ] && [ "$(state_get "BUILD_$svc")" = "$want" ]; then
     skip "$svc builds with $dockerfile"
   else
-    build_patch "$svc" "$id" | rw environment edit -m "setup: $svc builds with $dockerfile" --json >/dev/null ||
-      die "could not set the build settings of $svc" "$fix_hint"
+    send_patch "setup: $svc builds with $dockerfile" "$patch" || die "could not set the build settings of $svc ($TRIES tries): $RW_ERR" "$fix_hint"
     if [ -n "$cfg" ]; then # read them back: nothing is built until Railway holds the Dockerfile settings
-      wrong=$(build_wrong "$svc" "$id" "$(env_config || echo '{"services":{}}')")
-      [ -z "$wrong" ] || die "Railway did not keep the build settings of $svc: $(printf '%s' "$wrong" | tr '\n' ';')" "$fix_hint"
+      wait_applied "setup: $svc builds with $dockerfile" "$patch" build_wrong "$svc" "$id" ||
+        not_applied "$svc" "$id" "the build settings" "Set them there: Settings > Build: Builder Dockerfile, Dockerfile path $dockerfile. Then run this again."
     else
       note "this Railway CLI cannot show settings back; the first build of $svc proves them"
     fi
@@ -444,11 +567,21 @@ done
 # service already running elsewhere is redeployed there: Postgres now (its volume migrates with it, while the
 # database is still empty), the others in step 6. Checked against where each deployment really runs.
 service_regions() { # the regions the service's running deployment is in, sorted, comma separated ("" = not deployed)
-  rw service list --json 2>/dev/null | jq -r --arg n "$1" '.[] | select(.name == $n) | [.regions[]? | select((.configured // 1) > 0) | .name] | sort | join(",")' 2>/dev/null || true
+  local l
+  l=$(services_json) || exit 1
+  printf '%s' "$l" | jq -r --arg n "$1" '.[] | select(.name == $n) | [.regions[]? | select((.configured // 1) > 0) | .name] | sort | join(",")' 2>/dev/null || true
 }
 region_set() { # region_set service_id config: the configured regions, sorted, comma separated
   jq -rn --argjson have "$2" --arg id "$1" '($have.services[$id].deploy // {}) as $d
     | ([($d.multiRegionConfig // {}) | to_entries[] | select(.value != null) | .key] + [($d.region // empty)]) | unique | join(",")'
+}
+cron_wrong() { # cron_wrong service_id schedule config: "" when Railway holds that cron schedule
+  jq -rn --argjson have "$3" --arg id "$1" --arg c "$2" '($have.services[$id].deploy.cronSchedule // "not set") | select(. != $c) | "deploy.cronSchedule is \(.)"'
+}
+region_wrong() { # region_wrong service_id config: "" when the configured region is $REGION alone
+  local now
+  now=$(region_set "$1" "$2")
+  [ "$now" = "$REGION" ] || echo "the region is ${now:-not set}"
 }
 region_patch() { # region_patch service_id config actual: only $REGION stays (every other region null), its volumes follow
   jq -cn --argjson have "$2" --arg id "$1" --arg r "$REGION" --arg actual "$3" --arg all "$ALL_REGIONS" '($have.services[$id] // {}) as $s
@@ -462,7 +595,7 @@ for svc in "$PG" worker api admin backup; do
   id=$(service_id "$svc")
   [ -n "$id" ] || die "the $svc service was not found in the service list"
   actual=$(service_regions "$svc")
-  cfg=$(env_config) || cfg=""
+  cfg=$(env_settings)
   if [ -n "$cfg" ]; then configured=$(region_set "$id" "$cfg"); else configured=$(state_get "REGION_$svc"); fi
   if [ "$configured" = "$REGION" ] && { [ -z "$actual" ] || [ "$actual" = "$REGION" ]; }; then
     skip "$svc runs in $REGION_NAME"
@@ -472,11 +605,12 @@ for svc in "$PG" worker api admin backup; do
     die "this Railway CLI cannot move Postgres with its volume" "Railway dashboard: Postgres > Settings > Region: $REGION_NAME, and confirm the volume migration. Then run this again."
   fi
   if [ "$configured" != "$REGION" ]; then
-    region_patch "$id" "${cfg:-$NO_CONFIG}" "$actual" | rw environment edit -m "setup: $svc runs in $REGION_NAME" --json >/dev/null ||
-      die "could not move $svc to $REGION_NAME" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
+    patch=$(region_patch "$id" "${cfg:-$NO_CONFIG}" "$actual")
+    send_patch "setup: $svc runs in $REGION_NAME" "$patch" ||
+      die "could not move $svc to $REGION_NAME ($TRIES tries): $RW_ERR" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
     if [ -n "$cfg" ]; then
-      now=$(region_set "$id" "$(env_config || echo '{"services":{}}')")
-      [ "$now" = "$REGION" ] || die "Railway did not keep the region of $svc (it has: ${now:-none})" "Railway dashboard: $svc > Settings > Region: $REGION_NAME. Then run this again."
+      wait_applied "setup: $svc runs in $REGION_NAME" "$patch" region_wrong "$id" ||
+        not_applied "$svc" "$id" "the region" "Set it there: Settings > Region: $REGION_NAME. Then run this again."
     fi
     state_set "REGION_$svc" "$REGION"
   fi
@@ -591,7 +725,8 @@ EOF
 # master key: set once, never replaced (replacing it would make every stored wallet key unreadable)
 MASTER=$(tr -d '\n' <"$SECRETS/KEY_ENCRYPTION_KEY.txt")
 if rw_has worker KEY_ENCRYPTION_KEY; then
-  [ "$(rw variable list --service worker --json 2>/dev/null | jq -j '.KEY_ENCRYPTION_KEY' | shasum -a 256)" = "$(printf '%s' "$MASTER" | shasum -a 256)" ] ||
+  worker_vars=$(rw_vars worker) || exit 1
+  var_is "$worker_vars" KEY_ENCRYPTION_KEY "$MASTER" ||
     die "the worker already has a DIFFERENT KEY_ENCRYPTION_KEY than $SECRETS/KEY_ENCRYPTION_KEY.txt" \
       "Never replace it. Copy the one in Railway (worker > Variables) into that file, then run this again."
   skip "master key on the worker"
@@ -600,7 +735,7 @@ else
   rw_set worker KEY_VERSION=1
   ok "master key set on the worker"
 fi
-unset MASTER
+unset MASTER worker_vars
 # passwords already on Railway are never overwritten
 if rw_has admin ADMIN_PASSWORD && rw_has api RAT_API_DB_PASSWORD && rw_has backup BACKUP_AGE_RECIPIENT; then
   skip "admin password, read-only database password and backup public key"
@@ -890,8 +1025,13 @@ if [ "$PROFILE" = staging ]; then
 elif [ "$(state_get CRON_SET)" = 1 ]; then
   skip "nightly schedule"
 else
-  jq -nc --arg id "$(service_id backup)" --arg c "$BACKUP_CRON" '{services: {($id): {deploy: {cronSchedule: $c}}}}' |
-    rw environment edit -m "setup: nightly backup" --json >/dev/null || die "could not set the backup schedule"
+  id=$(service_id backup)
+  patch=$(jq -nc --arg id "$id" --arg c "$BACKUP_CRON" '{services: {($id): {deploy: {cronSchedule: $c}}}}')
+  send_patch "setup: nightly backup" "$patch" || die "could not set the backup schedule ($TRIES tries): $RW_ERR" "Railway dashboard: backup > Settings > Cron Schedule: $BACKUP_CRON. Then run this again."
+  if [ -n "$HAS_ENV_CONFIG" ]; then
+    wait_applied "setup: nightly backup" "$patch" cron_wrong "$id" "$BACKUP_CRON" ||
+      not_applied backup "$id" "the nightly schedule" "Set it there: Settings > Cron Schedule: $BACKUP_CRON. Then run this again."
+  fi
   state_set CRON_SET 1
   ok "backup runs every night at 03:30 UTC"
 fi
