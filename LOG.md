@@ -463,3 +463,32 @@ Rehearsal: a STAGING API also sends `treasury.stageSol` (claimed plus the rehear
 - `rat audit` (read-only, production-safe): every booked claim equals what left the creator's fee vaults in its transaction (and its ledger credit); every hired rat was paid by the creator exactly once and holds what the database says; the creator wallet's SOL change over every bot transaction (and external claims) equals the ledger to the lamport. Owner transactions (launch, dev buy, deposits), seeded SOL and emergency sweeps are kept apart. PASS / FAIL / WAIT (in flight), exit 1 unless PASS, `--json` for scripts. On LAUNCH-DAY.md's end-of-day list.
 - `tests/e2e/rehearsal.test.ts`: the whole rehearsal on SimChain in LIVE mode with STAGING on and the plan's budget: launch with a 0.1 SOL dev buy (never a fee, no kill), a claim of 0.0009 SOL of real fees booked exactly, a seed and 5 hires at the real salary, a burst at 0.01 SOL under a 0.05 SOL/h cap with the worker killed right after one hire was broadcast (recovered, paid once), the cap pausing and resuming, the kill switch tripped by an unexpected creator transaction with nothing sent after, and `rat audit` PASS / PASS / PASS. A second test tampers with the database: the audit catches both.
 - The long CI suite runs with at most 2 workers: four CPU-heavy files in parallel starved a worker past vitest's 60 s RPC timeout once (all tests had passed).
+
+## Rehearsal: the staging scripts (2026-09-29)
+- **`scripts/setup-staging.sh`:** the rehearsal's setup is `setup-mac.sh` with the staging profile.
+  - Its own project `wall-street-rats-staging`, folder `~/wallstreetrats-staging`, secrets `~/rat-secrets-staging`, master key, Postgres and R2 bucket (`wsr-staging-backups-...`).
+  - It asks for the test creator's public address and refuses production's wallets.
+  - It makes a throwaway sweep wallet with Node's ed25519: the key goes in a mode 600 file and is never printed.
+  - Settings: `STAGING=true` and `MIN_CLAIM_SOL=0.0003` on the worker, admin and api.
+  - No nightly schedule and no healthchecks question.
+  - `rat staging-init`, then the kill switch ON, before the key import.
+- **`setup-mac.sh` profile hooks** (`WSR_PROFILE`, `WSR_EXTRA_VARS` and others; no `STAGING=true` in it):
+  - production refuses extra settings and the staging project;
+  - staging refuses the production creator, the production secrets folder and the production project.
+- **`scripts/staging.sh check | 1 ... 8 | teardown | report`:** the rehearsal, one phase at a time.
+  - Each phase shows what it sends and the SOL, waits for the exact word GO, and opens the kill switch only for that phase. The switch closes on exit, also on FAIL or Ctrl-C.
+  - Isolation checks run before every phase: the linked project, STAGING on the worker, the test creator, and a master key compared by hash with production's.
+  - The report writes `rehearsal-report.md`. GO only if phases 0 to 8 and the production site check PASS.
+- **`scripts/approve-stocks.sh`:** for each enabled xStock it shows the mint and opens xstocks.fi, and you confirm it matches. It then sets `APPROVED_STOCKS` (loaded on top of `config/stocks.json`; an unknown symbol is a config error), redeploys the worker and runs `rat stocks-sync`. The on-chain mint check still applies.
+- **`rat status --json`:** one line for scripts, with no secret in it.
+- **Fixed along the way:** setup's remote `rat` commands joined their arguments without quoting, so an argument with spaces or parentheses broke the worker's shell (no current command passed one). Each argument is quoted now, as `scripts/rat.sh` already did.
+- **Docs:** `docs/runbooks/rehearsal.md`.
+
+**Tested:**
+- `tests/scripts/staging-test.sh` (in CI): 16 checks with fake `rat` and `railway`, covering the isolation refusals, the GO gate (anything but GO sends nothing), the kill switch back ON after a PASS and after a FAIL, and GO / NO-GO.
+- Setup harness scenario F:
+  - `setup-staging.sh` finishes with its own project, STAGING, the test creator, the throwaway cold wallet, a marked database and the kill switch on;
+  - it refuses the production creator at the prompt;
+  - staging refuses a folder linked to production, and production refuses the staging project;
+  - the throwaway key is never shown, and no secret leaks.
+- Unit tests for `APPROVED_STOCKS` and `status --json`.

@@ -30,3 +30,6 @@ id.json
 .idea/
 .vscode/
 *.log
+
+# written by scripts/staging.sh report (no secrets)
+rehearsal-report.md
