@@ -28,7 +28,8 @@ export type LedgerReason =
   | 'hire_reserve' // reserved before a hire tx (negative)
   | 'hire_settle' // actual cost minus reservation (signed)
   | 'hire_release' // reservation returned because the hire definitely did not land (positive)
-  | 'claim_fee'; // claim tx fee, paid from the hire bucket (negative)
+  | 'claim_fee' // claim tx fee, paid from the hire bucket (negative)
+  | 'seed_credit'; // STAGING only (`rat staging-seed`): SOL the owner sent to the test creator, never a creator fee
 
 export type KeyRole = 'rat' | 'creator';
 

@@ -8,6 +8,8 @@
 // 5. No holder payout code paths.
 // 6. No em dashes in authored text (owner preference).
 // 7. No token burn code outside tests: buy and burn was removed, every claimed fee hires rats.
+// 8. Rehearsal-only switches are never turned on in a deploy or setup file (scripts, Railway files, workflows,
+//    Dockerfiles, .env files) except the staging scripts; the runtime also refuses them with the production creator.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -87,6 +89,16 @@ for (const line of envExample.split('\n')) {
   if (key === 'DRY_RUN' && value.trim() !== 'true') {
     failures.push('.env.example: DRY_RUN must default to true');
   }
+}
+
+// 8. rehearsal-only switches in deploy and setup files
+const STAGING_ON = /\bSTAGING['"]?\s*[=:]\s*['"]?(true|1|yes)\b|\bSTAGING_CRASH_AFTER_SEND['"]?\s*[=:]\s*['"]?[1-9]/i;
+const DEPLOY_FILE = /\.(sh|json|ya?ml|toml)$|^\.env|Dockerfile/;
+const STAGING_ALLOW = new Set(['scripts/setup-staging.sh', 'scripts/staging.sh']);
+for (const { full, rel } of files) {
+  const base = rel.split('/').pop();
+  if (!DEPLOY_FILE.test(base) || rel === 'pnpm-lock.yaml' || STAGING_ALLOW.has(rel) || rel.startsWith('tests/')) continue;
+  if (STAGING_ON.test(readFileSync(full, 'utf8'))) failures.push(`${rel}: turns on a rehearsal-only switch (STAGING / STAGING_CRASH_AFTER_SEND); only the staging scripts may`);
 }
 
 if (failures.length) {

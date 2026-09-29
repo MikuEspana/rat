@@ -22,14 +22,14 @@ export class ThrottledAlerts implements Alerts {
   }
 }
 
-export function telegramSink(opts: { botToken: string; chatId: string; log?: Logger; fetchImpl?: typeof fetch }) {
+export function telegramSink(opts: { botToken: string; chatId: string; log?: Logger; fetchImpl?: typeof fetch; /** rehearsal: every alert says STAGING */ staging?: boolean }) {
   const f = opts.fetchImpl ?? fetch;
   return async (level: AlertLevel, text: string): Promise<void> => {
     try {
       const res = await f(`https://api.telegram.org/bot${opts.botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat_id: opts.chatId, text: `[RAT RACE ${ICON[level]} ${level}] ${text}`, disable_web_page_preview: true }),
+        body: JSON.stringify({ chat_id: opts.chatId, text: `[RAT RACE ${opts.staging ? 'STAGING ' : ''}${ICON[level]} ${level}] ${text}`, disable_web_page_preview: true }),
       });
       if (!res.ok) opts.log?.warn({ status: res.status }, 'telegram alert failed');
     } catch (err) {

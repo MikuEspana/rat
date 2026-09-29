@@ -7,7 +7,7 @@ import './style.css';
 import { Application, Container, Text, UPDATE_PRIORITY } from 'pixi.js';
 import type { StateResponse } from '@rat/contract';
 import {
-  API_BASE, DEBUG_MAX_RATS, DEBUG_RATS, DEBUG_SOL, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED,
+  API_BASE, API_CHOSEN, DEBUG_MAX_RATS, DEBUG_RATS, DEBUG_SOL, MOOD_THRESHOLD_PCT, POLL_EVENTS_MS, POLL_STATE_MS, SHOW_PERF, SIM, SIM_AUTOSTART, SIM_SCENARIO, SIM_SPEED,
   STRESS_RATS, STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
@@ -146,7 +146,7 @@ async function boot(): Promise<Site> {
   const plan = buildMaster();
   const everyone = (): RatRecord[] => [...store.rats.values()].sort((a, b) => a.facts.id - b.facts.id);
   let ratCount = DEBUG_RATS || everyone().length;
-  let liveSol = stageSourceSol(state.treasury);
+  let liveSol = stageSourceSol(state.treasury, { rehearsal: API_CHOSEN });
   const solAt = (n: number): number => (DEBUG_RATS ? DEBUG_SOL ?? solForRats(n) : liveSol);
   let growth = new Growth(plan);
   const replay = (n: number, sol = solAt(n)): RatRecord[] => {
@@ -450,7 +450,7 @@ async function boot(): Promise<Site> {
   /** New SOL claimed (every state poll): open any stage it reached, move the stage bar and the roadmap along. */
   const updateStage = (s: StateResponse): void => {
     if (DEBUG_RATS || recording) return; // the debug slider sets the stage; a timelapse puts it back when it ends
-    liveSol = stageSourceSol(s.treasury);
+    liveSol = stageSourceSol(s.treasury, { rehearsal: API_CHOSEN });
     const opened = growth.setSol(liveSol);
     if (opened.length) grew(opened, true);
     showStage();

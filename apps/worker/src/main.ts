@@ -3,6 +3,7 @@
 import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 import { createLogger, loadConfig, publicConfigSummary, sleep, systemClock } from '@rat/core';
+import { isStagingDatabase, stagingProblems } from '@rat/db';
 import { runPreflight } from './preflight';
 import { createProductionDeps } from './production';
 import { LockedRunner, createWorker } from './worker';
@@ -11,7 +12,26 @@ async function main(): Promise<void> {
   const cfg = loadConfig();
   const log = createLogger({ level: cfg.logLevel, name: 'rat-worker' });
   log.info(publicConfigSummary(cfg), cfg.dryRun ? 'starting in DRY RUN: nothing will be sent' : 'starting LIVE: transactions will be sent');
-  const { deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true });
+  let { deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true });
+  // staging and production never meet: refused in DRY RUN too
+  const staging = await stagingProblems(deps.store, cfg);
+  if (cfg.staging && staging.length === 0 && !(await isStagingDatabase(deps.store, cfg))) {
+    // a fresh staging database: wait, doing nothing, until `rat staging-init` (run inside this container) marks it
+    log.warn('STAGING: this database is not marked as staging yet. Waiting for: rat staging-init');
+    while (!(await isStagingDatabase(deps.store, cfg))) {
+      await sleep(5_000);
+      if ((await stagingProblems(deps.store, cfg)).length > 0) break;
+    }
+    await handle.close();
+    ({ deps, handle } = await createProductionDeps(cfg, log, { waitForCreatorKey: true })); // rewired for the staging database
+    staging.push(...(await stagingProblems(deps.store, cfg)));
+  }
+  if (staging.length > 0) {
+    log.fatal({ reasons: staging }, 'refusing to start: staging check failed');
+    await deps.alerts.send('critical', 'staging_refused', `Worker refused to start:\n- ${staging.join('\n- ')}`);
+    await handle.close();
+    process.exit(1);
+  }
   const pre = await runPreflight(deps);
   for (const issue of pre.issues) {
     if (issue.blocking) log.error({ check: issue.check }, issue.message);

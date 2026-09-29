@@ -7,6 +7,8 @@ function num(name: string, fallback: number): number {
   return Number.isFinite(v) && v > 0 ? v : fallback;
 }
 
+/** `?api=<url>` in the page URL: someone chose the API by hand (the rehearsal opens the staging API this way). */
+export const API_CHOSEN = params.has('api');
 export const API_BASE = (params.get('api') ?? import.meta.env.VITE_API_BASE ?? 'http://localhost:8787').replace(/\/$/, '');
 /**
  * The in-browser launch simulator replaces the API: `?sim` in the page URL, or VITE_SIM=1 at build time (the static

@@ -83,6 +83,12 @@ describe('growth (the idle game)', () => {
     }
     // what the stage reads: the public SOL claimed (not what was hired, not what waits)
     expect(stageSourceSol({ totalClaimedSol: 0.62, totalHiredSol: 0.3, waitingSol: 0.32 })).toBe(0.62);
+    // rehearsal: the staging API's stageSol (claimed plus the seed) counts only on a page opened with ?api=
+    const staging = { totalClaimedSol: 0.001, totalHiredSol: 0.29, waitingSol: 0, stageSol: 0.291 };
+    expect(stageSourceSol(staging, { rehearsal: true })).toBe(0.291);
+    expect(stageSourceSol(staging)).toBe(0.001);
+    expect(stageSourceSol(staging, { rehearsal: false })).toBe(0.001);
+    expect(stageSourceSol({ totalClaimedSol: 0.62, totalHiredSol: 0.3, waitingSol: 0.32 }, { rehearsal: true })).toBe(0.62);
     // a live session: the stage follows the SOL that came with the hires
     for (const [n, g] of states) expect(g.stage).toBe(stageOfSol(solForRats(n)));
   });

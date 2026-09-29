@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { LIVE_CONFIRM_PHRASE, isBase58Pubkey } from './constants';
+import { LIVE_CONFIRM_PHRASE, PRODUCTION_CREATOR_PUBKEY, isBase58Pubkey } from './constants';
 import { ConfigError } from './errors';
 import { solToLamports } from './money';
 import type { HireMode, StockConfigEntry } from './types';
@@ -82,6 +82,11 @@ const envSchema = z.object({
   KILL_SWITCH: boolStr('false'),
   SMOKE_MODE: boolStr('false'),
   SMOKE_CAP_SOL: solStr('0.1'),
+  // Rehearsal only (docs/runbooks/rehearsal.md): turns on the test-only features (`rat staging-seed`, the crash test,
+  // a stage source that counts seeded SOL). Refused with the production creator wallet and on a production database.
+  STAGING: boolStr('false'),
+  // STAGING only: the worker kills itself right after sending this many hires, once, to prove crash recovery.
+  STAGING_CRASH_AFTER_SEND: intStr(0, 0, 1000),
 
   DATABASE_URL: optStr,
   DATABASE_URL_READONLY: optStr,
@@ -173,6 +178,10 @@ export interface AppConfig {
   killSwitch: boolean;
   smokeMode: boolean;
   smokeCapLamports: bigint;
+  /** rehearsal only: test-only features on (never with the production creator, never on a production database) */
+  staging: boolean;
+  /** rehearsal only: kill the worker once, right after the Nth hire was sent (0 = off) */
+  stagingCrashAfterSend: number;
 
   databaseUrl?: string;
   databaseUrlReadonly?: string;
@@ -239,6 +248,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.SALARY_SOL <= e.HIRE_OVERHEAD_EST_SOL + e.RAT_BUFFER_SOL) {
     throw new ConfigError('SALARY_SOL must be larger than HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL');
   }
+  if (e.STAGING) {
+    if (!e.CREATOR_PUBKEY) throw new ConfigError('STAGING=true needs CREATOR_PUBKEY (the throwaway test creator).');
+    if (e.CREATOR_PUBKEY === PRODUCTION_CREATOR_PUBKEY) {
+      throw new ConfigError('STAGING=true is refused with the production creator wallet. Staging runs with a throwaway test creator only.');
+    }
+  } else if (e.STAGING_CRASH_AFTER_SEND > 0) {
+    throw new ConfigError('STAGING_CRASH_AFTER_SEND only works with STAGING=true (rehearsal only).');
+  }
   return {
     nodeEnv: e.NODE_ENV,
     logLevel: e.LOG_LEVEL,
@@ -247,6 +264,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     killSwitch: e.KILL_SWITCH,
     smokeMode: e.SMOKE_MODE,
     smokeCapLamports: e.SMOKE_CAP_SOL,
+    staging: e.STAGING,
+    stagingCrashAfterSend: e.STAGING ? e.STAGING_CRASH_AFTER_SEND : 0,
     databaseUrl: e.DATABASE_URL,
     databaseUrlReadonly: e.DATABASE_URL_READONLY,
     keyEncryptionKey: e.KEY_ENCRYPTION_KEY,
@@ -307,6 +326,7 @@ export function publicConfigSummary(cfg: AppConfig): Record<string, unknown> {
     liveConfirmed: cfg.liveConfirmed,
     killSwitch: cfg.killSwitch,
     smokeMode: cfg.smokeMode,
+    staging: cfg.staging,
     coinMint: cfg.coinMint ?? null,
     watchFromSlot: cfg.watchFromSlot || 'first live run',
     knownOwnerTxSigs: cfg.knownOwnerTxSigs.length,

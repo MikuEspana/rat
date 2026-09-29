@@ -2,7 +2,7 @@
 // FAILs. Read-only: it never sends a transaction. With --live, anything that would stop a live launch is a FAIL
 // (DRY RUN still on, no watch floor, kill switch on, no Telegram).
 import { type AppConfig, type ChainReader, type KeyStore, SETTINGS, formatSol } from '@rat/core';
-import type { Store } from '@rat/db';
+import { type Store, isStagingDatabase, stagingProblems } from '@rat/db';
 import { verifyStockMints } from '@rat/safety';
 import { PublicKey } from '@solana/web3.js';
 
@@ -142,6 +142,13 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
       add('PASS', 'database', 'connected, migrations applied.');
     } catch (err) {
       add('FAIL', 'database', `query failed: ${errText(err)}`);
+    }
+    // 3b. rehearsal: staging and production never meet
+    const problems = await stagingProblems(d.store, c).catch((err) => [`check failed: ${errText(err)}`]);
+    if (problems.length > 0) add('FAIL', 'staging', problems.join(' '));
+    else if (c.staging) {
+      if (await isStagingDatabase(d.store, c)) add('WARN', 'staging', `STAGING: rehearsal project, test creator ${c.creatorPubkey}. Test-only features are on (seed, crash test).`);
+      else add('FAIL', 'staging', 'STAGING is on but this database is not marked as staging. Run: rat staging-init');
     }
   }
 

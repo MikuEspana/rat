@@ -122,6 +122,7 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 - `coin.*` fields are `null` before launch (no `COIN_MINT` yet), except `symbol`.
 - `bot.lastClaimAt` can be `null`.
 - Every claimed SOL goes to hiring rats. Nothing is bought back or burned, and nothing is paid to holders.
+- `treasury.stageSol` (optional, rehearsal only): sent only by a STAGING API on a staging database. It is claimed fees plus SOL seeded for the rehearsal (`rat staging-seed`), so a rehearsal can show a real stage-up. The site's stage goes by `stageSol` when present, else `totalClaimedSol`. The production API never sends it, and `totalClaimedSol` never includes seeded SOL.
 - `treasury.totalClaimedSol`: creator fees claimed so far. `treasury.totalHiredSol`: SOL spent on hires (salaries plus fees, rent and tips). `treasury.waitingSol`: claimed SOL not spent yet, usually waiting under the hourly hire cap.
 - `portfolio` is what all the rats hold together: `ratCount`, `positionCount` (how many different stocks they hold), `costUsd`, `valueUsd` (show it as "Portfolio value"; it is the rats' stocks, not holders' money), `pnlUsd`, `pnlPct`.
 - `stock.priceUsd` and `stock.change24hPct` can be `null` if Jupiter has no fresh price.

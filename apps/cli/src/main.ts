@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, NATIVE_SOL_MINT, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
 import { JupiterHttp, JupiterPriceSource, SlidingWindowLimiter } from '@rat/jupiter';
-import { Store, openDatabase } from '@rat/db';
+import { Store, openDatabase, stagingProblems } from '@rat/db';
 import { DbKeyStore, MasterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { Command } from 'commander';
@@ -15,6 +15,7 @@ import { ledgerShowCommand } from './commands/ledger';
 import { printPreflight, runPreflightChecks, telegramCheck } from './commands/preflight';
 import { statusCommand } from './commands/status';
 import { stocksSyncCommand } from './commands/stocks';
+import { stagingInitCommand, stagingSeedCommand } from './commands/staging';
 import { sweepCommand } from './commands/sweep';
 import type { CliContext } from './context';
 
@@ -25,6 +26,9 @@ async function withContext(fn: (ctx: CliContext, cfg: AppConfig) => Promise<void
   await handle.migrate();
   const store = new Store(handle.db, config.dryRun ? 'paper' : 'live', systemClock);
   try {
+    // a staging database never runs with production settings, and staging never runs next to the production key
+    const problems = await stagingProblems(store, config);
+    if (problems.length > 0) throw new Error(problems.join(' '));
     await fn({ config, store, clock: systemClock, out: (l) => console.log(l) }, config);
   } finally {
     await handle.close();
@@ -96,6 +100,23 @@ program
   .description('delete all DRY RUN paper data')
   .option('--yes', 'really delete')
   .action((o) => withContext((ctx) => dryRunResetCommand(ctx, Boolean(o.yes))));
+program
+  .command('staging-init')
+  .description('REHEARSAL ONLY: mark this empty database as the staging database of the test creator (needs STAGING=true)')
+  .action(() => withContext((ctx) => stagingInitCommand(ctx)));
+program
+  .command('staging-seed')
+  .description('REHEARSAL ONLY: book SOL already sent to the test creator as hire budget (never a creator fee)')
+  .requiredOption('--sol <amount>', 'SOL to book (at most 0.5 per seed, 1 in total)')
+  .option('--confirm <phrase>', 'exact phrase printed by the plan')
+  .action((o) =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['rpcUrl']);
+      const conn = createConnection(cfg.rpcUrl!);
+      const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
+      await stagingSeedCommand(ctx, { chain }, { sol: o.sol, confirm: o.confirm });
+    }),
+  );
 const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
 program.command('stocks-sync').description('load config/stocks.json into the database').action(() => withContext((ctx) => stocksSyncCommand(ctx, REPO_ROOT)));
 program
@@ -105,7 +126,7 @@ program
     withContext(async (ctx, cfg) => {
       const log = createLogger({ level: cfg.logLevel });
       const sinks = [logSink(log)];
-      if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log }));
+      if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log, staging: cfg.staging }));
       await new ThrottledAlerts(fanOut(...sinks), ctx.clock, 0).send('info', 'alert_test', 'test alert from the RAT RACE CLI');
       ctx.out(cfg.telegram.botToken ? 'sent to Telegram and the log' : 'TELEGRAM_BOT_TOKEN not set: logged only');
     }),
