@@ -56,6 +56,7 @@ export async function statusCommand(ctx: CliContext, opts: { json?: boolean } = 
   out(`txs last hour:   ${JSON.stringify(Object.fromEntries(attempts))}`);
   for (const hb of await store.heartbeats.all()) {
     const age = Math.round((clock.now().getTime() - hb.lastRunAt.getTime()) / 1000);
-    out(`loop ${hb.loop.padEnd(10)} last run ${age}s ago${hb.lastError ? `, last error: ${hb.lastError}` : ''}`);
+    const every = hb.loop === 'coin' ? ' (runs every 10 min)' : '';
+    out(`loop ${hb.loop.padEnd(10)} last run ${age}s ago${every}${hb.lastError ? `, last error: ${hb.lastError}` : ''}`);
   }
 }

@@ -930,6 +930,7 @@ ALTER ROLE rat_api WITH LOGIN PASSWORD :'rat_pw';
 GRANT USAGE ON SCHEMA public TO rat_api;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO rat_api;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO rat_api;
+REVOKE ALL ON key_pool FROM rat_api;
 SQL
     die "could not create the read-only database user" "$(tail -2 "$SECRETS/.psql-err" 2>/dev/null)"
   unset RAT_API_PW

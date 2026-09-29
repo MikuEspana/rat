@@ -10,6 +10,7 @@ const SECRET_FIELDS = [
   'privateKey',
   'secretEnc',
   'keyEncryptionKey',
+  'keyEncryptionKeyPrevious',
   'apiKey',
   'botToken',
   'databaseUrl',

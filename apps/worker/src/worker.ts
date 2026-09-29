@@ -1,11 +1,12 @@
 // Assembles the steps into the loop:
-//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> reconcile (35s)
+//   prices (15s) -> mints (35s) -> claim + watch + hire (35s) -> reconcile (35s) -> coin creator check (10 min)
+import { redactSecrets } from '@rat/core';
 import type { WorkerDeps } from './deps';
 import { WorkerState } from './deps';
 import { Scheduler } from './scheduler';
 import { runClaimStep } from './steps/claim';
 import { runHireStep } from './steps/hire';
-import { runMintStep } from './steps/mints';
+import { runCoinCheckStep, runMintStep } from './steps/mints';
 import { runPriceStep } from './steps/prices';
 import { runReconcileStep } from './steps/reconcile';
 import { runWatchStep } from './steps/watch';
@@ -27,13 +28,27 @@ export function createWorker(d: WorkerDeps): Worker {
         name: 'claim',
         everySec: c.intervals.claimSec,
         run: async () => {
-          const claim = await runClaimStep(d, state);
-          const watch = await runWatchStep(d);
-          const hire = await runHireStep(d, state);
+          // A failing claim never skips the wallet watch (the key-leak detector). Hires only run after a
+          // successful watch: nothing is spent while the watch is blind. Any failure still fails the task (alerts).
+          const errors: string[] = [];
+          const step = async <T>(name: string, f: () => Promise<T>): Promise<T | { error: string }> => {
+            try {
+              return await f();
+            } catch (err) {
+              const error = redactSecrets((err as Error).message ?? String(err));
+              errors.push(`${name}: ${error}`);
+              return { error };
+            }
+          };
+          const claim = await step('claim', () => runClaimStep(d, state));
+          const watch = await step('watch', () => runWatchStep(d));
+          const hire = errors.some((e) => e.startsWith('watch:')) ? { skipped: 'the wallet watch failed' } : await step('hire', () => runHireStep(d, state));
+          if (errors.length > 0) throw new Error(errors.join('; '));
           return { claim, watch, hire };
         },
       },
       { name: 'reconcile', everySec: c.intervals.claimSec, run: () => runReconcileStep(d, state) },
+      { name: 'coin', everySec: 600, run: () => runCoinCheckStep(d) },
     ],
     {
       clock: d.clock,

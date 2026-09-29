@@ -3,6 +3,7 @@
 // (DRY RUN still on, no watch floor, kill switch on, no Telegram).
 import { type AppConfig, type ChainReader, type KeyStore, SETTINGS, formatSol } from '@rat/core';
 import { type Store, isStagingDatabase, stagingProblems } from '@rat/db';
+import { bondingCurveAddress, coinCreatorProblem } from '@rat/pump';
 import { verifyStockMints } from '@rat/safety';
 import { PublicKey } from '@solana/web3.js';
 
@@ -205,7 +206,7 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
       if (k.bad > 0 || k.ratsWithoutKey > 0) {
         add('FAIL', 'rat keys', `${k.bad} of ${k.total} stored rat keys do not decrypt with KEY_ENCRYPTION_KEY, ${k.ratsWithoutKey} rats have no stored key. Their tokens cannot be moved.`);
       } else {
-        add('PASS', 'rat keys', `${k.total} rat wallet keys stored, all decrypt with the current master key. Back them up: rat keys backup --out <file>.`);
+        add('PASS', 'rat keys', `${k.total} rat wallet keys stored, all decrypt with the current master key. Back them up on your Mac: scripts/keys-backup.sh.`);
       }
     } catch (err) {
       add('FAIL', 'rat keys', `check failed: ${errText(err)}`);
@@ -246,6 +247,16 @@ export async function runPreflightChecks(d: PreflightDeps, opts: { live?: boolea
       else add('FAIL', 'coin', `COIN_MINT ${c.coinMint} does not exist on this network.`);
     } catch (err) {
       add('FAIL', 'coin', `mint read failed: ${errText(err)}`);
+    }
+    // the coin must pay its creator fees to OUR creator wallet, in SOL: else the bot claims nothing, silently
+    if (c.creatorPubkey) {
+      try {
+        const problem = coinCreatorProblem(await d.chain.getAccountData(bondingCurveAddress(c.coinMint)), c.creatorPubkey);
+        if (problem) add('FAIL', 'coin creator', `COIN_MINT ${c.coinMint}: ${problem}.`);
+        else add('PASS', 'coin creator', `the coin's creator fees go to the creator wallet ${c.creatorPubkey}, in SOL.`);
+      } catch (err) {
+        add('FAIL', 'coin creator', `bonding curve read failed: ${errText(err)}`);
+      }
     }
   }
 

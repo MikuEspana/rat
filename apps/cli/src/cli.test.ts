@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FakeClock, LIVE_CONFIRM_PHRASE, SETTINGS, TOKEN_2022_PROGRAM, loadConfig } from '@rat/core';
@@ -61,6 +61,23 @@ describe('keys import', () => {
     expect(stored?.pubkey).toBe(kp.publicKey.toBase58());
     expect(stored?.secretEnc).not.toContain(secret);
     expect(lines.join('\n')).not.toContain(secret);
+  });
+
+  it('red team: --replace under ANOTHER master key with the same KEY_VERSION is refused (the rat keys would be unreadable)', async () => {
+    // KEY_ENCRYPTION_KEY was changed by mistake, KEY_VERSION still 1: the worker stops on the creator key; the
+    // operator re-imports it. Accepted, the worker would start and new rat keys would be labelled version 1 under
+    // a different key than the old ones: whichever key is kept, some rat wallets could never be signed for again.
+    const kp = Keypair.generate();
+    const secret = bs58.encode(kp.secretKey);
+    const ctx = ctxFor({ CREATOR_PUBKEY: kp.publicKey.toBase58() });
+    await keysImportRoleCommand(ctx, ring, 'creator', secret);
+    const rat = await new DbKeyStore(ctx.store.keys, ring).newRatKey();
+    const other = new MasterKeyRing({ version: 1, base64: randomBytes(32).toString('base64') });
+    await expect(keysImportRoleCommand(ctx, other, 'creator', secret, { replace: true })).rejects.toThrow(/do not decrypt with this KEY_ENCRYPTION_KEY/);
+    expect(await new DbKeyStore(ctx.store.keys, ring).ratSigner(rat)).toBeDefined();
+    // the same master key: --replace is fine. A new KEY_VERSION for a new key: the old rows cannot be confused.
+    await keysImportRoleCommand(ctx, ring, 'creator', secret, { replace: true });
+    await keysImportRoleCommand(ctx, new MasterKeyRing({ version: 2, base64: randomBytes(32).toString('base64') }), 'creator', secret, { replace: true });
   });
 });
 
@@ -129,8 +146,9 @@ describe('emergency sweep (SimChain, in-memory)', () => {
       chain.setTokenBalance(wallet, mint, 1_000_000n, TOKEN_2022_PROGRAM);
       chain.fundAccount(wallet, 3_000_000n);
     }
-    const sender = new GuardedSender(sim, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, false), dryRun: ctx.config.dryRun });
-    return { chain, reader, sim, ctx, live, cold, mint, ratWallets, deps: { chain: reader, keys, sender } };
+    const killSwitch = new DbKillSwitch(ctx.store.settings, false);
+    const sender = new GuardedSender(sim, { attempts: ctx.store.attempts, killSwitch, dryRun: ctx.config.dryRun });
+    return { chain, reader, sim, ctx, live, cold, mint, ratWallets, creator, deps: { chain: reader, keys, sender, killSwitch } };
   }
 
   it('prints the plan and refuses without the exact typed phrase', async () => {
@@ -158,7 +176,49 @@ describe('emergency sweep (SimChain, in-memory)', () => {
     expect((await w.live.rats.listByStatus(['frozen'])).length).toBe(2);
     w.chain.updateMint(w.mint, { paused: true });
     const r2 = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
-    expect(r2.failed).toBe(1);
+    // a paused stock's tokens cannot move, but its SOL still goes, and the result says tokens were left
+    expect(r2).toMatchObject({ ok: 1, failed: 0, tokensLeft: 1 }); // the first two were swept above
+    expect(w.chain.sol(w.ratWallets[2]!)).toBe(0n);
+    expect(lines.some((l) => /tokens stay \(stock paused\)/.test(l))).toBe(true);
+  });
+
+  it('red team: a token account frozen by the issuer keeps its tokens, but its SOL is still swept', async () => {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE });
+    const { ataAddress } = await import('@rat/chain/sim');
+    w.chain.setFrozen(ataAddress(w.ratWallets[0]!, w.mint, TOKEN_2022_PROGRAM), true);
+    const r = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
+    expect(r).toMatchObject({ ok: 3, failed: 0, tokensLeft: 1 });
+    expect(w.chain.sol(w.ratWallets[0]!)).toBe(0n);
+    expect(w.chain.tokenBalance(w.cold, w.mint, TOKEN_2022_PROGRAM)).toBe(2_000_000n);
+  });
+
+  it('red team: the creator was drained after a key leak: each rat pays its own fee, everything still reaches the cold wallet', async () => {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE });
+    w.chain.setSol(w.creator.publicKey.toBase58(), 0n);
+    const r = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
+    expect(r).toMatchObject({ executed: true, ok: 3, failed: 0 });
+    expect(w.chain.tokenBalance(w.cold, w.mint, TOKEN_2022_PROGRAM)).toBe(3_000_000n);
+    for (const wallet of w.ratWallets) expect(w.chain.sol(wallet)).toBe(0n);
+    expect(w.chain.sol(w.creator.publicKey.toBase58())).toBe(0n);
+    // the cold wallet got every rat's SOL and token account rent, minus the fees and its own token account's rent
+    expect(w.chain.sol(w.cold)).toBeGreaterThan(3n * 3_000_000n);
+  });
+
+  it('red team: rats still being hired are only swept with the kill switch on; the plan says how many hold anything', async () => {
+    const w = await world({ DRY_RUN: 'false', LIVE_CONFIRM: LIVE_CONFIRM_PHRASE });
+    const wallet = await w.deps.keys.newRatKey();
+    await w.live.rats.create({ wallet, stockMint: w.mint, salaryLamports: 30_000_000n, avatarSeed: 'cccccccc' });
+    w.chain.fundAccount(wallet, 29_000_000n); // funded, swap not landed yet
+    const r = await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) });
+    expect(r).toMatchObject({ ok: 3, skippedHiring: 1 });
+    expect(w.chain.sol(wallet)).toBe(29_000_000n);
+    lines.length = 0;
+    await sweepCommand(w.ctx, w.deps, { to: w.cold });
+    expect(lines).toContain('  wallets holding anything: 0');
+    const { engageKillSwitch } = await import('@rat/safety');
+    await engageKillSwitch(w.ctx.store.settings, 'teardown');
+    expect(await sweepCommand(w.ctx, w.deps, { to: w.cold, confirm: sweepPhrase(w.cold) })).toMatchObject({ ok: 1, skippedHiring: 0 });
+    expect(w.chain.sol(wallet)).toBe(0n);
   });
 
   it('red team: refuses the bot\'s own wallets and program addresses as destination', async () => {
@@ -231,6 +291,32 @@ describe('keys backup / restore (the rat wallet keys exist nowhere else)', () =>
       await fresh.close();
     }
     expect(lines.join('\n')).not.toContain(secrets[0]!);
+  });
+
+  it('--out - (run inside the Railway worker): the backup goes to stdout between markers, never to the container disk', async () => {
+    const ctx = ctxFor();
+    const notes: string[] = [];
+    const store = new DbKeyStore(ctx.store.keys, ring);
+    await ctx.store.keys.setRoleKey(encryptRoleKey(Keypair.generate(), ring, 'creator'));
+    const wallets = [await store.newRatKey(), await store.newRatKey()];
+    expect(await keysBackupCommand({ ...ctx, err: (l) => notes.push(l) }, ring, '-')).toEqual({ keys: 3 });
+    expect(lines[0]).toBe('-----BEGIN RAT KEY BACKUP-----');
+    expect(lines[2]).toBe('-----END RAT KEY BACKUP-----');
+    expect(lines.length).toBe(3);
+    expect(notes.join('\n')).toMatch(/3 keys \(2 rat wallets, 1 creator\) to stdout/);
+    // what the Mac saves restores into an empty database
+    const dir = mkdtempSync(join(tmpdir(), 'rat-backup-'));
+    writeFileSync(join(dir, 'k.json'), lines[1]!);
+    const fresh = await openMemoryDatabase();
+    try {
+      const ctx2 = { ...ctx, store: new Store(fresh.db, 'paper', clock) };
+      expect(await keysRestoreCommand(ctx2, ring, join(dir, 'k.json'))).toEqual({ restored: 3, skipped: 0 });
+      // `--in -`: the same backup piped in from the Mac
+      expect(await keysRestoreCommand(ctx2, ring, '-', lines[1]!)).toEqual({ restored: 0, skipped: 3 });
+      expect((await new DbKeyStore(ctx2.store.keys, ring).ratSigner(wallets[1]!)).publicKey.toBase58()).toBe(wallets[1]);
+    } finally {
+      await fresh.close();
+    }
   });
 
   it('refuses to back up or restore with the wrong master key, and names keys that do not decrypt', async () => {

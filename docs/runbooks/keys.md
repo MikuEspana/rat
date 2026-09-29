@@ -15,8 +15,19 @@ Every rat gets a brand new wallet at hire time: a fresh keypair is generated, en
 
 There is no key pool to fill and no grinding. `rat status` shows how many rat keys are stored.
 
+## Back up the rat keys (every hour or so while hiring)
+The rat wallets' keys exist only in the database (and in the nightly database backup, up to a day old). From `~/wallstreetrats` on your Mac:
+```
+scripts/keys-backup.sh
+```
+It runs `rat keys backup --out -` inside the worker and saves the answer, still encrypted, in `~/wallstreetrats-key-backups/wallstreetrats/` (folder 0700, files 0600). It refuses to save anything incomplete, or a backup with fewer keys than the last one (keys are never deleted). Keep that folder and `KEY_ENCRYPTION_KEY` in two different places. Restore (every key must decrypt first; existing keys are kept), from the Mac: `scripts/rat.sh keys restore --in - < ~/wallstreetrats-key-backups/wallstreetrats/rat-keys-<date>.json`.
+
 ## Rotate the master key
-1. Generate a new key. In the env set `KEY_ENCRYPTION_KEY_PREVIOUS=<old>`, `KEY_VERSION_PREVIOUS=<old version>`, `KEY_ENCRYPTION_KEY=<new>`, `KEY_VERSION=<old + 1>`.
-2. `rat kill --reason "key rotation"`
-3. `rat keys rotate`
-4. Remove `KEY_ENCRYPTION_KEY_PREVIOUS` and `KEY_VERSION_PREVIOUS`, redeploy the worker, `rat resume`.
+Not during a launch. The worker holds both keys while it runs, so it keeps going the whole time.
+1. `rat kill --reason "key rotation"`
+2. Generate a new key. On the worker set `KEY_ENCRYPTION_KEY_PREVIOUS=<old>`, `KEY_VERSION_PREVIOUS=<old version>`, `KEY_ENCRYPTION_KEY=<new>`, `KEY_VERSION=<old + 1>`. The worker restarts and reads keys under both.
+3. `rat keys rotate` (re-encrypts every key under the new one).
+4. `rat preflight`: the `rat keys` line must PASS.
+5. `scripts/keys-backup.sh` on your Mac: a fresh backup under the new key.
+6. Remove `KEY_ENCRYPTION_KEY_PREVIOUS` and `KEY_VERSION_PREVIOUS`, redeploy the worker, `rat resume`.
+7. Keep the old key archived for at least 30 days: the nightly database backups and older key backups from before the rotation are encrypted with it.

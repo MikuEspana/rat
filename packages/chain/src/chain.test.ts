@@ -82,6 +82,7 @@ function fakeConnection(overrides: Partial<Record<keyof SenderConnection, unknow
     },
     getSignatureStatuses: async () => ({ context: { slot: 1 }, value: [null] }),
     getBlockHeight: async () => state.height,
+    getEpochInfo: async () => ({ absoluteSlot: 1, blockHeight: state.height, epoch: 0, slotIndex: 1, slotsInEpoch: 432_000 }),
     getTransaction: async () => null,
     simulateTransaction: async () => ({ context: { slot: 1 }, value: { err: null, logs: ['ok'], accounts: null, unitsConsumed: 1 } }),
     ...overrides,
@@ -139,16 +140,42 @@ describe('RpcTxSender', () => {
     await expect(s.prepare(req)).rejects.toThrow();
   });
 
-  it('classifies a preflight rejection as failed without a record (not landed)', async () => {
-    const { conn } = fakeConnection({
+  it('a rejected send stays unknown (never retried hot), is not rebroadcast, and only its blockhash expiry settles it', async () => {
+    // web3.js raises SendTransactionError for ANY JSON-RPC error (connection.ts sendEncodedTransaction), and a
+    // load-balanced RPC can reject on one node what another already forwarded: until the blockhash expires the tx
+    // may still land, so its reservation stays and the rat is not retried.
+    const { conn, state } = fakeConnection({
       sendRawTransaction: async () => {
-        throw new SendTransactionError({ action: 'send', signature: 'x', transactionMessage: 'Transaction simulation failed', logs: [] });
+        state.sent++;
+        throw new SendTransactionError({ action: 'send', signature: 'x', transactionMessage: 'Transaction simulation failed: Blockhash not found', logs: [] });
       },
     });
     const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => {} });
-    const out = await s.submit(await s.prepare(request()));
-    expect(out.status).toBe('failed');
+    const p = await s.prepare(request());
+    const out = await s.submit(p);
+    expect(out.status).toBe('unknown');
+    expect(out.error).toMatch(/^preflight: /);
     expect(out.record).toBeUndefined();
+    expect(state.sent, 'no rebroadcast of a rejected tx (it could land as a failed tx and cost a fee)').toBe(1);
+    state.height = 150 + 31;
+    expect((await s.status(p.signature, p.lastValidBlockHeight)).status).toBe('expired');
+  });
+
+  it('never calls a tx expired from a status node that lags behind the block height it was compared with', async () => {
+    // the height comes from one node (slot 1000, height 200), the status from another still at slot 900: a tx that
+    // landed at slot 950 is invisible there. Expired would release the reservation and pay the rat a second time.
+    const { conn } = fakeConnection({
+      getEpochInfo: async () => ({ absoluteSlot: 1000, blockHeight: 200, epoch: 0, slotIndex: 1000, slotsInEpoch: 432_000 }),
+      getSignatureStatuses: async () => ({ context: { slot: 900 }, value: [null] }),
+    });
+    const s = new RpcTxSender(conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => {} });
+    expect((await s.status('sig', 150)).status).toBe('unknown');
+    const caughtUp = fakeConnection({
+      getEpochInfo: async () => ({ absoluteSlot: 1000, blockHeight: 200, epoch: 0, slotIndex: 1000, slotsInEpoch: 432_000 }),
+      getSignatureStatuses: async () => ({ context: { slot: 1000 }, value: [null] }),
+    });
+    const s2 = new RpcTxSender(caughtUp.conn, { dryRun: false, liveConfirmed: true, priorityFeeMaxMicroLamports: 1, sleep: async () => {} });
+    expect((await s2.status('sig', 150)).status).toBe('expired');
   });
 
   it('reports expired only after the blockhash is past its margin', async () => {
@@ -372,9 +399,25 @@ describe('SimChain', () => {
     expect((await sender.status(p3.signature, p3.lastValidBlockHeight)).status).toBe('confirmed');
 
     sender.failNext('reject');
-    const out4 = await sender.submit(await sender.prepare(t()));
-    expect(out4.status).toBe('failed');
+    const p4 = await sender.prepare(t());
+    const out4 = await sender.submit(p4);
+    expect(out4.status).toBe('unknown');
     expect(out4.record).toBeUndefined();
+    expect(chain.sol(bob.publicKey.toBase58())).toBe(1_000_000n);
+    chain.advanceBlocks(p4.lastValidBlockHeight - chain.blockHeight + 1);
+    expect((await sender.status(p4.signature, p4.lastValidBlockHeight)).status).toBe('expired');
+
+    // a tx sent after its blockhash expired never lands (a worker frozen between prepare and send)
+    const late = await sender.prepare(t());
+    chain.advanceBlocks(late.lastValidBlockHeight - chain.blockHeight + 1);
+    expect(await sender.submit(late)).toMatchObject({ status: 'unknown', error: 'preflight: Blockhash not found' });
+    expect(chain.transaction(late.signature)).toBeUndefined();
+
+    sender.failNext('reject_lands');
+    const p5 = await sender.prepare(t());
+    expect((await sender.submit(p5)).status).toBe('unknown');
+    expect(chain.sol(bob.publicKey.toBase58())).toBe(2_000_000n);
+    expect((await sender.status(p5.signature, p5.lastValidBlockHeight)).status).toBe('confirmed');
   });
 
   it('simulate never mutates; reader returns signatures newest first', async () => {

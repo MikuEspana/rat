@@ -7,9 +7,10 @@ import type { SimChain } from './sim-chain';
  * drop:          never lands, blockhash expires
  * fail:          lands with an on-chain error (fee charged, no effect)
  * land_timeout:  lands, but submit() reports `unknown` (a later status() shows it confirmed)
- * reject:        preflight rejects it (not broadcast, no fee)
+ * reject:        the RPC rejects it (not broadcast, no fee): `unknown` like the real sender, then expires
+ * reject_lands:  the RPC rejects it, but another node had already forwarded it and it lands (load-balanced RPC)
  */
-export type FailureMode = 'drop' | 'fail' | 'land_timeout' | 'reject';
+export type FailureMode = 'drop' | 'fail' | 'land_timeout' | 'reject' | 'reject_lands';
 
 interface Injection {
   mode: FailureMode;
@@ -89,9 +90,14 @@ export class SimTxSender implements TxSender {
 
   async submit(p: PreparedTx): Promise<TxOutcome> {
     this.submitted += 1;
+    // like the real network: a tx whose blockhash has expired never lands (the RPC answers "Blockhash not found")
+    if (this.chain.blockHeight > p.lastValidBlockHeight) {
+      return { status: 'unknown', signature: p.signature, feeLamports: 0n, error: 'preflight: Blockhash not found' };
+    }
     const mode = this.takeInjection(p.request);
     if (mode === 'reject') {
-      return { status: 'failed', signature: p.signature, feeLamports: 0n, error: 'preflight: injected rejection' };
+      // like RpcTxSender: a rejected send stays unknown until its blockhash expires (it might have been forwarded)
+      return { status: 'unknown', signature: p.signature, feeLamports: 0n, error: 'preflight: injected rejection' };
     }
     if (mode === 'drop') {
       this.chain.advanceBlocks(p.lastValidBlockHeight - this.chain.blockHeight + 1);
@@ -101,6 +107,7 @@ export class SimTxSender implements TxSender {
     if (!res.landed) return { status: 'failed', signature: p.signature, feeLamports: 0n, error: `preflight: ${res.reason}` };
     const r = res.record;
     if (mode === 'land_timeout') return { status: 'unknown', signature: p.signature, feeLamports: 0n };
+    if (mode === 'reject_lands') return { status: 'unknown', signature: p.signature, feeLamports: 0n, error: 'preflight: injected rejection (landed anyway)' };
     return {
       status: r.err ? 'failed' : 'confirmed',
       signature: p.signature,

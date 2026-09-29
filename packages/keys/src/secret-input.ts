@@ -6,7 +6,13 @@ export function parseSecretKey(input: string): Keypair {
   const text = input.trim();
   let bytes: Uint8Array;
   if (text.startsWith('[')) {
-    const arr = JSON.parse(text) as unknown;
+    let arr: unknown;
+    try {
+      arr = JSON.parse(text);
+    } catch {
+      // never the parser's message: it quotes the text around the bad character, which is part of the key
+      throw new Error('secret key JSON is not valid');
+    }
     if (!Array.isArray(arr) || arr.some((n) => typeof n !== 'number' || n < 0 || n > 255)) {
       throw new Error('secret key JSON must be an array of bytes');
     }

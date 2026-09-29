@@ -3,7 +3,7 @@ import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, type Logger, loadStocksFile, requireConfig, sleep, systemClock, systemRng } from '@rat/core';
 import { type DbHandle, Store, isStagingDatabase, openDatabase } from '@rat/db';
 import { BudgetedPriceSource, BudgetedSwapBuilder, JupiterHttp, JupiterPriceSource, JupiterSwapBuilder } from '@rat/jupiter';
-import { DbKeyStore, MasterKeyRing } from '@rat/keys';
+import { DbKeyStore, type MasterKeyRing, masterKeyRing, sameVersionKeysThatFail } from '@rat/keys';
 import { PumpFunClient } from '@rat/pump';
 import { DbKillSwitch, GuardedSender, SpendGuard, ThrottledAlerts, creatorCoinTokens, fanOut, logSink, telegramSink } from '@rat/safety';
 import type { WorkerDeps } from './deps';
@@ -16,6 +16,20 @@ export const REPO_ROOT = new URL('../../..', import.meta.url).pathname;
  * A fresh setup starts the worker before the creator key exists (it is imported inside the running worker), so the
  * worker waits here, doing nothing, instead of crash-looping. Only the missing key waits: a wrong key still fails.
  */
+/**
+ * Every stored key under the current KEY_VERSION must decrypt with KEY_ENCRYPTION_KEY. A creator re-imported under a
+ * changed master key would otherwise let the worker start and store new rat keys under the same version label as
+ * the old ones, encrypted with another key: whichever key is kept, some rat wallets could never be signed for again.
+ */
+export async function checkStoredKeys(store: Store, ring: MasterKeyRing): Promise<void> {
+  const bad = sameVersionKeysThatFail(await store.keys.all(), ring);
+  if (bad.length > 0) {
+    throw new Error(
+      `${bad.length} stored keys under KEY_VERSION ${ring.currentVersion} do not decrypt with KEY_ENCRYPTION_KEY (first: ${bad[0]!.pubkey}): the master key was changed. Put the original KEY_ENCRYPTION_KEY back. The worker does not start.`,
+    );
+  }
+}
+
 export async function waitForCreatorKey(store: Store, log: Logger, pause: (ms: number) => Promise<void> = sleep): Promise<void> {
   if (await store.keys.getRole('creator')) return;
   log.warn('no creator key imported yet: waiting, nothing runs until then. Import it with: rat keys import --role creator');
@@ -74,10 +88,12 @@ export async function createProductionDeps(
       checkWallets: !cfg.dryRun,
     },
   );
-  const ring = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
+  // with the previous key too while a rotation is under way (KEY_ENCRYPTION_KEY_PREVIOUS): the worker keeps running
+  const ring = masterKeyRing(cfg);
   const keys = new DbKeyStore(store.keys, ring, { expectedCreator: cfg.creatorPubkey });
   if (opts.waitForCreatorKey) await waitForCreatorKey(store, log);
   await keys.creator(); // a missing, wrong or undecryptable key still stops the worker here
+  await checkStoredKeys(store, ring);
 
   // Every Jupiter request goes through the one budget (no limiter or retries inside the HTTP client): at most
   // JUPITER_MAX_RPM (40) a minute. For the worker it starts spent, so a restarting worker never bursts.

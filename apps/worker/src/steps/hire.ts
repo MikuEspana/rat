@@ -28,7 +28,7 @@ import { JupiterBudgetError } from '@rat/jupiter';
 import type { GuardedResult, Reservation } from '@rat/safety';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
 import type { WorkerDeps, WorkerState } from '../deps';
-import { solUsd } from './prices';
+import { freshSolUsd, solUsd } from './prices';
 
 export const MAX_HIRE_ATTEMPTS = 5;
 /** Jupiter budget tokens hires always leave for the price step (one batched call every 45 s). */
@@ -99,8 +99,8 @@ export async function eligibleStocks(d: WorkerDeps): Promise<StockRow[]> {
 type Built = { ok: true; build: SwapBuild } | { ok: false; reason: string; wait?: boolean };
 
 async function buildSwap(d: WorkerDeps, s: WorkerState, wallet: Pubkey, stock: StockRow, a: Amounts): Promise<Built> {
-  const sol = await solUsd(d, s);
-  if (sol === null) return { ok: false, reason: 'no SOL price' };
+  const sol = await freshSolUsd(d, s);
+  if (sol === null) return { ok: false, reason: 'no fresh SOL price' };
   let build: SwapBuild;
   try {
     build = await d.swap.build({
@@ -286,6 +286,7 @@ async function sendHire(
     }
     let swapBuild = build;
     if (!swapBuild) {
+      if (!jupiterHasRoom(d)) return 'retry_later'; // funded; the swap waits for a Jupiter token (next loop)
       const b = await buildSwap(d, s, rat.wallet, stock, a);
       if (!b.ok) return 'retry_later';
       swapBuild = b.build;
@@ -340,6 +341,10 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
     const st = await d.sender.status(latest.signature, latest.lastValidBlockHeight);
     await d.store.attempts.finish(latest.id, { status: st.status, error: st.error, feeLamports: st.feeLamports });
     if (st.status === 'unknown') return 'waiting';
+    // two_step: the fund tx (paid by the creator) already booked, and the swap was refused before it got an attempt
+    // (stale quote, kill switch, no Jupiter budget): not a hire without tokens. The swap is retried below.
+    const fundedAlready = d.config.hireMode === 'two_step' && rat.funded && st.status === 'confirmed' && st.record?.feePayer === d.creator;
+    if (fundedAlready) return retryHire(d, s, rat, stock, a, latest.signature);
     const reservation = reservationOf(rat) ?? prefunded(rat);
     const phase = d.config.hireMode === 'two_step' && !rat.funded ? 'fund' : d.config.hireMode === 'two_step' ? 'swap' : 'single';
     const step = await handleOutcome(d, s, rat, stock, reservation, { status: 'done', outcome: st, prepared: null as never, attemptId: latest.id }, a, null, phase);
@@ -347,7 +352,11 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
     rat = (await d.store.rats.get(rat.id))!;
     if (step === 'funded') return sendHire(d, s, rat, stock, prefunded(rat), null);
   }
+  return retryHire(d, s, rat, stock, a, latest?.signature ?? null);
+}
 
+/** A rat whose last attempt definitely did not hire it: activate it if it holds its stock, else try again. */
+async function retryHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stock: StockRow, a: Amounts, latestSig: string | null): Promise<Step | 'waiting' | 'gave_up'> {
   if (rat.hireAttempts >= MAX_HIRE_ATTEMPTS) {
     const res = reservationOf(rat);
     if (res) await d.guard.release(res, 'gave up');
@@ -362,7 +371,7 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
     if (acct && acct.amount > 0n) {
       const res = reservationOf(rat);
       if (res) await d.guard.settle(res, d.config.salaryLamports);
-      await activate(d, s, rat, stock, { sig: latest?.signature ?? null, tokens: acct.amount, swapped: a.swap });
+      await activate(d, s, rat, stock, { sig: latestSig, tokens: acct.amount, swapped: a.swap });
       return 'hired';
     }
   }
@@ -379,7 +388,10 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
     reservation = auth.reservation;
     await d.store.rats.update(rat.id, { reserveLedgerId: reservation.ledgerId });
   }
-  const b = await buildSwap(d, s, rat.wallet, stock, a);
+  // two_step: a rat not funded yet has no SOL, so its swap is built after funding (sendHire); only the route and
+  // price are checked now, quoted for the creator (Jupiter may refuse to build for an empty wallet)
+  const unfunded = d.config.hireMode === 'two_step' && !rat.funded;
+  const b = await buildSwap(d, s, unfunded ? d.creator : rat.wallet, stock, a);
   if (!b.ok) {
     if (reservation && reservation.ledgerId > 0 && !(d.config.hireMode === 'two_step' && rat.funded)) {
       await d.guard.release(reservation, b.reason);
@@ -387,7 +399,7 @@ async function resumeHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stocks: Ma
     }
     return 'waiting';
   }
-  return sendHire(d, s, rat, stock, reservation ?? prefunded(rat), b.build);
+  return sendHire(d, s, rat, stock, reservation ?? prefunded(rat), unfunded ? null : b.build);
 }
 
 /**
@@ -459,7 +471,7 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
     await d.alerts.send('warn', 'no_eligible_stocks', 'No stock is eligible for hires (approved + mint verified + active + fresh price).');
     return { ...res, skipped: 'no eligible stocks' };
   }
-  if ((await solUsd(d, s)) === null) return { ...res, skipped: 'no SOL price' };
+  if ((await freshSolUsd(d, s)) === null) return { ...res, skipped: 'no fresh SOL price (Jupiter left SOL out for a while)' };
   const bySymbol = new Map(stocks.map((st) => [st.mint, st]));
   const weights = hireWeights(stocks.map((st) => ({ key: st.mint, change24hPct: st.change24hPct })), d.config.minStockWeightBps);
   const a = amounts(d);
@@ -482,7 +494,9 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
       res.blocked = auth.reason;
       break;
     }
-    const b = await buildSwap(d, s, wallet, stock, a);
+    // two_step: the new rat has no SOL yet: the route and price are checked with a quote for the creator, and the
+    // rat's own swap is built once it is funded (sendHire). Jupiter may refuse to build for an empty wallet.
+    const b = await buildSwap(d, s, d.config.hireMode === 'two_step' ? d.creator : wallet, stock, a);
     if (!b.ok && b.wait) {
       // Jupiter said 429 (or the budget ran out): stop for this loop, never retry hot
       await d.guard.release(auth.reservation, b.reason);
@@ -506,7 +520,7 @@ async function hire(d: WorkerDeps, s: WorkerState): Promise<HireResult> {
     const fresh = (await d.store.rats.get(rat.id))!;
     slots--;
     res.attempted++;
-    const step = await sendHire(d, s, fresh, stock, auth.reservation, b.build);
+    const step = await sendHire(d, s, fresh, stock, auth.reservation, d.config.hireMode === 'two_step' ? null : b.build);
     if (step === 'hired') res.hired++;
   }
   if (res.hired > 0) d.log.info({ hired: res.hired, budgetLeft: formatSol(await d.store.ledger.balance('hire')) }, 'hired rats');

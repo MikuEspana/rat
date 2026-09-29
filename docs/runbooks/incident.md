@@ -14,7 +14,7 @@ First move: `rat kill --reason "<what you saw>"`. Then look.
 | `inflow_*` | Solscan | Someone sent SOL to our wallet. It is never spent by the bot. |
 | Heartbeat stale (`/health` `ok: false`) | Railway logs of the worker | Restart the worker service. The lease lock frees itself after 120s. |
 
-Emergency sweep (last resort):
+Emergency sweep (last resort). Turn the kill switch on first: only then are rats still being hired swept too. If the creator wallet was drained (a key leak), each rat pays its own fee. Tokens in an account the issuer froze, or of a paused stock, cannot move: their SOL still goes, and the sweep says which rats to sweep again later. It exits with an error whenever anything is left behind. Run it from the Mac as `scripts/rat.sh sweep ...`.
 ```
 rat sweep --to <cold wallet>                                   # prints the plan
 rat sweep --to <cold wallet> --confirm "SWEEP ALL RATS TO <cold wallet>"

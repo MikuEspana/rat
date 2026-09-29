@@ -22,7 +22,7 @@ import { MockPriceSource, MockSwapBuilder, registerMockSwapProgram } from '@rat/
 import { BudgetedPriceSource, BudgetedSwapBuilder, type JupiterBudget } from '@rat/jupiter';
 import { createJupiterBudget } from './jupiter-budget';
 import { DbKeyStore, MasterKeyRing, encryptRoleKey } from '@rat/keys';
-import { PumpFunClient } from '@rat/pump';
+import { PUMP_PROGRAM_ID, PumpFunClient, bondingCurveAddress, encodeBondingCurve } from '@rat/pump';
 import { accrueCreatorFees, registerPumpSimPrograms } from '@rat/pump/sim';
 import { DbKillSwitch, GuardedSender, RecordingAlerts, SpendGuard, creatorCoinTokens } from '@rat/safety';
 import { Keypair } from '@solana/web3.js';
@@ -159,6 +159,8 @@ export async function createSimWorld(opts: SimWorldOptions = {}): Promise<SimWor
     entries.push({ symbol: spec.symbol, name: spec.symbol, mint, group: 'volatile', enabled: true, approved: spec.approved ?? true });
   }
   chain.createMint({ mint: coinMint, decimals: 6, tokenProgram: TOKEN_2022_PROGRAM, supply: 1_000_000_000_000_000n });
+  // the coin was launched from the creator wallet: its creator fees go there, in SOL
+  chain.setAccountData(bondingCurveAddress(coinMint), PUMP_PROGRAM_ID, encodeBondingCurve({ creator: creator.publicKey.toBase58() }));
   tokens.set(coinMint, { decimals: 6, program: TOKEN_2022_PROGRAM });
   prices.set(coinMint, opts.coinUsd ?? 0.00182, { vol: 0.01, change24hPct: 12 });
   await store.stocks.syncConfig(entries);

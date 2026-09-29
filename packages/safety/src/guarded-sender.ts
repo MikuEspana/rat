@@ -1,5 +1,6 @@
 // GuardedSender: the path every transaction takes.
-//   - kill switch on: nothing is prepared or sent (the emergency `sweep` kind is the only exception)
+//   - kill switch on: nothing is prepared or sent (the emergency `sweep` kind is the only exception); checked again
+//     right before the send
 //   - hires need a spend reservation from the SpendGuard
 //   - live claim / hire: the signed tx is simulated first and refused if it would break its spend limits
 //     (TxRequest.limits), so instructions from an outside API can never drain a wallet
@@ -123,6 +124,11 @@ export class GuardedSender {
     }
     if (this.deps.fence && !(await this.deps.fence())) {
       return { status: 'blocked', reason: 'lease_lost: another worker holds the worker lease' };
+    }
+    if (request.kind !== 'sweep') {
+      // again, right before sending: the prepare and the effects simulation can take many seconds
+      const kill = await this.deps.killSwitch.status();
+      if (kill.on) return { status: 'blocked', reason: `kill_switch: ${kill.reason}` };
     }
     const attemptId = await this.deps.attempts.create({
       kind: request.kind,

@@ -33,3 +33,5 @@ id.json
 
 # written by scripts/staging.sh report (no secrets)
 rehearsal-report.md
+# key backups (encrypted, but never in the repo)
+rat-keys-*.json

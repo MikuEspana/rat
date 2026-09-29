@@ -54,6 +54,11 @@ export class SimChainReader implements ChainReader {
     return this.chain.slot;
   }
 
+  async getAccountData(pubkey: Pubkey): Promise<{ owner: Pubkey; data: Uint8Array } | null> {
+    this.calls++;
+    return this.chain.accountData(pubkey) ?? null;
+  }
+
   async getTransactionRecord(signature: string): Promise<TxRecord | null> {
     this.calls++;
     return this.chain.transaction(signature) ?? null;

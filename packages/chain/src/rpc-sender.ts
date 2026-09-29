@@ -22,6 +22,7 @@ export type SenderConnection = Pick<
   | 'sendRawTransaction'
   | 'getSignatureStatuses'
   | 'getBlockHeight'
+  | 'getEpochInfo'
   | 'getTransaction'
   | 'simulateTransaction'
   | 'getMultipleAccountsInfoAndContext'
@@ -115,8 +116,11 @@ export class RpcTxSender implements TxSender {
       await this.conn.sendRawTransaction(p.serialized, { skipPreflight: false, maxRetries: 0, preflightCommitment: 'confirmed' });
     } catch (err) {
       if (err instanceof SendTransactionError || /simulation failed/i.test(String((err as Error)?.message))) {
-        // Preflight rejected it: the transaction was not broadcast, so it cannot land.
-        return { status: 'failed', signature: p.signature, feeLamports: 0n, error: `preflight: ${(err as Error).message}` };
+        // Rejected (preflight or any other JSON-RPC error). Most likely nothing was broadcast, but behind a
+        // load-balanced RPC another node may already have forwarded it (a lagging node answers "Blockhash not
+        // found"). Never rebroadcast it (it could land as a failed tx and cost a fee) and never call it `failed`:
+        // it stays `unknown`, the caller keeps its reservation and re-checks it until the blockhash has expired.
+        return { status: 'unknown', signature: p.signature, feeLamports: 0n, error: `preflight: ${(err as Error).message}` };
       }
       this.opts.log?.warn({ err, sig: p.signature }, 'send error, tx may or may not have been broadcast; polling');
     }
@@ -182,8 +186,13 @@ export class RpcTxSender implements TxSender {
 
   async status(signature: string, lastValidBlockHeight: number): Promise<TxOutcome> {
     // Height first: if the blockhash is long expired, any landing already happened and must show in the status check.
-    const height = await this.conn.getBlockHeight('confirmed');
-    const { value } = await this.conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
+    // Slot and height come from one call, and the status answer must come from a node at least at that slot: behind
+    // a load-balanced RPC the two calls can reach different nodes, and a lagging one does not know a tx that landed.
+    const epoch = await this.conn.getEpochInfo('confirmed');
+    const { absoluteSlot } = epoch;
+    // blockHeight is optional in the RPC answer: without it, ask for the height (still at least `absoluteSlot` old)
+    const height = epoch.blockHeight ?? (await this.conn.getBlockHeight('confirmed'));
+    const { context, value } = await this.conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
     const s = value[0];
     if (s && (s.confirmationStatus === 'confirmed' || s.confirmationStatus === 'finalized')) {
       const tx = await this.conn.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
@@ -198,7 +207,7 @@ export class RpcTxSender implements TxSender {
         logs: record.logs,
       };
     }
-    if (height > lastValidBlockHeight + this.margin) return { status: 'expired', signature, feeLamports: 0n };
+    if (height > lastValidBlockHeight + this.margin && context.slot >= absoluteSlot) return { status: 'expired', signature, feeLamports: 0n };
     return { status: 'unknown', signature, feeLamports: 0n };
   }
 }

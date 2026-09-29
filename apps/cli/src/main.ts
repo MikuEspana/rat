@@ -5,7 +5,7 @@ import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, NATIVE_SOL_MINT, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
 import { JupiterHttp, JupiterPriceSource, SlidingWindowLimiter } from '@rat/jupiter';
 import { Store, openDatabase, stagingProblems } from '@rat/db';
-import { DbKeyStore, MasterKeyRing } from '@rat/keys';
+import { DbKeyStore, type MasterKeyRing, masterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
@@ -31,7 +31,7 @@ async function withContext(fn: (ctx: CliContext, cfg: AppConfig) => Promise<void
     // a staging database never runs with production settings, and staging never runs next to the production key
     const problems = await stagingProblems(store, config);
     if (problems.length > 0) throw new Error(problems.join(' '));
-    await fn({ config, store, clock: systemClock, out: (l) => console.log(l) }, config);
+    await fn({ config, store, clock: systemClock, out: (l) => console.log(l), err: (l) => console.error(l) }, config);
   } finally {
     await handle.close();
   }
@@ -39,7 +39,7 @@ async function withContext(fn: (ctx: CliContext, cfg: AppConfig) => Promise<void
 
 function ring(cfg: AppConfig): MasterKeyRing {
   requireConfig(cfg, ['keyEncryptionKey']);
-  return new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! });
+  return masterKeyRing(cfg);
 }
 
 async function readStdin(): Promise<string> {
@@ -75,26 +75,22 @@ keys
   .action(() =>
     withContext(async (ctx, cfg) => {
       requireConfig(cfg, ['keyEncryptionKey']);
-      const prev = process.env.KEY_ENCRYPTION_KEY_PREVIOUS;
-      const prevVersion = Number(process.env.KEY_VERSION_PREVIOUS);
-      if (!prev || !Number.isInteger(prevVersion)) throw new Error('set KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS');
-      if (prevVersion === cfg.keyVersion) throw new Error('KEY_VERSION must differ from KEY_VERSION_PREVIOUS');
-      const r = new MasterKeyRing({ version: cfg.keyVersion, base64: cfg.keyEncryptionKey! }, [{ version: prevVersion, base64: prev }]);
-      await keysRotateCommand(ctx, r);
+      if (!cfg.keyEncryptionKeyPrevious) throw new Error('set KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS (docs/runbooks/keys.md)');
+      await keysRotateCommand(ctx, ring(cfg));
     }),
   );
 
 keys
   .command('backup')
   .description('write every stored key (rat wallets, creator) to a file, still encrypted; every key is checked first')
-  .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force)')
+  .requiredOption('--out <file>', 'backup file (created 0600, never overwritten without --force); - = to stdout, for scripts/keys-backup.sh on the Mac')
   .option('--force', 'overwrite an existing file')
   .action((o) => withContext(async (ctx, cfg) => void (await keysBackupCommand(ctx, ring(cfg), o.out, { force: Boolean(o.force) }))));
 keys
   .command('restore')
   .description('restore keys from a backup file (every key must decrypt with KEY_ENCRYPTION_KEY; existing keys are kept)')
-  .requiredOption('--in <file>', 'backup file')
-  .action((o) => withContext(async (ctx, cfg) => void (await keysRestoreCommand(ctx, ring(cfg), o.in))));
+  .requiredOption('--in <file>', 'backup file; - = from stdin (from the Mac: scripts/rat.sh keys restore --in - < <file>)')
+  .action((o) => withContext(async (ctx, cfg) => void (await keysRestoreCommand(ctx, ring(cfg), o.in, o.in === '-' ? readFileSync(0, 'utf8') : undefined))));
 
 program
   .command('ledger')
@@ -160,6 +156,7 @@ program
   .option('--to <address>', 'cold wallet (default: COLD_WALLET)')
   .option('--confirm <phrase>', 'exact phrase printed by the plan')
   .option('--limit <n>', 'only the first n rats', (v) => Number(v))
+  .option('--parallel <n>', 'rats swept at the same time (default 8)', (v) => Number(v))
   .action((o) =>
     withContext(async (ctx, cfg) => {
       requireConfig(cfg, ['rpcUrl']);
@@ -168,9 +165,13 @@ program
       const conn = createConnection(cfg.rpcUrl!);
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       const inner = new RpcTxSender(conn, { dryRun: cfg.dryRun, liveConfirmed: cfg.liveConfirmed, priorityFeeMaxMicroLamports: cfg.priorityFeeMicroLamportsMax });
-      const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch: new DbKillSwitch(ctx.store.settings, cfg.killSwitch), dryRun: cfg.dryRun });
+      const killSwitch = new DbKillSwitch(ctx.store.settings, cfg.killSwitch);
+      const sender = new GuardedSender(inner, { attempts: ctx.store.attempts, killSwitch, dryRun: cfg.dryRun });
       const keyStore = new DbKeyStore(ctx.store.keys, ring(cfg), { expectedCreator: cfg.creatorPubkey });
-      await sweepCommand(ctx, { chain, keys: keyStore, sender }, { to, confirm: o.confirm, limit: o.limit });
+      const r = await sweepCommand(ctx, { chain, keys: keyStore, sender, killSwitch }, { to, confirm: o.confirm, limit: o.limit, parallel: o.parallel });
+      // anything left behind (a failed tx, tokens that could not move, rats still being hired): exit 1, so a script
+      // never goes on as if the rats were empty
+      if (r.executed && (r.failed > 0 || r.tokensLeft > 0 || r.skippedHiring > 0)) process.exitCode = 1;
     }),
   );
 

@@ -55,9 +55,16 @@ case "$1" in
     # trip: the bot saw a creator transaction it did not send and turned the kill switch on by itself
     if [ "$kill" = off ] && [ -f "$F/trip" ]; then echo on >"$F/kill"; kill=on; fi
     if [ "$kill" = off ]; then echo 1 >"$F/claims"; fi
-    printf '{"mode":"live","staging":true,"killSwitch":{"on":%s,"reason":"test"},"claims":%s,"openReservations":0,"claimedSol":"0.0009"}\n' \
-      "$([ "$kill" = on ] && echo true || echo false)" "$(cat "$F/claims")" ;;
-  kill) echo on >"$F/kill"; echo "kill $*" >>"$F/rat.log" ;;
+    printf '{"mode":"live","staging":true,"killSwitch":{"on":%s,"reason":"test"},"claims":%s,"openReservations":0,"claimedSol":"0.0009","rats":{"active":%s}}\n' \
+      "$([ "$kill" = on ] && echo true || echo false)" "$(cat "$F/claims")" "$(cat "$F/rats" 2>/dev/null || echo 0)" ;;
+  kill) echo on >"$F/kill"; echo "kill $*" >>"$F/rat.log"; echo "kill" >>"$F/order.log" ;;
+  sweep) # the plan, or (with --confirm) the sweep itself: its exit code and what is left come from files
+    if [[ " $* " == *" --confirm "* ]]; then
+      echo "sweep-confirm" >>"$F/order.log"; echo "sweep done: 1 ok, 1 failed."
+      [ -f "$F/sweep_left" ] || echo 0 >"$F/holding"
+      exit "$(cat "$F/sweep_rc" 2>/dev/null || echo 0)"
+    fi
+    echo "SWEEP PLAN: 2 live rats -> x"; echo "  wallets holding anything: $(cat "$F/holding" 2>/dev/null || echo 2)" ;;
   resume) echo off >"$F/kill"; echo "resume" >>"$F/rat.log" ;;
   audit) cat "$F/audit" ;;
   --with) # the read-only launch preflight with the coin's settings (scripts/lib/launch.sh)
@@ -92,6 +99,7 @@ reset() {
   echo '{"lines":[{"status":"PASS","check":"launch txs","detail":"ok"},{"status":"PASS","check":"dev buy","detail":"ok"},{"status":"FAIL","check":"kill switch","detail":"on"}]}' >"$W/fake/pre-with"
   cp "$W/fake/pre-with" "$W/fake/pre-live"
   rm -f "$W/fake/fail_reads" "$W/fake/drop_sets" "$W/fake/trip" "$W/fake/order.log" "$W/fake/railway.log" "$W/fake/"dep-* "$W/fake/"state-*
+  rm -f "$W/fake/rats" "$W/fake/holding" "$W/fake/sweep_rc" "$W/fake/sweep_left"
   rm -f "$W/home/rat-secrets-staging/rehearsal-results.env"
 }
 run() { # run "<stdin>" args...: scripts/staging.sh with the fakes
@@ -181,6 +189,26 @@ printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"staging-ma
 echo '{"lines":[{"status":"FAIL","check":"launch txs","detail":"1 unlisted"},{"status":"PASS","check":"dev buy","detail":"ok"}]}' >"$W/fake/pre-with"
 run $'GO\n\ny\ny\n' 1; rc=$?
 check "the coin's settings fail the preflight: FAIL before anything changed" '[ $rc = 1 ] && results | grep -q "^PHASE_1=FAIL" && ! grep -q "^set\|^redeploy\|^dry-run-reset" "$W/fake/order.log"'
+
+echo "== teardown: nothing is deleted while a rat wallet still holds anything"
+THROWAWAY=9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin
+teardown_setup() {
+  reset
+  echo off >"$W/fake/kill"
+  echo 2 >"$W/fake/rats"
+  mkdir -p "$W/home/rat-secrets-staging"
+  echo "$THROWAWAY" >"$W/home/rat-secrets-staging/throwaway-wallet.pub"
+  jq -c --arg t "$THROWAWAY" '.COLD_WALLET = $t | .COIN_MINT = "MintTest"' "$W/fake/worker.json" >"$W/fake/x" && mv "$W/fake/x" "$W/fake/worker.json"
+}
+teardown_setup
+echo 1 >"$W/fake/sweep_rc"
+run $'GO\n' teardown; rc=$?
+check "a sweep that fails or leaves something: stop, never 'delete the staging project'" '[ $rc = 1 ] && grep -q "Do NOT delete the staging project" "$W/out.txt" && ! grep -q "delete the staging project wall" "$W/out.txt" && results | grep -q "^PHASE_T=\"\?FAIL"'
+check "the kill switch goes on before the sweep" '[ "$(grep -n "^kill" "$W/fake/order.log" | head -1 | cut -d: -f1)" -lt "$(grep -n "^sweep-confirm" "$W/fake/order.log" | head -1 | cut -d: -f1)" ]'
+teardown_setup
+touch "$W/fake/sweep_left"
+run $'GO\n' teardown; rc=$?
+check "the sweep says done but a wallet still holds something: stop" '[ $rc = 1 ] && grep -q "2 rat wallet(s) still hold SOL or tokens" "$W/out.txt" && ! grep -q "delete the staging project wall" "$W/out.txt"'
 
 echo "== the results file: two scripts writing at once"
 reset

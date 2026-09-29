@@ -6,3 +6,5 @@ create role rat_api login;
 grant usage on schema public to rat_api;
 grant select on all tables in schema public to rat_api;
 alter default privileges in schema public grant select on tables to rat_api;
+-- never the encrypted keys: the API does not need them (run this after the worker's migrations created key_pool)
+revoke all on key_pool from rat_api;

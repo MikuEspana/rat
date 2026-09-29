@@ -211,6 +211,11 @@ export class LedgerRepo implements LedgerStore {
     return toBig(r[0]?.v);
   }
 
+  /**
+   * Net spend in the window. A settle or release counts at the time of the reservation it closes (when the SOL
+   * really left): counted at its own later time, a release would free cap room after its reservation had already
+   * left the window, and the real outflow of an hour could exceed the cap.
+   */
   async netOutflowSince(bucket: Bucket, since: Date): Promise<bigint> {
     const r = await this.db
       .select({ v: sql<string>`coalesce(-sum(${ledgerEntries.deltaLamports}), 0)::text` })
@@ -220,7 +225,9 @@ export class LedgerRepo implements LedgerStore {
           eq(ledgerEntries.mode, this.mode),
           eq(ledgerEntries.bucket, bucket),
           inArray(ledgerEntries.reason, SPEND_REASONS[bucket]),
+          // a closing row is written at or after its reservation, so this only narrows the scan
           gte(ledgerEntries.at, since),
+          sql`coalesce((select o.at from ledger_entries o where o.id = ${ledgerEntries.closesId}), ${ledgerEntries.at}) >= ${since}`,
         ),
       );
     return toBig(r[0]?.v);
@@ -577,6 +584,19 @@ export class ClaimRepo {
     await this.db.update(claims).set(patch).where(and(eq(claims.id, id), eq(claims.mode, this.mode)));
   }
 
+  /**
+   * Changes a claim only while its status is still one of `from` (default: open). Returns false when another worker
+   * got there first: exactly once, like a reservation's settle, even with two workers during a redeploy overlap.
+   */
+  async closeOpen(id: number, patch: Partial<Omit<ClaimRow, 'id' | 'mode'>>, from: ClaimRow['status'][] = ['pending', 'unknown']): Promise<boolean> {
+    const r = await this.db
+      .update(claims)
+      .set(patch)
+      .where(and(eq(claims.id, id), eq(claims.mode, this.mode), inArray(claims.status, from)))
+      .returning({ id: claims.id });
+    return r.length > 0;
+  }
+
   async bySig(sig: string): Promise<ClaimRow | null> {
     const r = await this.db.select().from(claims).where(eq(claims.sig, sig)).limit(1);
     return r[0] ?? null;
@@ -783,6 +803,11 @@ export class Store {
       }
       return { rats: wallets.length, keysRetired };
     });
+  }
+
+  /** Runs `fn` in one database transaction: every write in it lands together, or none does. */
+  transaction<T>(fn: (store: Store) => Promise<T>): Promise<T> {
+    return this.db.transaction((tx) => fn(new Store(tx as unknown as Database, this.mode, this.clock)));
   }
 
   /** Same database, other mode. */

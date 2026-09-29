@@ -38,6 +38,7 @@ export async function runPriceStep(d: WorkerDeps, s: WorkerState): Promise<{ pri
   const sol = quotes.get(NATIVE_SOL_MINT);
   if (sol) {
     s.solUsd = sol.usdPrice;
+    s.solUsdAt = now.getTime();
     await d.store.settings.set(SETTINGS.priceSol, JSON.stringify({ usd: sol.usdPrice, change24hPct: sol.change24hPct, at: now.toISOString() }));
   }
   if (d.config.coinMint) {
@@ -51,11 +52,23 @@ export async function runPriceStep(d: WorkerDeps, s: WorkerState): Promise<{ pri
   return { priced: stocks.length - missing.length, missing };
 }
 
-/** Latest SOL price from memory, falling back to the database. */
+/** Latest SOL price from memory, falling back to the database (for display: it may be old). */
 export async function solUsd(d: WorkerDeps, s: WorkerState): Promise<number | null> {
   if (s.solUsd !== null) return s.solUsd;
   const raw = await d.store.settings.get(SETTINGS.priceSol);
   if (!raw) return null;
-  s.solUsd = (JSON.parse(raw) as { usd: number }).usd;
+  const p = JSON.parse(raw) as { usd: number; at?: string };
+  s.solUsd = p.usd;
+  s.solUsdAt = p.at ? new Date(p.at).getTime() : 0;
   return s.solUsd;
+}
+
+/**
+ * The SOL price for the hire price guard: null when older than PRICE_STALE_SEC, like a stock price. A stale SOL
+ * price would let a quote that is much worse than fair pass the guard (SOL rose, the bot still sees the old price).
+ */
+export async function freshSolUsd(d: WorkerDeps, s: WorkerState): Promise<number | null> {
+  const usd = await solUsd(d, s);
+  if (usd === null || d.clock.now().getTime() - s.solUsdAt > d.config.priceStaleSec * 1000) return null;
+  return usd;
 }

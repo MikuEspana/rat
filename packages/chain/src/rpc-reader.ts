@@ -51,6 +51,11 @@ export class RpcChainReader implements ChainReader {
     throw lastErr;
   }
 
+  async getAccountData(pubkey: Pubkey): Promise<{ owner: Pubkey; data: Uint8Array } | null> {
+    const info = await this.withFailover((c) => c.getAccountInfo(new PublicKey(pubkey)));
+    return info ? { owner: info.owner.toBase58(), data: new Uint8Array(info.data) } : null;
+  }
+
   private async accounts(pubkeys: string[]): Promise<(AccountInfo<Buffer> | null)[]> {
     const out: (AccountInfo<Buffer> | null)[] = [];
     for (const part of chunks(pubkeys, CHUNK)) {

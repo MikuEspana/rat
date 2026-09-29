@@ -98,6 +98,12 @@ const envSchema = z.object({
     message: 'must be 32 bytes, base64 encoded',
   }),
   KEY_VERSION: intStr(1, 1),
+  // only while rotating the master key (docs/runbooks/keys.md): the old key, so the running worker can still read
+  // what it encrypted. Removed once `rat keys rotate` re-encrypted everything.
+  KEY_ENCRYPTION_KEY_PREVIOUS: optStr.refine((v) => v === undefined || Buffer.from(v, 'base64').length === 32, {
+    message: 'must be 32 bytes, base64 encoded',
+  }),
+  KEY_VERSION_PREVIOUS: intStr(0, 0),
   CREATOR_PUBKEY: optPubkey,
   // Your cold wallet (a wallet the bot has no key for): the default target of `rat sweep`. Checked by preflight.
   COLD_WALLET: optPubkey,
@@ -200,6 +206,9 @@ export interface AppConfig {
 
   keyEncryptionKey?: string;
   keyVersion: number;
+  /** during a master key rotation only: the old key and its version (0 = none) */
+  keyEncryptionKeyPrevious?: string;
+  keyVersionPrevious: number;
   creatorPubkey?: string;
   /** the owner's cold wallet: default target of `rat sweep` */
   coldWallet?: string;
@@ -262,6 +271,12 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (e.SALARY_SOL <= e.HIRE_OVERHEAD_EST_SOL + e.RAT_BUFFER_SOL) {
     throw new ConfigError('SALARY_SOL must be larger than HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL');
   }
+  if (Boolean(e.KEY_ENCRYPTION_KEY_PREVIOUS) !== e.KEY_VERSION_PREVIOUS > 0) {
+    throw new ConfigError('KEY_ENCRYPTION_KEY_PREVIOUS and KEY_VERSION_PREVIOUS go together (only while rotating the master key).');
+  }
+  if (e.KEY_VERSION_PREVIOUS > 0 && e.KEY_VERSION_PREVIOUS === e.KEY_VERSION) {
+    throw new ConfigError('KEY_VERSION must differ from KEY_VERSION_PREVIOUS (a new master key gets a new version).');
+  }
   if (e.STAGING) {
     if (!e.CREATOR_PUBKEY) throw new ConfigError('STAGING=true needs CREATOR_PUBKEY (the throwaway test creator).');
     if (e.CREATOR_PUBKEY === PRODUCTION_CREATOR_PUBKEY) {
@@ -287,6 +302,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     databaseUrlReadonly: e.DATABASE_URL_READONLY,
     keyEncryptionKey: e.KEY_ENCRYPTION_KEY,
     keyVersion: e.KEY_VERSION,
+    keyEncryptionKeyPrevious: e.KEY_ENCRYPTION_KEY_PREVIOUS,
+    keyVersionPrevious: e.KEY_VERSION_PREVIOUS,
     creatorPubkey: e.CREATOR_PUBKEY,
     coldWallet: e.COLD_WALLET,
     rpcUrl: e.RPC_URL,

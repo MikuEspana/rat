@@ -193,6 +193,86 @@ describe('hire state machine', () => {
     });
   }
 
+  for (const mode of ['single', 'two_step'] as const) {
+    it(`${mode}: a hire the RPC rejected but another node forwarded lands once, is booked, and is never paid twice`, async () => {
+      w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1', HIRE_MODE: mode } });
+      await funded(w);
+      const creator = w.creator.publicKey.toBase58();
+      const start = w.chain.sol(creator);
+      const ledgerStart = await w.store.ledger.balance('hire');
+      w.simSender.failNext('reject_lands', 'hire');
+      await runHireStep(w.deps, w.worker.state);
+      for (let i = 0; i < 6; i++) {
+        w.clock.advanceSeconds(36);
+        w.chain.advanceBlocks(90);
+        await runHireStep(w.deps, w.worker.state);
+      }
+      const rats = await w.store.rats.listByStatus(['active', 'hiring', 'failed']);
+      const first = rats.find((r) => r.id === Math.min(...rats.map((x) => x.id)))!;
+      expect(first.status).toBe('active');
+      // every rat wallet was funded once: the creator's SOL out equals the ledger's spend, to the lamport
+      const spent = ledgerStart - (await w.store.ledger.balance('hire'));
+      expect(start - w.chain.sol(creator)).toBe(spent);
+      const funds = (await w.store.attempts.forRef('rat', String(first.id))).filter((a) => w.chain.transaction(a.signature) && !w.chain.transaction(a.signature)!.err);
+      expect(funds.length).toBe(mode === 'single' ? 1 : 2);
+    });
+  }
+
+  it('two_step: a swap refused before sending (stale quote) is retried, never read as a hire with no tokens', async () => {
+    w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1', HIRE_MODE: 'two_step' } });
+    await funded(w);
+    const effects = w.simSender.simulateEffects.bind(w.simSender);
+    let refused = 0;
+    w.simSender.simulateEffects = async (p, l) => {
+      if (refused === 0 && p.request.label.startsWith('buy ')) {
+        refused++;
+        return { error: 'slippage tolerance exceeded', solDelta: [], tokenDelta: [] };
+      }
+      return effects(p, l);
+    };
+    await runHireStep(w.deps, w.worker.state);
+    const [rat] = await w.store.rats.listByStatus(['hiring']);
+    expect(rat?.funded).toBe(true);
+    for (let i = 0; i < 3; i++) {
+      w.clock.advanceSeconds(36);
+      await runHireStep(w.deps, w.worker.state);
+    }
+    expect(w.alerts.sent.filter((a) => a.key.startsWith('hire_no_tokens_'))).toEqual([]);
+    expect((await w.store.rats.get(rat!.id))?.status).toBe('active');
+    expect(w.chain.tokenBalance(rat!.wallet, rat!.stockMint, TOKEN_2022_PROGRAM)).toBeGreaterThan(0n);
+  });
+
+  it('two_step (the fallback for a Jupiter that refuses empty wallets) never asks Jupiter to build for an empty wallet', async () => {
+    w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '2', HIRE_MODE: 'two_step' } });
+    await funded(w);
+    const build = w.swap.build.bind(w.swap);
+    w.swap.build = async (req) => {
+      if (w.chain.sol(req.taker) === 0n) throw new Error('taker has no SOL');
+      return build(req);
+    };
+    const r = await runHireStep(w.deps, w.worker.state);
+    expect(r.hired).toBe(2);
+    expect(r.skipped).toBeUndefined();
+  });
+
+  it('a stale SOL price stops hires (a quote much worse than fair would pass the price guard)', async () => {
+    // quotes 8% worse than fair; while Jupiter leaves SOL out, SOL rises 10%: with the old SOL price the quote
+    // looks fine. Stock prices go stale after PRICE_STALE_SEC; the SOL price now does too.
+    w = await createSimWorld({ dryRun: false, spreadBps: 800, env: { MAX_HIRES_PER_LOOP: '3' } });
+    await funded(w);
+    w.prices.setMissing(NATIVE_SOL_MINT, true);
+    w.prices.set(NATIVE_SOL_MINT, w.prices.price(NATIVE_SOL_MINT)! * 1.1);
+    w.clock.advanceSeconds(w.deps.config.priceStaleSec + 1);
+    await runPriceStep(w.deps, w.worker.state); // stocks fresh again, SOL still missing
+    const r = await runHireStep(w.deps, w.worker.state);
+    expect(r.hired).toBe(0);
+    expect(r.skipped).toMatch(/no fresh SOL price/);
+    // SOL is back (at its real price): the 8% worse quotes are refused by the guard
+    w.prices.setMissing(NATIVE_SOL_MINT, false);
+    await runPriceStep(w.deps, w.worker.state);
+    expect((await runHireStep(w.deps, w.worker.state)).hired).toBe(0);
+  });
+
   it('a dropped hire expires, its reservation is released, and the next loop retries', async () => {
     w = await createSimWorld({ dryRun: false, env: { MAX_HIRES_PER_LOOP: '1' } });
     await funded(w);
@@ -382,7 +462,8 @@ describe('scheduler and single worker', () => {
     expect(counts.get('claim')).toBe(Math.ceil(1200 / 35));
     expect(counts.get('reconcile')).toBe(Math.ceil(1200 / 35));
     const beats = await w.store.heartbeats.all();
-    expect(beats.map((b) => b.loop).sort()).toEqual(['claim', 'mints', 'prices', 'reconcile']);
+    expect(beats.map((b) => b.loop).sort()).toEqual(['claim', 'coin', 'mints', 'prices', 'reconcile']);
+    expect(counts.get('coin')).toBe(2); // every 10 minutes
     expect(beats.every((b) => b.lastError === null)).toBe(true);
   });
 
@@ -419,5 +500,40 @@ describe('claim reconciliation', () => {
     await runClaimStep(w.deps, w.worker.state);
     expect(await w.store.ledger.balance('hire')).toBe(SOL - t.fee);
     expect(await w.store.claims.totals()).toEqual(t);
+  });
+
+  it('two workers booking the same claim (a redeploy overlap) credit it once', async () => {
+    // chaos run seed 37: the old worker stalled after sending claim #5, the new one booked it from the attempt
+    // log, then the old one woke up and booked it again: the hire budget grew by a claim that never happened
+    w = await createSimWorld({ dryRun: false });
+    const { creditClaim } = await import('./steps/claim');
+    const id = await w.store.claims.insert({ source: 'bot', status: 'pending', claimableLamports: SOL });
+    const book = () => creditClaim(w.deps, { claimed: SOL, fee: 5_000n, source: 'bot', sig: 'sig5', claimId: id });
+    expect(await Promise.all([book(), book()])).toEqual(expect.arrayContaining([true, false]));
+    expect(await book()).toBe(false);
+    expect(await w.store.ledger.balance('hire')).toBe(SOL - 5_000n);
+    expect((await w.store.claims.totals()).claimed).toBe(SOL);
+    // a late "confirmation unknown" from the old worker never reopens a booked claim
+    expect(await w.store.claims.closeOpen(id, { status: 'unknown' }, ['pending'])).toBe(false);
+    expect(await w.store.claims.openBot()).toEqual([]);
+  });
+
+  it('a claim that lands while the kill switch is on is still booked (nothing new is sent)', async () => {
+    // chaos run seed 1: the confirmation was lost, then a leaked-key tx engaged the kill switch. The claim step
+    // stopped before re-checking it, the wallet watch skips our own signatures: the claim stayed unbooked.
+    w = await createSimWorld({ dryRun: false });
+    await prime(w);
+    w.accrue({ bondingLamports: SOL });
+    w.simSender.failNext('land_timeout', 'claim');
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('pending');
+    const { engageKillSwitch } = await import('@rat/safety');
+    await engageKillSwitch(w.store.settings, 'test');
+    w.accrue({ bondingLamports: SOL / 2n });
+    const sent = w.simSender.submitted;
+    expect((await runClaimStep(w.deps, w.worker.state)).status).toBe('skipped');
+    expect(w.simSender.submitted, 'nothing sent under the kill switch').toBe(sent);
+    const t = await w.store.claims.totals();
+    expect(t).toMatchObject({ claimed: SOL, hireShare: SOL, count: 1 });
+    expect(await w.store.claims.openBot()).toEqual([]);
   });
 });

@@ -18,20 +18,23 @@ LAUNCH_TIME=""
 latest_signature() { rpc getSignaturesForAddress "[\"$1\",{\"limit\":1}]" | jq -r '.[0].signature // empty'; }
 
 find_launch() { # find_launch creator signature-before-the-launch: sets LAUNCH_SIGS, LAUNCH_SLOT, LAUNCH_MINT, LAUNCH_TIME
+  # Every tx the creator signed since, FAILED ones too (a wallet's resend in congestion can land after the launch):
+  # all of them are the owner's, so all go into KNOWN_OWNER_TX_SIGS and the watch floor comes after the last one.
+  # Only the mint lookup needs a tx that succeeded.
   local c="$1" before="$2" sigs="[]" i s
   for i in 1 2 3 4 5 6 7 8 9 10 11 12; do # up to about 2 minutes for the launch to be finalized
     sigs=$(rpc getSignaturesForAddress "[\"$c\",{\"limit\":20,\"commitment\":\"finalized\"}]" |
-      jq -c --arg b "$before" '[.[] | select(.err == null)] | (map(.signature) | index($b)) as $i | if $i == null then . else .[:$i] end' 2>/dev/null || echo '[]')
-    [ "$(printf '%s' "$sigs" | jq 'length' 2>/dev/null || echo 0)" -gt 0 ] && break
+      jq -c --arg b "$before" '(map(.signature) | index($b)) as $i | if $i == null then . else .[:$i] end' 2>/dev/null || echo '[]')
+    [ "$(printf '%s' "$sigs" | jq '[.[] | select(.err == null)] | length' 2>/dev/null || echo 0)" -gt 0 ] && break
     [ "$i" = 12 ] || sleep "${WSR_POLL_SEC:-10}"
   done
-  [ "$(printf '%s' "$sigs" | jq 'length' 2>/dev/null || echo 0)" -gt 0 ] || return 1
+  [ "$(printf '%s' "$sigs" | jq '[.[] | select(.err == null)] | length' 2>/dev/null || echo 0)" -gt 0 ] || return 1
   LAUNCH_SLOT=$(printf '%s' "$sigs" | jq '[.[].slot] | max')
   # shellcheck disable=SC2034 # read by scripts/launch.sh
   LAUNCH_TIME=$(printf '%s' "$sigs" | jq -r '[.[].blockTime // empty] | min // empty')
   LAUNCH_SIGS=$(printf '%s' "$sigs" | jq -r '[.[].signature] | join(",")')
   LAUNCH_MINT=""
-  for s in $(printf '%s' "$sigs" | jq -r '.[].signature'); do
+  for s in $(printf '%s' "$sigs" | jq -r '.[] | select(.err == null) | .signature'); do
     LAUNCH_MINT=$(rpc getTransaction "[\"$s\",{\"encoding\":\"jsonParsed\",\"maxSupportedTransactionVersion\":0,\"commitment\":\"finalized\"}]" |
       jq -r --arg c "$c" '[.meta.postTokenBalances[]? | select(.owner == $c and (.uiTokenAmount.amount | tonumber) > 0) | .mint] | first // empty' 2>/dev/null || true)
     [ -n "$LAUNCH_MINT" ] && break

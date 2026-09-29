@@ -62,6 +62,7 @@ case "$d" in
   *getBalance*) echo '{"result":{"value":300000000}}' ;;
   *getSignaturesForAddress*'"limit":1}'*) echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' ;;
   *getSignaturesForAddress*) cat "$F/sigs.json" ;;
+  *getTransaction*'"sigRetry"'*) echo '{"result":{"meta":{"err":{"InstructionError":[0,"Custom"]},"postTokenBalances":[]}}}' ;;
   *getTransaction*) printf '{"result":{"meta":{"postTokenBalances":[{"owner":"%s","mint":"MintLaunch","uiTokenAmount":{"amount":"3500000000000"}}]}}}\n' "$CREATOR_FAKE" ;;
   *) echo '{}' ;;
 esac
@@ -130,6 +131,17 @@ reset
 echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
 run $'\nMintByHand\nsigA,sigB\n1234\nGO\n'; rc=$?
 check "no launch found on chain: typed by hand, same checks, LIVE" '[ $rc = 0 ] && grep -q "^preflight-with COIN_MINT=MintByHand WATCH_FROM_SLOT=1235 KNOWN_OWNER_TX_SIGS=sigA,sigB " "$W/fake/order.log"'
+
+reset
+# a failed retry of the launch (Phantom resends in congestion) lands after the good one: it is still the owner's
+# tx, signed by the creator. Left out, it sits past the watch floor: preflight FAIL, or the kill switch once live.
+echo '{"result":[{"signature":"sigRetry","slot":1003,"err":{"InstructionError":[0,"Custom"]},"blockTime":1700000009},{"signature":"sigLaunch","slot":1000,"err":null,"blockTime":1700000000},{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
+run $'\ny\nGO\n'; rc=$?
+check "a failed launch retry is listed and the watch floor is after it; the mint comes from the good tx" '[ $rc = 0 ] && grep -q "^preflight-with COIN_MINT=MintLaunch WATCH_FROM_SLOT=1004 KNOWN_OWNER_TX_SIGS=sigRetry,sigLaunch " "$W/fake/order.log"'
+reset
+echo '{"result":[{"signature":"sigRetry","slot":1003,"err":{"InstructionError":[0,"Custom"]}},{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
+run $'\nMintByHand\nsigA\n1234\nGO\n'; rc=$?
+check "only a failed tx so far: it keeps waiting for the launch, then asks by hand" 'grep -q "^preflight-with COIN_MINT=MintByHand " "$W/fake/order.log"'
 
 echo "== rat --with: preflight only, the launch settings only"
 mkdir -p "$W/pnpm"

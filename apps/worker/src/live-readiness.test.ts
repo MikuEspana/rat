@@ -115,3 +115,21 @@ describe('idle hire budget alert', () => {
     expect(w.alerts.keys()).not.toContain('hire_idle');
   });
 });
+
+describe('startup while the RPC is down', () => {
+  it('the startup checks wait for the RPC to answer instead of exiting (Railway stops restarting after 10 tries)', async () => {
+    const { runPreflightUntilAnswered } = await import('./preflight');
+    w = await createSimWorld({ dryRun: false, env: { WATCH_FROM_SLOT: '1000' } });
+    let down = 4;
+    const reader = w.deps.chain;
+    const getSlot = reader.getSlot.bind(reader);
+    reader.getSlot = async () => {
+      if (down-- > 0) throw new Error('fetch failed: ECONNREFUSED');
+      return getSlot();
+    };
+    const waits: number[] = [];
+    const r = await runPreflightUntilAnswered(w.deps, { sleep: async (ms) => void waits.push(ms) });
+    expect(r.issues.filter((i) => i.check === 'watch_from_slot')).toEqual([]);
+    expect(waits).toEqual([5_000, 10_000, 20_000, 40_000]);
+  });
+});

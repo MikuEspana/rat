@@ -49,6 +49,29 @@ describe('parseSecretKey', () => {
     expect(parseSecretKey(JSON.stringify(Array.from(kp.secretKey))).publicKey.equals(kp.publicKey)).toBe(true);
     expect(() => parseSecretKey('[1,2,3]')).toThrow(/64 bytes/);
   });
+
+  it('a malformed key never shows up in the error (JSON.parse quotes the text around the bad token)', () => {
+    const kp = Keypair.generate();
+    const json = JSON.stringify(Array.from(kp.secretKey));
+    for (const bad of [json.replace(',', ',x'), json.slice(0, -1), `${json.slice(0, 40)}]]`]) {
+      let message = '';
+      try {
+        parseSecretKey(bad);
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      expect(message).toBe('secret key JSON is not valid');
+      for (let i = 0; i + 3 <= kp.secretKey.length; i++) expect(message).not.toContain(Array.from(kp.secretKey.slice(i, i + 3)).join(','));
+    }
+    // base58 errors carry no key text either
+    let b58 = '';
+    try {
+      parseSecretKey(`${bs58.encode(kp.secretKey).slice(0, 30)}0OIl`);
+    } catch (err) {
+      b58 = (err as Error).message;
+    }
+    expect(b58).not.toContain(bs58.encode(kp.secretKey).slice(0, 10));
+  });
 });
 
 describe('DbKeyStore', () => {
@@ -139,5 +162,28 @@ describe('DbKeyStore', () => {
     const newer = new MasterKeyRing({ version: 2, base64: master() }, [{ version: 1, base64: old.current().toString('base64') }]);
     const ks = new DbKeyStore(store.keys, newer);
     expect((await ks.ratSigner(kp.publicKey.toBase58())).publicKey.equals(kp.publicKey)).toBe(true);
+  });
+});
+
+describe('master key rotation', () => {
+  it('mid-rotation the ring from the settings reads keys stored under the old key (the worker keeps running)', async () => {
+    const { loadConfig } = await import('@rat/core');
+    const { masterKeyRing, encryptRoleKey, DbKeyStore } = await import('./index');
+    const { openMemoryDatabase, Store } = await import('@rat/db');
+    const handle = await openMemoryDatabase();
+    try {
+      const store = new Store(handle.db, 'live');
+      const oldKey = master();
+      const newKey = master();
+      const creator = Keypair.generate();
+      await store.keys.setRoleKey(encryptRoleKey(creator, new MasterKeyRing({ version: 1, base64: oldKey }), 'creator'));
+      const cfg = loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_VERSION: '2', KEY_ENCRYPTION_KEY_PREVIOUS: oldKey, KEY_VERSION_PREVIOUS: '1' });
+      const ks = new DbKeyStore(store.keys, masterKeyRing(cfg));
+      expect((await ks.creator()).publicKey.equals(creator.publicKey)).toBe(true);
+      expect(() => loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_ENCRYPTION_KEY_PREVIOUS: oldKey })).toThrow(/go together/);
+      expect(() => loadConfig({ KEY_ENCRYPTION_KEY: newKey, KEY_VERSION: '1', KEY_ENCRYPTION_KEY_PREVIOUS: oldKey, KEY_VERSION_PREVIOUS: '1' })).toThrow(/must differ/);
+    } finally {
+      await handle.close();
+    }
   });
 });

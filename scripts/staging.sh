@@ -397,18 +397,25 @@ phase_8() { # one backup now, then a restore drill on this Mac, row counts compa
 }
 
 phase_teardown() {
-  local c t mint held spent back s_c s_t name
+  local c t mint held spent back s_c s_t name left
   title "Teardown: get the SOL back"
   c=$(creator)
   t=$(rw_var worker COLD_WALLET)
   mint=$(rw_var worker COIN_MINT)
   if [ -z "$t" ] || [ "$t" != "$(tr -d '[:space:]' <"$SECRETS/throwaway-wallet.pub")" ]; then die "the worker's COLD_WALLET is not the throwaway wallet"; fi
+  # the bot is done: the kill switch first, so no hire can fund a rat after the sweep (and rats still being hired
+  # are swept too)
+  rat kill --reason "staging teardown: sweeping the rats" >/dev/null 2>&1 || fail "could not turn the kill switch on before the sweep"
   rat sweep --to "$t" 2>&1 | sed 's/^/        /' || true
-  if [ "$(st_get '[.rats.active // 0, .rats.frozen // 0, .rats.failed // 0] | add')" -gt 0 ]; then
+  if [ "$(st_get '[.rats.active // 0, .rats.frozen // 0, .rats.failed // 0, .rats.hiring // 0] | add')" -gt 0 ]; then
     go_gate "sweep every rat's xStock tokens and SOL to the throwaway wallet $t (the bot's emergency sweep)" \
       "all the rats' SOL and tokens move to $t; the test creator pays the fees (under 0.001 SOL per rat)"
-    rat sweep --to "$t" --confirm "SWEEP ALL RATS TO $t" 2>&1 | sed 's/^/        /' || fail "the sweep failed"
+    rat sweep --to "$t" --confirm "SWEEP ALL RATS TO $t" 2>&1 | sed 's/^/        /' ||
+      fail "the sweep failed or left something behind (above). Do NOT delete the staging project: the rats' keys are in its database. Run: scripts/staging.sh teardown again"
   fi
+  # nothing may be left in any rat wallet before the project (and the only copy of the rats' keys) is deleted
+  left=$(rat sweep --to "$t" 2>&1 | sed -n 's/^ *wallets holding anything: \([0-9][0-9]*\)$/\1/p' | tail -1)
+  [ "$left" = 0 ] || fail "${left:-some} rat wallet(s) still hold SOL or tokens. Do NOT delete the staging project: the rats' keys are in its database. Run: scripts/staging.sh teardown again"
   held=$(tokens_held "$t")
   say "The throwaway wallet now holds: $(printf '%s' "$held" | wc -l | tr -d ' ') token(s) and $(lamports_to_sol "$(sol_balance "$t")") SOL."
   say "Sell the xStocks (YOUR transactions, in Phantom):"
