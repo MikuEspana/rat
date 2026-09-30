@@ -45,7 +45,7 @@ Running log of decisions and blockers. Newest first inside each section.
     - a RAT NEWS ticker from the live numbers whose voice darkens every stage
     - a visitor every one to three minutes (pizza delivery, the inspector cat, a pigeon)
     - applicants queue in the lobby, and the founders hang about the garage from day one
-  - **Find my rat:** search by wallet (or #id or name), the rat card opens with a spotlight, `?rat=<id>` or `?wallet=<address>` links straight to it (COPY LINK on the card), and an era badge from the stage the company was in at hire ("FLOOR 1 OG").
+  - **Find my rat:** (the search box and COPY LINK were removed before launch, 2026-09-30) `?rat=<id>` or `?wallet=<address>` links still open the rat card with a spotlight, and an era badge from the stage the company was in at hire ("FLOOR 1 OG").
   - **Timelapse:** one click replays the company from its first rat to now and records the canvas (MP4 where the browser can, WebM otherwise) with a caption, then puts everything back. Hires that arrive meanwhile are picked up at the end.
 
 - **Round 2: close the gap with floor796 (owner, 2026-09-28).** Rooms were the problem more than the art, so most of it is code:

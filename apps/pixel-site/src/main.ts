@@ -11,6 +11,7 @@ import {
   STRESS_RATS, STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
+import { PublicMarket } from './data/market';
 import { Store, type RatRecord } from './data/store';
 import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
@@ -638,9 +639,11 @@ async function boot(): Promise<Site> {
   );
 
   // follow the API: /api/state and /api/events every 5 s. The roster is never re-polled.
+  const market = new PublicMarket(); // the market cap from public feeds until the bot has one (right after the launch)
   const pollState = async (): Promise<void> => {
     try {
-      store.applyState(await api.state());
+      const st = await api.state();
+      store.applyState(SIM ? st : market.fill(st));
       setStatus(null);
     } catch (e) {
       console.warn(`API ${API_BASE} (state): ${(e as Error).message}`);

@@ -48,14 +48,14 @@ VITE_SIM=1 pnpm --filter @rat/pixel-site build              # static demo in app
 | Market cap | `coin.marketCapUsd` (shows "pre-launch" while null), price per RAT under it |
 | Rats hired | `portfolio.ratCount`, frozen count under it |
 | Portfolio value | `portfolio.valueUsd` (what all the rats' stocks are worth; not holders' money), the two biggest positions under it (for example `AMZNx 312`). Glides to each new value over 2 s: prices refresh every 45 s |
-| Portfolio PnL | `portfolio.pnlUsd` and `pnlPct`, green or red, gliding like the value |
-| Job fair | how many rats are in the job-fair line (applicants waiting for fees to be spent, plus hired rats waiting for a desk), for example "2,041 rats in line", in green. The line follows `treasury.waitingSol` (one applicant per `salarySol`): each claim adds applicants, each hire takes one |
 | The Vault | the money pile in the middle of the building, in 6 stages from loose change to a money bin (`portfolio.valueUsd`); shimmers green when the portfolio is up, dims when it is down; click it for the total, the breakdown by stock and the rat wallets. Bills fly in from the sewer on every claim (a gold "+$X") and every hire (a green "+$X" each); a burst of hires rains bills from above |
 | Next hire ring | fills from `bot.lastClaimAt` to `bot.nextClaimAt` (each claim pays for the next hires), with a countdown |
 | Stage chip | the stage the building is at, and three bars: the desk room filling up and the next room (by rats hired), and the next stage by SOL claimed ("CORPORATE FLOOR: 1.9 / 5 SOL") |
 | Company Roadmap | bottom right: every stage in order with the SOL claimed it takes (`treasury.totalClaimedSol`, read through `src/floor/stage-source.ts`); done ones checked, the next one with a bar ("0.62 / 1 SOL"), the rest locked. "hide" folds it to one line ("NEXT: CORPORATE 3.2 / 5 SOL"), remembered in the browser. Under 900 px wide it is that one line between the feed and the news ticker (tap for the list). It never sits on the Vault or the job-fair line, and gives the corner to an open rat card |
 | Live feed | the last 50 events from `/api/state`, then every new event: hires (click to fly to the rat), claims, freezes, thaws, each with its Solscan tx link |
-| Rat card | name, tier badge, stock, PnL %, value and cost, rank, status, hired, Solscan wallet link; a gold marker bobs over the rat |
+| Rat card | name, tier badge, stock, PnL %, value, rank, status, hired, and a WALLET ON SOLSCAN button to the rat's real wallet; a gold marker bobs over the rat. Founders, applicants and other extras open a short card saying what they are (no wallet) |
+| Market cap | the API's `coin.marketCapUsd`; right after the launch (a mint, no market cap yet) the browser reads Jupiter's price API, then DexScreener (`src/data/market.ts`), until the API has its own |
+| CA | `coin.mint`, shortened, links to pump.fun, with COPY; hidden before the launch |
 | Leaderboard | `leaderboard.top` (best 10) and `leaderboard.bottom` (worst 10) |
 | Banner | `bot.mode`: DRY RUN (yellow) or PAUSED (red); hidden when live |
 

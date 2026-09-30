@@ -280,7 +280,7 @@ export class Ui {
       st.value.className = `stat-value ${cls}`;
       st.sub.textContent = sub;
     };
-    set('mcap', s.coin.marketCapUsd === null ? 'pre-launch' : usd(s.coin.marketCapUsd), s.coin.priceUsd === null ? '' : `${priceUsd(s.coin.priceUsd)} / RAT`);
+    set('mcap', s.coin.marketCapUsd !== null ? usd(s.coin.marketCapUsd) : s.coin.mint ? 'loading...' : 'pre-launch', s.coin.priceUsd === null ? '' : `${priceUsd(s.coin.priceUsd)} / ${s.coin.symbol}`);
     const ca = caView(s.coin);
     this.ca.hidden = ca === null;
     if (ca && ca.copy !== this.caMint) {
