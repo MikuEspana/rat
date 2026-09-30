@@ -142,7 +142,7 @@ const envSchema = z.object({
   JUPITER_MAX_RPM: intStr(40, 1, 40),
 
   SALARY_SOL: solStr('0.03'),
-  HIRE_OVERHEAD_EST_SOL: solStr('0.0025'),
+  HIRE_OVERHEAD_EST_SOL: solStr('0.006'),
   RAT_BUFFER_SOL: solStr('0.003'),
   HIRE_MODE: z.enum(['single', 'two_step']).default('single'),
   MIN_CLAIM_SOL: solStr('0.005'),

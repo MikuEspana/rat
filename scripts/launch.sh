@@ -6,7 +6,7 @@
 # 3. It checks the live preflight WITH the coin's settings before anything changes (read-only): every line must pass.
 # 4. It waits for your GO. From then on the bot claims the creator fees and hires rats with real SOL.
 # 5. Every launch setting in one change (worker: COIN_MINT, WATCH_FROM_SLOT, KNOWN_OWNER_TX_SIGS, DRY_RUN=false,
-#    LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false), the DRY RUN paper data cleared, then ONE redeploy of the worker and
+#    LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false, LIVE_CONFIRM), the DRY RUN paper data cleared, then ONE redeploy of the worker and
 #    the API, side by side.
 # 6. It checks the bot is LIVE, the kill switch off, and preflight --live READY.
 # Only in the production folder, never with STAGING, never on a worker that is already live. The same steps are

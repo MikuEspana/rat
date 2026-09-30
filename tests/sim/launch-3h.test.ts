@@ -218,9 +218,9 @@ function check(run: Run) {
   expect(run.hireLeftLamports).toBeLessThan(30_000_000n);
   expect(run.maxHiresInLoop).toBeLessThanOrEqual(run.maxHiresPerLoop);
   expect(run.spentMin).not.toBeNull();
-  // 180 SOL, all of it to hires, at ~0.0296 SOL real cost per rat
-  expect(run.rats).toBeGreaterThan(5_900);
-  expect(run.rats).toBeLessThanOrEqual(6_200);
+  // 180 SOL, all of it to hires, at ~0.026 SOL real cost per rat on SimChain (0.024 transfer + its rent and fees; mainnet measured 0.0278)
+  expect(run.rats).toBeGreaterThan(6_500);
+  expect(run.rats).toBeLessThanOrEqual(7_200);
 }
 
 /** SOL with 2 decimals (the report is for reading; the money check itself is exact to the lamport) */

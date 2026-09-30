@@ -7,7 +7,7 @@ export const RULES = {
   /** SALARY_SOL: what one hire costs, all in */
   salarySol: 0.03,
   /** HIRE_OVERHEAD_EST_SOL + RAT_BUFFER_SOL come out of the salary; the rest is swapped into the stock */
-  hireOverheadSol: 0.0025,
+  hireOverheadSol: 0.006,
   ratBufferSol: 0.003,
   /** MAX_HIRES_PER_LOOP */
   maxHiresPerLoop: 20,

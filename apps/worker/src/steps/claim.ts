@@ -147,7 +147,7 @@ export async function runClaimStep(d: WorkerDeps, s: WorkerState): Promise<Claim
       instructions: ixs,
       computeUnitLimit: d.config.computeUnitLimitClaim,
       // the claim only pays in: the creator may lose no more than the fees
-      limits: { solOut: [{ account: d.creator, maxLamports: d.config.hireOverheadEstLamports }] },
+      limits: { solOut: [{ account: d.creator, maxLamports: 2_500_000n }] },
     },
     ref: { type: 'claim', id: String(claimId) },
   });

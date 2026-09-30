@@ -67,8 +67,8 @@ describe('mainnet rehearsal on SimChain (LIVE, STAGING)', () => {
     expect((await w.store.claims.totals()).claimed).toBe(900_000n);
     expect((await audit(w)).find((l) => l.check === 'claims')?.status).toBe('PASS');
 
-    // phase 3: seed 0.1625 SOL, 5 rats at the real 0.03 SOL salary
-    await seed(w, 162_500_000n);
+    // phase 3: seed 0.14 SOL, 5 rats at the real 0.03 SOL salary (each costs a bit less: the unused overhead stays in the budget)
+    await seed(w, 140_000_000n);
     await loops(w, 3);
     expect(await active(w)).toBe(5);
     expect((await w.store.claims.totals()).claimed, 'the seed is never a claim').toBe(900_000n);
@@ -120,7 +120,7 @@ describe('mainnet rehearsal on SimChain (LIVE, STAGING)', () => {
     // the audit: claims, every rat paid once, creator SOL equals the ledger to the lamport
     const lines = await audit(w);
     expect(lines.map((l) => `${l.status} ${l.check}`)).toEqual(['PASS claims', 'PASS rats', 'PASS money']);
-    expect(lines.find((l) => l.check === 'money')?.detail).toContain('seeded 0.2875 SOL kept apart');
+    expect(lines.find((l) => l.check === 'money')?.detail).toContain('seeded 0.265 SOL kept apart');
 
     // phase 6: an unexpected creator transaction trips the kill switch with a critical alert; nothing is sent after
     await ownerTx(w, 1_000_000n);
