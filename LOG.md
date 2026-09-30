@@ -679,3 +679,6 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 ## Chaos census 3 (seeds 2,001 to 4,000 on the fenced-writes fix)
 - Seed 2246 failed "ledger hire spend = creator SOL out" by exactly one salary, and it was the harness, not the bot. A worker released a reservation (its tx expired, nothing landed), then crashed one step before clearing the rat's pointer to it. The pointer is cleared at the rat's next attempt, but the kill switch (a leaked-key tx) meant none came.
 - The money check counted every hiring rat with a pointer as money in flight; it now counts only open reservations. The ledger equals the chain in that seed. `rat audit` already used the open reservations.
+
+## MORNING.md: the REVOKE on the existing databases (owner decision, 2026-09-30)
+- Step 3 now has the exact command, for production and staging: `REVOKE ALL ON key_pool FROM rat_api;` through `railway connect Postgres`, then a check that prints api_can_read_keys = f. The databases were set up before `scripts/setup-mac.sh` did it; new setups already do (`infra/readonly-role.sql`, `packages/db/src/readonly-role.test.ts`).
