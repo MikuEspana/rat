@@ -639,10 +639,19 @@ async function boot(): Promise<Site> {
   );
 
   // follow the API: /api/state and /api/events every 5 s. The roster is never re-polled.
-  const market = new PublicMarket(); // the market cap from public feeds until the bot has one (right after the launch)
+  // The header market cap and price come from public feeds (Jupiter, else DexScreener) on their own 5 s timer, pushed
+  // into the UI as each quote arrives; the API's own numbers are only the fallback.
+  const market = new PublicMarket();
+  let lastApiState: StateResponse | null = null;
+  if (!SIM) {
+    market.start(() => {
+      if (lastApiState) store.applyState(market.fill(lastApiState));
+    });
+  }
   const pollState = async (): Promise<void> => {
     try {
       const st = await api.state();
+      if (!SIM) lastApiState = st;
       store.applyState(SIM ? st : market.fill(st));
       setStatus(null);
     } catch (e) {
