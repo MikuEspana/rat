@@ -84,7 +84,9 @@ describe('state API on a live SimChain world', () => {
     expect(s.events.length).toBeGreaterThan(0);
     expect(s.events.every((e) => !e.dryRun)).toBe(true);
     expect(s.treasury.totalClaimedSol).toBe(1.5);
-    expect(s.treasury.totalHiredSol).toBeCloseTo(s.portfolio.ratCount * 0.03, 1);
+    // each rat costs the real transfer + rent + fees: at most the 0.03 salary, at least the swapped part
+    expect(s.treasury.totalHiredSol).toBeLessThanOrEqual(s.portfolio.ratCount * 0.03);
+    expect(s.treasury.totalHiredSol).toBeGreaterThan(s.portfolio.ratCount * 0.021);
     expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeLessThanOrEqual(1.5);
     expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeGreaterThan(1.49);
     await w.store.settings.set(SETTINGS.killSwitch, 'on');

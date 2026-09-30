@@ -42,7 +42,7 @@ describe('live mode on SimChain (in-memory only)', () => {
   it('hires rats with the hire bucket only, each rat holds its stock on-chain', async () => {
     w = await createSimWorld({ dryRun: false, creatorSol: SOL / 10n });
     await prime(w);
-    w.accrue({ bondingLamports: (SOL * 6n) / 10n });
+    w.accrue({ bondingLamports: (SOL * 4n) / 10n }); // fits in one loop (MAX_HIRES_PER_LOOP)
     await runClaimStep(w.deps, w.worker.state);
     const budget = await w.store.ledger.balance('hire');
     const r = await runHireStep(w.deps, w.worker.state);
