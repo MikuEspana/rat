@@ -138,6 +138,9 @@ export class StateService {
     const supplyUi = coinInfo ? Number(rawToDecimalString(BigInt(coinInfo.supplyRaw), coinInfo.decimals)) : null;
     const lastClaim = claims.lastAt;
     const claimBeat = (await this.store.heartbeats.all()).find((h) => h.loop === 'claim');
+    // before the bot runs the coin (COIN_MINT), the mint `rat announce-ca` checked on chain right after the launch:
+    // the site shows the CA in seconds, the price and market cap come with the bot (the site reads a public price)
+    const announced = this.cfg.coinMint ? null : (await this.store.settings.get(SETTINGS.announcedCoinMint)) || null;
     const events = await this.store.events.latest(50);
 
     return {
@@ -149,11 +152,11 @@ export class StateService {
         nextClaimAt: claimBeat ? new Date(claimBeat.lastRunAt.getTime() + this.cfg.intervals.claimSec * 1000).toISOString() : null,
       },
       coin: {
-        mint: this.cfg.coinMint ?? null,
+        mint: this.cfg.coinMint ?? announced,
         symbol: 'RAT',
         priceUsd: this.cfg.coinMint ? coinPrice : null,
         supply: coinInfo ? rawToDecimalString(BigInt(coinInfo.supplyRaw), coinInfo.decimals) : null,
-        marketCapUsd: coinPrice !== null && supplyUi !== null ? Math.round(coinPrice * supplyUi) : null,
+        marketCapUsd: this.cfg.coinMint && coinPrice !== null && supplyUi !== null ? Math.round(coinPrice * supplyUi) : null,
       },
       wallets: { creator: this.cfg.creatorPubkey ?? null },
       treasury: {

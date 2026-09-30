@@ -93,6 +93,14 @@ else
 fi
 fi
 
+# the site shows the coin now, minutes before the bot is live (rat announce-ca: the creator is checked on chain; it sends
+# nothing and changes nothing the bot uses). If it fails, the site shows the coin once the bot is live anyway.
+if rat announce-ca "$LAUNCH_MINT" >/dev/null 2>&1; then
+  ok "the site shows coin $LAUNCH_MINT now (the bot goes live after your GO)"
+else
+  note "the site could not be told about the coin yet: in another tab run scripts/announce-ca.sh $LAUNCH_MINT"
+fi
+
 # ---------------------------------------------------------------- 3. the live preflight, before anything changes --------
 say "Checking the live preflight with the coin's settings (read-only, nothing changes)..."
 pre=$(preflight_launch)

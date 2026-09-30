@@ -127,6 +127,7 @@ echo "== GO: one change, one build"
 reset
 run $'\ny\nGO\n'; rc=$?
 check "LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
+check "the site is told the coin (announce-ca) right after the mint is confirmed, before any setting changes" 'grep -q "^rat announce-ca MintLaunch$" "$W/fake/order.log" && [ "$(line "rat announce-ca")" -lt "$(line "set worker")" ]'
 check "the preflight saw exactly the coin's settings" 'grep -q "^preflight-with COIN_MINT=MintLaunch WATCH_FROM_SLOT=1001 KNOWN_OWNER_TX_SIGS=sigLaunch DRY_RUN=false LIVE_CONFIRM=$PHRASE$" "$W/fake/order.log"'
 check "order: preflight, then the reset, then the settings, then the redeploys" '[ "$(line preflight-with)" -lt "$(line dry-run-reset)" ] && [ "$(line dry-run-reset)" -lt "$(line "set worker")" ] && [ "$(line "set api")" -lt "$(line "redeploy worker")" ]'
 check "one change per service with every launch setting" '[ "$(grep -c "^set worker" "$W/fake/order.log")" = 1 ] && grep -q "^set worker COIN_MINT WATCH_FROM_SLOT KNOWN_OWNER_TX_SIGS DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log" && grep -q "^set api COIN_MINT DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log"'
