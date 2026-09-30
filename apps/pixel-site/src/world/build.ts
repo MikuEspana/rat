@@ -19,6 +19,8 @@ import { nextFloorWhen, planSigns, SIGN_PRIO, signAlpha, signScale as scaleFor, 
 import { type Focus, renderLandmarks } from './landmarks';
 import type { VaultAnchor } from './vault';
 import { TIER_SCALE } from './rats';
+import { ratHit } from './hit';
+import type { ExtraKind } from '../ui/format';
 import { CORRIDOR_TINT, ROOM_LOOK, STAGES } from '../floor/plan';
 import { FLOOR_STYLES, T, idx, type FloorLayout, type Prop, type Room, type Seat } from '../floor/types';
 
@@ -78,6 +80,8 @@ export interface World {
   setJobFair(count: number, head: Cell | null): void;
   /** where the JOB FAIR sign is on screen (CSS px), null while it is hidden: layout checks keep the HUD off it */
   jobFairBox(): { x: number; y: number; w: number; h: number } | null;
+  /** the set-dressing rat (founder, lobby applicant, crew, vignette extra) under a world point, null: none */
+  pickExtra(x: number, y: number, zoom: number): ExtraKind | null;
   destroy(): void;
 }
 
@@ -594,6 +598,8 @@ export function buildWorld(
 
   // vignette extras: posed rats that belong to the set, animated in place (tears for the one crying in the WC)
   const extras: Array<{ p: Particle; frames: Frame[]; k: number; t: number; fps: number; hold: boolean; acc?: Particle; accFrames?: Frame[] }> = [];
+  /** every set-dressing rat, for clicks: it opens a small card saying what it is (never a wallet or a stock) */
+  const extraHits: Array<{ p: Particle; scale: number; depth: number; kind: ExtraKind }> = [];
   const tears: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
   const tearTex = (() => {
     const c = document.createElement('canvas');
@@ -623,6 +629,7 @@ export function buildWorld(
     const f0 = frames[0]!;
     const p = makeParticle(f0, c.x + a.dx, c.y + a.dy, a.mirror, sc);
     const item = main.add(p, a.i + a.j + 1.25 + (a.dy < -10 ? 1.2 : 0));
+    extraHits.push({ p, scale: sc, depth: item.depth, kind: 'staff' });
     if (popIn.has(room.id)) addPop(item, (delay += 0.02));
     const fps = a.anim === 'cheer' ? 9 : a.anim.startsWith('walk') ? 10 : 4;
     extras.push({ p, frames, k: Math.floor(Math.random() * frames.length), t: 0, fps, hold: a.anim === 'slump' });
@@ -637,7 +644,7 @@ export function buildWorld(
   }
 
   // never empty: applicants queue in the lobby, the founders hang about the garage at the start
-  const posed = (look: string, anim: string, i: number, j: number, mirror: boolean, acc?: string, claimed = false): void => {
+  const posed = (kind: ExtraKind, look: string, anim: string, i: number, j: number, mirror: boolean, acc?: string, claimed = false): void => {
     // a rat on its own tile: skipped when the tile is taken (the scene already claimed its own rats)
     if (!claimed && !scene.zoning.claim({ what: `${look}/${anim}`, cat: 'extra', cells: [[i, j]] }, ['office', 'slot', 'apron', 'site'])) return;
     let frames: Frame[];
@@ -650,6 +657,7 @@ export function buildWorld(
     const sc = TIER_SCALE[look.split('.')[0] as keyof typeof TIER_SCALE] ?? 1;
     const p = makeParticle(frames[0]!, c.x, c.y, mirror, sc);
     main.add(p, i + j + 1.25);
+    extraHits.push({ p, scale: sc, depth: i + j + 1.25, kind });
     const k = Math.floor(Math.random() * frames.length);
     let hat: Particle | undefined;
     let accFrames: Frame[] | undefined;
@@ -674,12 +682,12 @@ export function buildWorld(
       const i = inI ? door.i - 2 - k : door.i + (k % 2 === 0 ? 0 : 1) - 1;
       const j = inI ? door.j + (k % 2 === 0 ? 0 : 1) - 1 : door.j - 2 - k;
       if (i < lobby.i0 || j < lobby.j0) break;
-      posed(looks[k % looks.length]!, 'idle_ne', i, j, inI);
+      posed('applicant', looks[k % looks.length]!, 'idle_ne', i, j, inI);
     }
     if (stage === 0) {
       const g = plan.garage;
-      posed('partner', 'idle_ne', g.i0 + 3, g.j0 + 2, false);
-      posed('vp.white', 'cheer', plan.vault.i + 3, plan.vault.j - 2, true);
+      posed('founder', 'partner', 'idle_ne', g.i0 + 3, g.j0 + 2, false);
+      posed('founder', 'vp.white', 'cheer', plan.vault.i + 3, plan.vault.j - 2, true);
     }
   }
 
@@ -695,7 +703,7 @@ export function buildWorld(
     const c = cellCentre(q.i, q.j);
     main.add(makeParticle(atlas.frame('world:crane'), c.x, c.y, q.mirror, q.scale), q.i + q.j + 1);
   }
-  for (const q of scene.crew) posed(q.look, q.anim, q.i, q.j, q.mirror, q.acc, true);
+  for (const q of scene.crew) posed('crew', q.look, q.anim, q.i, q.j, q.mirror, q.acc, true);
 
   // blinking server lights
   const dot = document.createElement('canvas');
@@ -783,7 +791,7 @@ export function buildWorld(
   // landmark set pieces (one per milestone) and the towers that grow the office upwards
   const lm = renderLandmarks({
     plan, stage, count: growth.count, built: (id) => growth.built[id] === 1, city, atlas, main, lights, signs, fresh: freshLandmarks,
-    addPop, posed, sign: (t, c) => signTexture(t, c, 2), scene,
+    addPop, posed: (...args) => posed('staff', ...args), sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
   // WALL ST RATS HIRING over the big sewer entrance, laid out with the landmark names
@@ -1026,6 +1034,20 @@ export function buildWorld(
       const b = fair.getBounds();
       return { x: b.x, y: b.y, w: b.width, h: b.height };
     },
+    pickExtra(x: number, y: number, z: number): ExtraKind | null {
+      let best: (typeof extraHits)[number] | null = null;
+      let bestD = Infinity;
+      for (const h of [...extraHits, ...cityView.rats.map((r) => ({ ...r, kind: 'passerby' as const }))]) {
+        if (h.p.scaleY === 0 || h.p.alpha === 0) continue;
+        const d = ratHit(h.p.x, h.p.y, h.scale, x, y, z);
+        if (d > 1) continue;
+        if (d < bestD - 0.05 || (d <= bestD + 0.05 && best !== null && h.depth > best.depth)) {
+          best = h;
+          bestD = d;
+        }
+      }
+      return best ? best.kind : null;
+    },
     destroy(): void {
       const free = (c: Container): void => {
         for (const ch of c.children) {
@@ -1173,7 +1195,15 @@ function renderCity(
   backdrop: Container,
   lights: Container | undefined,
   scene: Scene,
-): { update(dt: number): void; shells: Sprite[]; setPrep(on: boolean): void; parallax(cx: number, cy: number): void; parts(i0: number, j0: number, i1: number, j1: number): CityPart[] } {
+): {
+  update(dt: number): void;
+  shells: Sprite[];
+  setPrep(on: boolean): void;
+  parallax(cx: number, cy: number): void;
+  parts(i0: number, j0: number, i1: number, j1: number): CityPart[];
+  /** the rats in the street scenes, for clicks */
+  rats: Array<{ p: Particle; scale: number; depth: number }>;
+} {
   const fadeAt = (i: number, j: number): number => city.ground.get(CITY_KEY(Math.round(i), Math.round(j)))?.fade ?? 1;
   const warm = glowTexture(255, 186, 102);
   const drawn: Array<{ i: number; j: number; p: Particle }> = [];
@@ -1276,6 +1306,7 @@ function renderCity(
   }
   // extras: street scenes (food truck queue, the smoker, the delivery, the crew)
   const extras: Array<{ p: Particle; acc: Particle | null; frames: Frame[]; accFrames: Frame[]; k: number; t: number; fps: number }> = [];
+  const streetRats: Array<{ p: Particle; scale: number; depth: number }> = [];
   const puffs: Array<{ s: Sprite; x: number; y: number; t: number }> = [];
   for (const [n, x] of city.extras.entries()) {
     if (!scene.keepExtra[n] || fadeAt(x.i, x.j) > 0.5) continue;
@@ -1290,6 +1321,7 @@ function renderCity(
     const sc = TIER_SCALE[tier] ?? 1;
     const p = makeParticle(frames[0]!, c.x, c.y, x.mirror, sc);
     main.add(p, x.i + x.j + 1.25);
+    streetRats.push({ p, scale: sc, depth: x.i + x.j + 1.25 });
     let acc: Particle | null = null;
     let accFrames: Frame[] = [];
     if (x.acc) {
@@ -1402,6 +1434,7 @@ function renderCity(
   });
   return {
     shells,
+    rats: streetRats,
     parts(i0: number, j0: number, i1: number, j1: number): CityPart[] {
       return drawn
         .filter((d) => d.i >= i0 && d.i <= i1 && d.j >= j0 && d.j <= j1 && d.p.scaleY !== 0)

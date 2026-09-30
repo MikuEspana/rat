@@ -1,10 +1,17 @@
 // The Company Roadmap: every stage of the building in order and the SOL claimed each one takes. Stages done are
 // checked, the next one fills a bar ("0.62 / 1 SOL"), the rest are locked with their target. It folds to one line
-// ("NEXT: CORPORATE 3.2 / 5 SOL"), always on a phone. Plain DOM, textContent only.
+// ("NEXT: CORPORATE 3.2 / 5 SOL"), always on a phone. After the last stage two unnamed teaser rows ("???" at 100 SOL,
+// "??????" at 200 SOL) stay locked: roadmap only, the building has no such stages. Plain DOM, textContent only.
 import { STAGES } from '../floor/plan';
 import { solAmount } from './format';
 
 export type RoadmapStatus = 'done' | 'next' | 'locked';
+
+/** Teasers after WALL STREET: always locked and unnamed. Only the roadmap shows them (no stage, floor or world change). */
+export const ROADMAP_TEASERS: ReadonlyArray<{ name: string; sol: number }> = [
+  { name: '???', sol: 100 },
+  { name: '??????', sol: 200 },
+];
 
 export interface RoadmapRow {
   name: string;
@@ -15,6 +22,8 @@ export interface RoadmapRow {
   progress: number | null;
   /** "0.62 / 1 SOL" for the next stage, the target ("5 SOL") for the others */
   text: string;
+  /** a teaser row after the last stage: locked, never next, never done */
+  teaser?: boolean;
 }
 
 export interface RoadmapModel {
@@ -37,6 +46,7 @@ export function roadmapModel(stage: number, sol: number): RoadmapModel {
       text: `${solAmount(sol)} / ${solAmount(st.sol)} SOL`,
     };
   });
+  for (const t of ROADMAP_TEASERS) rows.push({ name: t.name, status: 'locked', target: t.sol, progress: null, text: `${solAmount(t.sol)} SOL`, teaser: true });
   const next = STAGES[at + 1];
   const line = next ? `NEXT: ${next.short} ${solAmount(sol)} / ${solAmount(next.sol)} SOL` : `${STAGES[at]!.name}: ${solAmount(sol)} SOL`;
   return { rows, line };
@@ -115,7 +125,7 @@ export class RoadmapPanel {
     this.key = key;
     this.list.replaceChildren(
       ...m.rows.map((r) => {
-        const li = el('li', `rm-row ${r.status}`);
+        const li = el('li', `rm-row ${r.status}${r.teaser ? ' teaser' : ''}`);
         li.append(el('span', 'rm-mark'), el('span', 'rm-name', r.name), el('span', 'rm-sol', r.text));
         if (r.progress !== null) {
           const bar = el('span', 'rm-bar');
@@ -124,7 +134,7 @@ export class RoadmapPanel {
           bar.append(fill);
           li.append(bar);
         }
-        li.title = r.status === 'done' ? `${r.name}: open` : r.status === 'next' ? `${r.name}: ${r.text} claimed` : `${r.name}: opens at ${r.text} claimed`;
+        li.title = r.teaser ? `${r.name}: locked. What comes after Wall Street is still under wraps.` : r.status === 'done' ? `${r.name}: open` : r.status === 'next' ? `${r.name}: ${r.text} claimed` : `${r.name}: opens at ${r.text} claimed`;
         return li;
       }),
     );

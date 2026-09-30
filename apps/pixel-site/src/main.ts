@@ -11,6 +11,7 @@ import {
   STRESS_RATS, STRESS_WALKERS,
 } from './config';
 import { Api, type ApiLike } from './data/api';
+import { PublicMarket } from './data/market';
 import { Store, type RatRecord } from './data/store';
 import { fakeHire, padRoster } from './data/stress';
 import { loadAtlas } from './gfx/atlas';
@@ -231,6 +232,8 @@ async function boot(): Promise<Site> {
 
   const ui = new Ui({ store, rats, camera, atlas, markerLayer: markers, simulated: sim !== null });
   ui.vaultHit = (x, y) => vault.hit(x, y);
+  // founders, lobby applicants, crews and street extras are clickable too (world is rebuilt: read it at click time)
+  ui.extraHit = (x, y, z) => world.pickExtra(x, y, z);
   ui.vaultStage = (v) => VAULT_STAGES[vaultStageOf(v)]!.name;
   /** the stage chip's bars and the roadmap */
   const showStage = (): void => ui.setStage(growth.stage, ratCount, growth.sol, growth.progress());
@@ -468,7 +471,6 @@ async function boot(): Promise<Site> {
   let seatlessWas = rats.seatlessCount;
   const updateLine = (): void => {
     world.setJobFair(rats.lineLength, rats.lineHead());
-    ui.setLine(rats.lineLength);
     const n = rats.seatlessCount;
     if (n > 0 && seatlessWas === 0) ui.pushLocal([{ tag: 'LINE', text: 'Every desk is taken: new hires wait in the line outside the lobby, job-fair style, for the next desk.' }]);
     else if (n === 0 && seatlessWas > 0) ui.pushLocal([{ tag: 'LINE', text: 'Every hire in line has a desk again.' }]);
@@ -637,9 +639,11 @@ async function boot(): Promise<Site> {
   );
 
   // follow the API: /api/state and /api/events every 5 s. The roster is never re-polled.
+  const market = new PublicMarket(); // the market cap from public feeds until the bot has one (right after the launch)
   const pollState = async (): Promise<void> => {
     try {
-      store.applyState(await api.state());
+      const st = await api.state();
+      store.applyState(SIM ? st : market.fill(st));
       setStatus(null);
     } catch (e) {
       console.warn(`API ${API_BASE} (state): ${(e as Error).message}`);
@@ -839,7 +843,7 @@ async function boot(): Promise<Site> {
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };
 
-  // find my rat from a shared link: ?rat=<id> or ?wallet=<address>
+  // a shared link to a rat: ?rat=<id> or ?wallet=<address>
   const q = new URLSearchParams(location.search);
   const deep = q.get('rat') ?? q.get('wallet');
   if (deep) {

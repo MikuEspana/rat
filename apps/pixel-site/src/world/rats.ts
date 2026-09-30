@@ -17,6 +17,7 @@ import { hash32 } from '../floor/rng';
 import { queueCells } from '../floor/plan';
 import type { Face, FloorLayout, Seat, Spot } from '../floor/types';
 import type { RatRecord } from '../data/store';
+import { ratHit } from './hit';
 
 export type Look = Tier | 'frozen';
 export type Mood = 'up' | 'down' | 'flat';
@@ -45,6 +46,7 @@ function applicantRecord(id: number): RatRecord {
 }
 
 export const TIER_SCALE: Record<Tier, number> = { intern: 0.88, analyst: 1, associate: 1.08, vp: 1.17, partner: 1.3 };
+
 const FPS: Record<AnimName, number> = { walk_se: 10, walk_ne: 10, idle_se: 5, idle_ne: 5, type: 8, slump: 6, cheer: 11, sit_front: 8, sit_back: 6, sulk_front: 3, sulk_back: 3 };
 const FURS = ['grey', 'brown', 'white', 'black'] as const;
 const WALK_SPEED = 2.8; // cells per second
@@ -968,15 +970,25 @@ export class RatSystem {
     else this.place(a);
   }
 
-  /** The rat under a world point, top-most first. */
-  pick(x: number, y: number): number | null {
+  /**
+   * The rat under a world point: the one whose body is nearest the point (ratHit), the front one on a tie.
+   * Applicants in the job-fair line come back with their negative ids (their card says what they are). `zoom`
+   * keeps every rat at least a finger-sized target on screen, however far out the camera is.
+   */
+  pick(x: number, y: number, zoom = 1): number | null {
     let best: Agent | null = null;
+    let bestD = Infinity;
     for (const a of this.list) {
+      if (!a.item.live) continue;
       const p = a.item.p;
-      const s = TIER_SCALE[a.rec.view.tier];
-      if (Math.abs(x - p.x) > 13 * s || y > p.y + 2 || y < p.y - 48 * s) continue;
-      if (a.id < 0) continue; // applicants have no card yet
-      if (!best || a.item.depth > best.item.depth) best = a;
+      const d = ratHit(p.x, p.y, TIER_SCALE[a.rec.view.tier], x, y, zoom);
+      if (d > 1) continue;
+      const nearer = d < bestD - 0.05;
+      const tieInFront = !nearer && d <= bestD + 0.05 && best !== null && a.item.depth > best.item.depth;
+      if (nearer || tieInFront) {
+        best = a;
+        bestD = d;
+      }
     }
     return best ? best.id : null;
   }
