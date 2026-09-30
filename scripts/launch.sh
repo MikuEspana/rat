@@ -20,19 +20,37 @@ cd "$(dirname "$0")/.."
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
 PRODUCTION_CREATOR="4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot"
+# --rehearsal: this exact script on the staging project with the test creator (from ~/wallstreetrats-staging), to
+# practise launch day: the staging guards instead of the production ones, and after your GO the staging kill switch
+# (ON between rehearsals) is released so the bot really claims and hires. Everything else is the same.
+REHEARSAL=""
+if [ "${1:-}" = --rehearsal ]; then
+  REHEARSAL=1
+  # shellcheck source=scripts/lib/staging-guard.sh
+  . scripts/lib/staging-guard.sh
+fi
 for t in jq curl; do command -v "$t" >/dev/null 2>&1 || die "$t is missing" "Run: brew install $t"; done
 
-title "Launch: the coin, then the bot LIVE in one build"
 # ---------------------------------------------------------------- only production, only once --------------------------
-pid=$(rw status --json 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
 pname=$(rw status --json 2>/dev/null | jq -r '.name // empty' 2>/dev/null || true)
-[ -n "$pid" ] || die "this folder ($PWD) is not linked to a Railway project" "Run it from ~/wallstreetrats (scripts/setup-mac.sh set it up)."
-[ "$pid" = "$(state_get "$STATE" RAILWAY_PROJECT_ID)" ] || die "this folder is linked to $pname, not the production project in $STATE" "Run it from ~/wallstreetrats."
-case "$(state_get "$STATE" PROFILE):$pname" in staging:* | *:*-staging) die "this is the staging project: the rehearsal launches with scripts/staging.sh 1" ;; esac
-vars=$(rw_vars worker) || die "Railway did not list the worker's variables" "$API_HINT"
-[ "$(printf '%s' "$vars" | jq -r '.STAGING // ""')" != true ] || die "STAGING is on for this worker: not the production bot"
-creator=$(printf '%s' "$vars" | jq -r '.CREATOR_PUBKEY // ""')
-[ "$creator" = "$PRODUCTION_CREATOR" ] || die "the worker's CREATOR_PUBKEY is ${creator:-not set}, not the creator wallet $PRODUCTION_CREATOR"
+if [ -n "$REHEARSAL" ]; then
+  title "REHEARSAL of launch day on $pname (staging, test creator)"
+  p=$(isolation)
+  [ -z "$p" ] || die "the rehearsal runs only on the staging project: $(printf '%s' "$p" | head -1)" "Run it from ~/wallstreetrats-staging."
+  vars=$(rw_vars worker) || die "Railway did not list the worker's variables" "$API_HINT"
+  creator=$(printf '%s' "$vars" | jq -r '.CREATOR_PUBKEY // ""')
+  { [ -n "$creator" ] && [ "$creator" != "$PRODUCTION_CREATOR" ]; } || die "the staging worker's creator is ${creator:-not set}: never the production creator"
+else
+  title "Launch: the coin, then the bot LIVE in one build"
+  pid=$(rw status --json 2>/dev/null | jq -r '.id // empty' 2>/dev/null || true)
+  [ -n "$pid" ] || die "this folder ($PWD) is not linked to a Railway project" "Run it from ~/wallstreetrats (scripts/setup-mac.sh set it up)."
+  [ "$pid" = "$(state_get "$STATE" RAILWAY_PROJECT_ID)" ] || die "this folder is linked to $pname, not the production project in $STATE" "Run it from ~/wallstreetrats."
+  case "$(state_get "$STATE" PROFILE):$pname" in staging:* | *:*-staging) die "this is the staging project: practise with scripts/launch.sh --rehearsal" ;; esac
+  vars=$(rw_vars worker) || die "Railway did not list the worker's variables" "$API_HINT"
+  [ "$(printf '%s' "$vars" | jq -r '.STAGING // ""')" != true ] || die "STAGING is on for this worker: not the production bot"
+  creator=$(printf '%s' "$vars" | jq -r '.CREATOR_PUBKEY // ""')
+  [ "$creator" = "$PRODUCTION_CREATOR" ] || die "the worker's CREATOR_PUBKEY is ${creator:-not set}, not the creator wallet $PRODUCTION_CREATOR"
+fi
 # the RPC address, once (its API key stays in this shell's memory): every chain read below reuses it
 RPC_URL=$(printf '%s' "$vars" | jq -r '.RPC_URL // ""')
 # A previous run that stopped halfway (Railway failed a write, a build failed) left the coin's settings on the worker:
@@ -63,7 +81,7 @@ if [ -n "$set_coin" ]; then
 elif [ "$set_dry" != true ]; then
   die "the worker is set to LIVE (DRY_RUN is not true) but has no COIN_MINT: not a launch this script started" "Railway dashboard: worker > Variables: set DRY_RUN=true, then run this again."
 fi
-ok "production project $pname, creator wallet $creator, the bot in DRY RUN"
+ok "${REHEARSAL:+REHEARSAL: }project $pname, creator wallet $creator, the bot in DRY RUN"
 
 if [ "${RESUME:-}" = y ]; then
   yes_no "Is $LAUNCH_MINT your coin (the mint shown on pump.fun)?" y || die "not your coin: nothing was changed" "Railway dashboard: worker > Variables: remove COIN_MINT, set DRY_RUN=true, then run this again."
@@ -73,15 +91,18 @@ bal=$(sol_balance "$creator")
 [ -n "$bal" ] || die "could not read the creator wallet's balance (RPC)"
 say "The creator wallet holds $(lamports_to_sol "$bal") SOL."
 [ "$bal" -ge 200000000 ] || die "the creator wallet holds less than 0.2 SOL" "Send it about 0.3 SOL first: 0.1 dev buy + launch cost + 0.05 reserve + spare (LAUNCH-DAY.md)."
+f="${WSR_FOUNDING_RATS:-5}"
+[ "$bal" -ge $((200000000 + f * 30000000)) ] ||
+  note "for $f founding rats the creator wallet needs about $(lamports_to_sol $((200000000 + f * 30000000))) SOL (0.03 each on top of 0.2): send more first, or fewer are booked"
 before=$(latest_signature "$creator")
 say "Now launch the coin in Phantom, with the CREATOR wallet $creator:"
 say "1. pump.fun > Create coin: name Wall Street Rats, ticker WSR. Normal mode: no holder rewards, no fee sharing, no cashback."
 say "2. Dev buy 0.1 SOL, inside the launch. The dev-buy coins stay in the creator wallet forever."
 say "3. After this, never sign anything else with the creator wallet: the bot treats it as a leaked key."
 # the CA as soon as pump.fun shows it: the site shows the coin right away (rat announce-ca checks on chain that the
-# creator wallet created it; it sends nothing), while this script waits for the launch to be finalized
+# creator wallet created it; it sends nothing), while this script waits for the launch to be confirmed
 printf '\n  %sPaste the CA%s (the coin address pump.fun shows) and press Enter.\n' "$B" "$N"
-printf '  (No CA? Just press Enter once Solscan shows the launch Finalized.)  CA: '
+printf '  (No CA? Just press Enter once Solscan shows the launch.)  CA: '
 IFS= read -r CA || die "no keyboard input (end of input)"
 CA=$(printf '%s' "$CA" | tr -d '[:space:]')
 ANNOUNCED=""
@@ -93,10 +114,10 @@ if [ -n "$CA" ]; then
   if [ -n "$ANNOUNCED" ]; then
     ok "the site shows your coin now: CA $CA"
   else
-    note "the site could not show $CA yet (not on chain yet, or not created by the creator wallet $creator): tried again once the launch is finalized"
+    note "the site could not show $CA yet (not on chain yet, or not created by the creator wallet $creator): tried again once the launch is confirmed"
   fi
 fi
-say "Waiting for the launch to be finalized on chain (usually under a minute)..."
+say "Waiting for the launch to be confirmed on chain (a few seconds)..."
 
 # ---------------------------------------------------------------- 2. the launch on chain -------------------------------
 if find_launch "$creator" "$before"; then
@@ -112,7 +133,7 @@ if find_launch "$creator" "$before"; then
   fi
   [ "$yes" = y ] || ask_launch
 else
-  note "no new finalized transaction from the creator wallet (was the coin launched before this script started?)"
+  note "no new confirmed transaction from the creator wallet (was the coin launched before this script started?)"
   ask_launch
 fi
 fi
@@ -134,7 +155,7 @@ printf '%s' "$pre" | jq -e '.lines | type == "array"' >/dev/null 2>&1 ||
   die "the live preflight gave no answer (railway ssh to the worker): nothing was changed" "Run scripts/launch.sh again in a minute: it finds the coin again and asks again."
 show_preflight "$pre"
 for chk in "launch txs" "dev buy"; do preflight_pass "$pre" "$chk" || die "preflight $chk is not PASS with the coin's settings: nothing was changed" "The line above says why."; done
-problems=$(preflight_problems "$pre")
+problems=$(preflight_problems "$pre" ${REHEARSAL:+"kill switch"}) # the rehearsal: the staging kill switch is ON between runs
 [ -z "$problems" ] || die "preflight --live is not READY with the coin's settings: nothing was changed" "$(printf '%s' "$problems" | head -3 | tr '\n' ';')"
 ok "preflight --live with the coin's settings: READY"
 
@@ -165,14 +186,28 @@ st=""
 for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
   st=$(rat_json status --json)
   [ "$(printf '%s' "$st" | jq -r '.mode // empty' 2>/dev/null)" = live ] && break
-  [ "$i" = 12 ] || sleep "${WSR_POLL_SEC:-10}"
+  [ "$i" = 12 ] || sleep "${WSR_POLL_SEC:-5}"
 done
 case "$(printf '%s' "$st" | jq -r '.mode // empty' 2>/dev/null)" in
   live) ;;
   dry_run) die "the worker still runs in DRY RUN two minutes after its build" "Check the worker's variables (DRY_RUN=false, LIVE_CONFIRM) and its logs on Railway, then run scripts/launch.sh again." ;;
   *) die "the worker did not answer for two minutes after its build (railway ssh)" "Check: scripts/rat.sh status, and the worker's logs on Railway. Running scripts/launch.sh again only redeploys what is left." ;;
 esac
+if [ -n "$REHEARSAL" ] && [ "$(printf '%s' "$st" | jq -r '.killSwitch.on // empty')" = true ]; then
+  rat resume >/dev/null 2>&1 && ok "rehearsal: the staging kill switch released (your GO): the bot claims and hires"
+  st=$(rat_json status --json)
+fi
 [ "$(printf '%s' "$st" | jq -r '.killSwitch.on // empty')" = false ] || note "the kill switch is ON: the bot sends nothing until you resume it (admin page, or scripts/rat.sh resume)"
+# founding rats (WSR_FOUNDING_RATS, default 5, 0 = none): your own SOL in the creator wallet books that many salaries
+# as hire budget, so rats walk in before the fees cover one. Never a creator fee (rat founders-seed); once only.
+FOUNDERS="${WSR_FOUNDING_RATS:-5}"
+if [ "$FOUNDERS" != 0 ]; then
+  if rat founders-seed --rats "$FOUNDERS" --confirm "FOUNDERS $FOUNDERS RATS" >/dev/null 2>&1; then
+    ok "$FOUNDERS founding rats booked: they are hired in the next loops (15 s each)"
+  else
+    note "the founding rats were not booked (not enough free SOL in the creator wallet, or already booked): scripts/rat.sh founders-seed --rats $FOUNDERS shows why"
+  fi
+fi
 pre=$(rat_json preflight --live --json)
 problems=$(preflight_problems "$pre")
 [ -z "$problems" ] || note "preflight --live now says: $(printf '%s' "$problems" | head -3 | tr '\n' ';')"
