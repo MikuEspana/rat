@@ -48,6 +48,12 @@ All from `~/wallstreetrats-staging`. Every mainnet transaction waits for your **
 All from `~/wallstreetrats`.
 - [ ] `scripts/verify-mainnet.sh --sample <any pump.fun coin mint> --payer <your wallet address>`: read-only, nothing signed or sent. Every stock mint, a Jupiter quote for 0.03 SOL into each, the claim and one swap simulated on live mainnet. Ends with `OK: no FAIL`; approve only stocks whose `mint` and `quote` lines PASS (`docs/runbooks/verify-mainnet.md`). 2.
 - [ ] `scripts/approve-stocks.sh`: check each mint on xstocks.fi. 5 + B.
+- [ ] **The public API never reads the rat keys**, not even encrypted (a one-time fix: these databases were set up before `scripts/setup-mac.sh` did it). Production, then staging:
+  ```
+  cd ~/wallstreetrats && printf '%s\n' 'REVOKE ALL ON key_pool FROM rat_api;' "SELECT has_table_privilege('rat_api', 'key_pool', 'SELECT') AS api_can_read_keys;" | railway connect Postgres
+  cd ~/wallstreetrats-staging && printf '%s\n' 'REVOKE ALL ON key_pool FROM rat_api;' "SELECT has_table_privilege('rat_api', 'key_pool', 'SELECT') AS api_can_read_keys;" | railway connect Postgres
+  ```
+  Each prints REVOKE, then api_can_read_keys = f. Safe to run again. Nothing else changes: the API never needed `key_pool`. If Railway names the database service differently, use that name instead of `Postgres`. 2.
 - [ ] `scripts/rat.sh preflight`: only the expected "not yet" lines (no `COIN_MINT` yet, the creator wallet not funded, the watch floor). 2.
 - [ ] `scripts/site-go-live.sh`: two clicks on GitHub, then check the site on your phone ("The rats are clocking in..." banner, 0 rats, "pre-launch"). 10.
 - [ ] **Auto deploy OFF** on the production worker, api and admin until the bot has run live for a day, and no merges to `main` in that time (`docs/runbooks/auto-deploy.md`, "The clicks"). `scripts/launch.sh` still deploys. 3.
