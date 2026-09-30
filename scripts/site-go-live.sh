@@ -33,11 +33,13 @@ die() {
 yes_no() { local a; printf '  %s [Y/n] ' "$1"; read -r a || exit 1; case "$a" in "" | y | Y | yes) return 0 ;; esac; return 1; }
 open_url() { say "Opening $1"; ${WSR_OPEN:-open} "$1" >/dev/null 2>&1 || say "(open it yourself: $1)"; }
 bundle_has() { # bundle_has text: the published page's scripts contain it
-  local html src
+  local html src js
   html=$(curl -fsS -m 20 "$SITE/?nocache=$(date +%s)" 2>/dev/null) || return 1
   for src in $(printf '%s' "$html" | sed -n 's/.*src="\([^"]*\.js\)".*/\1/p'); do
     case "$src" in http*) ;; *) src="$SITE/${src#/}" ;; esac
-    curl -fsS -m 30 "$src" 2>/dev/null | grep -qF "$1" && return 0
+    # read the whole bundle first: with pipefail, grep -q closing the pipe early made curl (and the check) fail
+    js=$(curl -fsS -m 30 "$src" 2>/dev/null) || continue
+    case "$js" in *"$1"*) return 0 ;; esac
   done
   return 1
 }
