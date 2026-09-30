@@ -18,7 +18,10 @@ type Progress = ReturnType<Growth['progress']>;
 
 /** Badges by hire order: the ring whose rooms were opening when a rat was hired. */
 const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
-import { ago, BOT_STALE_SEC, bannerText, caView, describe, emptyBoardText, hireRing, pct, priceUsd, ratsSub, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
+import {
+  ago, BOT_STALE_SEC, bannerText, caView, describe, emptyBoardText, EXTRA_CARD, hireRing, pct, priceUsd, ratsSub, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd, walletUrl,
+  type ExtraKind,
+} from './format';
 import { copyText } from './clipboard';
 
 type Look = keyof typeof TIER_COLOR;
@@ -98,11 +101,6 @@ export class Ui {
   private stats = new Map<string, { value: HTMLElement; sub: HTMLElement }>();
   private readonly glides = {
     portfolio: new Glide(2000, (v) => this.statText('portfolio', usd(v))),
-    pnl: new Glide(2000, (v) => this.statText('pnl', usd(v))),
-    pnlPct: new Glide(2000, (v) => {
-      const st = this.stats.get('pnl');
-      if (st) st.sub.textContent = pct(v);
-    }),
   };
   private ringArc!: SVGCircleElement;
   private ringLabel = el('div', 'ring-label');
@@ -124,6 +122,8 @@ export class Ui {
   private vaultCard = el('div', 'card vault-card');
   /** set by main: is a world point on the Vault's money pile? */
   vaultHit: ((x: number, y: number) => boolean) | null = null;
+  /** set by main: the set-dressing rat (founder, applicant, crew...) under a world point, if any */
+  extraHit: ((x: number, y: number, zoom: number) => ExtraKind | null) | null = null;
   /** set by main: the Vault's stage name for a value */
   vaultStage: ((usd: number) => string) | null = null;
   private vaultOpen: string | null = null;
@@ -135,7 +135,7 @@ export class Ui {
   /** the news ticker along the bottom */
   private news = el('div', 'news');
   private newsText = el('div', 'news-text');
-  /** find my rat: the room darkens round the rat you looked up */
+  /** a ?rat= / ?wallet= link: the room darkens round the rat it points at */
   private spot = el('div', 'spotlight');
   private spotOn = false;
   /** extra HUD buttons (timelapse) */
@@ -158,15 +158,24 @@ export class Ui {
 
     d.camera.onClick = (sx, sy) => {
       const w = d.camera.toWorld(sx, sy);
-      const id = d.rats.pick(w.x, w.y);
+      const id = d.rats.pick(w.x, w.y, d.camera.zoom);
       if (id === null && this.vaultHit?.(w.x, w.y)) {
         this.close();
         this.openVault();
         return;
       }
       this.closeVault();
-      if (id === null) this.close();
-      else this.open(id, false);
+      if (id !== null && id < 0) {
+        this.openExtra('applicant'); // an applicant in the job-fair line
+        return;
+      }
+      if (id !== null) {
+        this.open(id, false);
+        return;
+      }
+      const extra = this.extraHit?.(w.x, w.y, d.camera.zoom) ?? null;
+      if (extra) this.openExtra(extra);
+      else this.close();
     };
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -195,19 +204,15 @@ export class Ui {
   private buildHud(): HTMLElement {
     const hud = el('div', 'hud panel');
     const title = el('div', 'title');
-    const find = el('form', 'find');
-    const input = el('input', 'find-input');
-    input.placeholder = 'find my rat: wallet or #id';
-    input.setAttribute('aria-label', 'find my rat by wallet or rat number');
-    const go = el('button', 'find-go', 'FIND');
-    const note = el('span', 'find-note', '');
-    find.append(input, go, note);
-    find.onsubmit = (e) => {
-      e.preventDefault();
-      const id = this.find(input.value);
-      note.textContent = id === null ? 'no rat found' : '';
-      if (id !== null) this.spotlight(id);
-    };
+    // zoom for a mouse (a trackpad pinches, a phone pinches; a plain scroll pans)
+    for (const [text, factor, label] of [['+', 1.25, 'zoom in'], ['-', 0.8, 'zoom out']] as const) {
+      const b = el('button', 'zoom-btn', text);
+      b.type = 'button';
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.onclick = () => this.d.camera.zoomBy(factor);
+      this.tools.append(b);
+    }
     this.ca.hidden = true;
     this.caAddr.target = '_blank';
     this.caAddr.rel = 'noopener noreferrer';
@@ -223,14 +228,12 @@ export class Ui {
       });
     };
     this.ca.append(this.caAddr, this.caCopy);
-    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.ca, this.stageChip, find, this.tools);
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.ca, this.stageChip, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
       ['rats', 'Rats hired'],
       ['portfolio', 'Portfolio value'],
-      ['pnl', 'Portfolio PnL'],
-      ['line', 'Job fair'],
     ] as const) {
       const box = el('div', 'stat');
       const value = el('div', 'stat-value', '--');
@@ -264,15 +267,6 @@ export class Ui {
     return hud;
   }
 
-  /** The job-fair line: rats waiting outside for their buy (or, with the building full, a desk). */
-  setLine(n: number): void {
-    const st = this.stats.get('line');
-    if (!st) return;
-    st.value.textContent = n.toLocaleString('en-US');
-    st.value.className = `stat-value ${n > 0 ? 'hype' : ''}`;
-    st.sub.textContent = n === 1 ? 'rat in line' : n > 0 ? 'rats in line' : 'no line: walk right in';
-  }
-
   private statText(key: string, text: string): void {
     const st = this.stats.get(key);
     if (st) st.value.textContent = text;
@@ -302,10 +296,6 @@ export class Ui {
     const portfolio = this.stats.get('portfolio');
     if (portfolio) portfolio.sub.textContent = holdings || 'no positions yet';
     this.glides.portfolio.set(s.portfolio.valueUsd);
-    const pnl = this.stats.get('pnl');
-    if (pnl) pnl.value.className = `stat-value ${signClass(s.portfolio.pnlUsd)}`;
-    this.glides.pnl.set(s.portfolio.pnlUsd);
-    this.glides.pnlPct.set(s.portfolio.pnlPct);
     const banner = bannerText(s);
     this.banner.hidden = banner === null;
     this.banner.textContent = banner ?? '';
@@ -455,7 +445,7 @@ export class Ui {
     this.newsText.style.animationDuration = `${Math.max(20, this.newsText.textContent.length * 0.14)}s`;
   }
 
-  /** Find my rat: by wallet (whole or the start of it), by #id, or by name. */
+  /** The rat a shared link points at (?rat=<id> or ?wallet=<address>): by wallet (whole or the start of it), by #id, or by name. */
   find(query: string): number | null {
     const q = query.trim();
     if (!q) return null;
@@ -471,7 +461,7 @@ export class Ui {
     return null;
   }
 
-  /** Open a rat with the spotlight on it and put it in the address bar (a link you can share). */
+  /** Open a rat with the spotlight on it (a ?rat= link) and keep it in the address bar. */
   spotlight(id: number): void {
     this.open(id, true);
     this.spotOn = true;
@@ -649,24 +639,43 @@ export class Ui {
       const w = r.facts.wallet;
       const short = `${w.slice(0, 4)}...${w.slice(-4)}`;
       row.append(name, el('span', 'vault-v', usd(r.view.valueUsd)));
-      if (this.d.simulated) row.append(el('span', 'vault-addr', short));
-      else row.append(link(r.view.solscanUrl, short));
+      const url = walletUrl(w, !!this.d.simulated);
+      if (url) row.append(link(url, short));
+      else row.append(el('span', 'vault-addr', short));
       box.append(row);
     }
-    if (holders.length > 25) box.append(el('div', 'card-note', `and ${(holders.length - 25).toLocaleString('en-US')} more (find any rat by wallet in the search box)`));
+    if (holders.length > 25) box.append(el('div', 'card-note', `and ${(holders.length - 25).toLocaleString('en-US')} more (click a rat in the building to see its card)`));
     if (this.d.simulated) box.append(el('div', 'card-note', 'simulated rats: made-up wallets, nothing on chain'));
     return box;
   }
 
   // ------------------------------------------------------------------ rat card
   open(id: number, fly: boolean): void {
+    this.card.classList.remove('extra-card');
     this.selected = id;
     this.renderCard();
     const pos = this.d.rats.positionOf(id);
     if (fly && pos) this.d.camera.flyTo(pos.x, pos.y - 20, Math.max(1.8, this.d.camera.zoom));
   }
 
+  /** The small card for a rat that is not a hire (founder, applicant, crew): what it is, no wallet, no stock. */
+  openExtra(kind: ExtraKind): void {
+    this.close();
+    const c = EXTRA_CARD[kind];
+    const close = el('button', 'card-close', 'x');
+    close.onclick = () => this.close();
+    const head = el('div', 'card-head');
+    const who = el('div', 'card-who');
+    const badge = el('span', 'badge extra', c.badge);
+    who.append(el('div', 'card-name', c.name), badge);
+    head.append(this.sprite(kind === 'founder' ? 'partner' : 'intern'), who, close);
+    this.card.replaceChildren(head, el('p', 'card-extra', c.line));
+    this.card.classList.add('extra-card');
+    this.card.hidden = false;
+  }
+
   close(): void {
+    this.card.classList.remove('extra-card');
     this.spotOn = false;
     this.spot.hidden = true;
     this.selected = null;
@@ -719,24 +728,25 @@ export class Ui {
     };
     row('Stock', `${v.stock}${stock?.name ? ` (${stock.name})` : ''}`);
     row('PnL', `${pct(v.pnlPct)}  ${usd(v.pnlUsd)}`, signClass(v.pnlPct));
-    row('Value', `${usd(v.valueUsd)} (cost ${usd(v.costUsd)})`);
+    row('Value', usd(v.valueUsd));
     row('Rank', `#${this.rankOf(rec)} of ${this.d.store.rats.size.toLocaleString('en-US')}`);
     row('Status', v.status === 'frozen' ? 'frozen (stock paused or account frozen)' : 'at work');
     row('Hired', ago(v.hiredAt));
     const links = el('div', 'card-links');
-    if (this.d.simulated) links.append(el('span', 'card-note', 'simulated rat: made-up wallet, nothing on chain'));
-    else links.append(link(v.solscanUrl, 'Wallet on Solscan'));
+    // the rat's own on-chain wallet (never a link to this site); the simulator's wallets are made up: no link
+    const wallet = walletUrl(rec.facts.wallet, !!this.d.simulated);
+    if (wallet) {
+      const a = link(wallet, 'WALLET ON SOLSCAN');
+      a.className = 'wallet-btn';
+      a.title = `${rec.facts.wallet} on Solscan`;
+      links.append(a);
+    } else {
+      const off = el('span', 'wallet-btn off', this.d.simulated ? 'WALLET: SIMULATION' : 'WALLET: NOT ON CHAIN');
+      off.setAttribute('aria-disabled', 'true');
+      off.title = this.d.simulated ? 'simulated rat: made-up wallet, nothing on chain' : 'no on-chain wallet for this rat';
+      links.append(off);
+    }
     if (rec.estimated) links.append(el('span', 'card-note', 'value estimated since hire; exact after reload'));
-    const share = el('button', 'card-share', 'COPY LINK');
-    share.onclick = () => {
-      const url = new URL(location.href);
-      url.searchParams.set('rat', String(id));
-      void navigator.clipboard?.writeText(url.toString()).then(
-        () => (share.textContent = 'LINK COPIED'),
-        () => (share.textContent = url.toString()),
-      );
-    };
-    links.append(share);
     this.card.replaceChildren(head, grid, links);
     this.card.hidden = false;
   }

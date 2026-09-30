@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { STAGES, stageOfSol } from '../floor/plan';
-import { roadmapModel } from './roadmap';
+import { ROADMAP_TEASERS, roadmapModel } from './roadmap';
+
+const TEASERS = ['???', '??????'];
 
 describe('the Company Roadmap', () => {
   it('lists every stage in order: done ones checked, the next one with its progress, the rest locked with a target', () => {
     const m = roadmapModel(stageOfSol(0.62), 0.62);
-    expect(m.rows.map((r) => r.name)).toEqual(STAGES.map((s) => s.name));
-    expect(m.rows.map((r) => r.status)).toEqual(['done', 'done', 'next', 'locked', 'locked', 'locked']);
+    expect(m.rows.map((r) => r.name)).toEqual([...STAGES.map((s) => s.name), ...TEASERS]);
+    expect(m.rows.map((r) => r.status)).toEqual(['done', 'done', 'next', 'locked', 'locked', 'locked', 'locked', 'locked']);
     const next = m.rows[2]!;
     expect(next.text).toBe('0.62 / 1 SOL');
     expect(next.progress).toBeCloseTo(0.62, 9);
     expect(m.rows.filter((r) => r.status !== 'next').every((r) => r.progress === null)).toBe(true);
-    expect(m.rows.map((r) => r.text)).toEqual(['0 SOL', '0.25 SOL', '0.62 / 1 SOL', '5 SOL', '20 SOL', '50 SOL']);
+    expect(m.rows.map((r) => r.text)).toEqual(['0 SOL', '0.25 SOL', '0.62 / 1 SOL', '5 SOL', '20 SOL', '50 SOL', '100 SOL', '200 SOL']);
     expect(m.line).toBe('NEXT: FULL FLOOR 0.62 / 1 SOL');
   });
 
@@ -20,7 +22,7 @@ describe('the Company Roadmap', () => {
     expect(roadmapModel(0, 0).line).toBe('NEXT: SMALL OFFICE 0 / 0.25 SOL');
     expect(roadmapModel(4, 49.99).line).toBe('NEXT: WALL STREET 49.9 / 50 SOL');
     expect(roadmapModel(5, 72.4).line).toBe('WALL STREET: 72.4 SOL');
-    expect(roadmapModel(5, 72.4).rows.every((r) => r.status === 'done')).toBe(true);
+    expect(roadmapModel(5, 72.4).rows.filter((r) => !r.teaser).every((r) => r.status === 'done')).toBe(true);
     // one line on a 375 px phone (11 px monospace is about 6.6 px a character, inside a 16 px gutter)
     for (let k = 0; k < STAGES.length; k++) expect(roadmapModel(k, 49.99).line.length).toBeLessThanOrEqual(36);
   });
@@ -35,8 +37,23 @@ describe('the Company Roadmap', () => {
     expect(at.rows[2]!.text).toBe('0.25 / 1 SOL');
     // the stage never closes: the roadmap follows the building's stage even if a lower SOL came in
     const kept = roadmapModel(3, 1);
-    expect(kept.rows.map((r) => r.status)).toEqual(['done', 'done', 'done', 'done', 'next', 'locked']);
+    expect(kept.rows.map((r) => r.status)).toEqual(['done', 'done', 'done', 'done', 'next', 'locked', 'locked', 'locked']);
     expect(kept.rows[4]!.progress).toBeGreaterThanOrEqual(0);
     expect(roadmapModel(1, 999).rows[2]!.progress).toBe(1);
+  });
+
+  it('ends with two unnamed teasers after WALL STREET, at 100 and 200 SOL, locked whatever the SOL', () => {
+    expect(ROADMAP_TEASERS.map((t) => [t.name, t.sol])).toEqual([['???', 100], ['??????', 200]]);
+    // roadmap only: the building's stages stop at WALL STREET
+    expect(STAGES[STAGES.length - 1]!.name).toBe('WALL STREET');
+    expect(STAGES.some((s) => s.name.includes('?'))).toBe(false);
+    for (const [stage, sol] of [[0, 0], [4, 49.99], [5, 72.4], [5, 150], [5, 999]] as const) {
+      const rows = roadmapModel(stage, sol).rows.slice(-2);
+      expect(rows.map((r) => r.name)).toEqual(TEASERS);
+      expect(rows.map((r) => r.text)).toEqual(['100 SOL', '200 SOL']);
+      expect(rows.every((r) => r.teaser && r.status === 'locked' && r.progress === null)).toBe(true);
+    }
+    // at the top the one line still names the company's own stage, not a teaser
+    expect(roadmapModel(5, 150).line).toBe('WALL STREET: 150 SOL');
   });
 });

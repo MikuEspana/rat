@@ -1,5 +1,30 @@
-// Drag to pan, wheel to zoom around the pointer (like floor796). Pinch zoom on touch.
+// Drag to pan. A trackpad's two-finger scroll pans too; a pinch zooms around the pointer (browsers report a trackpad
+// pinch as a wheel event with ctrlKey set, Safari as gesture events). Mouse users zoom with ctrl + wheel or the
+// + and - buttons in the HUD (zoomBy). Touch: drag pans, two-finger pinch zooms.
 import type { Container } from 'pixi.js';
+
+/** What a wheel event does to the camera: a pinch (ctrlKey) zooms by `factor`, anything else pans by (dx, dy). */
+export type WheelAction = { kind: 'zoom'; factor: number } | { kind: 'pan'; dx: number; dy: number };
+
+/** px per line and per page for wheel events that count in lines (Firefox with a mouse) or pages */
+const LINE_PX = 16;
+
+export function wheelAction(e: Pick<WheelEvent, 'deltaX' | 'deltaY' | 'deltaMode' | 'ctrlKey' | 'shiftKey'>, pageH = 800): WheelAction {
+  const unit = e.deltaMode === 1 ? LINE_PX : e.deltaMode === 2 ? pageH : 1;
+  const dx = e.deltaX * unit;
+  const dy = e.deltaY * unit;
+  if (e.ctrlKey) {
+    // a pinch sends small deltas many times a second; ctrl + a mouse wheel sends big steps: cap each step
+    const d = Math.max(-60, Math.min(60, dy));
+    return { kind: 'zoom', factor: Math.exp(-d * 0.01) };
+  }
+  // shift + a mouse wheel scrolls sideways
+  if (e.shiftKey && dx === 0) return { kind: 'pan', dx: -dy, dy: 0 };
+  return { kind: 'pan', dx: -dx, dy: -dy };
+}
+
+/** A tap that moved less than this (CSS px) is a click, not a drag; fingers wobble more than a mouse. */
+export const CLICK_SLOP = { mouse: 6, touch: 12 };
 
 export interface View {
   x: number;
@@ -19,6 +44,9 @@ export class Camera {
   private last = { x: 0, y: 0 };
   private pointers = new Map<number, { x: number; y: number }>();
   private pinch = 0;
+  private touchDown = false;
+  /** Safari's trackpad pinch (gesture events): the scale at the last step */
+  private gestureScale = 0;
   onChange: () => void = () => {};
   /** a click that was not a drag, in screen coordinates */
   onClick: (x: number, y: number) => void = () => {};
@@ -32,6 +60,26 @@ export class Camera {
     window.addEventListener('pointerup', (e) => this.up(e));
     window.addEventListener('pointercancel', (e) => this.up(e));
     el.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
+    // Safari (macOS) reports a trackpad pinch as gesture events, not ctrl + wheel. On a touch screen the pointer
+    // events already run the pinch, so gestures are only stopped there (no page zoom), never applied twice.
+    type Gesture = Event & { scale?: number; clientX?: number; clientY?: number };
+    el.addEventListener('gesturestart', (e: Gesture) => {
+      e.preventDefault();
+      this.gestureScale = e.scale ?? 1;
+    });
+    el.addEventListener('gesturechange', (e: Gesture) => {
+      e.preventDefault();
+      if (this.touchDown || !this.gestureScale || !e.scale) return;
+      this.lastInput = performance.now();
+      this.flight++;
+      const box = el.getBoundingClientRect();
+      this.zoomAt(e.clientX ?? box.left + box.width / 2, e.clientY ?? box.top + box.height / 2, e.scale / this.gestureScale);
+      this.gestureScale = e.scale;
+    });
+    el.addEventListener('gestureend', (e: Gesture) => {
+      e.preventDefault();
+      this.gestureScale = 0;
+    });
   }
 
   /** when the viewer last touched the camera (ms, performance.now) */
@@ -45,6 +93,7 @@ export class Camera {
   private down(e: PointerEvent): void {
     this.lastInput = performance.now();
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.touchDown = e.pointerType === 'touch';
     this.dragging = true;
     this.moved = 0;
     this.last = { x: e.clientX, y: e.clientY };
@@ -77,7 +126,7 @@ export class Camera {
     this.x += dx;
     this.y += dy;
     this.lastInput = performance.now();
-    if (this.moved > 5) this.flight++; // dragging stops any flight
+    if (this.moved > CLICK_SLOP.mouse) this.flight++; // dragging stops any flight
     this.apply();
   }
 
@@ -85,8 +134,9 @@ export class Camera {
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.delete(e.pointerId);
     if (this.pointers.size === 0) {
-      if (this.dragging && this.moved < 5) this.onClick(e.clientX, e.clientY);
+      if (this.dragging && this.moved < (e.pointerType === 'touch' ? CLICK_SLOP.touch : CLICK_SLOP.mouse)) this.onClick(e.clientX, e.clientY);
       this.dragging = false;
+      this.touchDown = false;
     }
     this.pinch = 0;
   }
@@ -95,8 +145,22 @@ export class Camera {
     e.preventDefault();
     this.lastInput = performance.now();
     this.flight++; // a wheel stops any flight
-    const factor = Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015));
-    this.zoomAt(e.clientX, e.clientY, factor);
+    if (this.gestureScale && e.ctrlKey) return; // Safari: the gesture events run this pinch
+    const a = wheelAction(e, this.el.clientHeight);
+    if (a.kind === 'zoom') this.zoomAt(e.clientX, e.clientY, a.factor);
+    else {
+      this.x += a.dx;
+      this.y += a.dy;
+      this.apply();
+    }
+  }
+
+  /** Zoom in (factor > 1) or out around the middle of the screen: the HUD's + and - buttons. */
+  zoomBy(factor: number): void {
+    this.lastInput = performance.now();
+    this.flight++;
+    const box = this.el.getBoundingClientRect();
+    this.zoomAt(box.left + box.width / 2, box.top + box.height / 2, factor);
   }
 
   zoomAt(sx: number, sy: number, factor: number): void {

@@ -147,7 +147,7 @@ body {
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
   gap: 8px;
   flex: 1;
 }
@@ -360,7 +360,8 @@ body {
 .card {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  /* clear of the news ticker along the bottom */
+  bottom: 28px;
   width: 360px;
   padding: 10px 12px;
 }
@@ -432,7 +433,7 @@ body {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    /* find-my-rat and the tools wrap to a line of their own instead of running off the right edge */
+    /* the tools wrap to a line of their own instead of running off the right edge */
     flex-wrap: wrap;
     row-gap: 4px;
   }
@@ -441,12 +442,12 @@ body {
     letter-spacing: 1px;
   }
   .stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px 8px;
   }
-  /* the job-fair line gets its own row on small screens */
-  .stats .stat:last-child {
-    grid-column: span 2;
+  .stat {
+    padding-left: 6px;
+    min-width: 0;
   }
   .stat-value {
     font-size: 14px;
@@ -511,6 +512,35 @@ body {
 @media (max-width: 480px) {
   .stat-sub {
     display: none;
+  }
+  /* a phone: the three tiles take the whole row, the next-hire ring sits in the HUD's top right corner */
+  .stats {
+    flex: 1 1 100%;
+  }
+  .stat-value {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .hud .ring {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    flex-direction: column;
+    gap: 0;
+  }
+  .hud .ring svg {
+    width: 34px;
+    height: 34px;
+  }
+  .hud .ring-label {
+    width: auto;
+    font-size: 10px;
+    white-space: nowrap;
+    text-align: center;
+  }
+  /* the contract address row runs beside the ring */
+  .title .ca {
+    max-width: calc(100% - 92px);
   }
 }
 
@@ -870,7 +900,7 @@ body {
   z-index: 1;
 }
 
-/* ---------------------------------------------------------------- round 3: news, find my rat, tools */
+/* ---------------------------------------------------------------- round 3: news, tools */
 .news {
   position: absolute;
   left: 0;
@@ -971,23 +1001,6 @@ body {
   border: 0;
   flex: none;
 }
-.find {
-  margin-top: 4px;
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-.find-input {
-  font: inherit;
-  font-size: 10px;
-  width: 170px;
-  padding: 2px 4px;
-  color: #e8f0ff;
-  background: #10152a;
-  border: 1px solid #3a4266;
-}
-.find-go,
-.card-share,
 .hud-tools button {
   font: inherit;
   font-size: 9px;
@@ -997,10 +1010,6 @@ body {
   background: #ffd23f;
   border: 0;
   cursor: pointer;
-}
-.find-note {
-  font-size: 9px;
-  color: #ff9aa8;
 }
 .hud-tools {
   margin-top: 4px;
@@ -1013,9 +1022,6 @@ body {
   color: #16182c;
 }
 @media (max-width: 700px) {
-  .find-input {
-    width: 130px;
-  }
   .news {
     font-size: 10px;
   }
@@ -1109,12 +1115,6 @@ body {
     width: calc(100vw - 20px);
     top: 80px;
   }
-}
-
-/* the job-fair line: a hype number */
-.stat-value.hype {
-  color: #6dff9a;
-  text-shadow: 0 0 8px rgba(109, 255, 154, 0.45), 2px 2px 0 #0b0c18;
 }
 
 /* the Company Roadmap: every stage and the SOL claimed it takes. Bottom right, above the news ticker, in the space
@@ -1292,4 +1292,53 @@ body {
   .debug {
     bottom: 58px;
   }
+}
+
+/* HUD zoom buttons (a mouse has no pinch; a plain wheel or two-finger scroll pans) */
+.ui .hud-tools .zoom-btn {
+  min-width: 20px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* the rat card's wallet button: the rat's own wallet on Solscan, a pixel button in the gold of the links */
+.ui a.wallet-btn,
+.ui .wallet-btn {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 5px 10px;
+  color: #16182c;
+  background: #ffb13d;
+  border: 2px solid #0b0c18;
+  box-shadow: inset -2px -2px 0 #c77a12, inset 2px 2px 0 #ffd98a, 2px 2px 0 #0b0c18;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ui a.wallet-btn:hover {
+  background: #ffc766;
+}
+.ui a.wallet-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: inset 2px 2px 0 #c77a12, 1px 1px 0 #0b0c18;
+}
+.ui a.wallet-btn:focus-visible {
+  outline: 2px solid #f4f6ff;
+  outline-offset: 2px;
+}
+.ui .wallet-btn.off {
+  color: var(--dim);
+  background: #10152a;
+  border-color: #3a4266;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+/* the small card for a rat that is not a hire */
+.card-extra {
+  margin: 10px 0 2px;
+  line-height: 1.5;
+}
+.ui .card .badge.extra {
+  background: #3a4266;
 }

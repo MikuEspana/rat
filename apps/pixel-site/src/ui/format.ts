@@ -1,5 +1,5 @@
 // Display formatting for the HUD, feed, card and leaderboard.
-import type { RatEvent, StateResponse, Tier } from '@rat/contract';
+import { solscanAccountUrl, type RatEvent, type StateResponse, type Tier } from '@rat/contract';
 import { now as clockNow } from '../now';
 
 export function compact(n: number): string {
@@ -200,3 +200,28 @@ export function caView(coin: Pick<StateResponse['coin'], 'mint'>): { short: stri
   if (!mint) return null;
   return { short: `CA ${shortAddr(mint)}`, copy: mint, href: `https://pump.fun/coin/${encodeURIComponent(mint)}` };
 }
+
+/** A Solana address: base58, 32 to 44 characters. */
+const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+/**
+ * The rat card's "Wallet on Solscan" button: the rat's own on-chain wallet on Solscan, never a link to this site.
+ * null (no button) in the simulator, whose wallets are made up, or when the wallet is not a Solana address.
+ */
+export function walletUrl(wallet: string | null | undefined, simulated: boolean): string | null {
+  if (simulated) return null;
+  const w = wallet?.trim() ?? '';
+  return SOLANA_ADDRESS.test(w) ? solscanAccountUrl(w) : null;
+}
+
+/** Rats on screen that are not hires: set dressing and the job-fair line. They have no wallet and no stock. */
+export type ExtraKind = 'founder' | 'applicant' | 'crew' | 'staff' | 'passerby';
+
+/** The small card a rat that is not a hire opens: what it is, honestly. */
+export const EXTRA_CARD: Record<ExtraKind, { name: string; badge: string; line: string }> = {
+  founder: { name: 'FOUNDER', badge: 'NOT A HIRE', line: 'Founder: not a hire, no wallet. Part of the garage, holds no stock.' },
+  applicant: { name: 'JOB APPLICANT', badge: 'IN LINE', line: 'Job applicant: waiting for a desk. No wallet or stock yet: a real rat is hired when a salary buy confirms.' },
+  crew: { name: 'BUILDING CREW', badge: 'NOT A HIRE', line: 'Building crew: putting up the next rooms. Not a hire, no wallet.' },
+  staff: { name: 'OFFICE EXTRA', badge: 'NOT A HIRE', line: 'Office extra: part of the scenery. Not a hire, no wallet.' },
+  passerby: { name: 'PASSER-BY', badge: 'NOT A HIRE', line: 'Passer-by: lives in the city. Not a hire, no wallet.' },
+};
