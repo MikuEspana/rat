@@ -1,11 +1,11 @@
-# The launch, shared by scripts/launch.sh (launch day) and scripts/staging.sh phase 1 (the rehearsal), so the
-# rehearsal runs exactly what launch day runs:
-#   1. find the launch on chain: the creator wallet's new signatures, the last slot, the coin's mint;
+# The launch helpers, shared by scripts/launch.sh (launch day, armed first) and scripts/staging.sh phase 1:
+#   1. find the launch on chain: the creator wallet's new signatures, the last slot, the coin's mint (both scripts);
 #   2. check the live preflight WITH the coin's settings before anything changes on Railway (`rat --with ...
 #      preflight`, read-only: scripts/in-worker.cjs refuses --with for any other command);
-#   3. every launch setting in one change (worker: COIN_MINT, WATCH_FROM_SLOT = last slot + 1, KNOWN_OWNER_TX_SIGS,
-#      DRY_RUN=false, LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false, LIVE_CONFIRM), each read back, then ONE redeploy of the worker and
-#      the API, side by side (scripts/lib/wsr.sh redeploy).
+#   3. apply_launch: every launch setting in one change (worker: COIN_MINT, WATCH_FROM_SLOT = last slot + 1,
+#      KNOWN_OWNER_TX_SIGS, DRY_RUN=false, LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false, LIVE_CONFIRM), each read back.
+#      Used by scripts/staging.sh phase 1, and by scripts/launch.sh only to finish a coin an older run set on a DRY RUN
+#      worker. Launch day itself arms the bot before the coin exists (scripts/launch.sh).
 # Sourced after scripts/lib/wsr.sh. Every value here is public (addresses, signatures, a slot, a phrase).
 # shellcheck shell=bash
 LIVE_PHRASE="I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS"
