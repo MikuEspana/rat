@@ -101,6 +101,12 @@ export class KeyPoolRepo implements KeyPoolStore {
     return k ? { pubkey: k.pubkey, secretEnc: k.secretEnc, keyVersion: k.keyVersion, role } : null;
   }
 
+  /** The creator's public key only (the creator_pubkey view): the API's read-only user can read it, never the secret. */
+  async creatorPubkey(): Promise<Pubkey | null> {
+    const r = await this.db.execute(sql`select "pubkey" from "creator_pubkey" limit 1`);
+    return (rowsOf<{ pubkey: Pubkey }>(r)[0]?.pubkey) ?? null;
+  }
+
   /** Stores the creator key. Refuses to overwrite unless `replace` is set. */
   async setRoleKey(record: KeyPoolRecord & { role: 'creator' }, opts: { replace?: boolean } = {}): Promise<void> {
     const existing = await this.getRole(record.role);

@@ -23,8 +23,8 @@ export async function stagingProblems(store: Store, cfg: StagingConfig): Promise
       : [];
   }
   const problems: string[] = [];
-  const creatorKey = await store.keys.getRole('creator');
-  if (creatorKey?.pubkey === PRODUCTION_CREATOR_PUBKEY) {
+  // the public key only: the API runs as rat_api, which cannot read key_pool
+  if ((await store.keys.creatorPubkey()) === PRODUCTION_CREATOR_PUBKEY) {
     problems.push('STAGING refused: this database holds the production creator key. Staging runs on its own database only.');
   }
   if (marker && marker !== stagingMarkerFor(cfg.creatorPubkey ?? '')) {
