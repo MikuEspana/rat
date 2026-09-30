@@ -153,7 +153,7 @@ if ! (apply_launch); then
     "Run scripts/launch.sh again in a few minutes (status.railway.com): it finds the coin's settings and finishes."
 fi
 ok "every launch setting set on the worker and the API (read back)"
-if ! (redeploy worker api); then
+if ! (WSR_REUSE_BUILD=1; redeploy worker api); then
   die "the redeploy did not finish: the settings are LIVE on Railway, the old DRY RUN bot may still be running" \
     "Once Railway builds again (Deployments shows why), run scripts/launch.sh again: it redeploys and checks LIVE."
 fi

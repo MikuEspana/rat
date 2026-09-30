@@ -30,11 +30,12 @@ case "$1 ${2:-}" in
     done
     echo "set $svc$keys" >>"$F/order.log" ;;
   "redeploy --service")
-    echo "redeploy $svc" >>"$F/order.log"
+    case " $* " in *" --from-source "*) echo "redeploy $svc" >>"$F/order.log" ;; *) echo "restart $svc" >>"$F/order.log" ;; esac
     echo $(($(cat "$F/dep-$svc" 2>/dev/null || echo 0) + 1)) >"$F/dep-$svc"
     if [ "$svc" = worker ]; then
       if [ "$(jq -r .DRY_RUN "$F/vars-worker.json")" = false ]; then echo live >"$F/mode"; else echo dry_run >"$F/mode"; fi
     fi ;;
+  "deployment list") [ -f "$F/commit-$svc" ] && printf '[{"status":"SUCCESS","meta":{"commitHash":"%s"}}]\n' "$(cat "$F/commit-$svc")" || echo '[]' ;;
   "service status") printf '{"status":"SUCCESS","deploymentId":"d%s"}\n' "$(cat "$F/dep-$svc" 2>/dev/null || echo 0)" ;;
   *) echo "railway $*" >>"$F/order.log" ;;
 esac
@@ -78,13 +79,13 @@ reset() {
   echo '{"result":[{"signature":"sigLaunch","slot":1000,"err":null,"blockTime":1700000000},{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
   echo "$PASS_LINES" >"$W/fake/pre-with.json"
   echo "$PASS_LINES" >"$W/fake/pre-live.json"
-  rm -f "$W/fake/order.log" "$W/fake/dep-"*
+  rm -f "$W/fake/order.log" "$W/fake/dep-"* "$W/fake/commit-"*
 }
 run() { # run "<stdin>": scripts/launch.sh with the fakes
   printf '%s' "$1" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat \
     WSR_POLL_SEC=0 WSR_RETRY_SEC=0 bash "$REPO/scripts/launch.sh" >"$W/out.txt" 2>&1
 }
-changed() { grep -qE "^(set|redeploy|dry-run-reset)" "$W/fake/order.log" 2>/dev/null; }
+changed() { grep -qE "^(set|redeploy|restart|dry-run-reset)" "$W/fake/order.log" 2>/dev/null; }
 line() { grep -n "^$1" "$W/fake/order.log" | head -1 | cut -d: -f1; }
 
 echo "== only production, only once"
@@ -134,6 +135,17 @@ check "one change per service with every launch setting" '[ "$(grep -c "^set wor
 check "one redeploy each, both started before any wait" '[ "$(grep -c "^redeploy" "$W/fake/order.log")" = 2 ] && [ "$(sed -n "$(( $(line "redeploy worker") + 1 ))p" "$W/fake/order.log")" = "redeploy api" ]'
 check "the worker holds the launch settings" '[ "$(jq -r .WATCH_FROM_SLOT "$W/fake/vars-worker.json")" = 1001 ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-worker.json")" = "$PHRASE" ] && [ "$(jq -r .COIN_MINT "$W/fake/vars-api.json")" = MintLaunch ]'
 check "the API gets LIVE_CONFIRM with DRY_RUN=false (its config refuses to start without it)" '[ "$(jq -r .DRY_RUN "$W/fake/vars-api.json")" = false ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-api.json")" = "$PHRASE" ]'
+reset
+head=$(git -C "$REPO" rev-parse HEAD)
+echo "$head" >"$W/fake/commit-worker"
+echo "$head" >"$W/fake/commit-api"
+run $'\ny\nGO\n'; rc=$?
+check "worker and API already built from this commit: restarted with the launch settings, no build" '[ $rc = 0 ] && grep -q "^restart worker$" "$W/fake/order.log" && grep -q "^restart api$" "$W/fake/order.log" && ! grep -q "^redeploy" "$W/fake/order.log" && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+echo 0000000000000000000000000000000000000000 >"$W/fake/commit-worker"
+echo "$head" >"$W/fake/commit-api"
+run $'\ny\nGO\n'; rc=$?
+check "a service built from another commit is rebuilt (never an old image), the current one restarts" '[ $rc = 0 ] && grep -q "^redeploy worker$" "$W/fake/order.log" && grep -q "^restart api$" "$W/fake/order.log" && [ "$(cat "$W/fake/mode")" = live ]'
 reset
 run $'MintLaunch\nGO\n'; rc=$?
 check "the CA pasted right after the launch: the site is told at once, the found launch matches it, no question, LIVE" '[ $rc = 0 ] && [ "$(line "rat announce-ca MintLaunch")" -lt "$(line preflight-with)" ] && [ "$(grep -c "^rat announce-ca" "$W/fake/order.log")" = 1 ] && ! grep -q "Is that your coin" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
