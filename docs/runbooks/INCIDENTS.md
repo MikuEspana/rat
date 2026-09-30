@@ -31,8 +31,8 @@ Telegram alerts look like `[RAT RACE !!! critical] text`. The same key is sent a
 ## 1. launch.sh stopped halfway
 
 - **You see:** `scripts/launch.sh` ended with a red STOPPED line (a Railway setting lost, a build failed, `railway ssh` did not answer).
-- **Telegram / admin:** nothing yet. Admin still says DRY RUN, or LIVE with an old API.
-- **Fix:** run it again. It finds the coin's settings already on the worker, asks you to confirm the mint and type GO, then only does what is missing. It never asks for the launch again.
+- **Telegram / admin:** nothing yet. Admin says DRY RUN, or LIVE with the kill switch ON (armed), or LIVE with an old API.
+- **Fix:** run it again. It goes on from where it stopped: if the bot is already ARMED it asks whether you already created the coin (never create a second one) and goes on from the CA; a coin it already found or set, it keeps and only does what is missing.
   ```
   scripts/launch.sh
   ```

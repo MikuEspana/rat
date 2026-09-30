@@ -1,5 +1,5 @@
 #!/bin/bash
-# Dress rehearsal of scripts/launch.sh against fakes (no Railway, no chain): Railway slow and failing the way it did
+# Dress rehearsal of scripts/launch.sh (armed first) against fakes (no Railway, no chain): Railway slow and failing the way it did
 # during its incidents, `railway ssh` answering late or not at all, a build that fails. It times every step and counts
 # the Railway and ssh calls, and checks that each failure ends with a clear next step and that a second run finishes
 # what the first one started. Run: bash tests/scripts/launch-rehearsal.sh  (TIMINGS=1 prints the step timings)
@@ -60,9 +60,11 @@ echo "$(date +%s%3N) ssh $1" >>"$F/calls.log"
 dec() { n=$(cat "$F/$1" 2>/dev/null || echo 0); [ "$n" -gt 0 ] || return 1; echo $((n - 1)) >"$F/$1"; }
 if dec fail_ssh; then echo "railway ssh: connection closed" >&2; exit 1; fi
 case "$1" in
-  status) m=$(cat "$F/mode"); [ "$m" = live ] && dec stale_status && m=dry_run; printf '{"mode":"%s","killSwitch":{"on":false}}\n' "$m" ;;
+  status) m=$(cat "$F/mode"); [ "$m" = live ] && dec stale_status && m=dry_run; printf '{"mode":"%s","killSwitch":{"on":%s}}\n' "$m" "$(cat "$F/kill" 2>/dev/null || echo false)" ;;
   preflight) echo '{"lines":[{"status":"PASS","check":"launch txs","detail":"ok"},{"status":"PASS","check":"dev buy","detail":"ok"},{"status":"PASS","check":"coin creator","detail":"ok"}]}' ;;
   dry-run-reset) echo "paper data reset" ;;
+  launch-arm) echo true >"$F/kill"; echo "launch-arm: armed: waiting for the coin launch." ;;
+  launch-register) echo false >"$F/kill"; echo "launch-register: registered $2; kill switch released: hires start in the next loop." ;;
 esac
 EOF
 cat >"$W/bin/curl" <<'EOF'
@@ -71,6 +73,7 @@ d=""; prev=""; for a in "$@"; do [ "$prev" = -d ] && d="$a"; prev="$a"; done
 cat >/dev/null
 echo "$(date +%s%3N) rpc" >>"$FAKE_DIR/calls.log"
 case "$d" in
+  *getSlot*) echo '{"result":5000}' ;;
   *getBalance*) echo '{"result":{"value":300000000}}' ;;
   *getSignaturesForAddress*'"limit":1}'*) echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' ;;
   *getSignaturesForAddress*) echo '{"result":[{"signature":"sigLaunch","slot":1000,"err":null,"blockTime":1700000000},{"signature":"sigBefore","slot":900,"err":null}]}' ;;
@@ -104,45 +107,50 @@ echo "== timings: Railway as slow as during its incidents (2 s per API call, 8 s
 # scaled 1:20 so the rehearsal takes seconds: 100 ms per API call, 400 ms per ssh, 30 polls of the 10 s wait
 reset
 echo 30 >"$W/fake/polls"
-LAT_MS=100 SSH_MS=400 run $'\ny\nGO\n'; rc=$?
+LAT_MS=100 SSH_MS=400 run $'GO\nMintLaunch\n'; rc=$?
 check "LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt"'
-api=$(calls "railway"); ssh=$(calls "ssh"); polls=$(grep -c "railway service status" "$W/fake/calls.log")
-# at real speed: 2 s per API call except the status polls (every 10 s while building), 8 s per ssh, 5 min build
+# at real speed: 2 s per API call except the status polls (every 10 s while building), 8 s per ssh, 5 min per build
+arm=$(sed -n '1,/ssh founders-seed/p' "$W/fake/calls.log")
+api=$(printf '%s\n' "$arm" | grep -c " railway"); ssh=$(printf '%s\n' "$arm" | grep -c " ssh"); polls=$(printf '%s\n' "$arm" | grep -c "railway service status")
 est=$(( (api - polls) * 2 + ssh * 8 + 300 ))
-check "one build, and under 10 minutes from GO to LIVE at incident speed (estimated $((est / 60)) min $((est % 60)) s: $((api - polls)) Railway calls, $ssh ssh calls, one build)" '[ "$(grep -c "railway redeploy" "$W/fake/calls.log")" = 2 ] && [ $est -lt 600 ]'
+check "the arm: one build, under 10 minutes from GO to ARMED at incident speed (estimated $((est / 60)) min $((est % 60)) s: $((api - polls)) Railway calls, $ssh ssh calls, one build)" '[ "$(printf "%s\n" "$arm" | grep -c "railway redeploy")" = 2 ] && [ $est -lt 600 ]'
+coin=$(sed -n '/ssh founders-seed/,/ssh launch-register/p' "$W/fake/calls.log")
+api=$(printf '%s\n' "$coin" | grep -c " railway"); ssh=$(printf '%s\n' "$coin" | grep -c " ssh")
+est=$(( api * 2 + (ssh - 1) * 8 ))
+check "the coin to the first rats: no build, no Railway write, under a minute at incident speed (estimated $est s: $api Railway calls, $((ssh - 1)) ssh calls)" '[ "$api" = 0 ] && [ $est -lt 60 ] && grep -q "ssh launch-register" "$W/fake/calls.log"'
+check "then one more restart of both for the coin's settings" '[ "$(grep -c "railway redeploy" "$W/fake/calls.log")" = 4 ]'
 [ "${TIMINGS:-}" = 1 ] && awk -v t0="$(cat "$W/fake/t0")" '{ printf "  +%6.1fs  %s %s %s\n", ($1 - t0) / 1000, $2, $3, $4 }' "$W/fake/calls.log"
 
 echo "== Railway's API failing (the incident): every read answers after two failures"
 reset
 echo 2 >"$W/fake/fail_list"
-run $'\ny\nGO\n'; rc=$?
+run $'GO\nMintLaunch\n'; rc=$?
 check "the first variable read fails twice, then answers: the launch goes on to LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt"'
 
-echo "== a lost write: Railway answers OK to the launch settings but keeps no DRY_RUN=false"
+echo "== a lost write: Railway answers OK to the arm's settings but keeps no DRY_RUN=false"
 reset
 echo DRY_RUN >"$W/fake/drop_key"
-run $'\ny\nGO\n'; rc=$?
-check "stops before any redeploy, says what to do (run it again)" '[ $rc = 1 ] && ! grep -q "railway redeploy" "$W/fake/calls.log" && grep -q "Run scripts/launch.sh again" "$W/out.txt"'
+run $'GO\nMintLaunch\n'; rc=$?
+check "stops before any redeploy, before the CA, says what to do (run it again)" '[ $rc = 1 ] && ! grep -q "railway redeploy" "$W/fake/calls.log" && ! grep -q "Paste the CA" "$W/out.txt" && grep -q "Run scripts/launch.sh again" "$W/out.txt"'
 rm -f "$W/fake/drop_key"
 : >"$W/fake/calls.log"
-run $'y\nGO\n'; rc=$?
-check "the second run finishes it: the settings already there are completed, one redeploy, LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt" && [ "$(grep -c "railway redeploy" "$W/fake/calls.log")" = 2 ] && [ "$(jq -r .DRY_RUN "$W/fake/vars-worker.json")" = false ]'
-check "the second run never asks for the launch again (it keeps the coin from the first)" 'grep -q "MintLaunch" "$W/out.txt" && ! grep -q "Now launch the coin" "$W/out.txt"'
+run $'GO\nMintLaunch\n'; rc=$?
+check "the second run arms again (the coin did not exist yet) and finishes: LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt" && [ "$(grep -c "railway redeploy" "$W/fake/calls.log")" = 4 ] && [ "$(jq -r .DRY_RUN "$W/fake/vars-worker.json")" = false ] && [ "$(jq -r .COIN_MINT "$W/fake/vars-worker.json")" = MintLaunch ]'
 
-echo "== the API build fails"
+echo "== the API build fails during the arm"
 reset
 echo FAILED >"$W/fake/build_api"
-run $'\ny\nGO\n'; rc=$?
-check "stops with what to do: the settings are LIVE, run it again once the build problem is fixed" '[ $rc = 1 ] && grep -q "api did not start (status FAILED)" "$W/out.txt" && grep -q "scripts/launch.sh again" "$W/out.txt"'
+run $'GO\nMintLaunch\n'; rc=$?
+check "stops before the CA with what to do: run it again once the build problem is fixed" '[ $rc = 1 ] && grep -q "api did not start (status FAILED)" "$W/out.txt" && grep -q "scripts/launch.sh again" "$W/out.txt" && ! grep -q "Paste the CA" "$W/out.txt"'
 rm -f "$W/fake/build_api"
 : >"$W/fake/calls.log"
-run $'y\n'; rc=$?
-check "the second run sees the worker LIVE and only redeploys the API (asked first)" '[ $rc = 0 ] && grep -q "already runs LIVE" "$W/out.txt" && grep -q "the API runs with the live settings" "$W/out.txt" && [ "$(grep -c "railway redeploy --service api" "$W/fake/calls.log")" = 1 ] && ! grep -q "railway redeploy --service worker" "$W/fake/calls.log"'
+run $'n\nMintLaunch\n'; rc=$?
+check "the second run sees the bot ARMED and goes on from the launch; the finish restarts the worker and the API" '[ $rc = 0 ] && grep -q "already ARMED" "$W/out.txt" && grep -q "LIVE.*the bot runs" "$W/out.txt" && ! grep -q "ssh dry-run-reset" "$W/fake/calls.log" && [ "$(grep -c "railway redeploy --service api" "$W/fake/calls.log")" = 1 ] && [ "$(grep -c "railway redeploy --service worker" "$W/fake/calls.log")" = 1 ]'
 
 echo "== railway ssh after the redeploy: the old container still answers, then ssh drops once"
 reset
 echo 2 >"$W/fake/stale_status"
-run $'\ny\nGO\n'; rc=$?
+run $'GO\nMintLaunch\n'; rc=$?
 check "not called 'not LIVE' while the old DRY RUN container drains: it asks again until the new one answers" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt"'
 reset
 cat >"$W/bin/fake-rat-wrap" <<'EOF'
@@ -155,7 +163,7 @@ fi
 exec fake-rat "$@"
 EOF
 chmod +x "$W/bin/fake-rat-wrap"
-printf '%s' $'\ny\nGO\n' | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat-wrap \
+printf '%s' $'GO\nMintLaunch\n' | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat-wrap \
   WSR_POLL_SEC=0 WSR_RETRY_SEC=0 bash "$REPO/scripts/launch.sh" >"$W/out.txt" 2>&1
 rc=$?
 check "ssh dropping 3 times after the redeploy: asked again, LIVE (never a false 'not LIVE')" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt"'
@@ -164,7 +172,7 @@ echo "== railway ssh down for the live preflight: a clear stop, never a silent e
 reset
 printf '#!/bin/bash\n[ "$1" = --with ] && { echo "railway ssh: connection closed" >&2; exit 1; }\nexec fake-rat "$@"\n' >"$W/bin/fake-rat-nopre"
 chmod +x "$W/bin/fake-rat-nopre"
-printf '%s' $'\ny\nGO\n' | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat-nopre \
+printf '%s' $'GO\nMintLaunch\n' | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat-nopre \
   WSR_POLL_SEC=0 WSR_RETRY_SEC=0 bash "$REPO/scripts/launch.sh" >"$W/out.txt" 2>&1
 rc=$?
 check "stops with the reason (the preflight gave no answer) before anything changed" '[ $rc = 1 ] && grep -q "preflight gave no answer" "$W/out.txt" && ! grep -q "railway redeploy" "$W/fake/calls.log" && [ "$(jq -r .DRY_RUN "$W/fake/vars-worker.json")" = true ]'

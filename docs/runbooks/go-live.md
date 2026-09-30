@@ -19,7 +19,7 @@
 - [ ] `rat preflight` says **READY** (every FAIL line fixed; WARN lines read and understood).
 
 ## T-1 hour: launch the coin, THEN tell the worker about it
-`scripts/launch.sh` does steps 3 to 6 and T-0 below in one build: it finds the launch on chain, checks `rat preflight --live` with the coin's settings before anything changes, waits for GO, then sets everything in one change and redeploys the worker and the API once (LAUNCH-DAY.md). The steps by hand, if you ever need them:
+`scripts/launch.sh` does it the armed way (LAUNCH-DAY.md): before the coin exists it restarts the bot LIVE with its kill switch ON and a watch floor (`rat launch-arm`), then after you paste the CA it registers the launch (`rat launch-register`: the CA on the site, the launch txs as yours, the kill switch released), then puts the coin into the settings with one more restart. The steps by hand, if you ever need them:
 
 Order matters: the coin launch is a creator-wallet transaction the bot did not send. The wallet watch must know about it before the worker's first live start, or it looks like a leaked key and trips the kill switch.
 1. [ ] Fund the creator wallet (sending SOL **to** it is fine): the dev buy (0.1 SOL) + the launch cost + the 0.05 SOL reserve + a little spare, about 0.3 SOL.
