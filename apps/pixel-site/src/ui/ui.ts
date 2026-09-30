@@ -18,7 +18,8 @@ type Progress = ReturnType<Growth['progress']>;
 
 /** Badges by hire order: the ring whose rooms were opening when a rat was hired. */
 const ERAS = ['GARAGE OG', 'SMALL OFFICE OG', 'FLOOR 1 OG', 'CORPORATE ERA', 'MEGACORP ERA', 'WALL STREET ERA'];
-import { ago, BOT_STALE_SEC, bannerText, describe, emptyBoardText, hireRing, pct, ratsSub, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
+import { ago, BOT_STALE_SEC, bannerText, caView, describe, emptyBoardText, hireRing, pct, priceUsd, ratsSub, signClass, solAmount, TIER_COLOR, TIER_LABEL, usd } from './format';
+import { copyText } from './clipboard';
 
 type Look = keyof typeof TIER_COLOR;
 
@@ -106,6 +107,14 @@ export class Ui {
   private ringArc!: SVGCircleElement;
   private ringLabel = el('div', 'ring-label');
   private ringEl = el('div', 'ring');
+  private hudEl: HTMLElement | null = null;
+  private hudBottom = -1;
+  /** the contract address: hidden until the coin has a mint */
+  private ca = el('div', 'ca');
+  private caAddr = el('a', 'ca-addr');
+  private caCopy = el('button', 'ca-copy', 'COPY');
+  private caMint: string | null = null;
+  private caTimer = 0;
   private feedList = el('ol', 'feed-list');
   private feedEmpty = el('li', 'ev empty', 'Quiet so far. Claims and hires show up here as they happen.');
   private feedItems: Array<{ li: HTMLLIElement; time: HTMLElement; at: string }> = [];
@@ -199,7 +208,22 @@ export class Ui {
       note.textContent = id === null ? 'no rat found' : '';
       if (id !== null) this.spotlight(id);
     };
-    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.stageChip, find, this.tools);
+    this.ca.hidden = true;
+    this.caAddr.target = '_blank';
+    this.caAddr.rel = 'noopener noreferrer';
+    this.caCopy.type = 'button';
+    this.caCopy.setAttribute('aria-label', 'copy the contract address');
+    this.caCopy.onclick = () => {
+      const mint = this.caMint;
+      if (!mint) return;
+      void copyText(mint).then((ok) => {
+        this.caCopy.textContent = ok ? 'COPIED' : 'COPY FAILED';
+        clearTimeout(this.caTimer);
+        this.caTimer = window.setTimeout(() => (this.caCopy.textContent = 'COPY'), 1500);
+      });
+    };
+    this.ca.append(this.caAddr, this.caCopy);
+    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.ca, this.stageChip, find, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
@@ -236,6 +260,7 @@ export class Ui {
     this.ringArc = arc;
     ring.append(svg, this.ringLabel);
     hud.append(title, grid, ring);
+    this.hudEl = hud;
     return hud;
   }
 
@@ -261,7 +286,15 @@ export class Ui {
       st.value.className = `stat-value ${cls}`;
       st.sub.textContent = sub;
     };
-    set('mcap', s.coin.marketCapUsd === null ? 'pre-launch' : usd(s.coin.marketCapUsd), s.coin.priceUsd === null ? '' : `$${s.coin.priceUsd} / RAT`);
+    set('mcap', s.coin.marketCapUsd === null ? 'pre-launch' : usd(s.coin.marketCapUsd), s.coin.priceUsd === null ? '' : `${priceUsd(s.coin.priceUsd)} / RAT`);
+    const ca = caView(s.coin);
+    this.ca.hidden = ca === null;
+    if (ca && ca.copy !== this.caMint) {
+      this.caMint = ca.copy;
+      this.caAddr.textContent = ca.short;
+      this.caAddr.href = ca.href;
+      this.caAddr.title = `${ca.copy} on pump.fun`;
+    } else if (!ca) this.caMint = null;
     set('rats', s.portfolio.ratCount.toLocaleString('en-US'), ratsSub(s.portfolio, s.bot.mode));
     const top = [...s.stocks].sort((a, b) => b.ratCount - a.ratCount).filter((x) => x.ratCount > 0).slice(0, 2);
     const holdings = top.map((x) => `${x.symbol} ${x.ratCount.toLocaleString('en-US')}`).join(', ');
@@ -282,6 +315,12 @@ export class Ui {
   }
 
   private tick(): void {
+    // the live feed (top right on desktop) starts under the HUD, whatever height the HUD has (banner, CA, wrapping)
+    const hb = this.hudEl ? Math.round(this.hudEl.getBoundingClientRect().bottom) : -1;
+    if (hb > 0 && hb !== this.hudBottom) {
+      this.hudBottom = hb;
+      this.root.style.setProperty('--hud-bottom', `${hb}px`);
+    }
     const s = this.d.store.state;
     if (s) {
       const r = hireRing(s, clockNow(), SIM ? Number.POSITIVE_INFINITY : BOT_STALE_SEC);

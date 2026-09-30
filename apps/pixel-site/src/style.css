@@ -240,9 +240,10 @@ body {
 .feed {
   position: absolute;
   right: 10px;
-  top: 100px;
+  /* under the HUD, whatever its height (ui.ts measures it into --hud-bottom) */
+  top: calc(var(--hud-bottom, 90px) + 10px);
   width: 360px;
-  max-height: calc(100vh - 120px - 250px);
+  max-height: calc(100vh - var(--hud-bottom, 90px) - 30px - 250px);
   display: flex;
   flex-direction: column;
 }
@@ -714,7 +715,7 @@ body {
   top: 38px;
 }
 .sim-mode .feed {
-  top: 128px;
+  top: calc(var(--hud-bottom, 118px) + 10px);
 }
 .sim-intro {
   position: absolute;
@@ -933,6 +934,42 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+/* the contract address (CA): shown once the coin has a mint; the address opens pump.fun, COPY copies all of it */
+.ca {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+.ca[hidden] {
+  display: none;
+}
+.ui a.ca-addr {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  padding: 1px 6px;
+  background: #10152a;
+  border: 1px solid #3a4266;
+}
+.ui a.ca-addr:hover {
+  text-decoration: underline;
+}
+.ui .ca-copy {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  color: #16182c;
+  background: var(--gold);
+  border: 0;
+  flex: none;
 }
 .find {
   margin-top: 4px;

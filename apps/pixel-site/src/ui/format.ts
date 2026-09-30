@@ -176,3 +176,27 @@ export function emptyBoardText(s: { coin: Pick<StateResponse['coin'], 'mint'>; p
   if (s.portfolio.ratCount > 0) return 'No rats to rank yet.';
   return s.coin.mint ? 'No rats yet. The first one is hired as soon as the fees cover its salary.' : 'No rats yet. Hiring opens at launch.';
 }
+
+/**
+ * The coin's price under MARKET CAP: 4 significant figures, never in e-notation ($0.000003379, not
+ * $0.0000033788581567848046). Empty while there is no price (before launch).
+ */
+export function priceUsd(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n) || n < 0) return '';
+  return `$${n.toLocaleString('en-US', { maximumSignificantDigits: 4 })}`;
+}
+
+/** First 6 and last 6 characters of an address: bCiRzz...3spump. */
+export function shortAddr(a: string): string {
+  return a.length <= 15 ? a : `${a.slice(0, 6)}...${a.slice(-6)}`;
+}
+
+/**
+ * The contract address (CA) in the HUD: null (nothing shown) until the coin has a mint. `copy` is what the COPY
+ * button puts on the clipboard: always the whole mint.
+ */
+export function caView(coin: Pick<StateResponse['coin'], 'mint'>): { short: string; copy: string; href: string } | null {
+  const mint = coin.mint?.trim();
+  if (!mint) return null;
+  return { short: `CA ${shortAddr(mint)}`, copy: mint, href: `https://pump.fun/coin/${encodeURIComponent(mint)}` };
+}
