@@ -1,5 +1,5 @@
 import { EventsResponseSchema, HealthResponseSchema, RatsResponseSchema, StateResponseSchema } from '@rat/contract';
-import { SETTINGS } from '@rat/core';
+import { ARMED_KILL_REASON, SETTINGS } from '@rat/core';
 import { schema } from '@rat/db';
 import { SOL, type SimWorld, createSimWorld } from '@rat/worker';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -90,6 +90,12 @@ describe('state API on a live SimChain world', () => {
     expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeLessThanOrEqual(1.5);
     expect(s.treasury.totalHiredSol + s.treasury.waitingSol).toBeGreaterThan(1.49);
     await w.store.settings.set(SETTINGS.killSwitch, 'on');
+    expect(StateResponseSchema.parse((await getJson(app, '/api/state')).body).bot.mode).toBe('paused');
+    // armed before the coin launch (rat launch-arm): the pre-launch look, not "paused"
+    await w.store.settings.set(SETTINGS.killReason, ARMED_KILL_REASON);
+    expect(StateResponseSchema.parse((await getJson(app, '/api/state')).body).bot.mode).toBe('dry_run');
+    expect(HealthResponseSchema.parse((await getJson(app, '/health')).body).mode).toBe('dry_run');
+    await w.store.settings.set(SETTINGS.killReason, 'manual');
     expect(StateResponseSchema.parse((await getJson(app, '/api/state')).body).bot.mode).toBe('paused');
   });
 });

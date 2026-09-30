@@ -11,6 +11,7 @@ import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
 import { announceCaCommand } from './commands/announce';
 import { foundersSeedCommand } from './commands/founders';
+import { launchArmCommand, launchRegisterCommand } from './commands/launch';
 import { printAudit, runAudit } from './commands/audit';
 import { dryRunResetCommand } from './commands/dry-run';
 import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
@@ -175,6 +176,27 @@ program
       const conn = createConnection(cfg.rpcUrl!);
       const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
       if (!(await announceCaCommand(ctx, chain, mint))) process.exitCode = 1;
+    }),
+  );
+program
+  .command('launch-arm')
+  .description('before the coin exists: kill switch ON (armed) and the owner launch pending for 30 minutes (sends nothing)')
+  .action(() =>
+    withContext(async (ctx) => {
+      if (!(await launchArmCommand(ctx))) process.exitCode = 1;
+    }),
+  );
+program
+  .command('launch-register')
+  .description('right after the launch: record the coin + launch signatures as the owner\'s and release the armed kill switch')
+  .argument('<mint>', 'the coin mint (CA)')
+  .requiredOption('--sigs <list>', 'comma separated launch transaction signature(s) signed by the creator wallet')
+  .action((mint: string, o) =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['rpcUrl']);
+      const conn = createConnection(cfg.rpcUrl!);
+      const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
+      if (!(await launchRegisterCommand(ctx, chain, mint, { sigs: o.sigs }))) process.exitCode = 1;
     }),
   );
 program

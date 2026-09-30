@@ -6,8 +6,11 @@
 // Owner transactions are not attacks:
 //  - nothing before the watch floor is ever looked at: WATCH_FROM_SLOT (set it right after the coin launch), else
 //    the slot of the worker's first live run (stored once). This also covers a launch tx that the RPC indexes late.
-//  - signatures in KNOWN_OWNER_TX_SIGS (the launch, a manual transfer) are accepted instead of engaging the kill switch.
-import { SETTINGS, formatSol, solDelta } from '@rat/core';
+//  - signatures in KNOWN_OWNER_TX_SIGS or SETTINGS.knownOwnerTxSigs (the launch, a manual transfer; rat launch-register)
+//    are accepted instead of engaging the kill switch.
+//  - armed launch: while SETTINGS.launchPendingUntil is in the future (rat launch-arm), an unknown creator-signed tx
+//    waits (no kill, no alert, the cursor stays before it) for rat launch-register; once pending ends, the rule applies.
+import { SETTINGS, formatSol, launchPending, parseSigList, solDelta } from '@rat/core';
 import { engageKillSwitch } from '@rat/safety';
 import type { WorkerDeps } from '../deps';
 import { creditClaim } from './claim';
@@ -23,8 +26,10 @@ export interface WatchResult {
   unknownSigned: number;
   /** skipped: older than the watch floor */
   beforeFloor: number;
-  /** accepted: listed in KNOWN_OWNER_TX_SIGS */
+  /** accepted: listed in KNOWN_OWNER_TX_SIGS or SETTINGS.knownOwnerTxSigs */
   ownerKnown: number;
+  /** creator-signed txs left for the next loop while the owner launch is pending (rat launch-arm) */
+  ownerPending: number;
 }
 
 /** WATCH_FROM_SLOT, else the slot of the first live run (stored once, never moves). */
@@ -60,7 +65,8 @@ async function watchWallet(d: WorkerDeps, role: 'creator', res: WatchResult, flo
       `More than ${WATCH_SIG_LIMIT} new transactions on the ${role} wallet since the last check (spam flood?). Older ones may not have been checked: review the wallet on Solscan.`,
     );
   }
-  const known = new Set(d.config.knownOwnerTxSigs);
+  // read every run: rat launch-register adds the launch signatures without a restart
+  const known = new Set([...d.config.knownOwnerTxSigs, ...parseSigList(await d.store.settings.get(SETTINGS.knownOwnerTxSigs))]);
   const unseen = new Set(await d.store.seen.unseen(sigs.map((s) => s.signature)));
   const ours = await d.store.attempts.signaturesKnown(sigs.map((s) => s.signature));
   const now = d.clock.now();
@@ -107,6 +113,14 @@ async function watchWallet(d: WorkerDeps, role: 'creator', res: WatchResult, flo
     }
     // Signers first: even a FAILED transaction signed by our key proves someone else has the key.
     if (record.signers.includes(wallet)) {
+      // armed launch: the owner's launch tx waits for rat launch-register (judged again next loop, cursor stays before it)
+      if (launchPending(await d.store.settings.get(SETTINGS.launchPendingUntil), d.clock.now())) {
+        res.ownerPending++;
+        if (!incomplete) cursorTo = previous(sigs, sig);
+        incomplete = true;
+        d.log.info({ sig, role }, 'owner launch pending: waiting for launch-register');
+        break;
+      }
       res.unknownSigned++;
       // kill and alert BEFORE marking it seen: a crash in between must not let the next loop skip it
       await engageKillSwitch(d.store.settings, `unknown transaction signed by the ${role} wallet: ${sig}`);
@@ -149,7 +163,7 @@ function previous(sigs: { signature: string }[], sig: string): string | null {
 }
 
 export async function runWatchStep(d: WorkerDeps): Promise<WatchResult> {
-  const res: WatchResult = { externalClaims: 0, unexplainedInflows: 0, unknownSigned: 0, beforeFloor: 0, ownerKnown: 0 };
+  const res: WatchResult = { externalClaims: 0, unexplainedInflows: 0, unknownSigned: 0, beforeFloor: 0, ownerKnown: 0, ownerPending: 0 };
   if (d.store.mode === 'paper') return res;
   const floor = await watchFloor(d);
   await watchWallet(d, 'creator', res, floor);

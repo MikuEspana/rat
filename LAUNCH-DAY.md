@@ -31,18 +31,18 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 - [ ] `scripts/site-go-live.sh` says **SITE READY**: wallstreetrats.world reads the production API and shows the honest pre-launch state (the "The rats are clocking in..." banner, 0 rats, market cap "pre-launch").
 - [ ] Go to sleep.
 
-## T-1 hour: launch the coin, then the bot goes LIVE in ONE build
+## T-1 hour: arm the bot, then launch the coin
 
-- [ ] Fund the creator wallet with about **0.3 SOL**: 0.1 dev buy + launch cost + 0.05 reserve + spare. It is the bot's only wallet besides the rats'.
-- [ ] From `~/wallstreetrats`, start **`scripts/launch.sh` BEFORE you launch.** It checks this is the production bot, in DRY RUN, then notes the creator wallet's last transaction and waits.
-- [ ] Launch on pump.fun from the creator wallet: **normal mode, no holder rewards, no fee sharing**, dev buy **0.1 SOL** inside the launch.
+- [ ] Fund the creator wallet with about **0.35 SOL**: 0.1 dev buy + launch cost + 0.05 reserve + 0.15 for 5 founding rats + spare. It is the bot's only wallet besides the rats'.
+- [ ] From `~/wallstreetrats`, start **`scripts/launch.sh` BEFORE the coin exists.** It checks this is the production bot, in DRY RUN, the creator wallet's balance, and the preflight (read-only). Only the coin's own lines may FAIL yet.
+- [ ] **Type GO to arm.** The bot restarts LIVE with its kill switch ON ("armed"): it sends nothing and waits 30 minutes for your coin. The founding rats are booked. It prints **ARMED**.
+- [ ] Now launch on pump.fun from the creator wallet: name Wall Street Rats, ticker WSR, **normal mode, no holder rewards, no fee sharing, no cashback**, dev buy **0.1 SOL** inside the launch.
 - [ ] The dev-buy coins stay in the creator wallet **forever**. Never sell or move them (anything signed by the creator wallet stops the bot). They are never counted as fees and the bot can never move them. Your own trading: your separate wallet only.
-- [ ] When Solscan shows the launch **Finalized**, press Enter. The script finds the launch signature(s), the slot and the coin's mint; confirm the mint (or type them by hand from Solscan if it asks).
-- [ ] It checks `rat preflight --live` **with the coin's settings, before anything changes**: `launch txs` PASS, `dev buy` PASS, no FAIL. Any FAIL: it stops and nothing was changed.
-- [ ] **Type GO.** It clears the DRY RUN paper data, sets every launch setting in one change (worker: `COIN_MINT`, `WATCH_FROM_SLOT` = slot + 1, `KNOWN_OWNER_TX_SIGS`, `DRY_RUN=false`, `LIVE_CONFIRM`; API: `COIN_MINT`, `DRY_RUN=false`), then ONE redeploy of the worker and the API, side by side. About 5 minutes plus one Railway build from the coin to the bot live.
-- [ ] It ends with **LIVE** (mode live, kill switch off, `rat preflight --live` READY).
-- **It stopped halfway** (Railway lost a setting, a build failed, `railway ssh` did not answer)? **Run `scripts/launch.sh` again.** It finds the coin's settings already on the worker, asks you to confirm the mint and type GO again, completes what is missing and redeploys; it never asks for the launch again. If the worker already runs LIVE, it says so and only offers to redeploy the API.
-- The rehearsal runs these exact steps (`scripts/staging.sh 1`, `scripts/lib/launch.sh`). By hand instead: `docs/runbooks/go-live.md`.
+- [ ] **Paste the CA** pump.fun shows (or just press Enter once Solscan shows the launch). The script finds the launch on chain; if it is not the CA you pasted, it asks.
+- [ ] It registers the coin: the site shows the CA, the kill switch is released, fee claims start and the founding rats walk in within about 30 s. No build in between.
+- [ ] Then, no hurry: the coin goes into the worker's and the API's settings, one restart (hiring pauses about a minute), `rat preflight --live`. It ends with **LIVE**.
+- **It stopped halfway?** **Run `scripts/launch.sh` again.** It goes on from where it stopped: armed, it asks whether you already created the coin (never create a second one) and goes on from the CA; a coin it already found, it keeps. If the bot already runs LIVE with its coin, it says so and only offers what is left to restart.
+- The rehearsal: `scripts/launch.sh --rehearsal` from `~/wallstreetrats-staging` runs this same flow on staging. By hand instead: `docs/runbooks/go-live.md`.
 
 ## T-0: watch it
 

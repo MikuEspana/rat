@@ -17,7 +17,7 @@ import {
   summarizePortfolio,
   summarizeStocks,
 } from '@rat/contract';
-import { type AppConfig, type Clock, SETTINGS, hireWeights, lamportsToSol, ratName, rawToDecimalString } from '@rat/core';
+import { ARMED_KILL_REASON, type AppConfig, type Clock, SETTINGS, hireWeights, lamportsToSol, ratName, rawToDecimalString } from '@rat/core';
 import { type EventRow, type Store, type StockRow, isStagingDatabase } from '@rat/db';
 
 function uiAmount(raw: bigint, decimals: number, multiplier: number): string {
@@ -43,7 +43,11 @@ export class StateService {
   ) {}
 
   private async mode(): Promise<BotMode> {
-    if (this.cfg.killSwitch || (await this.store.settings.get(SETTINGS.killSwitch)) === 'on') return 'paused';
+    if (this.cfg.killSwitch) return 'paused';
+    if ((await this.store.settings.get(SETTINGS.killSwitch)) === 'on') {
+      // armed before the coin launch (rat launch-arm): the site shows the pre-launch look, not "paused"
+      return (await this.store.settings.get(SETTINGS.killReason)) === ARMED_KILL_REASON ? 'dry_run' : 'paused';
+    }
     return this.cfg.dryRun ? 'dry_run' : 'live';
   }
 

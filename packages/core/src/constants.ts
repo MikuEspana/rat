@@ -40,7 +40,32 @@ export const SETTINGS = {
   stagingMarker: 'staging_marker',
   /** STAGING only: set right before the one-shot crash test kills the worker, so it never fires twice */
   stagingCrashDone: 'staging_crash_done',
+  /** comma separated owner transaction signatures the wallet watch accepts (rat launch-register), besides KNOWN_OWNER_TX_SIGS */
+  knownOwnerTxSigs: 'known_owner_tx_sigs',
+  /** ISO timestamp: until then an unknown creator-signed tx waits for rat launch-register instead of killing ('' = none) */
+  launchPendingUntil: 'launch_pending_until',
 } as const;
+
+/** Kill switch reason while the bot is armed before the coin launch (rat launch-arm); rat launch-register releases only this one. */
+export const ARMED_KILL_REASON = 'armed: waiting for the coin launch';
+
+const TX_SIG_RE = /^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
+/** A base58 transaction signature (64 to 88 characters). */
+export function isTxSignature(value: string): boolean {
+  return TX_SIG_RE.test(value);
+}
+
+/** A comma separated signature list from a setting (null / '' = empty). */
+export function parseSigList(value: string | null | undefined): string[] {
+  return (value ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+}
+
+/** SETTINGS.launchPendingUntil still in the future ('' / null / unparsable = not pending). */
+export function launchPending(value: string | null | undefined, now: Date): boolean {
+  if (!value) return false;
+  const until = Date.parse(value);
+  return Number.isFinite(until) && until > now.getTime();
+}
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 export function isBase58Pubkey(value: string): boolean {
