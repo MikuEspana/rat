@@ -135,6 +135,12 @@ check "one redeploy each, both started before any wait" '[ "$(grep -c "^redeploy
 check "the worker holds the launch settings" '[ "$(jq -r .WATCH_FROM_SLOT "$W/fake/vars-worker.json")" = 1001 ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-worker.json")" = "$PHRASE" ] && [ "$(jq -r .COIN_MINT "$W/fake/vars-api.json")" = MintLaunch ]'
 check "the API gets LIVE_CONFIRM with DRY_RUN=false (its config refuses to start without it)" '[ "$(jq -r .DRY_RUN "$W/fake/vars-api.json")" = false ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-api.json")" = "$PHRASE" ]'
 reset
+run $'MintLaunch\nGO\n'; rc=$?
+check "the CA pasted right after the launch: the site is told at once, the found launch matches it, no question, LIVE" '[ $rc = 0 ] && [ "$(line "rat announce-ca MintLaunch")" -lt "$(line preflight-with)" ] && [ "$(grep -c "^rat announce-ca" "$W/fake/order.log")" = 1 ] && ! grep -q "Is that your coin" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+run $'OtherMint\ny\nGO\n'; rc=$?
+check "a pasted CA that is not the launch found on chain: said so, and asked" '[ $rc = 0 ] && grep -q "NOT the CA you pasted" "$W/out.txt" && grep -q "^preflight-with COIN_MINT=MintLaunch " "$W/fake/order.log"'
+reset
 echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
 run $'\nMintByHand\nsigA,sigB\n1234\nGO\n'; rc=$?
 check "no launch found on chain: typed by hand, same checks, LIVE" '[ $rc = 0 ] && grep -q "^preflight-with COIN_MINT=MintByHand WATCH_FROM_SLOT=1235 KNOWN_OWNER_TX_SIGS=sigA,sigB " "$W/fake/order.log"'
