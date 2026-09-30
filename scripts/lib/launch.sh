@@ -4,7 +4,7 @@
 #   2. check the live preflight WITH the coin's settings before anything changes on Railway (`rat --with ...
 #      preflight`, read-only: scripts/in-worker.cjs refuses --with for any other command);
 #   3. every launch setting in one change (worker: COIN_MINT, WATCH_FROM_SLOT = last slot + 1, KNOWN_OWNER_TX_SIGS,
-#      DRY_RUN=false, LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false), each read back, then ONE redeploy of the worker and
+#      DRY_RUN=false, LIVE_CONFIRM; API: COIN_MINT, DRY_RUN=false, LIVE_CONFIRM), each read back, then ONE redeploy of the worker and
 #      the API, side by side (scripts/lib/wsr.sh redeploy).
 # Sourced after scripts/lib/wsr.sh. Every value here is public (addresses, signatures, a slot, a phrase).
 # shellcheck shell=bash
@@ -79,5 +79,6 @@ show_preflight() { printf '%s' "$1" | jq -r '.lines[]? | "        \(.status)  \(
 
 apply_launch() { # every launch setting in one change per service, each value read back
   set_vars worker "COIN_MINT=$LAUNCH_MINT" "WATCH_FROM_SLOT=$((LAUNCH_SLOT + 1))" "KNOWN_OWNER_TX_SIGS=$LAUNCH_SIGS" DRY_RUN=false "LIVE_CONFIRM=$LIVE_PHRASE"
-  set_vars api "COIN_MINT=$LAUNCH_MINT" DRY_RUN=false
+  # the API loads the same config: DRY_RUN=false without LIVE_CONFIRM makes it refuse to start (packages/core/src/config.ts)
+  set_vars api "COIN_MINT=$LAUNCH_MINT" DRY_RUN=false "LIVE_CONFIRM=$LIVE_PHRASE"
 }

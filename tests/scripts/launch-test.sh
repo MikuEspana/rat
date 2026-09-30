@@ -129,9 +129,10 @@ run $'\ny\nGO\n'; rc=$?
 check "LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
 check "the preflight saw exactly the coin's settings" 'grep -q "^preflight-with COIN_MINT=MintLaunch WATCH_FROM_SLOT=1001 KNOWN_OWNER_TX_SIGS=sigLaunch DRY_RUN=false LIVE_CONFIRM=$PHRASE$" "$W/fake/order.log"'
 check "order: preflight, then the reset, then the settings, then the redeploys" '[ "$(line preflight-with)" -lt "$(line dry-run-reset)" ] && [ "$(line dry-run-reset)" -lt "$(line "set worker")" ] && [ "$(line "set api")" -lt "$(line "redeploy worker")" ]'
-check "one change per service with every launch setting" '[ "$(grep -c "^set worker" "$W/fake/order.log")" = 1 ] && grep -q "^set worker COIN_MINT WATCH_FROM_SLOT KNOWN_OWNER_TX_SIGS DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log" && grep -q "^set api COIN_MINT DRY_RUN$" "$W/fake/order.log"'
+check "one change per service with every launch setting" '[ "$(grep -c "^set worker" "$W/fake/order.log")" = 1 ] && grep -q "^set worker COIN_MINT WATCH_FROM_SLOT KNOWN_OWNER_TX_SIGS DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log" && grep -q "^set api COIN_MINT DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log"'
 check "one redeploy each, both started before any wait" '[ "$(grep -c "^redeploy" "$W/fake/order.log")" = 2 ] && [ "$(sed -n "$(( $(line "redeploy worker") + 1 ))p" "$W/fake/order.log")" = "redeploy api" ]'
 check "the worker holds the launch settings" '[ "$(jq -r .WATCH_FROM_SLOT "$W/fake/vars-worker.json")" = 1001 ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-worker.json")" = "$PHRASE" ] && [ "$(jq -r .COIN_MINT "$W/fake/vars-api.json")" = MintLaunch ]'
+check "the API gets LIVE_CONFIRM with DRY_RUN=false (its config refuses to start without it)" '[ "$(jq -r .DRY_RUN "$W/fake/vars-api.json")" = false ] && [ "$(jq -r .LIVE_CONFIRM "$W/fake/vars-api.json")" = "$PHRASE" ]'
 reset
 echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
 run $'\nMintByHand\nsigA,sigB\n1234\nGO\n'; rc=$?
