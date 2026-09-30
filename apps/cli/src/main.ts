@@ -10,6 +10,7 @@ import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegram
 import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
 import { announceCaCommand } from './commands/announce';
+import { foundersSeedCommand } from './commands/founders';
 import { printAudit, runAudit } from './commands/audit';
 import { dryRunResetCommand } from './commands/dry-run';
 import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
@@ -149,6 +150,19 @@ program
       if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log, staging: cfg.staging }));
       await new ThrottledAlerts(fanOut(...sinks), ctx.clock, 0).send('info', 'alert_test', 'test alert from the RAT RACE CLI');
       ctx.out(cfg.telegram.botToken ? 'sent to Telegram and the log' : 'TELEGRAM_BOT_TOKEN not set: logged only');
+    }),
+  );
+program
+  .command('founders-seed')
+  .description('at launch, once: book 1 to 5 founding rats paid with your own SOL in the creator wallet (never a creator fee)')
+  .requiredOption('--rats <n>', 'how many founding rats (1 to 5)')
+  .option('--confirm <phrase>', 'exact phrase printed by the plan')
+  .action((o) =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['rpcUrl']);
+      const conn = createConnection(cfg.rpcUrl!);
+      const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
+      await foundersSeedCommand(ctx, { chain }, { rats: o.rats, confirm: o.confirm });
     }),
   );
 program
