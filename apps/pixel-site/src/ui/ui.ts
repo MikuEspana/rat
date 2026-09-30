@@ -1,4 +1,4 @@
-// The data layer on top of the floor: HUD, next-hire ring, live feed, rat card, leaderboard, DRY RUN banner.
+// The data layer on top of the floor: HUD, next-hire ring, live feed, rat card, leaderboard, status banner.
 // Plain DOM over the canvas. Everything from the API goes in with textContent, never as HTML.
 import { Container, Graphics } from 'pixi.js';
 import type { RatEvent, RatView, StateResponse } from '@rat/contract';
@@ -286,7 +286,7 @@ export class Ui {
     if (s) {
       const r = hireRing(s, clockNow(), SIM ? Number.POSITIVE_INFINITY : BOT_STALE_SEC);
       const len = 2 * Math.PI * 26;
-      // waiting (bot starting, not launched yet): a quarter arc that turns slowly (CSS), not an empty ring
+      // waiting (clocking in, not launched yet): a quarter arc that turns slowly (CSS), not an empty ring
       this.ringArc.setAttribute('stroke-dashoffset', String(len * (1 - (r.waiting ? 0.25 : (r.progress ?? 0)))));
       this.ringEl.classList.toggle('waiting', r.waiting);
       this.ringLabel.textContent = r.label;
