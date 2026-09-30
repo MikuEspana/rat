@@ -134,20 +134,27 @@ export function hireRing(
   const next = nextClaimAt ? Math.round((Date.parse(nextClaimAt) - now) / 1000) : null;
   if (next === null || Number.isNaN(next)) {
     // no claim loop has ever run: the bot is starting. (The simulator, once its launch is over, has claims and no next.)
-    return lastClaimAt ? { label: 'next hire --', progress: null, waiting: false } : { label: 'bot starting', progress: null, waiting: true };
+    return lastClaimAt ? { label: 'next hire --', progress: null, waiting: false } : { label: 'clocking in', progress: null, waiting: true };
   }
   if (next > 0) return { label: `next hire ${next}s`, progress: claimProgress(lastClaimAt, nextClaimAt, now), waiting: false };
   if (-next <= staleSec) return { label: 'hiring...', progress: 1, waiting: false };
-  return { label: lastClaimAt ? 'back soon' : 'bot starting', progress: null, waiting: true };
+  return { label: lastClaimAt ? 'back soon' : 'clocking in', progress: null, waiting: true };
 }
 
-/** The banner above the HUD (null: no banner). DRY RUN reads differently before and after the coin exists. */
-export function bannerText(s: { bot: Pick<StateResponse['bot'], 'mode'>; coin: Pick<StateResponse['coin'], 'mint'> }): string | null {
-  if (s.bot.mode === 'paused') return 'PAUSED: the kill switch is on. No claims, no hires.';
+/**
+ * The banner above the HUD (null: no banner). Buyers read it: plain words, nothing technical (no "DRY RUN", no "kill
+ * switch"). Before the bot goes live it says the rats are clocking in; if practice rats are ever on screen then, it
+ * says plainly that they are not real money.
+ */
+export function bannerText(s: {
+  bot: Pick<StateResponse['bot'], 'mode'>;
+  coin: Pick<StateResponse['coin'], 'mint'>;
+  portfolio?: Pick<StateResponse['portfolio'], 'ratCount'>;
+}): string | null {
+  if (s.bot.mode === 'paused') return '\u{1F400} The rats are on a break. Hiring is paused for now.';
   if (s.bot.mode !== 'dry_run') return null;
-  return s.coin.mint
-    ? 'DRY RUN: the bot is warming up with simulated trades. Real hiring starts when it goes live.'
-    : 'DRY RUN: pre-launch rehearsal with simulated trades. Nothing on this page is real money yet.';
+  const practice = (s.portfolio?.ratCount ?? 0) > 0 ? ' Practice rats only, not real money yet.' : '';
+  return s.coin.mint ? `\u{1F400} The rats are clocking in...${practice}` : `\u{1F400} The rats are clocking in... Hiring starts at launch.${practice}`;
 }
 
 /** Under RATS HIRED. */

@@ -41,7 +41,7 @@ Telegram alerts look like `[RAT RACE !!! critical] text`. The same key is sent a
 
 ## 2. Bot not live after launch
 
-- **You see:** the site ring says "bot starting" for more than 10 minutes, no rats.
+- **You see:** the site ring says "clocking in" for more than 10 minutes, no rats.
 - **Telegram:**
   - `startup_retrying`: the worker cannot read the chain or the database. It retries every minute by itself.
   - `preflight_failed`: the worker refused to start LIVE. Each reason is on its own line.
@@ -159,11 +159,11 @@ Telegram alerts look like `[RAT RACE !!! critical] text`. The same key is sent a
 
 | The site shows | Meaning | Do |
 |---|---|---|
-| "bot starting" (for minutes) | the worker is not running its loop yet | incident 2 |
+| "clocking in" on the ring (for minutes) | the worker is not running its loop yet | incident 2 |
 | "back soon" | the worker ran and stopped | incident 8 |
 | "Reconnecting to the trading floor..." | the API does not answer | `railway logs --service api`, then `railway redeploy --service api --from-source --yes` |
-| DRY RUN banner after the launch | the API still runs the old settings | `scripts/launch.sh` again (incident 1) |
-| PAUSED banner | the kill switch is on | on purpose? If not: find out why, then `scripts/rat.sh resume` |
+| "The rats are clocking in..." banner after the launch | the API still runs the old settings | `scripts/launch.sh` again (incident 1) |
+| "The rats are on a break" banner | the kill switch is on | on purpose? If not: find out why, then `scripts/rat.sh resume` |
 | "pre-launch" market cap after the launch | the API has no `COIN_MINT` | `scripts/launch.sh` again |
 
 - Check the whole published site: `scripts/site-go-live.sh`.

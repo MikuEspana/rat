@@ -17,15 +17,15 @@ describe('next-hire ring', () => {
   });
 
   it('right after launch (no claim loop yet, or a stale one) it says the bot is starting, never a stuck "hiring..."', () => {
-    expect(ring({ mode: 'live', lastClaimAt: null, nextClaimAt: null })).toEqual({ label: 'bot starting', progress: null, waiting: true });
+    expect(ring({ mode: 'live', lastClaimAt: null, nextClaimAt: null })).toEqual({ label: 'clocking in', progress: null, waiting: true });
     // the last heartbeat is from before the redeploy: minutes old
-    expect(ring({ mode: 'live', lastClaimAt: null, nextClaimAt: at(-300) })).toEqual({ label: 'bot starting', progress: null, waiting: true });
+    expect(ring({ mode: 'live', lastClaimAt: null, nextClaimAt: at(-300) })).toEqual({ label: 'clocking in', progress: null, waiting: true });
     // it ran before and stopped (a restart): it comes back on its own
     expect(ring({ mode: 'live', lastClaimAt: at(-600), nextClaimAt: at(-300) })).toEqual({ label: 'back soon', progress: null, waiting: true });
     // no next claim but claims before (the simulator after its launch ends): no countdown, no "starting"
     expect(ring({ mode: 'live', lastClaimAt: at(-600), nextClaimAt: null })).toEqual({ label: 'next hire --', progress: null, waiting: false });
     // a DRY RUN bot that is not up yet reads the same way
-    expect(ring({ mode: 'dry_run', lastClaimAt: null, nextClaimAt: null }).label).toBe('bot starting');
+    expect(ring({ mode: 'dry_run', lastClaimAt: null, nextClaimAt: null }).label).toBe('clocking in');
   });
 
   it('the simulator (clock up to 300x, polled 4 times a second) never reads as a stalled bot', () => {
@@ -45,18 +45,32 @@ describe('next-hire ring', () => {
 });
 
 describe('banner', () => {
-  it('DRY RUN before and after the coin exists; PAUSED; nothing when live', () => {
+  const MINT2 = MINT;
+  it('before the bot is live the rats are clocking in; paused is a break; nothing when live', () => {
     const pre = bannerText({ bot: { mode: 'dry_run' }, coin: { mint: null } })!;
-    const warm = bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT } })!;
-    // tools/verify-live.mjs looks for these prefixes on the published site
-    expect(pre.startsWith('DRY RUN:')).toBe(true);
-    expect(warm.startsWith('DRY RUN:')).toBe(true);
-    expect(pre).toMatch(/pre-launch/);
-    expect(pre).toMatch(/not real money|Nothing on this page is real money/);
-    expect(warm).toMatch(/warming up/);
-    expect(warm).toMatch(/simulated/);
-    expect(bannerText({ bot: { mode: 'paused' }, coin: { mint: MINT } })!.startsWith('PAUSED:')).toBe(true);
-    expect(bannerText({ bot: { mode: 'live' }, coin: { mint: MINT } })).toBeNull();
+    const warm = bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 } })!;
+    const paused = bannerText({ bot: { mode: 'paused' }, coin: { mint: MINT2 } })!;
+    // tools/verify-live.mjs looks for these phrases on the published site
+    expect(pre).toContain('The rats are clocking in...');
+    expect(pre).toContain('Hiring starts at launch.');
+    expect(warm).toContain('The rats are clocking in...');
+    expect(paused).toContain('The rats are on a break');
+    expect(bannerText({ bot: { mode: 'live' }, coin: { mint: MINT2 } })).toBeNull();
+  });
+
+  it('buyers read it: no technical words', () => {
+    const texts = [
+      bannerText({ bot: { mode: 'dry_run' }, coin: { mint: null } }),
+      bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 }, portfolio: { ratCount: 3 } }),
+      bannerText({ bot: { mode: 'paused' }, coin: { mint: MINT2 } }),
+      ...['live', 'dry_run'].map((mode) => ring({ mode: mode as 'live', lastClaimAt: null, nextClaimAt: null }).label),
+    ];
+    for (const t of texts) expect(t, String(t)).not.toMatch(/dry.?run|kill switch|simulat|claim|\bbot\b|preflight|worker|rehearsal/i);
+  });
+
+  it('if practice rats are on screen before the bot is live, it says plainly they are not real money', () => {
+    expect(bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 }, portfolio: { ratCount: 3 } })).toMatch(/not real money/);
+    expect(bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 }, portfolio: { ratCount: 0 } })).not.toMatch(/real money/);
   });
 });
 
