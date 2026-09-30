@@ -59,6 +59,9 @@ cat >"$W/bin/curl" <<'EOF'
 F="$FAKE_DIR"
 d=""; prev=""; for a in "$@"; do [ "$prev" = -d ] && d="$a"; prev="$a"; done
 cat >/dev/null # the config (the RPC URL) comes on stdin
+# "flaky-N": the next N answers are a rate limit page, not JSON
+n=$(cat "$F/flaky" 2>/dev/null || echo 0)
+if [ "$n" -gt 0 ]; then echo $((n - 1)) >"$F/flaky"; echo 'Too Many Requests'; exit 0; fi
 case "$d" in
   *getBalance*) echo '{"result":{"value":300000000}}' ;;
   *getSignaturesForAddress*'"limit":1}'*) echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' ;;
@@ -79,7 +82,7 @@ reset() {
   echo '{"result":[{"signature":"sigLaunch","slot":1000,"err":null,"blockTime":1700000000},{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
   echo "$PASS_LINES" >"$W/fake/pre-with.json"
   echo "$PASS_LINES" >"$W/fake/pre-live.json"
-  rm -f "$W/fake/order.log" "$W/fake/dep-"* "$W/fake/commit-"*
+  rm -f "$W/fake/order.log" "$W/fake/dep-"* "$W/fake/commit-"* "$W/fake/flaky"
 }
 run() { # run "<stdin>": scripts/launch.sh with the fakes
   printf '%s' "$1" | env -i PATH="$W/bin:/usr/bin:/bin" HOME="$W/home" FAKE_DIR="$W/fake" CREATOR_FAKE="$CREATOR" WSR_RAILWAY=railway WSR_RAT=fake-rat \
@@ -151,6 +154,14 @@ echo 0000000000000000000000000000000000000000 >"$W/fake/commit-worker"
 echo "$head" >"$W/fake/commit-api"
 run $'\ny\nGO\n'; rc=$?
 check "a service built from another commit is rebuilt (never an old image), the current one restarts" '[ $rc = 0 ] && grep -q "^redeploy worker$" "$W/fake/order.log" && grep -q "^restart api$" "$W/fake/order.log" && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+echo 2 >"$W/fake/flaky"
+run $'\ny\nGO\n'; rc=$?
+check "the RPC answers a rate limit page twice: retried, the launch goes on (no silent stop)" '[ $rc = 0 ] && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+echo 99 >"$W/fake/flaky"
+run $'\ny\nGO\n'; rc=$?
+check "the RPC never answers: stops with a message, nothing changed" '[ $rc = 1 ] && grep -qE "could not read the creator wallet|could not read the creator" "$W/out.txt" && ! changed'
 reset
 run $'MintLaunch\nGO\n'; rc=$?
 check "the CA pasted right after the launch: the site is told at once, the found launch matches it, no question, LIVE" '[ $rc = 0 ] && [ "$(line "rat announce-ca MintLaunch")" -lt "$(line preflight-with)" ] && [ "$(grep -c "^rat announce-ca" "$W/fake/order.log")" = 1 ] && ! grep -q "Is that your coin" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'

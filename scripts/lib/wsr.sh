@@ -164,11 +164,22 @@ redeploy() { # redeploy service...: a fresh build of the latest commit with the 
 
 # Solana reads from this Mac through the worker's RPC URL (it holds an API key: it stays in this shell)
 RPC_URL=""
-rpc() { # rpc method 'params json': prints the "result" JSON (empty on error)
+rpc() { # rpc method 'params json': prints the "result" JSON (empty on error); never fails the caller
+  # up to 3 tries: a network error or a non-JSON answer (a rate limit page) used to end a script under set -e and
+  # pipefail without a word (launch.sh stopped right after the balance line on 2026-09-30)
+  local raw i
   [ -n "$RPC_URL" ] || RPC_URL=$(rw_var worker RPC_URL)
   [ -n "$RPC_URL" ] || die "the worker has no RPC_URL"
-  printf 'url = "%s"\n' "$RPC_URL" | curl -sS -m 30 -K - -H 'content-type: application/json' \
-    -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":$2}" 2>/dev/null | jq -c '.result // empty' 2>/dev/null
+  for i in 1 2 3; do
+    raw=$(printf 'url = "%s"\n' "$RPC_URL" | curl -sS -m 30 -K - -H 'content-type: application/json' \
+      -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$1\",\"params\":$2}" 2>/dev/null) || raw=""
+    if printf '%s' "$raw" | jq -e 'has("result")' >/dev/null 2>&1; then
+      printf '%s' "$raw" | jq -c '.result // empty' 2>/dev/null || true
+      return 0
+    fi
+    [ "$i" = 3 ] || sleep "${WSR_RETRY_SEC:-1}"
+  done
+  return 0
 }
 sol_balance() { rpc getBalance "[\"$1\",{\"commitment\":\"confirmed\"}]" | jq -r '.value // empty'; } # lamports
 token_balance() { # token_balance owner mint: raw amount summed over the owner's accounts of that mint
