@@ -44,7 +44,7 @@ find_launch() { # find_launch creator signature-before-the-launch: sets LAUNCH_S
   LAUNCH_SIGS=$(printf '%s' "$sigs" | jq -r '[.[].signature] | join(",")')
   LAUNCH_MINT=""
   for s in $(printf '%s' "$sigs" | jq -r '.[] | select(.err == null) | .signature'); do
-    LAUNCH_MINT=$(rpc getTransaction "[\"$s\",{\"encoding\":\"jsonParsed\",\"maxSupportedTransactionVersion\":0,\"commitment\":\"finalized\"}]" |
+    LAUNCH_MINT=$(rpc getTransaction "[\"$s\",{\"encoding\":\"jsonParsed\",\"maxSupportedTransactionVersion\":1,\"commitment\":\"finalized\"}]" |
       jq -r --arg c "$c" '[.meta.postTokenBalances[]? | select(.owner == $c and (.uiTokenAmount.amount | tonumber) > 0) | .mint] | first // empty' 2>/dev/null || true)
     [ -n "$LAUNCH_MINT" ] && break
   done

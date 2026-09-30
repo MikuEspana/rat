@@ -116,7 +116,7 @@ export class RpcChainReader implements ChainReader {
 
   async getTransactionRecord(signature: string): Promise<TxRecord | null> {
     const tx = await this.withFailover((c) =>
-      c.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }),
+      c.getTransaction(signature, { maxSupportedTransactionVersion: 1, commitment: 'confirmed' }),
     );
     return tx ? normalizeTransaction(tx) : null;
   }
