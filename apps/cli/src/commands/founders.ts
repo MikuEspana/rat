@@ -18,8 +18,9 @@ export async function foundersSeedCommand(
   const { config: cfg, store, out } = ctx;
   const n = Number(opts.rats);
   if (!Number.isInteger(n) || n < 1 || n > FOUNDERS_MAX_RATS) throw new Error(`founders-seed: --rats must be a whole number from 1 to ${FOUNDERS_MAX_RATS}`);
-  if (cfg.dryRun || !cfg.liveConfirmed || store.mode !== 'live' || !cfg.coinMint) {
-    throw new Error('founders-seed: the bot must run LIVE with its coin first (scripts/launch.sh)');
+  // no COIN_MINT needed: claims and hires do not use it (armed launch: seeded before the coin exists)
+  if (cfg.dryRun || !cfg.liveConfirmed || store.mode !== 'live') {
+    throw new Error('founders-seed: the bot must run LIVE first (scripts/launch.sh)');
   }
   const creator = cfg.creatorPubkey;
   if (!creator) throw new Error('founders-seed: CREATOR_PUBKEY is not set');

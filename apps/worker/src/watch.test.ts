@@ -1,6 +1,7 @@
 // Coin launch vs the wallet watch: owner transactions before the watch floor (or allowlisted) never trip the
 // kill switch; anything else signed by a bot wallet still does. In memory only (SimChain).
-import type { ChainReader } from '@rat/core';
+import { ARMED_KILL_REASON, type ChainReader, SETTINGS } from '@rat/core';
+import { engageKillSwitch } from '@rat/safety';
 import { collectCreatorFeeV2Ix, creatorAccounts } from '@rat/pump';
 import { Keypair, PublicKey, SystemProgram, type TransactionInstruction } from '@solana/web3.js';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -222,5 +223,48 @@ describe('red team: the coin stops paying the creator wallet after launch', () =
       await w.worker.tick();
     }
     expect(w.alerts.sent.find((a) => a.key === 'coin_creator')?.level).toBe('critical');
+  });
+});
+
+describe('armed launch: owner signatures from the database, launch pending', () => {
+  it('signatures in SETTINGS.knownOwnerTxSigs are accepted (read every run, no restart)', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await runWatchStep(w.deps);
+    w.chain.advanceBlocks(10);
+    const launch = await ownerTx(w);
+    await w.store.settings.set(SETTINGS.knownOwnerTxSigs, `someothersig,${launch}`);
+    expect(await runWatchStep(w.deps)).toMatchObject({ ownerKnown: 1, unknownSigned: 0 });
+    expect(await killSwitchOn(w)).toBe(false);
+  });
+
+  it('while pending an unknown signed tx waits (no kill, no alert, cursor stays); after pending expires it kills', async () => {
+    w = await createSimWorld({ dryRun: false });
+    await runWatchStep(w.deps);
+    const cursor0 = await w.store.settings.get(SETTINGS.creatorWatchCursor);
+    await engageKillSwitch(w.store.settings, ARMED_KILL_REASON);
+    await w.store.settings.set(SETTINGS.launchPendingUntil, new Date(w.clock.now().getTime() + 30 * 60_000).toISOString());
+    w.chain.advanceBlocks(10);
+    const launch = await ownerTx(w);
+    for (let i = 0; i < 2; i++) {
+      expect(await runWatchStep(w.deps)).toMatchObject({ ownerPending: 1, unknownSigned: 0 });
+      expect(await w.store.settings.get(SETTINGS.creatorWatchCursor)).toBe(cursor0);
+      expect(await w.store.settings.get(SETTINGS.killReason)).toBe(ARMED_KILL_REASON);
+      expect(w.alerts.keys()).not.toContain(`unknown_signed_${launch}`);
+    }
+    w.clock.advanceSeconds(31 * 60);
+    expect(await runWatchStep(w.deps)).toMatchObject({ ownerPending: 0, unknownSigned: 1 });
+    expect(await w.store.settings.get(SETTINGS.killReason)).toMatch(/unknown transaction signed/);
+    expect(w.alerts.keys()).toContain(`unknown_signed_${launch}`);
+    expect(await w.store.settings.get(SETTINGS.creatorWatchCursor)).toBe(launch);
+  });
+
+  it("a cleared pending ('') means the normal rule", async () => {
+    w = await createSimWorld({ dryRun: false });
+    await runWatchStep(w.deps);
+    await w.store.settings.set(SETTINGS.launchPendingUntil, '');
+    w.chain.advanceBlocks(10);
+    await ownerTx(w);
+    expect(await runWatchStep(w.deps)).toMatchObject({ ownerPending: 0, unknownSigned: 1 });
+    expect(await killSwitchOn(w)).toBe(true);
   });
 });
