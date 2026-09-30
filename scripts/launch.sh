@@ -75,22 +75,56 @@ say "The creator wallet holds $(lamports_to_sol "$bal") SOL."
 [ "$bal" -ge 200000000 ] || die "the creator wallet holds less than 0.2 SOL" "Send it about 0.3 SOL first: 0.1 dev buy + launch cost + 0.05 reserve + spare (LAUNCH-DAY.md)."
 before=$(latest_signature "$creator")
 say "Now launch the coin in Phantom, with the CREATOR wallet $creator:"
-say "1. pump.fun > Create coin: normal mode, no holder rewards, no fee sharing."
+say "1. pump.fun > Create coin: name Wall Street Rats, ticker WSR. Normal mode: no holder rewards, no fee sharing, no cashback."
 say "2. Dev buy 0.1 SOL, inside the launch. The dev-buy coins stay in the creator wallet forever."
 say "3. After this, never sign anything else with the creator wallet: the bot treats it as a leaked key."
-pause "When Solscan shows the launch as Finalized, press Enter."
+# the CA as soon as pump.fun shows it: the site shows the coin right away (rat announce-ca checks on chain that the
+# creator wallet created it; it sends nothing), while this script waits for the launch to be finalized
+printf '\n  %sPaste the CA%s (the coin address pump.fun shows) and press Enter.\n' "$B" "$N"
+printf '  (No CA? Just press Enter once Solscan shows the launch Finalized.)  CA: '
+IFS= read -r CA || die "no keyboard input (end of input)"
+CA=$(printf '%s' "$CA" | tr -d '[:space:]')
+ANNOUNCED=""
+if [ -n "$CA" ]; then
+  for i in 1 2 3 4 5 6; do # the coin can take a few seconds to be readable on chain
+    if rat announce-ca "$CA" >/dev/null 2>&1; then ANNOUNCED=$CA; break; fi
+    [ "$i" = 6 ] || sleep "${WSR_POLL_SEC:-3}"
+  done
+  if [ -n "$ANNOUNCED" ]; then
+    ok "the site shows your coin now: CA $CA"
+  else
+    note "the site could not show $CA yet (not on chain yet, or not created by the creator wallet $creator): tried again once the launch is finalized"
+  fi
+fi
+say "Waiting for the launch to be finalized on chain (usually under a minute)..."
 
 # ---------------------------------------------------------------- 2. the launch on chain -------------------------------
 if find_launch "$creator" "$before"; then
   say "Found: the launch signature(s) $LAUNCH_SIGS, last slot $LAUNCH_SLOT"
   say "Coin mint: ${LAUNCH_MINT:-not found}"
   yes=n
-  [ -n "$LAUNCH_MINT" ] && yes_no "Is that your coin (the mint shown on pump.fun)?" y && yes=y
+  if [ -n "$LAUNCH_MINT" ] && [ "$LAUNCH_MINT" = "$CA" ]; then
+    ok "the same coin as the CA you pasted"
+    yes=y
+  elif [ -n "$LAUNCH_MINT" ]; then
+    [ -z "$CA" ] || note "that is NOT the CA you pasted ($CA)"
+    yes_no "Is that your coin (the mint shown on pump.fun)?" y && yes=y
+  fi
   [ "$yes" = y ] || ask_launch
 else
   note "no new finalized transaction from the creator wallet (was the coin launched before this script started?)"
   ask_launch
 fi
+fi
+
+# the site shows the coin now, minutes before the bot is live (rat announce-ca: the creator is checked on chain; it sends
+# nothing and changes nothing the bot uses). If it fails, the site shows the coin once the bot is live anyway.
+if [ "${ANNOUNCED:-}" = "$LAUNCH_MINT" ]; then
+  : # already on the site
+elif rat announce-ca "$LAUNCH_MINT" >/dev/null 2>&1; then
+  ok "the site shows coin $LAUNCH_MINT now (the bot goes live after your GO)"
+else
+  note "the site could not be told about the coin yet: in another tab run scripts/announce-ca.sh $LAUNCH_MINT"
 fi
 
 # ---------------------------------------------------------------- 3. the live preflight, before anything changes --------

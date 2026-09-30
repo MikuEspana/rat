@@ -33,6 +33,8 @@ export const SETTINGS = {
   priceCoin: 'price_coin',
   /** JSON { mint, decimals, supplyRaw, tokenProgram } */
   coinInfo: 'coin_info',
+  /** the coin mint the public site shows before the bot runs it (rat announce-ca, right after the launch) */
+  announcedCoinMint: 'announced_coin_mint',
   expectedMintAuthority: 'expected_mint_authority',
   /** STAGING only: "staging:<test creator pubkey>", written once by `rat staging-init` on an empty database */
   stagingMarker: 'staging_marker',

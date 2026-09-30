@@ -147,3 +147,25 @@ describe('scale, cache and rate limit', () => {
     expect((await getJson(app, '/api/events', '9.9.9.9')).status).toBe(200);
   });
 });
+
+describe('the coin right after the launch (rat announce-ca)', () => {
+  it('before the bot runs a coin, the API shows the announced CA, without a price', async () => {
+    w = await createSimWorld({ dryRun: true });
+    const cfg = { ...w.deps.config, coinMint: undefined };
+    const app = createApp({ service: new StateService(w.store, cfg, w.clock), clock: w.clock, cacheSec: 0, corsOrigin: '*' });
+    let s = StateResponseSchema.parse((await getJson(app, '/api/state')).body);
+    expect(s.coin.mint).toBeNull();
+    await w.store.settings.set(SETTINGS.announcedCoinMint, 'CoinAnnounced1111111111111111111111111pump');
+    s = StateResponseSchema.parse((await getJson(app, '/api/state', '5.6.7.8')).body);
+    expect(s.coin.mint).toBe('CoinAnnounced1111111111111111111111111pump');
+    expect(s.coin.priceUsd).toBeNull();
+    expect(s.coin.marketCapUsd).toBeNull();
+  });
+
+  it('once the bot runs its coin (COIN_MINT), that coin wins', async () => {
+    w = await createSimWorld({ dryRun: true });
+    await w.store.settings.set(SETTINGS.announcedCoinMint, 'CoinAnnounced1111111111111111111111111pump');
+    const s = StateResponseSchema.parse((await getJson(appFor(w, 0), '/api/state')).body);
+    expect(s.coin.mint).toBe(w.deps.config.coinMint);
+  });
+});

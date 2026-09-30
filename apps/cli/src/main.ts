@@ -9,6 +9,7 @@ import { DbKeyStore, type MasterKeyRing, masterKeyRing } from '@rat/keys';
 import { DbKillSwitch, GuardedSender, ThrottledAlerts, fanOut, logSink, telegramSink } from '@rat/safety';
 import { PumpFunClient } from '@rat/pump';
 import { Command } from 'commander';
+import { announceCaCommand } from './commands/announce';
 import { printAudit, runAudit } from './commands/audit';
 import { dryRunResetCommand } from './commands/dry-run';
 import { keysBackupCommand, keysImportRoleCommand, keysRestoreCommand, keysRotateCommand, verifyKeyRecords } from './commands/keys';
@@ -148,6 +149,18 @@ program
       if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log, staging: cfg.staging }));
       await new ThrottledAlerts(fanOut(...sinks), ctx.clock, 0).send('info', 'alert_test', 'test alert from the RAT RACE CLI');
       ctx.out(cfg.telegram.botToken ? 'sent to Telegram and the log' : 'TELEGRAM_BOT_TOKEN not set: logged only');
+    }),
+  );
+program
+  .command('announce-ca')
+  .description('right after the launch: the public site shows the coin (its creator is checked on chain; sends nothing)')
+  .argument('<mint>', 'the coin mint (CA)')
+  .action((mint: string) =>
+    withContext(async (ctx, cfg) => {
+      requireConfig(cfg, ['rpcUrl']);
+      const conn = createConnection(cfg.rpcUrl!);
+      const chain = new RpcChainReader(conn, cfg.rpcUrlBackup ? createConnection(cfg.rpcUrlBackup) : undefined);
+      if (!(await announceCaCommand(ctx, chain, mint))) process.exitCode = 1;
     }),
   );
 program

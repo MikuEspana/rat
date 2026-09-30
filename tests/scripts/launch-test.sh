@@ -128,6 +128,7 @@ echo "== GO: one change, one build"
 reset
 run $'\ny\nGO\n'; rc=$?
 check "LIVE" '[ $rc = 0 ] && grep -q "LIVE.*the bot runs" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
+check "the site is told the coin (announce-ca) right after the mint is confirmed, before any setting changes" 'grep -q "^rat announce-ca MintLaunch$" "$W/fake/order.log" && [ "$(line "rat announce-ca")" -lt "$(line "set worker")" ]'
 check "the preflight saw exactly the coin's settings" 'grep -q "^preflight-with COIN_MINT=MintLaunch WATCH_FROM_SLOT=1001 KNOWN_OWNER_TX_SIGS=sigLaunch DRY_RUN=false LIVE_CONFIRM=$PHRASE$" "$W/fake/order.log"'
 check "order: preflight, then the reset, then the settings, then the redeploys" '[ "$(line preflight-with)" -lt "$(line dry-run-reset)" ] && [ "$(line dry-run-reset)" -lt "$(line "set worker")" ] && [ "$(line "set api")" -lt "$(line "redeploy worker")" ]'
 check "one change per service with every launch setting" '[ "$(grep -c "^set worker" "$W/fake/order.log")" = 1 ] && grep -q "^set worker COIN_MINT WATCH_FROM_SLOT KNOWN_OWNER_TX_SIGS DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log" && grep -q "^set api COIN_MINT DRY_RUN LIVE_CONFIRM$" "$W/fake/order.log"'
@@ -145,6 +146,12 @@ echo 0000000000000000000000000000000000000000 >"$W/fake/commit-worker"
 echo "$head" >"$W/fake/commit-api"
 run $'\ny\nGO\n'; rc=$?
 check "a service built from another commit is rebuilt (never an old image), the current one restarts" '[ $rc = 0 ] && grep -q "^redeploy worker$" "$W/fake/order.log" && grep -q "^restart api$" "$W/fake/order.log" && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+run $'MintLaunch\nGO\n'; rc=$?
+check "the CA pasted right after the launch: the site is told at once, the found launch matches it, no question, LIVE" '[ $rc = 0 ] && [ "$(line "rat announce-ca MintLaunch")" -lt "$(line preflight-with)" ] && [ "$(grep -c "^rat announce-ca" "$W/fake/order.log")" = 1 ] && ! grep -q "Is that your coin" "$W/out.txt" && [ "$(cat "$W/fake/mode")" = live ]'
+reset
+run $'OtherMint\ny\nGO\n'; rc=$?
+check "a pasted CA that is not the launch found on chain: said so, and asked" '[ $rc = 0 ] && grep -q "NOT the CA you pasted" "$W/out.txt" && grep -q "^preflight-with COIN_MINT=MintLaunch " "$W/fake/order.log"'
 reset
 echo '{"result":[{"signature":"sigBefore","slot":900,"err":null}]}' >"$W/fake/sigs.json"
 run $'\nMintByHand\nsigA,sigB\n1234\nGO\n'; rc=$?
