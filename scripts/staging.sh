@@ -141,6 +141,13 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   title "Phase 1: launch the test coin"
   c=$(creator)
   [ "$(st_get '.killSwitch.on')" = true ] || die "the kill switch must be ON before phase 1" "Run: scripts/rat.sh kill --reason staging"
+  LAUNCH_MINT=$(rw_var worker COIN_MINT)
+  if [ -n "$LAUNCH_MINT" ] && [ "$(rw_var worker DRY_RUN)" = false ]; then # an earlier phase 1 set the launch, then stopped
+    note "the launch settings are already on the worker (coin $LAUNCH_MINT): finishing phase 1 without a new launch"
+    set_vars api "COIN_MINT=$LAUNCH_MINT" DRY_RUN=false "LIVE_CONFIRM=$LIVE_PHRASE"
+    phase_1_live # the same restart and the same full preflight --live (launch txs, dev buy, every line but the kill switch)
+    return
+  fi
   start=$(sol_balance "$c")
   [ -n "$start" ] || die "could not read the test creator's balance"
   state_get "$RESULTS" CREATOR_START_LAMPORTS | grep -q . || state_set "$RESULTS" CREATOR_START_LAMPORTS "$start"
@@ -176,6 +183,11 @@ phase_1() { # the launch (yours, in Phantom), then the bot's live settings with 
   apply_launch
   say "While the worker and the API build: do phase 2's trades now, from YOUR trading wallet (never the test creator):"
   say "buy 0.05 SOL of TEST DO NOT BUY, twice, then sell both. The bot sends nothing (kill switch ON)."
+  phase_1_live
+}
+
+phase_1_live() { # the launch settings are set: one redeploy, then the bot must be live with the kill switch ON
+  local pre problems
   redeploy worker api
   [ "$(st_get '.mode')" = live ] || fail "the worker is not live"
   [ "$(st_get '.killSwitch.on')" = true ] || fail "the kill switch is not ON after going live"
