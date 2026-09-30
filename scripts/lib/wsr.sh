@@ -119,13 +119,22 @@ rat_json() { rat "$@" 2>/dev/null | grep '^{' | tail -1 || true; }
 
 service_status() { rw service status --service "$1" --json 2>/dev/null | jq -r '.status // "NONE"' 2>/dev/null || echo NONE; }
 deployment_id() { rw service status --service "$1" --json 2>/dev/null | jq -r '.deploymentId // empty' 2>/dev/null || true; }
+# the commit the service's running (latest successful) deployment was built from ("" = unknown)
+deployed_commit() { rw deployment list --service "$1" --json 2>/dev/null | jq -r '[.[]? | select(.status == "SUCCESS")][0].meta.commitHash // empty' 2>/dev/null || true; }
 redeploy() { # redeploy service...: a fresh build of the latest commit with the current settings, every service at
   # once (they build side by side, one wait instead of one per service), then wait until every one runs
-  local svc s i=0 olds="" old pending left
+  local svc s i=0 olds="" old pending left src head
   for svc in "$@"; do
     olds="$olds$svc=$(deployment_id "$svc")"$'\n' # one line per service
+    # WSR_REUSE_BUILD=1 (the launch): a service already built from this exact commit restarts on its image with the new
+    # settings (seconds, measured 29 to 153 s on staging) instead of a fresh build (minutes); anything else builds
+    src=--from-source
+    if [ -n "${WSR_REUSE_BUILD:-}" ] && head=$(git rev-parse HEAD 2>/dev/null) && [ "$(deployed_commit "$svc")" = "$head" ]; then
+      src=""
+      note "$svc already runs commit ${head:0:7}: restarting it with the new settings (no build)"
+    fi
     for i in 1 2 3; do
-      rw redeploy --service "$svc" --from-source --yes >/dev/null 2>&1 && break
+      rw redeploy --service "$svc" $src --yes >/dev/null 2>&1 && break
       [ "$i" = "$TRIES" ] && die "could not redeploy $svc ($TRIES tries)" "Railway dashboard: $svc > Deployments > Deploy the latest commit." "$API_HINT"
       retry_pause "$i"
     done
