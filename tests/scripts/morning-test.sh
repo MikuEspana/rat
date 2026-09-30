@@ -114,6 +114,14 @@ echo '{"mode":"dry_run","killSwitch":{"on":false},"loops":[{"loop":"claim","ageS
 run y; rc=$?
 check "a loop 15 minutes old: WAIT naming it" '[ $rc = 1 ] && grep -q "worker loops not running: claim 900s old" "$W/out.txt"'
 reset
+echo '{"mode":"dry_run","killSwitch":{"on":false},"loops":[{"loop":"claim","ageSec":8},{"loop":"coin","ageSec":548}]}' >"$W/fake/status.json"
+run y; rc=$?
+check "the coin check 548 s old (it runs every 10 min): on time, GO" '[ $rc = 0 ] && grep -q "GO  Everything checked" "$W/out.txt"'
+reset
+echo '{"mode":"dry_run","killSwitch":{"on":false},"loops":[{"loop":"claim","ageSec":8},{"loop":"coin","ageSec":1500}]}' >"$W/fake/status.json"
+run y; rc=$?
+check "the coin check 25 min old: WAIT naming it" '[ $rc = 1 ] && grep -q "worker loops not running: coin 1500s old" "$W/out.txt"'
+reset
 : >"$W/fake/status.json"
 run y; rc=$?
 check "the worker does not answer (railway ssh): WAIT" '[ $rc = 1 ] && grep -q "the running worker did not answer" "$W/out.txt"'

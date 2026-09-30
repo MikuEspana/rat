@@ -18,8 +18,10 @@ SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
 PRODUCTION_CREATOR="4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot"
 STATUS_URL="${WSR_STATUS_URL:-https://status.railway.com/summary.json}"
-# a worker loop older than this is not running (the admin watchdog uses the same 3 minutes, apps/admin/src/watchdog.ts)
+# a worker loop older than this is not running (the admin watchdog uses the same 3 minutes, apps/admin/src/watchdog.ts).
+# The coin check runs every 10 minutes (apps/worker/src/worker.ts), so it gets twice that.
 LOOP_STALE_SEC=180
+COIN_LOOP_STALE_SEC=1200
 g() { ${WSR_GIT:-git} "$@"; }
 WAITS=0
 wait_on() { # wait_on "what" "fix"...: one WAIT line
@@ -110,11 +112,12 @@ else
   fi
   kill=$(printf '%s' "$st" | jq -r 'if .killSwitch.on then (.killSwitch.reason // "on") else "" end')
   [ -z "$kill" ] || note "the kill switch is ON ($kill). Fine before the launch; scripts/launch.sh checks it is off at the end."
-  stale=$(printf '%s' "$st" | jq -r --argjson max "$LOOP_STALE_SEC" '[.loops[]? | select(.ageSec > $max) | "\(.loop) \(.ageSec)s"] | join(", ")')
+  stale=$(printf '%s' "$st" | jq -r --argjson max "$LOOP_STALE_SEC" --argjson coin "$COIN_LOOP_STALE_SEC" \
+    '[.loops[]? | select(.ageSec > (if .loop == "coin" then $coin else $max end)) | "\(.loop) \(.ageSec)s"] | join(", ")')
   nloops=$(printf '%s' "$st" | jq -r '[.loops[]?] | length')
   if [ "$nloops" = 0 ]; then wait_on "the worker has no loop running yet" "Wait a minute (it may be starting), then run this again. Logs: railway logs --service worker"
   elif [ -n "$stale" ]; then wait_on "worker loops not running: $stale old" "railway logs --service worker says why (docs/runbooks/INCIDENTS.md, 2 and 8)."
-  else ok "worker loops: all ran in the last $LOOP_STALE_SEC s"; fi
+  else ok "worker loops: all on time (each under $LOOP_STALE_SEC s; the coin check runs every 10 min)"; fi
 fi
 
 # ---------------------------------------------------------------- 6. preflight ----------------------------------------
