@@ -55,7 +55,7 @@ All from `~/wallstreetrats`.
   ```
   Each prints REVOKE, then api_can_read_keys = f. Safe to run again. Nothing else changes: the API never needed `key_pool`. If Railway names the database service differently, use that name instead of `Postgres`. 2.
 - [ ] `scripts/rat.sh preflight`: only the expected "not yet" lines (no `COIN_MINT` yet, the creator wallet not funded, the watch floor). 2.
-- [ ] `scripts/site-go-live.sh`: two clicks on GitHub, then check the site on your phone (DRY RUN banner, 0 rats, "pre-launch"). 10.
+- [ ] `scripts/site-go-live.sh`: two clicks on GitHub, then check the site on your phone ("The rats are clocking in..." banner, 0 rats, "pre-launch"). 10.
 - [ ] **Auto deploy OFF** on the production worker, api and admin until the bot has run live for a day, and no merges to `main` in that time (`docs/runbooks/auto-deploy.md`, "The clicks"). `scripts/launch.sh` still deploys. 3.
 - [ ] Fund the creator wallet with about **0.3 SOL**. 2.
 

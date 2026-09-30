@@ -680,5 +680,10 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 - Seed 2246 failed "ledger hire spend = creator SOL out" by exactly one salary, and it was the harness, not the bot. A worker released a reservation (its tx expired, nothing landed), then crashed one step before clearing the rat's pointer to it. The pointer is cleared at the rat's next attempt, but the kill switch (a leaked-key tx) meant none came.
 - The money check counted every hiring rat with a pointer as money in flight; it now counts only open reservations. The ledger equals the chain in that seed. `rat audit` already used the open reservations.
 
+## Site: plain words in the public banner (owner decision, 2026-09-30)
+- Before the bot is live the banner says "🐀 The rats are clocking in..." (and "Hiring starts at launch." before the coin exists) instead of "DRY RUN: ...". Paused says "🐀 The rats are on a break. Hiring is paused for now." instead of "PAUSED: the kill switch is on". The ring says "clocking in" instead of "bot starting".
+- Honest either way: if practice rats were ever on screen before the bot is live, the banner adds "Practice rats only, not real money yet."
+- A test rejects technical words (dry run, kill switch, claim, bot, simulated) in these public texts. `tools/verify-live.mjs`, `scripts/site-go-live.sh` and the runbooks look for the new wording.
+
 ## MORNING.md: the REVOKE on the existing databases (owner decision, 2026-09-30)
 - Step 3 now has the exact command, for production and staging: `REVOKE ALL ON key_pool FROM rat_api;` through `railway connect Postgres`, then a check that prints api_can_read_keys = f. The databases were set up before `scripts/setup-mac.sh` did it; new setups already do (`infra/readonly-role.sql`, `packages/db/src/readonly-role.test.ts`).
