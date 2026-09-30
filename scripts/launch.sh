@@ -95,6 +95,7 @@ f="${WSR_FOUNDING_RATS:-5}"
 [ "$bal" -ge $((200000000 + f * 30000000)) ] ||
   note "for $f founding rats the creator wallet needs about $(lamports_to_sol $((200000000 + f * 30000000))) SOL (0.03 each on top of 0.2): send more first, or fewer are booked"
 before=$(latest_signature "$creator")
+[ -n "$before" ] || die "could not read the creator wallet's latest transaction (the RPC did not answer after 3 tries): nothing was changed" "Run scripts/launch.sh again in a few seconds."
 say "Now launch the coin in Phantom, with the CREATOR wallet $creator:"
 say "1. pump.fun > Create coin: name Wall Street Rats, ticker WSR. Normal mode: no holder rewards, no fee sharing, no cashback."
 say "2. Dev buy 0.1 SOL, inside the launch. The dev-buy coins stay in the creator wallet forever."
