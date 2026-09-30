@@ -192,7 +192,9 @@ describe('RpcTxSender', () => {
     let polls = 0;
     const { conn } = fakeConnection({
       getSignatureStatuses: async () => ({ context: { slot: 1 }, value: [polls++ > 0 ? { confirmationStatus: 'confirmed', err: null, slot: 5, confirmations: 1 } : null] }),
-      getTransaction: async () => {
+      getTransaction: async (_sig: string, opts?: { maxSupportedTransactionVersion?: number }) => {
+        // mainnet has version 1 transactions (pump.fun and Phantom send them): asking for 0 fails the whole fetch
+        expect(opts?.maxSupportedTransactionVersion).toBe(1);
         const vtx = VersionedTransaction.deserialize(prepared!);
         const n = vtx.message.staticAccountKeys.length;
         return {

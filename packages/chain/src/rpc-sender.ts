@@ -195,7 +195,7 @@ export class RpcTxSender implements TxSender {
     const { context, value } = await this.conn.getSignatureStatuses([signature], { searchTransactionHistory: true });
     const s = value[0];
     if (s && (s.confirmationStatus === 'confirmed' || s.confirmationStatus === 'finalized')) {
-      const tx = await this.conn.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
+      const tx = await this.conn.getTransaction(signature, { maxSupportedTransactionVersion: 1, commitment: 'confirmed' });
       if (!tx) return { status: 'unknown', signature, feeLamports: 0n };
       const record = normalizeTransaction(tx);
       return {
