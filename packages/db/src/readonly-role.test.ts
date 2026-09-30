@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type DbHandle, openMemoryDatabase } from './index';
+import { PRODUCTION_CREATOR_PUBKEY, systemClock } from '@rat/core';
+import { type DbHandle, Store, openMemoryDatabase, stagingProblems } from './index';
 
 const file = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 let handle: DbHandle;
@@ -45,4 +46,31 @@ describe('read-only API database user', () => {
       await handle.db.execute(sql.raw('RESET ROLE'));
     });
   }
+
+  // the API runs its staging check as rat_api: it must see the creator's public key (never its secret) and still
+  // refuse a staging setup on a database that holds the production creator key
+  it('the API staging check runs as rat_api and still refuses the production creator key', async () => {
+    for (const stmt of plainSql(file('../../../infra/readonly-role.sql'))) await handle.db.execute(sql.raw(stmt));
+    const store = new Store(handle.db, 'paper', systemClock);
+    const cfg = { staging: true, creatorPubkey: 'TestCreator1111111111111111111111111111111111' };
+    await handle.db.execute(sql.raw('SET ROLE rat_api'));
+    expect(await stagingProblems(store, cfg)).toEqual([]);
+    await handle.db.execute(sql.raw('RESET ROLE'));
+    await store.keys.setRoleKey({ pubkey: PRODUCTION_CREATOR_PUBKEY, secretEnc: 'x', keyVersion: 1, role: 'creator' });
+    await handle.db.execute(sql.raw('SET ROLE rat_api'));
+    expect((await stagingProblems(store, cfg)).join(' ')).toMatch(/holds the production creator key/);
+    await expect(handle.db.execute(sql.raw('SELECT secret_enc FROM key_pool'))).rejects.toThrow();
+    await handle.db.execute(sql.raw('RESET ROLE'));
+  });
+
+  it('a database whose rat_api existed before the creator_pubkey migration: the migration grants it', async () => {
+    for (const stmt of plainSql(file('../../../infra/readonly-role.sql'))) await handle.db.execute(sql.raw(stmt));
+    await handle.db.execute(sql.raw('DROP VIEW creator_pubkey'));
+    for (const stmt of file('../migrations/0003_creator_pubkey_view.sql').split('--> statement-breakpoint')) {
+      await handle.db.execute(sql.raw(stmt));
+    }
+    await handle.db.execute(sql.raw('SET ROLE rat_api'));
+    await expect(handle.db.execute(sql.raw('SELECT pubkey FROM creator_pubkey'))).resolves.toBeDefined();
+    await handle.db.execute(sql.raw('RESET ROLE'));
+  });
 });
