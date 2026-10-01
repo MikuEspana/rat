@@ -70,7 +70,7 @@ describe('admin page', () => {
     expect(html).toMatch(/<td>hire<\/td><td>0\.\d+ SOL<\/td>/);
     expect(html).toMatch(/Cap used/);
     expect(html).toMatch(/solscan\.io\/tx\//);
-    expect(html).toMatch(/Rats<b>\d+<\/b>/);
+    expect(html).toMatch(/Inus<b>\d+<\/b>/);
   });
 
   it('KILL runs the CLI kill logic; RESUME needs the typed confirmation', async () => {

@@ -687,3 +687,9 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 
 ## MORNING.md: the REVOKE on the existing databases (owner decision, 2026-09-30)
 - Step 3 now has the exact command, for production and staging: `REVOKE ALL ON key_pool FROM rat_api;` through `railway connect Postgres`, then a check that prints api_can_read_keys = f. The databases were set up before `scripts/setup-mac.sh` did it; new setups already do (`infra/readonly-role.sql`, `packages/db/src/readonly-role.test.ts`).
+
+## Rebrand: Wall Street Inu, ticker WSI, wallstreetinu.world (owner decision, 2026-10-01)
+- The coin is now "Wall Street Inu", ticker WSI (was Wall Street Rats, WSR); the site domain is wallstreetinu.world (was wallstreetrats.world). Older entries above keep the old names.
+- Code and ops: public display names are `Inu #0001` (`ratName()`), the API coin symbol is WSI (and the mock data), Telegram alerts start with `[WSI ...]`, the admin page is "WALL STREET INU admin", the Pages CNAME and SITE_URL, `scripts/setup-mac.sh` SITE_ORIGIN, `scripts/site-go-live.sh`, `scripts/staging.sh`, `scripts/launch.sh` and the runbooks use the new domain and name.
+- Internal identifiers stay: the `@rat/*` packages, the `rat` CLI, `scripts/rat.sh`, the database tables and columns, `WSR_*` env vars, the API JSON fields (`ratCount`, `rats`) and `/api/rats`.
+- Production CORS_ORIGIN on Railway still says https://wallstreetrats.world until the owner changes it.

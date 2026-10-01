@@ -306,7 +306,7 @@ export class LiveMock implements StateProvider {
       bot: { mode: 'live', ...this.bot },
       coin: {
         mint: this.coin.mint,
-        symbol: 'WSR',
+        symbol: 'WSI',
         priceUsd: Number(this.coin.priceUsd.toPrecision(4)),
         supply: this.coin.supply.toFixed(2),
         marketCapUsd: Math.round(this.coin.priceUsd * this.coin.supply),

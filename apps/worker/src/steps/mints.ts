@@ -58,7 +58,7 @@ export async function runMintStep(d: WorkerDeps): Promise<{ verified: number; re
         type: 'freeze',
         data: { scope: 'stock', stock: st.symbol, ratId: null, ratCount: n, reason: 'stock_paused' },
       });
-      await d.alerts.send('warn', `stock_paused_${st.symbol}`, `${st.symbol} is paused by its issuer: ${n} rats frozen, no hires into it.`);
+      await d.alerts.send('warn', `stock_paused_${st.symbol}`, `${st.symbol} is paused by its issuer: ${n} inus frozen, no hires into it.`);
     } else if (!m.paused && st.status === 'paused') {
       await d.store.stocks.setStatus(st.mint, 'active');
       const n = await d.store.rats.unfreezeByStock(st.mint, 'stock_paused');
@@ -66,7 +66,7 @@ export async function runMintStep(d: WorkerDeps): Promise<{ verified: number; re
         type: 'unfreeze',
         data: { scope: 'stock', stock: st.symbol, ratId: null, ratCount: n, reason: 'stock_resumed' },
       });
-      await d.alerts.send('info', `stock_resumed_${st.symbol}`, `${st.symbol} resumed: ${n} rats unfrozen.`);
+      await d.alerts.send('info', `stock_resumed_${st.symbol}`, `${st.symbol} resumed: ${n} inus unfrozen.`);
     }
   }
   return { verified, rejected, paused };

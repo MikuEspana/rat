@@ -29,7 +29,7 @@ export function telegramSink(opts: { botToken: string; chatId: string; log?: Log
       const res = await f(`https://api.telegram.org/bot${opts.botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat_id: opts.chatId, text: `[RAT RACE ${opts.staging ? 'STAGING ' : ''}${ICON[level]} ${level}] ${text}`, disable_web_page_preview: true }),
+        body: JSON.stringify({ chat_id: opts.chatId, text: `[WSI ${opts.staging ? 'STAGING ' : ''}${ICON[level]} ${level}] ${text}`, disable_web_page_preview: true }),
       });
       if (!res.ok) opts.log?.warn({ status: res.status }, 'telegram alert failed');
     } catch (err) {

@@ -6,5 +6,5 @@ export function avatarSeedFor(wallet: string): string {
 }
 
 export function ratName(id: number): string {
-  return `Rat #${String(id).padStart(4, '0')}`;
+  return `Inu #${String(id).padStart(4, '0')}`;
 }

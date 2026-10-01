@@ -134,7 +134,7 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 ```json
 {
   "id": 1042,
-  "name": "Rat #1042",
+  "name": "Inu #1042",
   "wallet": "7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyW5n",
   "solscanUrl": "https://solscan.io/account/7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyW5n",
   "stock": "TSLAx",
@@ -154,7 +154,7 @@ Rounding: USD and percentages to 2 decimals, `sizeScale` to 2 decimals, prices u
 }
 ```
 
-`name` is `"Rat #" + id` padded to 4 digits (`Rat #0042`, `Rat #1042`, `Rat #12345`).
+`name` is `"Inu #" + id` padded to 4 digits (`Inu #0042`, `Inu #1042`, `Inu #12345`).
 
 ## `GET /api/rats`
 
@@ -177,7 +177,7 @@ Sorted by `id` ascending. `total` is always the full count, even with `afterId`.
   { "id": 90210, "type": "claim", "at": "2026-10-01T17:59:50Z", "txSig": "3cL...", "txUrl": "https://solscan.io/tx/3cL...", "dryRun": false,
     "data": { "amountSol": 1.284, "source": "bot" } },
   { "id": 90211, "type": "hire", "at": "2026-10-01T17:59:58Z", "txSig": "5hT...", "txUrl": "https://solscan.io/tx/5hT...", "dryRun": false,
-    "data": { "ratId": 1042, "ratName": "Rat #1042", "wallet": "7xKp...yW5n", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
+    "data": { "ratId": 1042, "ratName": "Inu #1042", "wallet": "7xKp...yW5n", "stock": "TSLAx", "salarySol": 0.03, "costUsd": 5.41 } },
   { "id": 90213, "type": "freeze", "at": "2026-10-01T18:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
     "data": { "scope": "stock", "stock": "COINx", "ratId": null, "ratCount": 37, "reason": "stock_paused" } },
   { "id": 90214, "type": "unfreeze", "at": "2026-10-01T19:00:03Z", "txSig": null, "txUrl": null, "dryRun": false,
