@@ -88,7 +88,7 @@ export function createAdminApp(opts: AdminOptions): Hono<Env> {
     }
     if (!password || !timingSafeEqual(sha256(password), expected)) {
       if (password) lockout.fail(ip);
-      c.header('www-authenticate', 'Basic realm="RAT RACE admin", charset="UTF-8"');
+      c.header('www-authenticate', 'Basic realm="WALL STREET INU admin", charset="UTF-8"');
       return c.text('Password required.', 401);
     }
     lockout.reset(ip);

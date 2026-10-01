@@ -5,7 +5,7 @@
   "rats": [
     {
       "id": 1,
-      "name": "Rat #0001",
+      "name": "Inu #0001",
       "wallet": "GMQvaenhSzsu8fADqo5k93zCWRENDdyJHuStqEM2xFtc",
       "solscanUrl": "https://solscan.io/account/GMQvaenhSzsu8fADqo5k93zCWRENDdyJHuStqEM2xFtc",
       "stock": "NVDAx",
@@ -25,7 +25,7 @@
     },
     {
       "id": 2,
-      "name": "Rat #0002",
+      "name": "Inu #0002",
       "wallet": "GpHXVCQRZmuo4VReiY87vkYRCUmChoaK4YV2zndGVjex",
       "solscanUrl": "https://solscan.io/account/GpHXVCQRZmuo4VReiY87vkYRCUmChoaK4YV2zndGVjex",
       "stock": "MSTRx",
@@ -45,7 +45,7 @@
     },
     {
       "id": 3,
-      "name": "Rat #0003",
+      "name": "Inu #0003",
       "wallet": "aV9XoJeFG6DDE4dNqEV8QMdri6AVuiWYaQYHbjcADkky",
       "solscanUrl": "https://solscan.io/account/aV9XoJeFG6DDE4dNqEV8QMdri6AVuiWYaQYHbjcADkky",
       "stock": "SPYx",
@@ -65,7 +65,7 @@
     },
     {
       "id": 4,
-      "name": "Rat #0004",
+      "name": "Inu #0004",
       "wallet": "QV4WqFFb4ZqsRV95FvCXtmcnLFCDaPwQfhbtcEbAmJB7",
       "solscanUrl": "https://solscan.io/account/QV4WqFFb4ZqsRV95FvCXtmcnLFCDaPwQfhbtcEbAmJB7",
       "stock": "TSLAx",
@@ -85,7 +85,7 @@
     },
     {
       "id": 5,
-      "name": "Rat #0005",
+      "name": "Inu #0005",
       "wallet": "xWXCqCjCmkuf9bMuSHs3hfFF2ygS3hEmrecAxmXAvbxy",
       "solscanUrl": "https://solscan.io/account/xWXCqCjCmkuf9bMuSHs3hfFF2ygS3hEmrecAxmXAvbxy",
       "stock": "SPYx",
@@ -105,7 +105,7 @@
     },
     {
       "id": 6,
-      "name": "Rat #0006",
+      "name": "Inu #0006",
       "wallet": "W7ZZNMWKKbhSDQhtGN1oMzDtvVqxzh8hrTeYAbsNQd9x",
       "solscanUrl": "https://solscan.io/account/W7ZZNMWKKbhSDQhtGN1oMzDtvVqxzh8hrTeYAbsNQd9x",
       "stock": "NVDAx",
@@ -125,7 +125,7 @@
     },
     {
       "id": 7,
-      "name": "Rat #0007",
+      "name": "Inu #0007",
       "wallet": "APJeBr2RgfA8dBQHVzEB6fpvXi7wj9BjNhHU1ZLApyuq",
       "solscanUrl": "https://solscan.io/account/APJeBr2RgfA8dBQHVzEB6fpvXi7wj9BjNhHU1ZLApyuq",
       "stock": "GOOGLx",
@@ -145,7 +145,7 @@
     },
     {
       "id": 8,
-      "name": "Rat #0008",
+      "name": "Inu #0008",
       "wallet": "JtSyvny2kvD9AJuLkVBy1VgC7eA8g2C4VTfhhGsrsheM",
       "solscanUrl": "https://solscan.io/account/JtSyvny2kvD9AJuLkVBy1VgC7eA8g2C4VTfhhGsrsheM",
       "stock": "NVDAx",
@@ -165,7 +165,7 @@
     },
     {
       "id": 9,
-      "name": "Rat #0009",
+      "name": "Inu #0009",
       "wallet": "kZapFGuu4mQk7Yu4Ab2omPCmsqqvTVSiyEvLPYVLho58",
       "solscanUrl": "https://solscan.io/account/kZapFGuu4mQk7Yu4Ab2omPCmsqqvTVSiyEvLPYVLho58",
       "stock": "NVDAx",
@@ -185,7 +185,7 @@
     },
     {
       "id": 10,
-      "name": "Rat #0010",
+      "name": "Inu #0010",
       "wallet": "cMpSq8MwRjq9n6JkL7Y71fEXeeyxY9cw6eekirNLAW75",
       "solscanUrl": "https://solscan.io/account/cMpSq8MwRjq9n6JkL7Y71fEXeeyxY9cw6eekirNLAW75",
       "stock": "GOOGLx",
@@ -205,7 +205,7 @@
     },
     {
       "id": 11,
-      "name": "Rat #0011",
+      "name": "Inu #0011",
       "wallet": "zKcn7MpCt6PS5NLkkkpdWxZAJ94SQGoyXBD6zQZEQbwP",
       "solscanUrl": "https://solscan.io/account/zKcn7MpCt6PS5NLkkkpdWxZAJ94SQGoyXBD6zQZEQbwP",
       "stock": "AMDx",
@@ -225,7 +225,7 @@
     },
     {
       "id": 12,
-      "name": "Rat #0012",
+      "name": "Inu #0012",
       "wallet": "kefQ3hNf5dcLHLXPyPU2CtNLtWiB5nJCW8H5xcRctPFK",
       "solscanUrl": "https://solscan.io/account/kefQ3hNf5dcLHLXPyPU2CtNLtWiB5nJCW8H5xcRctPFK",
       "stock": "GOOGLx",
@@ -245,7 +245,7 @@
     },
     {
       "id": 13,
-      "name": "Rat #0013",
+      "name": "Inu #0013",
       "wallet": "yjx2YqJF4b1ShgbGAS34v87VGPNsfAk92MwuAFVLTaqy",
       "solscanUrl": "https://solscan.io/account/yjx2YqJF4b1ShgbGAS34v87VGPNsfAk92MwuAFVLTaqy",
       "stock": "MSTRx",
@@ -265,7 +265,7 @@
     },
     {
       "id": 14,
-      "name": "Rat #0014",
+      "name": "Inu #0014",
       "wallet": "WMdj4NeFUieZYNYo699i7LoFaxNrn3eazBkUamu4fofn",
       "solscanUrl": "https://solscan.io/account/WMdj4NeFUieZYNYo699i7LoFaxNrn3eazBkUamu4fofn",
       "stock": "NVDAx",
@@ -285,7 +285,7 @@
     },
     {
       "id": 15,
-      "name": "Rat #0015",
+      "name": "Inu #0015",
       "wallet": "RnwXCMASnF29dAsHHAvNwsUKU2LnTQh6VPeDfmag5BXr",
       "solscanUrl": "https://solscan.io/account/RnwXCMASnF29dAsHHAvNwsUKU2LnTQh6VPeDfmag5BXr",
       "stock": "TSLAx",
@@ -305,7 +305,7 @@
     },
     {
       "id": 16,
-      "name": "Rat #0016",
+      "name": "Inu #0016",
       "wallet": "SczFgB6rjMQz7NTmeKp1N1Kynk7Ha8qse3u6vDbBgkor",
       "solscanUrl": "https://solscan.io/account/SczFgB6rjMQz7NTmeKp1N1Kynk7Ha8qse3u6vDbBgkor",
       "stock": "NVDAx",
@@ -325,7 +325,7 @@
     },
     {
       "id": 17,
-      "name": "Rat #0017",
+      "name": "Inu #0017",
       "wallet": "vvb4vQzQDjZmoHgDodYztA1b6mZqRkMwLsgEt8ugF1K9",
       "solscanUrl": "https://solscan.io/account/vvb4vQzQDjZmoHgDodYztA1b6mZqRkMwLsgEt8ugF1K9",
       "stock": "COINx",
@@ -345,7 +345,7 @@
     },
     {
       "id": 18,
-      "name": "Rat #0018",
+      "name": "Inu #0018",
       "wallet": "TTM6czQeGqDK9jijvcpmaAJDYnoyjzjJkeTJJgWrbS8X",
       "solscanUrl": "https://solscan.io/account/TTM6czQeGqDK9jijvcpmaAJDYnoyjzjJkeTJJgWrbS8X",
       "stock": "AMDx",
@@ -365,7 +365,7 @@
     },
     {
       "id": 19,
-      "name": "Rat #0019",
+      "name": "Inu #0019",
       "wallet": "WEgy9Pi3GmPHpfY723y1hFu41Jaav4NfxT3qYHN4h9UJ",
       "solscanUrl": "https://solscan.io/account/WEgy9Pi3GmPHpfY723y1hFu41Jaav4NfxT3qYHN4h9UJ",
       "stock": "NVDAx",
@@ -385,7 +385,7 @@
     },
     {
       "id": 20,
-      "name": "Rat #0020",
+      "name": "Inu #0020",
       "wallet": "K5Nt5EEYtkQpsx65nW1fccTFydUaTVo7gMtf5eFRQ8EQ",
       "solscanUrl": "https://solscan.io/account/K5Nt5EEYtkQpsx65nW1fccTFydUaTVo7gMtf5eFRQ8EQ",
       "stock": "NVDAx",
@@ -405,7 +405,7 @@
     },
     {
       "id": 21,
-      "name": "Rat #0021",
+      "name": "Inu #0021",
       "wallet": "etaji6QdkyDKtmdjU1zKVC7eNV7Ac3mWZaziPNS7ybv8",
       "solscanUrl": "https://solscan.io/account/etaji6QdkyDKtmdjU1zKVC7eNV7Ac3mWZaziPNS7ybv8",
       "stock": "AMDx",
@@ -425,7 +425,7 @@
     },
     {
       "id": 22,
-      "name": "Rat #0022",
+      "name": "Inu #0022",
       "wallet": "BpqgYXhY6SRgNoRqsqWYpL1BqxN66xgquKy3QW78sNhe",
       "solscanUrl": "https://solscan.io/account/BpqgYXhY6SRgNoRqsqWYpL1BqxN66xgquKy3QW78sNhe",
       "stock": "AMDx",
@@ -445,7 +445,7 @@
     },
     {
       "id": 23,
-      "name": "Rat #0023",
+      "name": "Inu #0023",
       "wallet": "GCTb5n5XciuNSCKNtZtX8LXyoqsUmdgDVWB1HPSEK8jK",
       "solscanUrl": "https://solscan.io/account/GCTb5n5XciuNSCKNtZtX8LXyoqsUmdgDVWB1HPSEK8jK",
       "stock": "AMDx",
@@ -465,7 +465,7 @@
     },
     {
       "id": 24,
-      "name": "Rat #0024",
+      "name": "Inu #0024",
       "wallet": "yqYCRtud2w6KGjVni88B7QgTtwVKRkPVTJrnffdWiAet",
       "solscanUrl": "https://solscan.io/account/yqYCRtud2w6KGjVni88B7QgTtwVKRkPVTJrnffdWiAet",
       "stock": "COINx",
@@ -485,7 +485,7 @@
     },
     {
       "id": 25,
-      "name": "Rat #0025",
+      "name": "Inu #0025",
       "wallet": "2G3CnJi8o5HDUXdap845YAyYmh42Qrbac3rfTTuM4vTY",
       "solscanUrl": "https://solscan.io/account/2G3CnJi8o5HDUXdap845YAyYmh42Qrbac3rfTTuM4vTY",
       "stock": "AMDx",
@@ -505,7 +505,7 @@
     },
     {
       "id": 26,
-      "name": "Rat #0026",
+      "name": "Inu #0026",
       "wallet": "pzjGr2FLiX2ga2m4jVVQ1boK93gLaAhYPN8YTS8wSVqs",
       "solscanUrl": "https://solscan.io/account/pzjGr2FLiX2ga2m4jVVQ1boK93gLaAhYPN8YTS8wSVqs",
       "stock": "AMDx",
@@ -525,7 +525,7 @@
     },
     {
       "id": 27,
-      "name": "Rat #0027",
+      "name": "Inu #0027",
       "wallet": "48WsdVnQ5nA4osMtnGUJe1Grj9pTjPqoYJ1LbMpbR4cv",
       "solscanUrl": "https://solscan.io/account/48WsdVnQ5nA4osMtnGUJe1Grj9pTjPqoYJ1LbMpbR4cv",
       "stock": "METAx",
@@ -545,7 +545,7 @@
     },
     {
       "id": 28,
-      "name": "Rat #0028",
+      "name": "Inu #0028",
       "wallet": "AiXsFYLe6H3oEdAaGgk5P1ZaLQzAfUPUztWmQv44mXmS",
       "solscanUrl": "https://solscan.io/account/AiXsFYLe6H3oEdAaGgk5P1ZaLQzAfUPUztWmQv44mXmS",
       "stock": "METAx",
@@ -565,7 +565,7 @@
     },
     {
       "id": 29,
-      "name": "Rat #0029",
+      "name": "Inu #0029",
       "wallet": "ApKEexvKAf12ug5rSB9ntpbtDBTvBfEZLufyhbu8LXaW",
       "solscanUrl": "https://solscan.io/account/ApKEexvKAf12ug5rSB9ntpbtDBTvBfEZLufyhbu8LXaW",
       "stock": "TSLAx",
@@ -585,7 +585,7 @@
     },
     {
       "id": 30,
-      "name": "Rat #0030",
+      "name": "Inu #0030",
       "wallet": "DNSd8AvSymuDpX76hHXAoELngTNQUtx5s7LopfzVGcLx",
       "solscanUrl": "https://solscan.io/account/DNSd8AvSymuDpX76hHXAoELngTNQUtx5s7LopfzVGcLx",
       "stock": "TSLAx",
@@ -605,7 +605,7 @@
     },
     {
       "id": 31,
-      "name": "Rat #0031",
+      "name": "Inu #0031",
       "wallet": "ixK64mHdTeqpgabouFymJvA4LeS5DZYTvQX6PZUvE8h3",
       "solscanUrl": "https://solscan.io/account/ixK64mHdTeqpgabouFymJvA4LeS5DZYTvQX6PZUvE8h3",
       "stock": "TSLAx",
@@ -625,7 +625,7 @@
     },
     {
       "id": 32,
-      "name": "Rat #0032",
+      "name": "Inu #0032",
       "wallet": "G5J1Q1jWyTzpcFos4rfusHVjez1T6PibratwYYfjDb3F",
       "solscanUrl": "https://solscan.io/account/G5J1Q1jWyTzpcFos4rfusHVjez1T6PibratwYYfjDb3F",
       "stock": "TSLAx",
@@ -645,7 +645,7 @@
     },
     {
       "id": 33,
-      "name": "Rat #0033",
+      "name": "Inu #0033",
       "wallet": "CTUwFtWBMFFSLfJFnYXQAXZt45QLbGxVi7aATZzbV1wh",
       "solscanUrl": "https://solscan.io/account/CTUwFtWBMFFSLfJFnYXQAXZt45QLbGxVi7aATZzbV1wh",
       "stock": "NVDAx",
@@ -665,7 +665,7 @@
     },
     {
       "id": 34,
-      "name": "Rat #0034",
+      "name": "Inu #0034",
       "wallet": "cuHMZWbrYs11yGyY3VxgRvaFyUvPkQUjQLykDLC4dZuN",
       "solscanUrl": "https://solscan.io/account/cuHMZWbrYs11yGyY3VxgRvaFyUvPkQUjQLykDLC4dZuN",
       "stock": "MSTRx",
@@ -685,7 +685,7 @@
     },
     {
       "id": 35,
-      "name": "Rat #0035",
+      "name": "Inu #0035",
       "wallet": "ULQCqkvUCp6YiEvnydBomUJ47ijzavpDovgw2jxpEEMp",
       "solscanUrl": "https://solscan.io/account/ULQCqkvUCp6YiEvnydBomUJ47ijzavpDovgw2jxpEEMp",
       "stock": "TSLAx",
@@ -705,7 +705,7 @@
     },
     {
       "id": 36,
-      "name": "Rat #0036",
+      "name": "Inu #0036",
       "wallet": "eB9wVmxeMB6RukkfEcn9SPEBLwwdJV4w9hbcS2zxW73y",
       "solscanUrl": "https://solscan.io/account/eB9wVmxeMB6RukkfEcn9SPEBLwwdJV4w9hbcS2zxW73y",
       "stock": "MSTRx",
@@ -725,7 +725,7 @@
     },
     {
       "id": 37,
-      "name": "Rat #0037",
+      "name": "Inu #0037",
       "wallet": "UWfukCTorGNapWTgYhg58egEybursEEnF32eqT1ftAeQ",
       "solscanUrl": "https://solscan.io/account/UWfukCTorGNapWTgYhg58egEybursEEnF32eqT1ftAeQ",
       "stock": "GOOGLx",
@@ -745,7 +745,7 @@
     },
     {
       "id": 38,
-      "name": "Rat #0038",
+      "name": "Inu #0038",
       "wallet": "sVb71b4iA23yHqjKqAAG1mdpDK29aorrNLf3WM3WjNGU",
       "solscanUrl": "https://solscan.io/account/sVb71b4iA23yHqjKqAAG1mdpDK29aorrNLf3WM3WjNGU",
       "stock": "AMDx",
@@ -765,7 +765,7 @@
     },
     {
       "id": 39,
-      "name": "Rat #0039",
+      "name": "Inu #0039",
       "wallet": "4p8SJAdWNP1vY2SBqjhJYrhfkyHsN8h9dEX4w3nL6Wva",
       "solscanUrl": "https://solscan.io/account/4p8SJAdWNP1vY2SBqjhJYrhfkyHsN8h9dEX4w3nL6Wva",
       "stock": "TSLAx",
@@ -785,7 +785,7 @@
     },
     {
       "id": 40,
-      "name": "Rat #0040",
+      "name": "Inu #0040",
       "wallet": "5u1K2XjD11kmBpvdaC6GJVmkqKpLHVfGHBteRWE9Bk1C",
       "solscanUrl": "https://solscan.io/account/5u1K2XjD11kmBpvdaC6GJVmkqKpLHVfGHBteRWE9Bk1C",
       "stock": "NVDAx",
@@ -805,7 +805,7 @@
     },
     {
       "id": 41,
-      "name": "Rat #0041",
+      "name": "Inu #0041",
       "wallet": "dBRFhSadkQDA3LCZt5ohhwpJ7ws4nxz1R8ew9rjnwyQD",
       "solscanUrl": "https://solscan.io/account/dBRFhSadkQDA3LCZt5ohhwpJ7ws4nxz1R8ew9rjnwyQD",
       "stock": "TSLAx",
@@ -825,7 +825,7 @@
     },
     {
       "id": 42,
-      "name": "Rat #0042",
+      "name": "Inu #0042",
       "wallet": "aoRgwDq3KypuXDQnLKgbxbAXVQJy4rmhsrEJFy2CjZXz",
       "solscanUrl": "https://solscan.io/account/aoRgwDq3KypuXDQnLKgbxbAXVQJy4rmhsrEJFy2CjZXz",
       "stock": "AAPLx",
@@ -845,7 +845,7 @@
     },
     {
       "id": 43,
-      "name": "Rat #0043",
+      "name": "Inu #0043",
       "wallet": "9q9Fg4ciNhDg9AN8LTZ9FAaQbNdoCnKa5itpw6sKiMit",
       "solscanUrl": "https://solscan.io/account/9q9Fg4ciNhDg9AN8LTZ9FAaQbNdoCnKa5itpw6sKiMit",
       "stock": "AMDx",
@@ -865,7 +865,7 @@
     },
     {
       "id": 44,
-      "name": "Rat #0044",
+      "name": "Inu #0044",
       "wallet": "FP2wgjBwZSJMygkBk55EeA7NZoYFAH7ox9xbgVMXxW8K",
       "solscanUrl": "https://solscan.io/account/FP2wgjBwZSJMygkBk55EeA7NZoYFAH7ox9xbgVMXxW8K",
       "stock": "MSTRx",
@@ -885,7 +885,7 @@
     },
     {
       "id": 45,
-      "name": "Rat #0045",
+      "name": "Inu #0045",
       "wallet": "mY6E5kdJqQYeJTL4Y33uLS99mN1a7KjohEJQXewxB4ih",
       "solscanUrl": "https://solscan.io/account/mY6E5kdJqQYeJTL4Y33uLS99mN1a7KjohEJQXewxB4ih",
       "stock": "MSTRx",
@@ -905,7 +905,7 @@
     },
     {
       "id": 46,
-      "name": "Rat #0046",
+      "name": "Inu #0046",
       "wallet": "6LgrDeVLaX4KTULp19Y2ND5j16QPooq28vNdqwjHtzdN",
       "solscanUrl": "https://solscan.io/account/6LgrDeVLaX4KTULp19Y2ND5j16QPooq28vNdqwjHtzdN",
       "stock": "AMDx",
@@ -925,7 +925,7 @@
     },
     {
       "id": 47,
-      "name": "Rat #0047",
+      "name": "Inu #0047",
       "wallet": "syQSpEhFaYgAQMpRv4j39wkApSEJ8UdktiKRATP4AQvR",
       "solscanUrl": "https://solscan.io/account/syQSpEhFaYgAQMpRv4j39wkApSEJ8UdktiKRATP4AQvR",
       "stock": "NVDAx",
@@ -945,7 +945,7 @@
     },
     {
       "id": 48,
-      "name": "Rat #0048",
+      "name": "Inu #0048",
       "wallet": "c3tVpmk9qmNuboL9Bro3mAMBt9ufR7mEGmQucjz2BQii",
       "solscanUrl": "https://solscan.io/account/c3tVpmk9qmNuboL9Bro3mAMBt9ufR7mEGmQucjz2BQii",
       "stock": "METAx",
@@ -965,7 +965,7 @@
     },
     {
       "id": 49,
-      "name": "Rat #0049",
+      "name": "Inu #0049",
       "wallet": "vpN1wSsytM1bdeZJ88PsZcjwpR2HVKnzpmKWjkR8PgwZ",
       "solscanUrl": "https://solscan.io/account/vpN1wSsytM1bdeZJ88PsZcjwpR2HVKnzpmKWjkR8PgwZ",
       "stock": "NVDAx",
@@ -985,7 +985,7 @@
     },
     {
       "id": 50,
-      "name": "Rat #0050",
+      "name": "Inu #0050",
       "wallet": "odzHtuQmZmxBFz3w1wNa9nTKeFCBHGvvZvKy8y4sspNk",
       "solscanUrl": "https://solscan.io/account/odzHtuQmZmxBFz3w1wNa9nTKeFCBHGvvZvKy8y4sspNk",
       "stock": "MSTRx",
@@ -1005,7 +1005,7 @@
     },
     {
       "id": 51,
-      "name": "Rat #0051",
+      "name": "Inu #0051",
       "wallet": "KTAaasexYbGr5YPePsUTYYckLyuXm8VSP5ixZkxSaABD",
       "solscanUrl": "https://solscan.io/account/KTAaasexYbGr5YPePsUTYYckLyuXm8VSP5ixZkxSaABD",
       "stock": "MSTRx",
@@ -1025,7 +1025,7 @@
     },
     {
       "id": 52,
-      "name": "Rat #0052",
+      "name": "Inu #0052",
       "wallet": "ovHqHoXd6JXxGRx5iRmgAgFSQjLkvgCvuJ6tNTMdDpSj",
       "solscanUrl": "https://solscan.io/account/ovHqHoXd6JXxGRx5iRmgAgFSQjLkvgCvuJ6tNTMdDpSj",
       "stock": "GOOGLx",
@@ -1045,7 +1045,7 @@
     },
     {
       "id": 53,
-      "name": "Rat #0053",
+      "name": "Inu #0053",
       "wallet": "Lw62gRaeiJgWEXvwa9PS26CBTEtF6BARDYVrssMYtnJj",
       "solscanUrl": "https://solscan.io/account/Lw62gRaeiJgWEXvwa9PS26CBTEtF6BARDYVrssMYtnJj",
       "stock": "NVDAx",
@@ -1065,7 +1065,7 @@
     },
     {
       "id": 54,
-      "name": "Rat #0054",
+      "name": "Inu #0054",
       "wallet": "K3aop9HJs37ujS8GSSMyWxpHAPk4BkYD9GyhKCKWC36u",
       "solscanUrl": "https://solscan.io/account/K3aop9HJs37ujS8GSSMyWxpHAPk4BkYD9GyhKCKWC36u",
       "stock": "AMZNx",
@@ -1085,7 +1085,7 @@
     },
     {
       "id": 55,
-      "name": "Rat #0055",
+      "name": "Inu #0055",
       "wallet": "AhYWBmsa1jY5E4Vxjb1F5aHv24J8Lr6v5JAs7s4UWV8q",
       "solscanUrl": "https://solscan.io/account/AhYWBmsa1jY5E4Vxjb1F5aHv24J8Lr6v5JAs7s4UWV8q",
       "stock": "TSLAx",
@@ -1105,7 +1105,7 @@
     },
     {
       "id": 56,
-      "name": "Rat #0056",
+      "name": "Inu #0056",
       "wallet": "zHy1bnYc5SMjYR9jWduyy1DaxDY3jmeDeeEaawSbiy1A",
       "solscanUrl": "https://solscan.io/account/zHy1bnYc5SMjYR9jWduyy1DaxDY3jmeDeeEaawSbiy1A",
       "stock": "AAPLx",
@@ -1125,7 +1125,7 @@
     },
     {
       "id": 57,
-      "name": "Rat #0057",
+      "name": "Inu #0057",
       "wallet": "MR6P7AnJt831G8nX96Bf59L1UyoiAtFZhziBKXrVut7w",
       "solscanUrl": "https://solscan.io/account/MR6P7AnJt831G8nX96Bf59L1UyoiAtFZhziBKXrVut7w",
       "stock": "NVDAx",
@@ -1145,7 +1145,7 @@
     },
     {
       "id": 58,
-      "name": "Rat #0058",
+      "name": "Inu #0058",
       "wallet": "S96NBukooCurLZf9kmpcvVfzfzskdiz41MUfX4mF3Sdk",
       "solscanUrl": "https://solscan.io/account/S96NBukooCurLZf9kmpcvVfzfzskdiz41MUfX4mF3Sdk",
       "stock": "TSLAx",
@@ -1165,7 +1165,7 @@
     },
     {
       "id": 59,
-      "name": "Rat #0059",
+      "name": "Inu #0059",
       "wallet": "NtVj2otUNYvapXKapBLXKjWb2K7DyxgqCHeyH8WoRiPp",
       "solscanUrl": "https://solscan.io/account/NtVj2otUNYvapXKapBLXKjWb2K7DyxgqCHeyH8WoRiPp",
       "stock": "TSLAx",
@@ -1185,7 +1185,7 @@
     },
     {
       "id": 60,
-      "name": "Rat #0060",
+      "name": "Inu #0060",
       "wallet": "cGxPCaGuqg3jqKqEcDRb6SJG2LDfW9VQfd5ChwoVjr4V",
       "solscanUrl": "https://solscan.io/account/cGxPCaGuqg3jqKqEcDRb6SJG2LDfW9VQfd5ChwoVjr4V",
       "stock": "MSTRx",
@@ -1205,7 +1205,7 @@
     },
     {
       "id": 61,
-      "name": "Rat #0061",
+      "name": "Inu #0061",
       "wallet": "pCEFhNWY6v9tA3U9MUmFm3dvsxVp3C3FtLK8bJDsfV65",
       "solscanUrl": "https://solscan.io/account/pCEFhNWY6v9tA3U9MUmFm3dvsxVp3C3FtLK8bJDsfV65",
       "stock": "SPYx",
@@ -1225,7 +1225,7 @@
     },
     {
       "id": 62,
-      "name": "Rat #0062",
+      "name": "Inu #0062",
       "wallet": "mfYQfYFheotkaBqR2SrjdCUcqjB5eaEji14Wqb9V1KE9",
       "solscanUrl": "https://solscan.io/account/mfYQfYFheotkaBqR2SrjdCUcqjB5eaEji14Wqb9V1KE9",
       "stock": "AMZNx",
@@ -1245,7 +1245,7 @@
     },
     {
       "id": 63,
-      "name": "Rat #0063",
+      "name": "Inu #0063",
       "wallet": "RBsnPNr5BKBq4uGaYRdS5WfMmK2aqMYJfJ5zZuJkwjXr",
       "solscanUrl": "https://solscan.io/account/RBsnPNr5BKBq4uGaYRdS5WfMmK2aqMYJfJ5zZuJkwjXr",
       "stock": "NVDAx",
@@ -1265,7 +1265,7 @@
     },
     {
       "id": 64,
-      "name": "Rat #0064",
+      "name": "Inu #0064",
       "wallet": "1bL9pFWhQXWDSTVERoNqt61imosv1RC2LzUsVPvedTF2",
       "solscanUrl": "https://solscan.io/account/1bL9pFWhQXWDSTVERoNqt61imosv1RC2LzUsVPvedTF2",
       "stock": "SPYx",
@@ -1285,7 +1285,7 @@
     },
     {
       "id": 65,
-      "name": "Rat #0065",
+      "name": "Inu #0065",
       "wallet": "A2BNhrsuqu5CCXMQBMZYqNbfLyVhWQCZjm34HYRuWvhr",
       "solscanUrl": "https://solscan.io/account/A2BNhrsuqu5CCXMQBMZYqNbfLyVhWQCZjm34HYRuWvhr",
       "stock": "GOOGLx",
@@ -1305,7 +1305,7 @@
     },
     {
       "id": 66,
-      "name": "Rat #0066",
+      "name": "Inu #0066",
       "wallet": "gfHfe92b7KeoR13PFSLJ7S7JBFFTRBx9Bi7VCND7K826",
       "solscanUrl": "https://solscan.io/account/gfHfe92b7KeoR13PFSLJ7S7JBFFTRBx9Bi7VCND7K826",
       "stock": "MSTRx",
@@ -1325,7 +1325,7 @@
     },
     {
       "id": 67,
-      "name": "Rat #0067",
+      "name": "Inu #0067",
       "wallet": "Pf8tgajU7CnocgzGDEscc9DbgzcGTyVAhRWZhPe9AkXT",
       "solscanUrl": "https://solscan.io/account/Pf8tgajU7CnocgzGDEscc9DbgzcGTyVAhRWZhPe9AkXT",
       "stock": "TSLAx",
@@ -1345,7 +1345,7 @@
     },
     {
       "id": 68,
-      "name": "Rat #0068",
+      "name": "Inu #0068",
       "wallet": "aYJCeC39gT6c9m98qX7re32YewzBja3Xtrqr1QCmJRhZ",
       "solscanUrl": "https://solscan.io/account/aYJCeC39gT6c9m98qX7re32YewzBja3Xtrqr1QCmJRhZ",
       "stock": "SPYx",
@@ -1365,7 +1365,7 @@
     },
     {
       "id": 69,
-      "name": "Rat #0069",
+      "name": "Inu #0069",
       "wallet": "M2QX2KsDp5WDLr7R8cJxB92CDzzQrY1Tst34arFTyWeu",
       "solscanUrl": "https://solscan.io/account/M2QX2KsDp5WDLr7R8cJxB92CDzzQrY1Tst34arFTyWeu",
       "stock": "COINx",
@@ -1385,7 +1385,7 @@
     },
     {
       "id": 70,
-      "name": "Rat #0070",
+      "name": "Inu #0070",
       "wallet": "g4VYCbLkF9fBi1DAWY1iu7amnesyeWvCXQxSLy5z3tKX",
       "solscanUrl": "https://solscan.io/account/g4VYCbLkF9fBi1DAWY1iu7amnesyeWvCXQxSLy5z3tKX",
       "stock": "NVDAx",
@@ -1405,7 +1405,7 @@
     },
     {
       "id": 71,
-      "name": "Rat #0071",
+      "name": "Inu #0071",
       "wallet": "2A7U81nok6ViNLrBzeVLNrx4p6xdvS6vaNzYsvrtno7E",
       "solscanUrl": "https://solscan.io/account/2A7U81nok6ViNLrBzeVLNrx4p6xdvS6vaNzYsvrtno7E",
       "stock": "AAPLx",
@@ -1425,7 +1425,7 @@
     },
     {
       "id": 72,
-      "name": "Rat #0072",
+      "name": "Inu #0072",
       "wallet": "srTXNcABDdMzeBL1JpRnTMKZyX4pUeg4d1iZC2T5wdnY",
       "solscanUrl": "https://solscan.io/account/srTXNcABDdMzeBL1JpRnTMKZyX4pUeg4d1iZC2T5wdnY",
       "stock": "TSLAx",
@@ -1445,7 +1445,7 @@
     },
     {
       "id": 73,
-      "name": "Rat #0073",
+      "name": "Inu #0073",
       "wallet": "9pWTgyziM8A94n1XPHMyLTDmS7tiZxzUnH3tKoXpq5c2",
       "solscanUrl": "https://solscan.io/account/9pWTgyziM8A94n1XPHMyLTDmS7tiZxzUnH3tKoXpq5c2",
       "stock": "AMZNx",
@@ -1465,7 +1465,7 @@
     },
     {
       "id": 74,
-      "name": "Rat #0074",
+      "name": "Inu #0074",
       "wallet": "DrLetG87vYPy7nfRvXA8jm9oVQdU9oEBHTC8BqiMTt4U",
       "solscanUrl": "https://solscan.io/account/DrLetG87vYPy7nfRvXA8jm9oVQdU9oEBHTC8BqiMTt4U",
       "stock": "MSTRx",
@@ -1485,7 +1485,7 @@
     },
     {
       "id": 75,
-      "name": "Rat #0075",
+      "name": "Inu #0075",
       "wallet": "7QqpxZzziCgE7EjkjbZrb6ZoqpxECDpCD6QjhnH8qBLa",
       "solscanUrl": "https://solscan.io/account/7QqpxZzziCgE7EjkjbZrb6ZoqpxECDpCD6QjhnH8qBLa",
       "stock": "NVDAx",
@@ -1505,7 +1505,7 @@
     },
     {
       "id": 76,
-      "name": "Rat #0076",
+      "name": "Inu #0076",
       "wallet": "iMPoqPp2nkQFnxT1qgqnSWKrkBmP5PdWcnaiFqLQd3d9",
       "solscanUrl": "https://solscan.io/account/iMPoqPp2nkQFnxT1qgqnSWKrkBmP5PdWcnaiFqLQd3d9",
       "stock": "TSLAx",
@@ -1525,7 +1525,7 @@
     },
     {
       "id": 77,
-      "name": "Rat #0077",
+      "name": "Inu #0077",
       "wallet": "6PpeKYy5KMWFZXrNdgkdNHbaJ4xLQP3yVRox79JB2d8L",
       "solscanUrl": "https://solscan.io/account/6PpeKYy5KMWFZXrNdgkdNHbaJ4xLQP3yVRox79JB2d8L",
       "stock": "GOOGLx",
@@ -1545,7 +1545,7 @@
     },
     {
       "id": 78,
-      "name": "Rat #0078",
+      "name": "Inu #0078",
       "wallet": "Ze14vx4opUw7rV9NhxkLWiFTT2gnDvzeMz9ae6YqmrfM",
       "solscanUrl": "https://solscan.io/account/Ze14vx4opUw7rV9NhxkLWiFTT2gnDvzeMz9ae6YqmrfM",
       "stock": "MSTRx",
@@ -1565,7 +1565,7 @@
     },
     {
       "id": 79,
-      "name": "Rat #0079",
+      "name": "Inu #0079",
       "wallet": "npPDVe2u8Soh7CkaB3uZPw2B3RugbgRqybR4EgrgVZDD",
       "solscanUrl": "https://solscan.io/account/npPDVe2u8Soh7CkaB3uZPw2B3RugbgRqybR4EgrgVZDD",
       "stock": "MSTRx",
@@ -1585,7 +1585,7 @@
     },
     {
       "id": 80,
-      "name": "Rat #0080",
+      "name": "Inu #0080",
       "wallet": "5VZCm7nf9ujXxh4euEyRYbQNmhxVjRxXsSLJcvGQ3FX3",
       "solscanUrl": "https://solscan.io/account/5VZCm7nf9ujXxh4euEyRYbQNmhxVjRxXsSLJcvGQ3FX3",
       "stock": "METAx",
@@ -1605,7 +1605,7 @@
     },
     {
       "id": 81,
-      "name": "Rat #0081",
+      "name": "Inu #0081",
       "wallet": "EJMTPeazzwFb1hUg95hGXQrxTUiJLedPByTJWXP4rABc",
       "solscanUrl": "https://solscan.io/account/EJMTPeazzwFb1hUg95hGXQrxTUiJLedPByTJWXP4rABc",
       "stock": "NVDAx",
@@ -1625,7 +1625,7 @@
     },
     {
       "id": 82,
-      "name": "Rat #0082",
+      "name": "Inu #0082",
       "wallet": "wdP5X9Zr56LH8vjTZU6o2Mdtz2BC1BMbmtFQXTKRydd9",
       "solscanUrl": "https://solscan.io/account/wdP5X9Zr56LH8vjTZU6o2Mdtz2BC1BMbmtFQXTKRydd9",
       "stock": "TSLAx",
@@ -1645,7 +1645,7 @@
     },
     {
       "id": 83,
-      "name": "Rat #0083",
+      "name": "Inu #0083",
       "wallet": "KxYJToAmJBynuDRRuGUGvNL6VKPnbqSbPsc6uw2bACTu",
       "solscanUrl": "https://solscan.io/account/KxYJToAmJBynuDRRuGUGvNL6VKPnbqSbPsc6uw2bACTu",
       "stock": "TSLAx",
@@ -1665,7 +1665,7 @@
     },
     {
       "id": 84,
-      "name": "Rat #0084",
+      "name": "Inu #0084",
       "wallet": "Q6LpA5hNm7oKoYJfLJCyVb5jtWsXvg8nSj5cjKx19SSW",
       "solscanUrl": "https://solscan.io/account/Q6LpA5hNm7oKoYJfLJCyVb5jtWsXvg8nSj5cjKx19SSW",
       "stock": "TSLAx",
@@ -1685,7 +1685,7 @@
     },
     {
       "id": 85,
-      "name": "Rat #0085",
+      "name": "Inu #0085",
       "wallet": "CuSXzKf4n2Vz3xd5b7aTZjYZ3XvU5R3pyVLbr5VDYu4c",
       "solscanUrl": "https://solscan.io/account/CuSXzKf4n2Vz3xd5b7aTZjYZ3XvU5R3pyVLbr5VDYu4c",
       "stock": "AMZNx",
@@ -1705,7 +1705,7 @@
     },
     {
       "id": 86,
-      "name": "Rat #0086",
+      "name": "Inu #0086",
       "wallet": "NCUvegUfcUUD89uciJcHGbRz4USvrK5VLCGupdP1ew8q",
       "solscanUrl": "https://solscan.io/account/NCUvegUfcUUD89uciJcHGbRz4USvrK5VLCGupdP1ew8q",
       "stock": "MSTRx",
@@ -1725,7 +1725,7 @@
     },
     {
       "id": 87,
-      "name": "Rat #0087",
+      "name": "Inu #0087",
       "wallet": "K9B5JhT88yZnPFANWQWmsgJwUZgZUhU4KugA4Ky8S2kg",
       "solscanUrl": "https://solscan.io/account/K9B5JhT88yZnPFANWQWmsgJwUZgZUhU4KugA4Ky8S2kg",
       "stock": "COINx",
@@ -1745,7 +1745,7 @@
     },
     {
       "id": 88,
-      "name": "Rat #0088",
+      "name": "Inu #0088",
       "wallet": "gikm3i6ZL6gpUCa6fQ8LEMLRRPQ7JP2XxWGFd16gNpFx",
       "solscanUrl": "https://solscan.io/account/gikm3i6ZL6gpUCa6fQ8LEMLRRPQ7JP2XxWGFd16gNpFx",
       "stock": "AMDx",
@@ -1765,7 +1765,7 @@
     },
     {
       "id": 89,
-      "name": "Rat #0089",
+      "name": "Inu #0089",
       "wallet": "kQw3GKEqy31n7sDNA9ULLoiJAN49Vb46aLoJ72LmWJGf",
       "solscanUrl": "https://solscan.io/account/kQw3GKEqy31n7sDNA9ULLoiJAN49Vb46aLoJ72LmWJGf",
       "stock": "TSLAx",
@@ -1785,7 +1785,7 @@
     },
     {
       "id": 90,
-      "name": "Rat #0090",
+      "name": "Inu #0090",
       "wallet": "d1ipsEqnX53pbFFw3kK6aXVw751ZMwv59jneTrhWdeEi",
       "solscanUrl": "https://solscan.io/account/d1ipsEqnX53pbFFw3kK6aXVw751ZMwv59jneTrhWdeEi",
       "stock": "AMZNx",
@@ -1805,7 +1805,7 @@
     },
     {
       "id": 91,
-      "name": "Rat #0091",
+      "name": "Inu #0091",
       "wallet": "C5eXi1UDF6RxzSWjEHUQwXGxnDkSEJe2aPv9AsBWGNqD",
       "solscanUrl": "https://solscan.io/account/C5eXi1UDF6RxzSWjEHUQwXGxnDkSEJe2aPv9AsBWGNqD",
       "stock": "NVDAx",
@@ -1825,7 +1825,7 @@
     },
     {
       "id": 92,
-      "name": "Rat #0092",
+      "name": "Inu #0092",
       "wallet": "42xXV7GRBpRo7PrZYTg4uGn2x3dMfZER9dEfNVw2KVak",
       "solscanUrl": "https://solscan.io/account/42xXV7GRBpRo7PrZYTg4uGn2x3dMfZER9dEfNVw2KVak",
       "stock": "AMDx",
@@ -1845,7 +1845,7 @@
     },
     {
       "id": 93,
-      "name": "Rat #0093",
+      "name": "Inu #0093",
       "wallet": "BaipbEwaERh5MDJapwSTYC5ypC4GBsvVamy9qHuPjU8f",
       "solscanUrl": "https://solscan.io/account/BaipbEwaERh5MDJapwSTYC5ypC4GBsvVamy9qHuPjU8f",
       "stock": "AMDx",
@@ -1865,7 +1865,7 @@
     },
     {
       "id": 94,
-      "name": "Rat #0094",
+      "name": "Inu #0094",
       "wallet": "fgmcfdHLKgL2YvN2uhpkdciUmQQxdu2yf3k8NmvmQqvf",
       "solscanUrl": "https://solscan.io/account/fgmcfdHLKgL2YvN2uhpkdciUmQQxdu2yf3k8NmvmQqvf",
       "stock": "METAx",
@@ -1885,7 +1885,7 @@
     },
     {
       "id": 95,
-      "name": "Rat #0095",
+      "name": "Inu #0095",
       "wallet": "1FCwCbHPew7KLPgSKVThq1nbnfwnjUYZ4ug3ie4VRH1H",
       "solscanUrl": "https://solscan.io/account/1FCwCbHPew7KLPgSKVThq1nbnfwnjUYZ4ug3ie4VRH1H",
       "stock": "AMZNx",
@@ -1905,7 +1905,7 @@
     },
     {
       "id": 96,
-      "name": "Rat #0096",
+      "name": "Inu #0096",
       "wallet": "4Auv76qfKze7unEgNHAqRZcM3EmwmTRdD2XKBoFrGBHZ",
       "solscanUrl": "https://solscan.io/account/4Auv76qfKze7unEgNHAqRZcM3EmwmTRdD2XKBoFrGBHZ",
       "stock": "TSLAx",
@@ -1925,7 +1925,7 @@
     },
     {
       "id": 97,
-      "name": "Rat #0097",
+      "name": "Inu #0097",
       "wallet": "AWokzN947M1yZpg9ipvGDNv9boGrde2BXriNA1qWn6pN",
       "solscanUrl": "https://solscan.io/account/AWokzN947M1yZpg9ipvGDNv9boGrde2BXriNA1qWn6pN",
       "stock": "TSLAx",
@@ -1945,7 +1945,7 @@
     },
     {
       "id": 98,
-      "name": "Rat #0098",
+      "name": "Inu #0098",
       "wallet": "T7cxWm5UuhgUQZ5QLjuCEMEPyNpmig61hUd9M4mMVEQT",
       "solscanUrl": "https://solscan.io/account/T7cxWm5UuhgUQZ5QLjuCEMEPyNpmig61hUd9M4mMVEQT",
       "stock": "GOOGLx",
@@ -1965,7 +1965,7 @@
     },
     {
       "id": 99,
-      "name": "Rat #0099",
+      "name": "Inu #0099",
       "wallet": "2yDZ5vPz8emyrvpBxHN7Mf7MsHmu2VBau19Key8JwRCX",
       "solscanUrl": "https://solscan.io/account/2yDZ5vPz8emyrvpBxHN7Mf7MsHmu2VBau19Key8JwRCX",
       "stock": "AMDx",
@@ -1985,7 +1985,7 @@
     },
     {
       "id": 100,
-      "name": "Rat #0100",
+      "name": "Inu #0100",
       "wallet": "UpKHhmMnHKzUkKYnAoURWTSm2xCGVE6FCLcxK5KAciUP",
       "solscanUrl": "https://solscan.io/account/UpKHhmMnHKzUkKYnAoURWTSm2xCGVE6FCLcxK5KAciUP",
       "stock": "METAx",
@@ -2005,7 +2005,7 @@
     },
     {
       "id": 101,
-      "name": "Rat #0101",
+      "name": "Inu #0101",
       "wallet": "9AEnMecyF1zNq8CfN6Pgz6S1zQmvvH5ucAV2V3j6QepG",
       "solscanUrl": "https://solscan.io/account/9AEnMecyF1zNq8CfN6Pgz6S1zQmvvH5ucAV2V3j6QepG",
       "stock": "GOOGLx",
@@ -2025,7 +2025,7 @@
     },
     {
       "id": 102,
-      "name": "Rat #0102",
+      "name": "Inu #0102",
       "wallet": "Q6xdn5xdnmwDDQfccgEv1KLvobTMA6RDZzuyFmyhLNpR",
       "solscanUrl": "https://solscan.io/account/Q6xdn5xdnmwDDQfccgEv1KLvobTMA6RDZzuyFmyhLNpR",
       "stock": "NVDAx",
@@ -2045,7 +2045,7 @@
     },
     {
       "id": 103,
-      "name": "Rat #0103",
+      "name": "Inu #0103",
       "wallet": "A6VyEEohphA4pkB9FbjVAbkWgasHW1zGWwhGfoxBNuv3",
       "solscanUrl": "https://solscan.io/account/A6VyEEohphA4pkB9FbjVAbkWgasHW1zGWwhGfoxBNuv3",
       "stock": "MSTRx",
@@ -2065,7 +2065,7 @@
     },
     {
       "id": 104,
-      "name": "Rat #0104",
+      "name": "Inu #0104",
       "wallet": "Yi7zjrYC1GUUueNzXGS7d2LdF1fu6b5wpQcFVUZJBN65",
       "solscanUrl": "https://solscan.io/account/Yi7zjrYC1GUUueNzXGS7d2LdF1fu6b5wpQcFVUZJBN65",
       "stock": "TSLAx",
@@ -2085,7 +2085,7 @@
     },
     {
       "id": 105,
-      "name": "Rat #0105",
+      "name": "Inu #0105",
       "wallet": "FrXsjWceg8NKTWBKPjJftwFanWktv6uQgv1jgR1i51br",
       "solscanUrl": "https://solscan.io/account/FrXsjWceg8NKTWBKPjJftwFanWktv6uQgv1jgR1i51br",
       "stock": "AAPLx",
@@ -2105,7 +2105,7 @@
     },
     {
       "id": 106,
-      "name": "Rat #0106",
+      "name": "Inu #0106",
       "wallet": "hbFiHDhCQTtbHmyN3r73eJBKw5BKmCZtJmNG9tiUay6m",
       "solscanUrl": "https://solscan.io/account/hbFiHDhCQTtbHmyN3r73eJBKw5BKmCZtJmNG9tiUay6m",
       "stock": "AMDx",
@@ -2125,7 +2125,7 @@
     },
     {
       "id": 107,
-      "name": "Rat #0107",
+      "name": "Inu #0107",
       "wallet": "zYHtaux14MRwJM8wkSvnE4wRQhNmVFP2WepuqJqZFdyk",
       "solscanUrl": "https://solscan.io/account/zYHtaux14MRwJM8wkSvnE4wRQhNmVFP2WepuqJqZFdyk",
       "stock": "METAx",
@@ -2145,7 +2145,7 @@
     },
     {
       "id": 108,
-      "name": "Rat #0108",
+      "name": "Inu #0108",
       "wallet": "s5K83PvsYpGLrHRW9fVQjzSVuCCh6qb9kwEmymwwvroJ",
       "solscanUrl": "https://solscan.io/account/s5K83PvsYpGLrHRW9fVQjzSVuCCh6qb9kwEmymwwvroJ",
       "stock": "MSTRx",
@@ -2165,7 +2165,7 @@
     },
     {
       "id": 109,
-      "name": "Rat #0109",
+      "name": "Inu #0109",
       "wallet": "yy7yVKVRusm37hp69d5A9JP9EnQ3o5GiiPmwofihk3Si",
       "solscanUrl": "https://solscan.io/account/yy7yVKVRusm37hp69d5A9JP9EnQ3o5GiiPmwofihk3Si",
       "stock": "AMDx",
@@ -2185,7 +2185,7 @@
     },
     {
       "id": 110,
-      "name": "Rat #0110",
+      "name": "Inu #0110",
       "wallet": "ZDJnXNbLN5DH29cR2LvkgnKxiPBqy9qyCzDPyRHU4CvF",
       "solscanUrl": "https://solscan.io/account/ZDJnXNbLN5DH29cR2LvkgnKxiPBqy9qyCzDPyRHU4CvF",
       "stock": "GOOGLx",
@@ -2205,7 +2205,7 @@
     },
     {
       "id": 111,
-      "name": "Rat #0111",
+      "name": "Inu #0111",
       "wallet": "WL7sR8bo78FCx7xqfC29vwF4n2hu3PVn6XvHiGXX7zGb",
       "solscanUrl": "https://solscan.io/account/WL7sR8bo78FCx7xqfC29vwF4n2hu3PVn6XvHiGXX7zGb",
       "stock": "METAx",
@@ -2225,7 +2225,7 @@
     },
     {
       "id": 112,
-      "name": "Rat #0112",
+      "name": "Inu #0112",
       "wallet": "iDzpwrBDKLju58PhXXCRzQZ7bVZ6Jep1dSMPZraY4zdD",
       "solscanUrl": "https://solscan.io/account/iDzpwrBDKLju58PhXXCRzQZ7bVZ6Jep1dSMPZraY4zdD",
       "stock": "AAPLx",
@@ -2245,7 +2245,7 @@
     },
     {
       "id": 113,
-      "name": "Rat #0113",
+      "name": "Inu #0113",
       "wallet": "wmeCjnAtNKzxDykd5Z4vYWYTVzVsEdNswPwrPDqJnRxx",
       "solscanUrl": "https://solscan.io/account/wmeCjnAtNKzxDykd5Z4vYWYTVzVsEdNswPwrPDqJnRxx",
       "stock": "SPYx",
@@ -2265,7 +2265,7 @@
     },
     {
       "id": 114,
-      "name": "Rat #0114",
+      "name": "Inu #0114",
       "wallet": "XKd1AcDbnXdPRgv7jQVWmRFarwdMLAfNeq7nohcpTXzW",
       "solscanUrl": "https://solscan.io/account/XKd1AcDbnXdPRgv7jQVWmRFarwdMLAfNeq7nohcpTXzW",
       "stock": "COINx",
@@ -2285,7 +2285,7 @@
     },
     {
       "id": 115,
-      "name": "Rat #0115",
+      "name": "Inu #0115",
       "wallet": "xV9uYvvToZCJSWNH9UHFoefGjAtW9xDRR7zeTt1Tzpex",
       "solscanUrl": "https://solscan.io/account/xV9uYvvToZCJSWNH9UHFoefGjAtW9xDRR7zeTt1Tzpex",
       "stock": "TSLAx",
@@ -2305,7 +2305,7 @@
     },
     {
       "id": 116,
-      "name": "Rat #0116",
+      "name": "Inu #0116",
       "wallet": "qv4zrN2hgtyJzmNnYigPEatvpteCq2roXtP6kLP33nN2",
       "solscanUrl": "https://solscan.io/account/qv4zrN2hgtyJzmNnYigPEatvpteCq2roXtP6kLP33nN2",
       "stock": "SPYx",
@@ -2325,7 +2325,7 @@
     },
     {
       "id": 117,
-      "name": "Rat #0117",
+      "name": "Inu #0117",
       "wallet": "z56ZPhYfm8kWz2BpTMDdkQy8Ltn5jtpYDSVwGcRGob9T",
       "solscanUrl": "https://solscan.io/account/z56ZPhYfm8kWz2BpTMDdkQy8Ltn5jtpYDSVwGcRGob9T",
       "stock": "METAx",
@@ -2345,7 +2345,7 @@
     },
     {
       "id": 118,
-      "name": "Rat #0118",
+      "name": "Inu #0118",
       "wallet": "DUJoXeWGzpVRopeCzUZcBjLMGsuA3X6kGh3Geze7ycBB",
       "solscanUrl": "https://solscan.io/account/DUJoXeWGzpVRopeCzUZcBjLMGsuA3X6kGh3Geze7ycBB",
       "stock": "TSLAx",
@@ -2365,7 +2365,7 @@
     },
     {
       "id": 119,
-      "name": "Rat #0119",
+      "name": "Inu #0119",
       "wallet": "4p5Ei2fkKSxtN2DnSVpxUyWuAmYFJQ4ns4RX7vVp8k7L",
       "solscanUrl": "https://solscan.io/account/4p5Ei2fkKSxtN2DnSVpxUyWuAmYFJQ4ns4RX7vVp8k7L",
       "stock": "MSTRx",
@@ -2385,7 +2385,7 @@
     },
     {
       "id": 120,
-      "name": "Rat #0120",
+      "name": "Inu #0120",
       "wallet": "7ZjdqnxyqJuYBQE8y2pvdorLGFJ3dDWaUfXQLsQZHJCw",
       "solscanUrl": "https://solscan.io/account/7ZjdqnxyqJuYBQE8y2pvdorLGFJ3dDWaUfXQLsQZHJCw",
       "stock": "AAPLx",
@@ -2405,7 +2405,7 @@
     },
     {
       "id": 121,
-      "name": "Rat #0121",
+      "name": "Inu #0121",
       "wallet": "86C1UeKctnVp3WMYUSaajVqkbP23nED5qSUuUzcqcCXv",
       "solscanUrl": "https://solscan.io/account/86C1UeKctnVp3WMYUSaajVqkbP23nED5qSUuUzcqcCXv",
       "stock": "AAPLx",
@@ -2425,7 +2425,7 @@
     },
     {
       "id": 122,
-      "name": "Rat #0122",
+      "name": "Inu #0122",
       "wallet": "JxyaxzECukxYeSTQuKWcp8CLYsHgh3D2cuk35KmPCsAT",
       "solscanUrl": "https://solscan.io/account/JxyaxzECukxYeSTQuKWcp8CLYsHgh3D2cuk35KmPCsAT",
       "stock": "METAx",
@@ -2445,7 +2445,7 @@
     },
     {
       "id": 123,
-      "name": "Rat #0123",
+      "name": "Inu #0123",
       "wallet": "yKkfw8dhX5H2iBnboBVUrp8VELNvKwPC6VuwhjU7NnhY",
       "solscanUrl": "https://solscan.io/account/yKkfw8dhX5H2iBnboBVUrp8VELNvKwPC6VuwhjU7NnhY",
       "stock": "AMDx",
@@ -2465,7 +2465,7 @@
     },
     {
       "id": 124,
-      "name": "Rat #0124",
+      "name": "Inu #0124",
       "wallet": "L7d6b87kq3z3aNixDrxUvYdGLCZsxdxG3SsUqzxHZuRZ",
       "solscanUrl": "https://solscan.io/account/L7d6b87kq3z3aNixDrxUvYdGLCZsxdxG3SsUqzxHZuRZ",
       "stock": "COINx",
@@ -2485,7 +2485,7 @@
     },
     {
       "id": 125,
-      "name": "Rat #0125",
+      "name": "Inu #0125",
       "wallet": "k4FQvyXNTYn1zSGHeKMBfjzZ7mmEeEKXfP2rPgGPRMvU",
       "solscanUrl": "https://solscan.io/account/k4FQvyXNTYn1zSGHeKMBfjzZ7mmEeEKXfP2rPgGPRMvU",
       "stock": "AAPLx",
@@ -2505,7 +2505,7 @@
     },
     {
       "id": 126,
-      "name": "Rat #0126",
+      "name": "Inu #0126",
       "wallet": "GpgTi8Asz45u1mE8jo8uDK67wdEMG34hAupewgMbQAcp",
       "solscanUrl": "https://solscan.io/account/GpgTi8Asz45u1mE8jo8uDK67wdEMG34hAupewgMbQAcp",
       "stock": "NVDAx",
@@ -2525,7 +2525,7 @@
     },
     {
       "id": 127,
-      "name": "Rat #0127",
+      "name": "Inu #0127",
       "wallet": "SCSEb7stQSsNFwgx18Ch7JZTqBfTfmT4CoYH41fhBus3",
       "solscanUrl": "https://solscan.io/account/SCSEb7stQSsNFwgx18Ch7JZTqBfTfmT4CoYH41fhBus3",
       "stock": "METAx",
@@ -2545,7 +2545,7 @@
     },
     {
       "id": 128,
-      "name": "Rat #0128",
+      "name": "Inu #0128",
       "wallet": "T9xRUTHiDwqK95crqEENFvMZ2xmYpi4RMM2V1tVGdpdV",
       "solscanUrl": "https://solscan.io/account/T9xRUTHiDwqK95crqEENFvMZ2xmYpi4RMM2V1tVGdpdV",
       "stock": "MSTRx",
@@ -2565,7 +2565,7 @@
     },
     {
       "id": 129,
-      "name": "Rat #0129",
+      "name": "Inu #0129",
       "wallet": "BeaHCaBb48VmdEHSbEHwATh4JcyrZSi96xcJmhC7dqS8",
       "solscanUrl": "https://solscan.io/account/BeaHCaBb48VmdEHSbEHwATh4JcyrZSi96xcJmhC7dqS8",
       "stock": "TSLAx",
@@ -2585,7 +2585,7 @@
     },
     {
       "id": 130,
-      "name": "Rat #0130",
+      "name": "Inu #0130",
       "wallet": "gM2ZtKqvHT54G7bqQ9B1VFdDJTFNDPYZEh1EvCkP7UFj",
       "solscanUrl": "https://solscan.io/account/gM2ZtKqvHT54G7bqQ9B1VFdDJTFNDPYZEh1EvCkP7UFj",
       "stock": "SPYx",
@@ -2605,7 +2605,7 @@
     },
     {
       "id": 131,
-      "name": "Rat #0131",
+      "name": "Inu #0131",
       "wallet": "z5vg8xKRsKALZsyiVwE4ucQ2f23SGYSdo24de54fcX1k",
       "solscanUrl": "https://solscan.io/account/z5vg8xKRsKALZsyiVwE4ucQ2f23SGYSdo24de54fcX1k",
       "stock": "AAPLx",
@@ -2625,7 +2625,7 @@
     },
     {
       "id": 132,
-      "name": "Rat #0132",
+      "name": "Inu #0132",
       "wallet": "YmZxKo9L2WJLj7nNiHZGUUL4j1qgTT18feiNEDvmaqwc",
       "solscanUrl": "https://solscan.io/account/YmZxKo9L2WJLj7nNiHZGUUL4j1qgTT18feiNEDvmaqwc",
       "stock": "AMZNx",
@@ -2645,7 +2645,7 @@
     },
     {
       "id": 133,
-      "name": "Rat #0133",
+      "name": "Inu #0133",
       "wallet": "Xbagm7Hig8f2dLM3SxmkJH8QB92nviZNhDy6aWC8NCFq",
       "solscanUrl": "https://solscan.io/account/Xbagm7Hig8f2dLM3SxmkJH8QB92nviZNhDy6aWC8NCFq",
       "stock": "COINx",
@@ -2665,7 +2665,7 @@
     },
     {
       "id": 134,
-      "name": "Rat #0134",
+      "name": "Inu #0134",
       "wallet": "dERmXrdW9VPzuhZzMMjpqbyQoDUpr6G2LhSSgxovcvyC",
       "solscanUrl": "https://solscan.io/account/dERmXrdW9VPzuhZzMMjpqbyQoDUpr6G2LhSSgxovcvyC",
       "stock": "AMDx",
@@ -2685,7 +2685,7 @@
     },
     {
       "id": 135,
-      "name": "Rat #0135",
+      "name": "Inu #0135",
       "wallet": "RBDRg6TN9pDW6VUFoESyMx935zM5ZMmAcy6J99Zf7C1n",
       "solscanUrl": "https://solscan.io/account/RBDRg6TN9pDW6VUFoESyMx935zM5ZMmAcy6J99Zf7C1n",
       "stock": "AMZNx",
@@ -2705,7 +2705,7 @@
     },
     {
       "id": 136,
-      "name": "Rat #0136",
+      "name": "Inu #0136",
       "wallet": "ArD9bWgbXPsSgDwvgMFHN24opCA46EEFzBdCtDxPPnXN",
       "solscanUrl": "https://solscan.io/account/ArD9bWgbXPsSgDwvgMFHN24opCA46EEFzBdCtDxPPnXN",
       "stock": "AAPLx",
@@ -2725,7 +2725,7 @@
     },
     {
       "id": 137,
-      "name": "Rat #0137",
+      "name": "Inu #0137",
       "wallet": "yhqG4trG8uGM2FQemfzw3wRv5YK67NvF1WUqLe2uZsz9",
       "solscanUrl": "https://solscan.io/account/yhqG4trG8uGM2FQemfzw3wRv5YK67NvF1WUqLe2uZsz9",
       "stock": "AMDx",
@@ -2745,7 +2745,7 @@
     },
     {
       "id": 138,
-      "name": "Rat #0138",
+      "name": "Inu #0138",
       "wallet": "RCfJkxU2gXKu8DZ91jzckPg5Jesgf7vxHpLwPzAo2JW4",
       "solscanUrl": "https://solscan.io/account/RCfJkxU2gXKu8DZ91jzckPg5Jesgf7vxHpLwPzAo2JW4",
       "stock": "MSTRx",
@@ -2765,7 +2765,7 @@
     },
     {
       "id": 139,
-      "name": "Rat #0139",
+      "name": "Inu #0139",
       "wallet": "FoGMFFbNZdehahxD2WuAThTFMXSypLzNTRj1hx7d2a1u",
       "solscanUrl": "https://solscan.io/account/FoGMFFbNZdehahxD2WuAThTFMXSypLzNTRj1hx7d2a1u",
       "stock": "NVDAx",
@@ -2785,7 +2785,7 @@
     },
     {
       "id": 140,
-      "name": "Rat #0140",
+      "name": "Inu #0140",
       "wallet": "vNNjinnkZimJ23XstgEt2LsBmXxWfbZqcQeGkc8oD7vH",
       "solscanUrl": "https://solscan.io/account/vNNjinnkZimJ23XstgEt2LsBmXxWfbZqcQeGkc8oD7vH",
       "stock": "MSTRx",
@@ -2805,7 +2805,7 @@
     },
     {
       "id": 141,
-      "name": "Rat #0141",
+      "name": "Inu #0141",
       "wallet": "Jdh74uMfhLnineNnvGFH19A76okPU2avPryiDJdN3DBU",
       "solscanUrl": "https://solscan.io/account/Jdh74uMfhLnineNnvGFH19A76okPU2avPryiDJdN3DBU",
       "stock": "TSLAx",
@@ -2825,7 +2825,7 @@
     },
     {
       "id": 142,
-      "name": "Rat #0142",
+      "name": "Inu #0142",
       "wallet": "VtBbasG7cAKU7akuQPCRCTWi72QfCd6niiVPAmzxGiyK",
       "solscanUrl": "https://solscan.io/account/VtBbasG7cAKU7akuQPCRCTWi72QfCd6niiVPAmzxGiyK",
       "stock": "METAx",
@@ -2845,7 +2845,7 @@
     },
     {
       "id": 143,
-      "name": "Rat #0143",
+      "name": "Inu #0143",
       "wallet": "Sp2aK1SH19Uy5tboS1kEhqfKG6U4sAVfex1agSDVXD72",
       "solscanUrl": "https://solscan.io/account/Sp2aK1SH19Uy5tboS1kEhqfKG6U4sAVfex1agSDVXD72",
       "stock": "MSTRx",
@@ -2865,7 +2865,7 @@
     },
     {
       "id": 144,
-      "name": "Rat #0144",
+      "name": "Inu #0144",
       "wallet": "4kHVtCLraANqmhBPnJNBvUW5Rd1QDPbz5ERaUwxDmzJf",
       "solscanUrl": "https://solscan.io/account/4kHVtCLraANqmhBPnJNBvUW5Rd1QDPbz5ERaUwxDmzJf",
       "stock": "GOOGLx",
@@ -2885,7 +2885,7 @@
     },
     {
       "id": 145,
-      "name": "Rat #0145",
+      "name": "Inu #0145",
       "wallet": "cCEcNQC3EM7tpmP8H1HFR7dFydsCj5uRkonLjHfC83yq",
       "solscanUrl": "https://solscan.io/account/cCEcNQC3EM7tpmP8H1HFR7dFydsCj5uRkonLjHfC83yq",
       "stock": "AMZNx",
@@ -2905,7 +2905,7 @@
     },
     {
       "id": 146,
-      "name": "Rat #0146",
+      "name": "Inu #0146",
       "wallet": "uKegDXs3eEEjRZ8DqvkZt3jhEaExqDzMns7QeCVvPMzs",
       "solscanUrl": "https://solscan.io/account/uKegDXs3eEEjRZ8DqvkZt3jhEaExqDzMns7QeCVvPMzs",
       "stock": "COINx",
@@ -2925,7 +2925,7 @@
     },
     {
       "id": 147,
-      "name": "Rat #0147",
+      "name": "Inu #0147",
       "wallet": "K78JyPXbXoy4eJTyLESQmavrsVzvrR4GTtsQkEHjyQ4K",
       "solscanUrl": "https://solscan.io/account/K78JyPXbXoy4eJTyLESQmavrsVzvrR4GTtsQkEHjyQ4K",
       "stock": "SPYx",
@@ -2945,7 +2945,7 @@
     },
     {
       "id": 148,
-      "name": "Rat #0148",
+      "name": "Inu #0148",
       "wallet": "pMUFYB2tghwYGtZTXBWABMW9D1BCD19wk2MVYXPhojGK",
       "solscanUrl": "https://solscan.io/account/pMUFYB2tghwYGtZTXBWABMW9D1BCD19wk2MVYXPhojGK",
       "stock": "GOOGLx",
@@ -2965,7 +2965,7 @@
     },
     {
       "id": 149,
-      "name": "Rat #0149",
+      "name": "Inu #0149",
       "wallet": "sJFys2Hgvp1Z2WAkb6QGDZNXwRYbMwvNVcPUozbPw4aE",
       "solscanUrl": "https://solscan.io/account/sJFys2Hgvp1Z2WAkb6QGDZNXwRYbMwvNVcPUozbPw4aE",
       "stock": "TSLAx",
@@ -2985,7 +2985,7 @@
     },
     {
       "id": 150,
-      "name": "Rat #0150",
+      "name": "Inu #0150",
       "wallet": "THudHwAgerPBeCJJBwFAYakY9CRZdBTLdRRfp424WK9v",
       "solscanUrl": "https://solscan.io/account/THudHwAgerPBeCJJBwFAYakY9CRZdBTLdRRfp424WK9v",
       "stock": "AAPLx",
@@ -3005,7 +3005,7 @@
     },
     {
       "id": 151,
-      "name": "Rat #0151",
+      "name": "Inu #0151",
       "wallet": "xoh2NZFRjLWtY24GU1PsRVfEatRBpN2u8NSnXFnXEvxE",
       "solscanUrl": "https://solscan.io/account/xoh2NZFRjLWtY24GU1PsRVfEatRBpN2u8NSnXFnXEvxE",
       "stock": "NVDAx",
@@ -3025,7 +3025,7 @@
     },
     {
       "id": 152,
-      "name": "Rat #0152",
+      "name": "Inu #0152",
       "wallet": "nXcwpa1TWELQiu9xP1dWLpyNUmFZawUv9ZaT2ThQSZWc",
       "solscanUrl": "https://solscan.io/account/nXcwpa1TWELQiu9xP1dWLpyNUmFZawUv9ZaT2ThQSZWc",
       "stock": "GOOGLx",
@@ -3045,7 +3045,7 @@
     },
     {
       "id": 153,
-      "name": "Rat #0153",
+      "name": "Inu #0153",
       "wallet": "2iBSGq5YTEphw8eJhFSE2fxfEBv8tFHsq1AhJciRKGsN",
       "solscanUrl": "https://solscan.io/account/2iBSGq5YTEphw8eJhFSE2fxfEBv8tFHsq1AhJciRKGsN",
       "stock": "MSTRx",
@@ -3065,7 +3065,7 @@
     },
     {
       "id": 154,
-      "name": "Rat #0154",
+      "name": "Inu #0154",
       "wallet": "K4UVubkKpAJ5vv6YvQcGzqHhNCmuWAKyayWkrmauQQQt",
       "solscanUrl": "https://solscan.io/account/K4UVubkKpAJ5vv6YvQcGzqHhNCmuWAKyayWkrmauQQQt",
       "stock": "AMZNx",
@@ -3085,7 +3085,7 @@
     },
     {
       "id": 155,
-      "name": "Rat #0155",
+      "name": "Inu #0155",
       "wallet": "n5YfJsAgEDpS3TvJULhv27pPwW3Dsqqgs9jaTeeCuD4P",
       "solscanUrl": "https://solscan.io/account/n5YfJsAgEDpS3TvJULhv27pPwW3Dsqqgs9jaTeeCuD4P",
       "stock": "MSTRx",
@@ -3105,7 +3105,7 @@
     },
     {
       "id": 156,
-      "name": "Rat #0156",
+      "name": "Inu #0156",
       "wallet": "HqTenrSg2Ekywug5z34tkLPSE9aBjQuKLTLouVvTAjTp",
       "solscanUrl": "https://solscan.io/account/HqTenrSg2Ekywug5z34tkLPSE9aBjQuKLTLouVvTAjTp",
       "stock": "SPYx",
@@ -3125,7 +3125,7 @@
     },
     {
       "id": 157,
-      "name": "Rat #0157",
+      "name": "Inu #0157",
       "wallet": "FSNDVtD6cax5R3R75acEh1mTYvQ3Ymyy2D5rWbjzkbBF",
       "solscanUrl": "https://solscan.io/account/FSNDVtD6cax5R3R75acEh1mTYvQ3Ymyy2D5rWbjzkbBF",
       "stock": "AAPLx",
@@ -3145,7 +3145,7 @@
     },
     {
       "id": 158,
-      "name": "Rat #0158",
+      "name": "Inu #0158",
       "wallet": "urcWjnNSZXmaFuMAmbZ7mh3H5iGYyGmA1pAecTCXRZjh",
       "solscanUrl": "https://solscan.io/account/urcWjnNSZXmaFuMAmbZ7mh3H5iGYyGmA1pAecTCXRZjh",
       "stock": "COINx",
@@ -3165,7 +3165,7 @@
     },
     {
       "id": 159,
-      "name": "Rat #0159",
+      "name": "Inu #0159",
       "wallet": "o5SRSVTSy5LL5YmHGz5PXv8Qs98KcBMqo6ZZk4JYXm3J",
       "solscanUrl": "https://solscan.io/account/o5SRSVTSy5LL5YmHGz5PXv8Qs98KcBMqo6ZZk4JYXm3J",
       "stock": "AAPLx",
@@ -3185,7 +3185,7 @@
     },
     {
       "id": 160,
-      "name": "Rat #0160",
+      "name": "Inu #0160",
       "wallet": "F9r7SH8NJKGYJmvj4ThCcAHfYniavTXWxaeAGyzx73Wf",
       "solscanUrl": "https://solscan.io/account/F9r7SH8NJKGYJmvj4ThCcAHfYniavTXWxaeAGyzx73Wf",
       "stock": "AMZNx",
@@ -3205,7 +3205,7 @@
     },
     {
       "id": 161,
-      "name": "Rat #0161",
+      "name": "Inu #0161",
       "wallet": "77sp8dQ9ieGsUeSTaRV8SfXkW9szFhZhmFTNGiRM6Aav",
       "solscanUrl": "https://solscan.io/account/77sp8dQ9ieGsUeSTaRV8SfXkW9szFhZhmFTNGiRM6Aav",
       "stock": "AMDx",
@@ -3225,7 +3225,7 @@
     },
     {
       "id": 162,
-      "name": "Rat #0162",
+      "name": "Inu #0162",
       "wallet": "4X1QjD4XJwa8iRbq1TvfevW6McHfM6PGxPHFZaKpXNhx",
       "solscanUrl": "https://solscan.io/account/4X1QjD4XJwa8iRbq1TvfevW6McHfM6PGxPHFZaKpXNhx",
       "stock": "AMDx",
@@ -3245,7 +3245,7 @@
     },
     {
       "id": 163,
-      "name": "Rat #0163",
+      "name": "Inu #0163",
       "wallet": "MpVzkN4HiERdhQGbJmYTZ9152rYBHhB2ajP6gKF2QALF",
       "solscanUrl": "https://solscan.io/account/MpVzkN4HiERdhQGbJmYTZ9152rYBHhB2ajP6gKF2QALF",
       "stock": "TSLAx",
@@ -3265,7 +3265,7 @@
     },
     {
       "id": 164,
-      "name": "Rat #0164",
+      "name": "Inu #0164",
       "wallet": "nspLiaFxcvuLu8UfC8HBbK4pv33cK8XKcugfruzfjHL1",
       "solscanUrl": "https://solscan.io/account/nspLiaFxcvuLu8UfC8HBbK4pv33cK8XKcugfruzfjHL1",
       "stock": "AMDx",
@@ -3285,7 +3285,7 @@
     },
     {
       "id": 165,
-      "name": "Rat #0165",
+      "name": "Inu #0165",
       "wallet": "2aVuAu7NxVyQ7aMVqiSqVriJrFfMauNUfmwBvAgTy7My",
       "solscanUrl": "https://solscan.io/account/2aVuAu7NxVyQ7aMVqiSqVriJrFfMauNUfmwBvAgTy7My",
       "stock": "TSLAx",
@@ -3305,7 +3305,7 @@
     },
     {
       "id": 166,
-      "name": "Rat #0166",
+      "name": "Inu #0166",
       "wallet": "US9xJw6uDdLFVoJu4tM3yWGRg4nEZ7h4Aj5CnKCoQGov",
       "solscanUrl": "https://solscan.io/account/US9xJw6uDdLFVoJu4tM3yWGRg4nEZ7h4Aj5CnKCoQGov",
       "stock": "METAx",
@@ -3325,7 +3325,7 @@
     },
     {
       "id": 167,
-      "name": "Rat #0167",
+      "name": "Inu #0167",
       "wallet": "v6WTDzpG6RArgzqUQrC8LWaEbLantngHLUkeQemLxBPF",
       "solscanUrl": "https://solscan.io/account/v6WTDzpG6RArgzqUQrC8LWaEbLantngHLUkeQemLxBPF",
       "stock": "MSTRx",
@@ -3345,7 +3345,7 @@
     },
     {
       "id": 168,
-      "name": "Rat #0168",
+      "name": "Inu #0168",
       "wallet": "BYUyA6fvTx1i4WbnGLJWFaNidEMpsRkx27tgZoorhSvQ",
       "solscanUrl": "https://solscan.io/account/BYUyA6fvTx1i4WbnGLJWFaNidEMpsRkx27tgZoorhSvQ",
       "stock": "TSLAx",
@@ -3365,7 +3365,7 @@
     },
     {
       "id": 169,
-      "name": "Rat #0169",
+      "name": "Inu #0169",
       "wallet": "72HsLVyT6zSo3LzAaZWqBYCzoHmXAk31mycJALgg5Pxi",
       "solscanUrl": "https://solscan.io/account/72HsLVyT6zSo3LzAaZWqBYCzoHmXAk31mycJALgg5Pxi",
       "stock": "MSTRx",
@@ -3385,7 +3385,7 @@
     },
     {
       "id": 170,
-      "name": "Rat #0170",
+      "name": "Inu #0170",
       "wallet": "RepMGR35Zot54aKnowZSio6o6wn1BaULadfdzH5QzYWu",
       "solscanUrl": "https://solscan.io/account/RepMGR35Zot54aKnowZSio6o6wn1BaULadfdzH5QzYWu",
       "stock": "SPYx",
@@ -3405,7 +3405,7 @@
     },
     {
       "id": 171,
-      "name": "Rat #0171",
+      "name": "Inu #0171",
       "wallet": "KkCh2Z5Af28jYSppDhCmiMH2EymHG2BxuSxyYQ8oAnCQ",
       "solscanUrl": "https://solscan.io/account/KkCh2Z5Af28jYSppDhCmiMH2EymHG2BxuSxyYQ8oAnCQ",
       "stock": "TSLAx",
@@ -3425,7 +3425,7 @@
     },
     {
       "id": 172,
-      "name": "Rat #0172",
+      "name": "Inu #0172",
       "wallet": "PketquMSRRfHb8zfyQV7xgpkXWb3vpLjDJc5yQYQhu5f",
       "solscanUrl": "https://solscan.io/account/PketquMSRRfHb8zfyQV7xgpkXWb3vpLjDJc5yQYQhu5f",
       "stock": "AMDx",
@@ -3445,7 +3445,7 @@
     },
     {
       "id": 173,
-      "name": "Rat #0173",
+      "name": "Inu #0173",
       "wallet": "1XeLh2kYkDkoYRmZjwTW22mJi6EAu1igumpg5p1ie7LE",
       "solscanUrl": "https://solscan.io/account/1XeLh2kYkDkoYRmZjwTW22mJi6EAu1igumpg5p1ie7LE",
       "stock": "AAPLx",
@@ -3465,7 +3465,7 @@
     },
     {
       "id": 174,
-      "name": "Rat #0174",
+      "name": "Inu #0174",
       "wallet": "JCEsyirkqYhofUFvp62P8oTigt7ToGMVK2EpVbxkh9u4",
       "solscanUrl": "https://solscan.io/account/JCEsyirkqYhofUFvp62P8oTigt7ToGMVK2EpVbxkh9u4",
       "stock": "AMZNx",
@@ -3485,7 +3485,7 @@
     },
     {
       "id": 175,
-      "name": "Rat #0175",
+      "name": "Inu #0175",
       "wallet": "LYjwbQsXgMdxwMwWQweTw2TiMYdEXCLUEZTmPPd4GZAy",
       "solscanUrl": "https://solscan.io/account/LYjwbQsXgMdxwMwWQweTw2TiMYdEXCLUEZTmPPd4GZAy",
       "stock": "MSTRx",
@@ -3505,7 +3505,7 @@
     },
     {
       "id": 176,
-      "name": "Rat #0176",
+      "name": "Inu #0176",
       "wallet": "28cjd7TtxvucqwaZiK2zLCGe1fuKBrTwuMWGzJD9oP5S",
       "solscanUrl": "https://solscan.io/account/28cjd7TtxvucqwaZiK2zLCGe1fuKBrTwuMWGzJD9oP5S",
       "stock": "COINx",
@@ -3525,7 +3525,7 @@
     },
     {
       "id": 177,
-      "name": "Rat #0177",
+      "name": "Inu #0177",
       "wallet": "jkHRNUAqMRhQHBCLofyNdYEWvuYbTuStaKEcvYvDM5iP",
       "solscanUrl": "https://solscan.io/account/jkHRNUAqMRhQHBCLofyNdYEWvuYbTuStaKEcvYvDM5iP",
       "stock": "NVDAx",
@@ -3545,7 +3545,7 @@
     },
     {
       "id": 178,
-      "name": "Rat #0178",
+      "name": "Inu #0178",
       "wallet": "MNHPcYZhYM6pXcon34UfWrBZ3Akk3ZekiLrKCYSMNZTS",
       "solscanUrl": "https://solscan.io/account/MNHPcYZhYM6pXcon34UfWrBZ3Akk3ZekiLrKCYSMNZTS",
       "stock": "MSTRx",
@@ -3565,7 +3565,7 @@
     },
     {
       "id": 179,
-      "name": "Rat #0179",
+      "name": "Inu #0179",
       "wallet": "2c3g8cPj4UbtceM8ix3bbE3EdQKfGqitHttbaYPKKSeE",
       "solscanUrl": "https://solscan.io/account/2c3g8cPj4UbtceM8ix3bbE3EdQKfGqitHttbaYPKKSeE",
       "stock": "NVDAx",
@@ -3585,7 +3585,7 @@
     },
     {
       "id": 180,
-      "name": "Rat #0180",
+      "name": "Inu #0180",
       "wallet": "pftg84iHGT1i17VsVTpqsEGqemgYoxCk3YZmNHejqen3",
       "solscanUrl": "https://solscan.io/account/pftg84iHGT1i17VsVTpqsEGqemgYoxCk3YZmNHejqen3",
       "stock": "TSLAx",
@@ -3605,7 +3605,7 @@
     },
     {
       "id": 181,
-      "name": "Rat #0181",
+      "name": "Inu #0181",
       "wallet": "CBveGWGsKgp6NmLQUxfBsqmYtTGjt3QHvchMppMLYuLX",
       "solscanUrl": "https://solscan.io/account/CBveGWGsKgp6NmLQUxfBsqmYtTGjt3QHvchMppMLYuLX",
       "stock": "METAx",
@@ -3625,7 +3625,7 @@
     },
     {
       "id": 182,
-      "name": "Rat #0182",
+      "name": "Inu #0182",
       "wallet": "ktmzaUam4Uie9c8irf2CVSfuDnusfgCGgUUAckjj8WyV",
       "solscanUrl": "https://solscan.io/account/ktmzaUam4Uie9c8irf2CVSfuDnusfgCGgUUAckjj8WyV",
       "stock": "GOOGLx",
@@ -3645,7 +3645,7 @@
     },
     {
       "id": 183,
-      "name": "Rat #0183",
+      "name": "Inu #0183",
       "wallet": "EdbVaoxPbSCs2CDxJCqT4hYmGBh12NekKrVqWfxFiF5t",
       "solscanUrl": "https://solscan.io/account/EdbVaoxPbSCs2CDxJCqT4hYmGBh12NekKrVqWfxFiF5t",
       "stock": "COINx",
@@ -3665,7 +3665,7 @@
     },
     {
       "id": 184,
-      "name": "Rat #0184",
+      "name": "Inu #0184",
       "wallet": "h1124NVL6qYxd3rg1aVpm1iaxVMREk3A2CtjA5pa8gAE",
       "solscanUrl": "https://solscan.io/account/h1124NVL6qYxd3rg1aVpm1iaxVMREk3A2CtjA5pa8gAE",
       "stock": "SPYx",
@@ -3685,7 +3685,7 @@
     },
     {
       "id": 185,
-      "name": "Rat #0185",
+      "name": "Inu #0185",
       "wallet": "YS1nHcN5rqS28xfcG7GipPYjQSYiZTJtu4S9p8Cc6rTG",
       "solscanUrl": "https://solscan.io/account/YS1nHcN5rqS28xfcG7GipPYjQSYiZTJtu4S9p8Cc6rTG",
       "stock": "COINx",
@@ -3705,7 +3705,7 @@
     },
     {
       "id": 186,
-      "name": "Rat #0186",
+      "name": "Inu #0186",
       "wallet": "z6GPdTfn4MJtfMKbGPAjk6KRAUnytsXaWU8Yo49UwJC6",
       "solscanUrl": "https://solscan.io/account/z6GPdTfn4MJtfMKbGPAjk6KRAUnytsXaWU8Yo49UwJC6",
       "stock": "TSLAx",
@@ -3725,7 +3725,7 @@
     },
     {
       "id": 187,
-      "name": "Rat #0187",
+      "name": "Inu #0187",
       "wallet": "1FQonYcsCNxqquKFzreL3hWh2Bh9GhtHFy3pTEzcHxNc",
       "solscanUrl": "https://solscan.io/account/1FQonYcsCNxqquKFzreL3hWh2Bh9GhtHFy3pTEzcHxNc",
       "stock": "COINx",
@@ -3745,7 +3745,7 @@
     },
     {
       "id": 188,
-      "name": "Rat #0188",
+      "name": "Inu #0188",
       "wallet": "AtN8fFgY6BaQ7s5e3DeoKy9jGLemwU745CJsiVVF1ZyG",
       "solscanUrl": "https://solscan.io/account/AtN8fFgY6BaQ7s5e3DeoKy9jGLemwU745CJsiVVF1ZyG",
       "stock": "GOOGLx",
@@ -3765,7 +3765,7 @@
     },
     {
       "id": 189,
-      "name": "Rat #0189",
+      "name": "Inu #0189",
       "wallet": "ujBYAVmvjqEN4F7NE2iAMujSgvwoTdvxiQ2MCBn5b7cq",
       "solscanUrl": "https://solscan.io/account/ujBYAVmvjqEN4F7NE2iAMujSgvwoTdvxiQ2MCBn5b7cq",
       "stock": "AAPLx",
@@ -3785,7 +3785,7 @@
     },
     {
       "id": 190,
-      "name": "Rat #0190",
+      "name": "Inu #0190",
       "wallet": "Gwu7pxjbj5nEBxJJsphzdV3JSK1TbJmJJCNStQq5DKcS",
       "solscanUrl": "https://solscan.io/account/Gwu7pxjbj5nEBxJJsphzdV3JSK1TbJmJJCNStQq5DKcS",
       "stock": "GOOGLx",
@@ -3805,7 +3805,7 @@
     },
     {
       "id": 191,
-      "name": "Rat #0191",
+      "name": "Inu #0191",
       "wallet": "Ttd2rSCVRo4Z56MdgVG4ZStgYy6Num4UJ3Z1pt5VV3bd",
       "solscanUrl": "https://solscan.io/account/Ttd2rSCVRo4Z56MdgVG4ZStgYy6Num4UJ3Z1pt5VV3bd",
       "stock": "SPYx",
@@ -3825,7 +3825,7 @@
     },
     {
       "id": 192,
-      "name": "Rat #0192",
+      "name": "Inu #0192",
       "wallet": "k91h67RibQDWZGSD3FYZ3RiHyCnos7VE7wKYZr7uzUmz",
       "solscanUrl": "https://solscan.io/account/k91h67RibQDWZGSD3FYZ3RiHyCnos7VE7wKYZr7uzUmz",
       "stock": "COINx",
@@ -3845,7 +3845,7 @@
     },
     {
       "id": 193,
-      "name": "Rat #0193",
+      "name": "Inu #0193",
       "wallet": "1kASFQrrsX1azPdwHFdTqc6Bogm4fxJQSxCsU4xMsyKn",
       "solscanUrl": "https://solscan.io/account/1kASFQrrsX1azPdwHFdTqc6Bogm4fxJQSxCsU4xMsyKn",
       "stock": "COINx",
@@ -3865,7 +3865,7 @@
     },
     {
       "id": 194,
-      "name": "Rat #0194",
+      "name": "Inu #0194",
       "wallet": "kzvqDrRxmLQNgdsqhn4k6ntMrKxMZEAscKz672fAvSD3",
       "solscanUrl": "https://solscan.io/account/kzvqDrRxmLQNgdsqhn4k6ntMrKxMZEAscKz672fAvSD3",
       "stock": "TSLAx",
@@ -3885,7 +3885,7 @@
     },
     {
       "id": 195,
-      "name": "Rat #0195",
+      "name": "Inu #0195",
       "wallet": "ntuYDRCE6cBHNq73waiwMVs3AWHBoYf5HsXpgwCxrRx1",
       "solscanUrl": "https://solscan.io/account/ntuYDRCE6cBHNq73waiwMVs3AWHBoYf5HsXpgwCxrRx1",
       "stock": "AMDx",
@@ -3905,7 +3905,7 @@
     },
     {
       "id": 196,
-      "name": "Rat #0196",
+      "name": "Inu #0196",
       "wallet": "gFGKEP5b1CZswTx9h7SMwggRmMZ35infShHXrWaiUA1V",
       "solscanUrl": "https://solscan.io/account/gFGKEP5b1CZswTx9h7SMwggRmMZ35infShHXrWaiUA1V",
       "stock": "AAPLx",
@@ -3925,7 +3925,7 @@
     },
     {
       "id": 197,
-      "name": "Rat #0197",
+      "name": "Inu #0197",
       "wallet": "ghdT2w2oapXfQPhWZLdu8zRFUYV16GfXdb1sRnSn6kw1",
       "solscanUrl": "https://solscan.io/account/ghdT2w2oapXfQPhWZLdu8zRFUYV16GfXdb1sRnSn6kw1",
       "stock": "NVDAx",
@@ -3945,7 +3945,7 @@
     },
     {
       "id": 198,
-      "name": "Rat #0198",
+      "name": "Inu #0198",
       "wallet": "tVX8YkUvaDmNEg13JRkUCQ1gsyS5Z7urW2DEtVQPfbQp",
       "solscanUrl": "https://solscan.io/account/tVX8YkUvaDmNEg13JRkUCQ1gsyS5Z7urW2DEtVQPfbQp",
       "stock": "COINx",
@@ -3965,7 +3965,7 @@
     },
     {
       "id": 199,
-      "name": "Rat #0199",
+      "name": "Inu #0199",
       "wallet": "dtJxbCYPks33yb2sQ1t9TaqxHhu9VERXj1EDdiHZVT3M",
       "solscanUrl": "https://solscan.io/account/dtJxbCYPks33yb2sQ1t9TaqxHhu9VERXj1EDdiHZVT3M",
       "stock": "NVDAx",
@@ -3985,7 +3985,7 @@
     },
     {
       "id": 200,
-      "name": "Rat #0200",
+      "name": "Inu #0200",
       "wallet": "6mo1Lj3FYW4PqTTM8C2P2hLfRMvCsNP8WKqMcuXzXymj",
       "solscanUrl": "https://solscan.io/account/6mo1Lj3FYW4PqTTM8C2P2hLfRMvCsNP8WKqMcuXzXymj",
       "stock": "TSLAx",
@@ -4005,7 +4005,7 @@
     },
     {
       "id": 201,
-      "name": "Rat #0201",
+      "name": "Inu #0201",
       "wallet": "FmgKa2L94QXZqNW23XWrYzjwhaKsGXQdPwzWQUUjXrmS",
       "solscanUrl": "https://solscan.io/account/FmgKa2L94QXZqNW23XWrYzjwhaKsGXQdPwzWQUUjXrmS",
       "stock": "MSTRx",
@@ -4025,7 +4025,7 @@
     },
     {
       "id": 202,
-      "name": "Rat #0202",
+      "name": "Inu #0202",
       "wallet": "q72AbVHyLguWZYRaKJUxk4b2kcwAuyAzUg6dQky9EShM",
       "solscanUrl": "https://solscan.io/account/q72AbVHyLguWZYRaKJUxk4b2kcwAuyAzUg6dQky9EShM",
       "stock": "COINx",
@@ -4045,7 +4045,7 @@
     },
     {
       "id": 203,
-      "name": "Rat #0203",
+      "name": "Inu #0203",
       "wallet": "TtbBtgHx3jZHfS8KZjJn6Qpgk2C3WhDq1sBfAjkHxCh5",
       "solscanUrl": "https://solscan.io/account/TtbBtgHx3jZHfS8KZjJn6Qpgk2C3WhDq1sBfAjkHxCh5",
       "stock": "SPYx",
@@ -4065,7 +4065,7 @@
     },
     {
       "id": 204,
-      "name": "Rat #0204",
+      "name": "Inu #0204",
       "wallet": "m1EWPA9J8DkNgLGMUpjn9g5iMfat8zwMDUjJFMuuidpV",
       "solscanUrl": "https://solscan.io/account/m1EWPA9J8DkNgLGMUpjn9g5iMfat8zwMDUjJFMuuidpV",
       "stock": "NVDAx",
@@ -4085,7 +4085,7 @@
     },
     {
       "id": 205,
-      "name": "Rat #0205",
+      "name": "Inu #0205",
       "wallet": "yQ9wjXsN1ZG7sPjbqZsRec3fjoTxiuWn2GGYG1xB35Kc",
       "solscanUrl": "https://solscan.io/account/yQ9wjXsN1ZG7sPjbqZsRec3fjoTxiuWn2GGYG1xB35Kc",
       "stock": "NVDAx",
@@ -4105,7 +4105,7 @@
     },
     {
       "id": 206,
-      "name": "Rat #0206",
+      "name": "Inu #0206",
       "wallet": "BQrGaiLyCRcSRMLiYCu9NuNMikvb9tqzWmsrEGvUW5h9",
       "solscanUrl": "https://solscan.io/account/BQrGaiLyCRcSRMLiYCu9NuNMikvb9tqzWmsrEGvUW5h9",
       "stock": "METAx",
@@ -4125,7 +4125,7 @@
     },
     {
       "id": 207,
-      "name": "Rat #0207",
+      "name": "Inu #0207",
       "wallet": "HhG6XZCHsiJDHM26ix6NJ3vc7QzeQFnqePoV2NkumZwm",
       "solscanUrl": "https://solscan.io/account/HhG6XZCHsiJDHM26ix6NJ3vc7QzeQFnqePoV2NkumZwm",
       "stock": "COINx",
@@ -4145,7 +4145,7 @@
     },
     {
       "id": 208,
-      "name": "Rat #0208",
+      "name": "Inu #0208",
       "wallet": "Pr7j7j6wXTbyVProukQovtLahDmaDfPpU38iHBjYB4rv",
       "solscanUrl": "https://solscan.io/account/Pr7j7j6wXTbyVProukQovtLahDmaDfPpU38iHBjYB4rv",
       "stock": "AMZNx",
@@ -4165,7 +4165,7 @@
     },
     {
       "id": 209,
-      "name": "Rat #0209",
+      "name": "Inu #0209",
       "wallet": "iCgL64rSiJ6dPFkeTSYsuVTgbGzvhj2TmPQ6TaXxZoo5",
       "solscanUrl": "https://solscan.io/account/iCgL64rSiJ6dPFkeTSYsuVTgbGzvhj2TmPQ6TaXxZoo5",
       "stock": "NVDAx",
@@ -4185,7 +4185,7 @@
     },
     {
       "id": 210,
-      "name": "Rat #0210",
+      "name": "Inu #0210",
       "wallet": "mqs3sdQhe5XTHrtyvbUUUzEUsMU9FoNtsqq1mxG1GXXq",
       "solscanUrl": "https://solscan.io/account/mqs3sdQhe5XTHrtyvbUUUzEUsMU9FoNtsqq1mxG1GXXq",
       "stock": "MSTRx",
@@ -4205,7 +4205,7 @@
     },
     {
       "id": 211,
-      "name": "Rat #0211",
+      "name": "Inu #0211",
       "wallet": "DqxP9mLwXihkaVQEXrpDYQR1mvKxBBY9wJ5DEsnLPcpR",
       "solscanUrl": "https://solscan.io/account/DqxP9mLwXihkaVQEXrpDYQR1mvKxBBY9wJ5DEsnLPcpR",
       "stock": "AMZNx",
@@ -4225,7 +4225,7 @@
     },
     {
       "id": 212,
-      "name": "Rat #0212",
+      "name": "Inu #0212",
       "wallet": "Avcms5NTSicg2YpqsLakfRqHCopn5oyq3m5xqKXDWECy",
       "solscanUrl": "https://solscan.io/account/Avcms5NTSicg2YpqsLakfRqHCopn5oyq3m5xqKXDWECy",
       "stock": "MSTRx",
@@ -4245,7 +4245,7 @@
     },
     {
       "id": 213,
-      "name": "Rat #0213",
+      "name": "Inu #0213",
       "wallet": "VGtNuovkUdzLpfE9t2zLMx5C3QtgrgbFkUY78kSgUWdi",
       "solscanUrl": "https://solscan.io/account/VGtNuovkUdzLpfE9t2zLMx5C3QtgrgbFkUY78kSgUWdi",
       "stock": "COINx",
@@ -4265,7 +4265,7 @@
     },
     {
       "id": 214,
-      "name": "Rat #0214",
+      "name": "Inu #0214",
       "wallet": "GRyXuC1UdFeq8asXv18fwMw9tNeAGDdUdhDcuq2uX8i8",
       "solscanUrl": "https://solscan.io/account/GRyXuC1UdFeq8asXv18fwMw9tNeAGDdUdhDcuq2uX8i8",
       "stock": "COINx",
@@ -4285,7 +4285,7 @@
     },
     {
       "id": 215,
-      "name": "Rat #0215",
+      "name": "Inu #0215",
       "wallet": "KbFswtCLGx8cbyBST6sjGpSEC1pz84r3k9mWs4wkqQtv",
       "solscanUrl": "https://solscan.io/account/KbFswtCLGx8cbyBST6sjGpSEC1pz84r3k9mWs4wkqQtv",
       "stock": "COINx",
@@ -4305,7 +4305,7 @@
     },
     {
       "id": 216,
-      "name": "Rat #0216",
+      "name": "Inu #0216",
       "wallet": "2GGFwVW7XdRRRbqZxyvbpsj7k84kE9MXLqUH6zVhqzZi",
       "solscanUrl": "https://solscan.io/account/2GGFwVW7XdRRRbqZxyvbpsj7k84kE9MXLqUH6zVhqzZi",
       "stock": "NVDAx",
@@ -4325,7 +4325,7 @@
     },
     {
       "id": 217,
-      "name": "Rat #0217",
+      "name": "Inu #0217",
       "wallet": "HybNcehscjTPYYUpoQUJ17Xip7MHG4dqxCHrJ1maPtf2",
       "solscanUrl": "https://solscan.io/account/HybNcehscjTPYYUpoQUJ17Xip7MHG4dqxCHrJ1maPtf2",
       "stock": "TSLAx",
@@ -4345,7 +4345,7 @@
     },
     {
       "id": 218,
-      "name": "Rat #0218",
+      "name": "Inu #0218",
       "wallet": "aVsSffvwsAZPKD1cWmss2Yg1mhvH2BFqVH3g3oiwGgvn",
       "solscanUrl": "https://solscan.io/account/aVsSffvwsAZPKD1cWmss2Yg1mhvH2BFqVH3g3oiwGgvn",
       "stock": "NVDAx",
@@ -4365,7 +4365,7 @@
     },
     {
       "id": 219,
-      "name": "Rat #0219",
+      "name": "Inu #0219",
       "wallet": "dckde4Sm7CGYDPVjPmUTkJT7hoG23PU8ghCAkZLWb3nA",
       "solscanUrl": "https://solscan.io/account/dckde4Sm7CGYDPVjPmUTkJT7hoG23PU8ghCAkZLWb3nA",
       "stock": "SPYx",
@@ -4385,7 +4385,7 @@
     },
     {
       "id": 220,
-      "name": "Rat #0220",
+      "name": "Inu #0220",
       "wallet": "vdp2uMT6GTw98rMgsaQA9HbxwuWDwEmr1Uj9bmnA1qNA",
       "solscanUrl": "https://solscan.io/account/vdp2uMT6GTw98rMgsaQA9HbxwuWDwEmr1Uj9bmnA1qNA",
       "stock": "TSLAx",
@@ -4405,7 +4405,7 @@
     },
     {
       "id": 221,
-      "name": "Rat #0221",
+      "name": "Inu #0221",
       "wallet": "UXKX51pg5VGasnMA4BCEZsjhvTsiyzx1bgKxjB87kxGo",
       "solscanUrl": "https://solscan.io/account/UXKX51pg5VGasnMA4BCEZsjhvTsiyzx1bgKxjB87kxGo",
       "stock": "GOOGLx",
@@ -4425,7 +4425,7 @@
     },
     {
       "id": 222,
-      "name": "Rat #0222",
+      "name": "Inu #0222",
       "wallet": "1rFVtwqGZ1yjdfJ1JWDWi2ES1QtheWq9a1SRjinmxs6U",
       "solscanUrl": "https://solscan.io/account/1rFVtwqGZ1yjdfJ1JWDWi2ES1QtheWq9a1SRjinmxs6U",
       "stock": "AAPLx",
@@ -4445,7 +4445,7 @@
     },
     {
       "id": 223,
-      "name": "Rat #0223",
+      "name": "Inu #0223",
       "wallet": "PZBZVGVopkRTpSaJZn27CFeTQkvgyWR4Vr1X34JvuXv5",
       "solscanUrl": "https://solscan.io/account/PZBZVGVopkRTpSaJZn27CFeTQkvgyWR4Vr1X34JvuXv5",
       "stock": "NVDAx",
@@ -4465,7 +4465,7 @@
     },
     {
       "id": 224,
-      "name": "Rat #0224",
+      "name": "Inu #0224",
       "wallet": "3yYeoxxTKLNScxpfYgkjJoAfmQkW9TKkub62Rc2Pn1Jq",
       "solscanUrl": "https://solscan.io/account/3yYeoxxTKLNScxpfYgkjJoAfmQkW9TKkub62Rc2Pn1Jq",
       "stock": "MSTRx",
@@ -4485,7 +4485,7 @@
     },
     {
       "id": 225,
-      "name": "Rat #0225",
+      "name": "Inu #0225",
       "wallet": "UAMHrB5CkhVNUnz5kmHu5prQXa3dWmanEsTbFN1gAotz",
       "solscanUrl": "https://solscan.io/account/UAMHrB5CkhVNUnz5kmHu5prQXa3dWmanEsTbFN1gAotz",
       "stock": "AMDx",
@@ -4505,7 +4505,7 @@
     },
     {
       "id": 226,
-      "name": "Rat #0226",
+      "name": "Inu #0226",
       "wallet": "nNL2mVaihD1bQyB5u7MtBXrZAPGfji2UtQNXLac5HCSy",
       "solscanUrl": "https://solscan.io/account/nNL2mVaihD1bQyB5u7MtBXrZAPGfji2UtQNXLac5HCSy",
       "stock": "MSTRx",
@@ -4525,7 +4525,7 @@
     },
     {
       "id": 227,
-      "name": "Rat #0227",
+      "name": "Inu #0227",
       "wallet": "uWvGgQGXFD7s9Mmuh76hX7y4jsM4y34SzST1WQCRzgYb",
       "solscanUrl": "https://solscan.io/account/uWvGgQGXFD7s9Mmuh76hX7y4jsM4y34SzST1WQCRzgYb",
       "stock": "NVDAx",
@@ -4545,7 +4545,7 @@
     },
     {
       "id": 228,
-      "name": "Rat #0228",
+      "name": "Inu #0228",
       "wallet": "Qbwd6djS78AaVmh8JudbycvEj3aXvALTphsnojEFywaR",
       "solscanUrl": "https://solscan.io/account/Qbwd6djS78AaVmh8JudbycvEj3aXvALTphsnojEFywaR",
       "stock": "GOOGLx",
@@ -4565,7 +4565,7 @@
     },
     {
       "id": 229,
-      "name": "Rat #0229",
+      "name": "Inu #0229",
       "wallet": "ECKeNP7o3W2Bd5MznqJ2o1VhSE8KYeK5zLffzV8Ha5nM",
       "solscanUrl": "https://solscan.io/account/ECKeNP7o3W2Bd5MznqJ2o1VhSE8KYeK5zLffzV8Ha5nM",
       "stock": "NVDAx",
@@ -4585,7 +4585,7 @@
     },
     {
       "id": 230,
-      "name": "Rat #0230",
+      "name": "Inu #0230",
       "wallet": "DJrJi7A8qdvCE5YeSQSFUwEyCKz3tovy4HUpfazd8WAo",
       "solscanUrl": "https://solscan.io/account/DJrJi7A8qdvCE5YeSQSFUwEyCKz3tovy4HUpfazd8WAo",
       "stock": "NVDAx",
@@ -4605,7 +4605,7 @@
     },
     {
       "id": 231,
-      "name": "Rat #0231",
+      "name": "Inu #0231",
       "wallet": "vnXbaqGiDY8XsFrzptujPXiQX7uso2Rs6GpsQ1LBkXq5",
       "solscanUrl": "https://solscan.io/account/vnXbaqGiDY8XsFrzptujPXiQX7uso2Rs6GpsQ1LBkXq5",
       "stock": "AAPLx",
@@ -4625,7 +4625,7 @@
     },
     {
       "id": 232,
-      "name": "Rat #0232",
+      "name": "Inu #0232",
       "wallet": "HY2BjM9JBXEThonzJyPHoLhSYhCTu9yLMJ3exL5bDBkt",
       "solscanUrl": "https://solscan.io/account/HY2BjM9JBXEThonzJyPHoLhSYhCTu9yLMJ3exL5bDBkt",
       "stock": "MSTRx",
@@ -4645,7 +4645,7 @@
     },
     {
       "id": 233,
-      "name": "Rat #0233",
+      "name": "Inu #0233",
       "wallet": "PviQ9TdXQeLi1NX4Ugi8AiK72Rrnoxwd9TJfj7zfKaPr",
       "solscanUrl": "https://solscan.io/account/PviQ9TdXQeLi1NX4Ugi8AiK72Rrnoxwd9TJfj7zfKaPr",
       "stock": "GOOGLx",
@@ -4665,7 +4665,7 @@
     },
     {
       "id": 234,
-      "name": "Rat #0234",
+      "name": "Inu #0234",
       "wallet": "ozqntkQm9LsHfbFoHgBSwF4K4zVSQX3uYzTQt1b9K25A",
       "solscanUrl": "https://solscan.io/account/ozqntkQm9LsHfbFoHgBSwF4K4zVSQX3uYzTQt1b9K25A",
       "stock": "AMDx",
@@ -4685,7 +4685,7 @@
     },
     {
       "id": 235,
-      "name": "Rat #0235",
+      "name": "Inu #0235",
       "wallet": "ghrGRuTmBvhxWeMSzRvVwLfK74X6RhxrFardqobgsUAq",
       "solscanUrl": "https://solscan.io/account/ghrGRuTmBvhxWeMSzRvVwLfK74X6RhxrFardqobgsUAq",
       "stock": "MSTRx",
@@ -4705,7 +4705,7 @@
     },
     {
       "id": 236,
-      "name": "Rat #0236",
+      "name": "Inu #0236",
       "wallet": "Xemp51TgxmBB9faqXPcHbdNgt6WYuNQHEEJbqxGc5RCR",
       "solscanUrl": "https://solscan.io/account/Xemp51TgxmBB9faqXPcHbdNgt6WYuNQHEEJbqxGc5RCR",
       "stock": "SPYx",
@@ -4725,7 +4725,7 @@
     },
     {
       "id": 237,
-      "name": "Rat #0237",
+      "name": "Inu #0237",
       "wallet": "9oXpwpDrwftD4boenmRAXn6dzxaRx7AUPVPKwZaryroF",
       "solscanUrl": "https://solscan.io/account/9oXpwpDrwftD4boenmRAXn6dzxaRx7AUPVPKwZaryroF",
       "stock": "NVDAx",
@@ -4745,7 +4745,7 @@
     },
     {
       "id": 238,
-      "name": "Rat #0238",
+      "name": "Inu #0238",
       "wallet": "tDayLKKtFsGL2R9P2y6d4HEgLtKaHiReD3w7tRNxeAVD",
       "solscanUrl": "https://solscan.io/account/tDayLKKtFsGL2R9P2y6d4HEgLtKaHiReD3w7tRNxeAVD",
       "stock": "COINx",
@@ -4765,7 +4765,7 @@
     },
     {
       "id": 239,
-      "name": "Rat #0239",
+      "name": "Inu #0239",
       "wallet": "TGvCrtsjF53fESv1ukQkwkwuKSX4zmcHJt2X6TSxkUU3",
       "solscanUrl": "https://solscan.io/account/TGvCrtsjF53fESv1ukQkwkwuKSX4zmcHJt2X6TSxkUU3",
       "stock": "GOOGLx",
@@ -4785,7 +4785,7 @@
     },
     {
       "id": 240,
-      "name": "Rat #0240",
+      "name": "Inu #0240",
       "wallet": "mUeh3hqwbcRShqUiKNWf6zdWVjLE8WKBNSnYNghCngy1",
       "solscanUrl": "https://solscan.io/account/mUeh3hqwbcRShqUiKNWf6zdWVjLE8WKBNSnYNghCngy1",
       "stock": "COINx",
@@ -4805,7 +4805,7 @@
     },
     {
       "id": 241,
-      "name": "Rat #0241",
+      "name": "Inu #0241",
       "wallet": "eU6oj8rCuZZ8ns6hEaKvwPTEC6hX2uq7RP8WfrqQ1w68",
       "solscanUrl": "https://solscan.io/account/eU6oj8rCuZZ8ns6hEaKvwPTEC6hX2uq7RP8WfrqQ1w68",
       "stock": "METAx",
@@ -4825,7 +4825,7 @@
     },
     {
       "id": 242,
-      "name": "Rat #0242",
+      "name": "Inu #0242",
       "wallet": "65oGjk4xn9sKjAwjduNgKCdJ9bCbzdqKcXSgi8QSuufn",
       "solscanUrl": "https://solscan.io/account/65oGjk4xn9sKjAwjduNgKCdJ9bCbzdqKcXSgi8QSuufn",
       "stock": "TSLAx",
@@ -4845,7 +4845,7 @@
     },
     {
       "id": 243,
-      "name": "Rat #0243",
+      "name": "Inu #0243",
       "wallet": "1vswZxxGn9jGghEwh1sa9DHBhb92jCNDDs8fyg7TFHPj",
       "solscanUrl": "https://solscan.io/account/1vswZxxGn9jGghEwh1sa9DHBhb92jCNDDs8fyg7TFHPj",
       "stock": "GOOGLx",
@@ -4865,7 +4865,7 @@
     },
     {
       "id": 244,
-      "name": "Rat #0244",
+      "name": "Inu #0244",
       "wallet": "GXi3D24JDVjY8t4vB8LbjPCWZjVMi7sgYsVct1wcb7ML",
       "solscanUrl": "https://solscan.io/account/GXi3D24JDVjY8t4vB8LbjPCWZjVMi7sgYsVct1wcb7ML",
       "stock": "AMZNx",
@@ -4885,7 +4885,7 @@
     },
     {
       "id": 245,
-      "name": "Rat #0245",
+      "name": "Inu #0245",
       "wallet": "vEpxGdPKz6fCF7ZwdudLKRYrBb8wTzr9c53kPgqmPrsy",
       "solscanUrl": "https://solscan.io/account/vEpxGdPKz6fCF7ZwdudLKRYrBb8wTzr9c53kPgqmPrsy",
       "stock": "MSTRx",
@@ -4905,7 +4905,7 @@
     },
     {
       "id": 246,
-      "name": "Rat #0246",
+      "name": "Inu #0246",
       "wallet": "DiaHTnQZJgKq1HA29tYAdEgbt3YC59nMskLCFEFTJnsQ",
       "solscanUrl": "https://solscan.io/account/DiaHTnQZJgKq1HA29tYAdEgbt3YC59nMskLCFEFTJnsQ",
       "stock": "TSLAx",
@@ -4925,7 +4925,7 @@
     },
     {
       "id": 247,
-      "name": "Rat #0247",
+      "name": "Inu #0247",
       "wallet": "F8SkfPR1dMTL2pmf4VmkYQtBNonWyBfkhfxqmw75XcZ1",
       "solscanUrl": "https://solscan.io/account/F8SkfPR1dMTL2pmf4VmkYQtBNonWyBfkhfxqmw75XcZ1",
       "stock": "GOOGLx",
@@ -4945,7 +4945,7 @@
     },
     {
       "id": 248,
-      "name": "Rat #0248",
+      "name": "Inu #0248",
       "wallet": "mvbbE4dNitNM1M2AedoHwCm9SdGHWfyvWSzK8a9c5CZj",
       "solscanUrl": "https://solscan.io/account/mvbbE4dNitNM1M2AedoHwCm9SdGHWfyvWSzK8a9c5CZj",
       "stock": "TSLAx",
@@ -4965,7 +4965,7 @@
     },
     {
       "id": 249,
-      "name": "Rat #0249",
+      "name": "Inu #0249",
       "wallet": "33uReiDmEB77bY9qfvQRaSHeZuWEyHrMAEGir46ELcH8",
       "solscanUrl": "https://solscan.io/account/33uReiDmEB77bY9qfvQRaSHeZuWEyHrMAEGir46ELcH8",
       "stock": "METAx",
@@ -4985,7 +4985,7 @@
     },
     {
       "id": 250,
-      "name": "Rat #0250",
+      "name": "Inu #0250",
       "wallet": "mexjW3UqA52XKzh64eKnLZaWtnzKgyWp2DxzCo4DaFrU",
       "solscanUrl": "https://solscan.io/account/mexjW3UqA52XKzh64eKnLZaWtnzKgyWp2DxzCo4DaFrU",
       "stock": "AAPLx",

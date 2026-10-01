@@ -34,12 +34,12 @@ export async function runReconcileStep(d: WorkerDeps, s: WorkerState): Promise<R
     if (rat.status === 'active' && acct.frozen) {
       await d.store.rats.update(rat.id, { status: 'frozen', freezeReason: 'account_frozen' });
       await event('freeze', 'account_frozen');
-      await d.alerts.send('warn', `rat_frozen_${rat.id}`, `Rat ${rat.id} (${rat.wallet}) token account was frozen by the issuer.`);
+      await d.alerts.send('warn', `rat_frozen_${rat.id}`, `Inu #${rat.id} (${rat.wallet}) token account was frozen by the issuer.`);
       res.frozen++;
     } else if (rat.status === 'active' && acct.amount < expected) {
       await d.store.rats.update(rat.id, { status: 'frozen', freezeReason: 'balance_mismatch' });
       await event('freeze', 'balance_mismatch');
-      await d.alerts.send('critical', `rat_balance_${rat.id}`, `Rat ${rat.id} (${rat.wallet}) holds ${acct.amount} raw ${symbol}, database says ${expected}. Frozen.`);
+      await d.alerts.send('critical', `rat_balance_${rat.id}`, `Inu #${rat.id} (${rat.wallet}) holds ${acct.amount} raw ${symbol}, database says ${expected}. Frozen.`);
       res.frozen++;
     } else if (rat.status === 'frozen' && rat.freezeReason === 'account_frozen' && !acct.frozen) {
       await d.store.rats.update(rat.id, { status: 'active', freezeReason: null });

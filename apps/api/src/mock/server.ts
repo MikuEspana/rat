@@ -15,7 +15,7 @@ const app = createApp({ service: mock, clock: systemClock, cacheSec: 1, corsOrig
 
 serve({ fetch: app.fetch, port }, (info) => {
   const base = `http://localhost:${info.port}`;
-  console.log(`RAT RACE mock API (live-changing mock data, nothing real) on ${base}`);
+  console.log(`WALL STREET INU mock API (live-changing mock data, nothing real) on ${base}`);
   console.log(`  ${base}/api/state   ${base}/api/rats   ${base}/api/events?afterId=0   ${base}/health`);
   console.log(`  new rat every 2-6s, prices drift every 1s, claim every 35s, COINx pauses/resumes; speed x${speed}`);
 });
