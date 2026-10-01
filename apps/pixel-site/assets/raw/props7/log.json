@@ -1,0 +1,166 @@
+{
+ "_gens_used": 11,
+ "giant_shiba_statue": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "de33bb18-65c9-411a-b92c-3c6de7dbe55c",
+    "args": {
+     "description": "a giant golden shiba inu dog statue sitting proudly in the classic doge pose, pointy ears, curled tail, head tilted with a smug side-eye, on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   },
+   {
+    "id": "fc6c1e4f-1608-438a-89e7-0c6e3f978501",
+    "args": {
+     "description": "a giant shiny solid gold metal statue of a shiba inu dog, the whole dog cast in gleaming yellow gold with gold highlights, not orange fur, sitting proudly in the classic doge pose, pointy ears, curled tail, head tilted with a smug side-eye, on top of a tall white marble plinth with a stepped base, the whole plinth fully visible down to its bottom edge with empty space below it, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 160,
+     "height": 224,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   }
+  ],
+  "note": "picked attempt 2 (gold metal); attempt 1 came out orange fur"
+ },
+ "rich": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "4fe5d551-be4c-443b-b2a3-9c9951acbc2b",
+    "args": {
+     "description": "sprite sheet of five separate office props in one row with empty space between them, not touching, each standing on its own: stack of shiny gold bars, electronic money counting machine with banknotes, big pile of green cash stacks on a small table, small golden shiba inu dog statue sitting on a marble pedestal, antique globe on a wooden stand. Clean bright corporate office, isometric three-quarter view",
+     "width": 400,
+     "height": 96,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   }
+  ],
+  "note": "only the 4th object (small golden shiba statue) is used, as rat_statue"
+ },
+ "evil_block": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "18a85680-ab74-4aab-8106-44920d55e4f7",
+    "args": {
+     "description": "dark grey fortress-like office block with red neon trim and a giant glowing shiba inu dog head logo sign on its front, a single object standing alone in the centre. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 224,
+     "height": 288,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   }
+  ],
+  "note": "not used: whole regeneration replaced by an edit_image_pixen of the original (evil_rat_tower entry), so only the rooftop statue changes"
+ },
+ "rocket": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "5f80e326-fa78-474e-8a97-3572fea5f411",
+    "args": {
+     "description": "a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two pointy orange shiba inu dog ears on top of the nose cone, a round orange shiba inu dog face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   },
+   {
+    "id": "05edea40-4742-49a4-9e1c-279fda5ba5b1",
+    "args": {
+     "description": "a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two big pointy triangular orange shiba inu dog ears sticking up from the sides of the nose cone, a round orange shiba inu dog face logo painted on its side, engines off, no flame, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   },
+   {
+    "id": "192bdc35-5a08-4ca3-8d52-3814ccf96e18",
+    "args": {
+     "description": "a tall white space rocket standing upright on its three fins, a large rocket filling the frame from top to bottom, two big pointy triangular orange shiba inu dog ears sticking up from the sides of the nose cone, a round doge meme shiba inu face logo painted on its side (golden tan and cream fur, cream face mask, side-eye expression), engines off, the bottom of the rocket clean with no flame, no fire, no smoke, no exhaust, a single object standing alone in the centre, no surrounding scenery, transparent background. Night city, clean bright corporate style, isometric three-quarter view",
+     "width": 112,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   }
+  ],
+  "note": "not used: the original rocket shows no rat (no ears, no logo; see props5/log.json), so it stays as it was. 3 generations spent before that call; images deleted"
+ },
+ "vault_5": {
+  "tool": "create_map_object",
+  "attempts": [
+   {
+    "id": "43f8e330-eaeb-4d1c-b9d5-3f3e05aa6495",
+    "args": {
+     "description": "a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, small orange shiba inu dogs in business suits swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 256,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   },
+   {
+    "id": "dd5ee4db-ddbc-4e6b-b91a-3320504b5efd",
+    "args": {
+     "description": "a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, three small orange shiba inu dogs wearing black business suits with white shirts and red ties, swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 256,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   },
+   {
+    "id": "6a971ff6-854a-4969-a039-300b41d6bfcb",
+    "args": {
+     "description": "a giant round riveted steel money bin like a huge silo, filled to the brim with gold coins and green cash, three small doge meme shiba inu dogs with golden tan and cream fur, cream face masks, side-eye expressions, pointy ears and fluffy curled tails, wearing navy business suits with white shirts and blue ties, swimming and diving in the coins, a single object standing alone in the centre, no surrounding scenery, transparent background. Night office, clean bright corporate style, isometric three-quarter view",
+     "width": 256,
+     "height": 256,
+     "view": "high top-down",
+     "outline": "selective outline",
+     "shading": "basic shading",
+     "detail": "high detail"
+    }
+   }
+  ],
+  "note": "picked attempt 3 (navy suits, blue ties, matches the C_doge character); 1 had no suits, 2 black suits and red ties. Grey background keyed out, scaled to 222 px wide (the rat bin width) by tools/cut_props7.py"
+ },
+ "evil_rat_tower": {
+  "tool": "edit_image_pixen",
+  "attempts": [
+   {
+    "job_id": "554029ca-8efc-4b2e-9f35-904200136b27",
+    "args": {
+     "description": "replace the big red rat statue sitting on the roof with a big red glowing shiba inu dog statue sitting in the doge meme pose, pointy ears, fluffy curled tail, side-eye expression, same red colour and size; keep the dark tower, its red neon trim and everything else exactly the same",
+     "image": "raw/props7/evil_rat_tower_in.png"
+    }
+   }
+  ],
+  "note": "attempt 1 failed server-side (CUDA out of memory); attempt 2 picked"
+ }
+}

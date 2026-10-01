@@ -107,6 +107,14 @@ for who in ("cat", "pigeon"):
             if os.path.exists(f):
                 items.append((f"{who}_walk_{d}_{k}", f"../props4/{who}/walk_{d}_{k}", Image.open(f).convert("RGBA")))
 
+# Wall Street Inu (assets/raw/props7, cut by tools/cut_props7.py): Shiba versions of the rat props, under the same
+# frame keys so no game code changes
+CROPS7 = os.path.join(OUT, "raw", "props7", "crops")
+for i, (name, src, im) in enumerate(items):
+    f = os.path.join(CROPS7, f"{name}.png")
+    if os.path.exists(f):
+        items[i] = (name, f"../props7/crops/{name}", Image.open(f).convert("RGBA"))
+
 W = 1280
 x = y = row = 0
 pos = {}
