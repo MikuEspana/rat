@@ -20,7 +20,7 @@ cd "$(dirname "$0")/.."
 . scripts/lib/launch.sh
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
-PRODUCTION_CREATOR="4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot"
+PRODUCTION_CREATOR="6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB"
 # --rehearsal: this exact script on the staging project with the test creator (from ~/wallstreetrats-staging), to
 # practise launch day: the staging guards instead of the production ones. The staging kill switch (ON between
 # rehearsals) is released right before the arm; launch-register releases the armed one. Everything else is the same.
@@ -111,7 +111,7 @@ signature_before_floor() { # the creator's newest transaction before the watch f
 }
 tell_launch() {
   say "Now create the coin on pump.fun, in Phantom, with the CREATOR wallet $creator (within 30 minutes):"
-  say "1. pump.fun > Create coin: name Wall Street Rats, ticker WSR. Normal mode: no holder rewards, no fee sharing, no cashback."
+  say "1. pump.fun > Create coin: name Wall Street Inu, ticker WSI. Normal mode: no holder rewards, no fee sharing, no cashback."
   say "2. Dev buy 0.1 SOL, inside the launch. The dev-buy coins stay in the creator wallet forever."
   say "3. After this, never sign anything else with the creator wallet: the bot treats it as a leaked key."
 }

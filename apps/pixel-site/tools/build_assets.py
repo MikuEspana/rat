@@ -16,6 +16,11 @@ Outputs (assets/):
 import base64, io, json, math, os, sys, urllib.request
 from PIL import Image, ImageDraw
 
+if "--legacy-rats" not in sys.argv:
+    # Wall Street Inu: the character sheets (rats.png/json, build/tier_*.png) now come from tools/build_shiba.py.
+    # This script would overwrite them with the old rat; world.png is unchanged and needs no rebuild.
+    raise SystemExit("rats.png is built by tools/build_shiba.py now; pass --legacy-rats to rebuild the old rat and world atlases")
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.path.dirname(HERE)
 RAW = os.path.join(APP, "assets", "raw")

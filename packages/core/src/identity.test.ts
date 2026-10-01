@@ -9,9 +9,9 @@ describe('identity', () => {
     expect(avatarSeedFor('7xKpQm3vN8aLr2Tz9WcYh4sBd6FjE1uGkPoXqZyRAT')).toBe(s);
   });
   it('rat names pad to 4 digits', () => {
-    expect(ratName(42)).toBe('Rat #0042');
-    expect(ratName(1042)).toBe('Rat #1042');
-    expect(ratName(12345)).toBe('Rat #12345');
+    expect(ratName(42)).toBe('Inu #0042');
+    expect(ratName(1042)).toBe('Inu #1042');
+    expect(ratName(12345)).toBe('Inu #12345');
   });
   it('fake clock advances and never goes backwards', () => {
     const c = new FakeClock('2026-10-01T00:00:00Z');

@@ -227,7 +227,7 @@ async function handleOutcome(
     if (reservation.ledgerId > 0) await d.guard.settle(reservation, creatorSpent(d, out.record));
     const tokens = tokenOwnerDelta(out.record, rat.wallet, stock.mint);
     if (tokens <= 0n) {
-      await d.alerts.send('critical', `hire_no_tokens_${rat.id}`, `Hire tx ${out.signature} confirmed but rat ${rat.id} received no tokens.`);
+      await d.alerts.send('critical', `hire_no_tokens_${rat.id}`, `Hire tx ${out.signature} confirmed but Inu #${rat.id} received no tokens.`);
       await d.store.rats.update(rat.id, { status: 'failed', reserveLedgerId: null });
       return 'failed';
     }
@@ -361,7 +361,7 @@ async function retryHire(d: WorkerDeps, s: WorkerState, rat: RatRow, stock: Stoc
     const res = reservationOf(rat);
     if (res) await d.guard.release(res, 'gave up');
     await d.store.rats.update(rat.id, { status: 'failed', reserveLedgerId: null });
-    await d.alerts.send('warn', `hire_gave_up_${rat.id}`, `Gave up hiring rat ${rat.id} (${rat.wallet}) after ${rat.hireAttempts} attempts.`);
+    await d.alerts.send('warn', `hire_gave_up_${rat.id}`, `Gave up hiring Inu #${rat.id} (${rat.wallet}) after ${rat.hireAttempts} attempts.`);
     return 'gave_up';
   }
 
@@ -429,7 +429,7 @@ async function checkIdle(d: WorkerDeps, res: HireResult): Promise<void> {
     await d.alerts.send(
       'warn',
       'hire_idle',
-      `No rat hired for ${Math.round(minutes)} min while ${formatSol(budget)} SOL waits in the hire budget. Reason: ${why}. Check stock prices (weekend?), approvals and rat status.`,
+      `No inu hired for ${Math.round(minutes)} min while ${formatSol(budget)} SOL waits in the hire budget. Reason: ${why}. Check stock prices (weekend?), approvals and inu status.`,
     );
   }
 }

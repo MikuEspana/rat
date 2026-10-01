@@ -794,7 +794,7 @@ export function buildWorld(
     addPop, posed: (...args) => posed('staff', ...args), sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
-  // WALL ST RATS HIRING over the big sewer entrance, laid out with the landmark names
+  // WALL ST INU HIRING over the big sewer entrance, laid out with the landmark names
   const hiringAt = spotAt.get('hiring');
   if (hiringAt) {
     const s = new Sprite(signTexture(hiringAt.text, 0x43d17a, 2));

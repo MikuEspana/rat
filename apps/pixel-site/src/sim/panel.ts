@@ -117,8 +117,8 @@ export class SimPanel {
     });
     const speedLabel = el('div', 'sim-label', 'Speed');
     box.append(
-      el('div', 'sim-kicker', 'WALL STREET RATS LAUNCH SIMULATOR'),
-      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a rat that buys and holds a stock, and the portfolio and the company grow.'),
+      el('div', 'sim-kicker', 'WALL STREET INU LAUNCH SIMULATOR'),
+      el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a Shiba Inu that buys and holds a stock, and the portfolio and the company grow.'),
       el('div', 'sim-label', 'Scenario'),
       pick,
       speedLabel,
@@ -171,7 +171,7 @@ export class SimPanel {
     const launch = !sim.isLaunched;
     if (launch) {
       sim.launch();
-      this.d.ui.pushLocal([{ tag: 'LAUNCH', text: `RAT is live on pump.fun (simulated, ${SCENARIOS[this.scenarioId()].label} scenario). Creator fees start flowing.` }]);
+      this.d.ui.pushLocal([{ tag: 'LAUNCH', text: `WSI is live on pump.fun (simulated, ${SCENARIOS[this.scenarioId()].label} scenario). Creator fees start flowing.` }]);
     }
     this.intro.hidden = true;
     this.panel.hidden = false;
@@ -199,7 +199,7 @@ export class SimPanel {
       this.announcedEnd = true;
       const s = sim.stats();
       const waiting = s.hireWaitingSol >= 1 ? ` ${s.hireWaitingSol.toFixed(1)} SOL still waiting under the hourly cap.` : '';
-      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} rats hired, portfolio worth ${usd(s.portfolioValueUsd)}.${waiting} Reset to run it again.` }]);
+      this.d.ui.pushLocal([{ tag: 'SIM', text: `Scenario finished: ${s.rats.toLocaleString('en-US')} inus hired, portfolio worth ${usd(s.portfolioValueUsd)}.${waiting} Reset to run it again.` }]);
     }
     this.render();
   }
@@ -214,7 +214,7 @@ export class SimPanel {
     const rows: Array<[string, string]> = [
       ['Sim time', simClock(s.t)],
       ['Market cap', s.mcap === null ? 'pre-launch' : usd(s.mcap)],
-      ['Rats', s.rats.toLocaleString('en-US')],
+      ['Inus', s.rats.toLocaleString('en-US')],
       ['Stage', this.d.stage()],
       ['SOL claimed', `${s.claimedSol.toFixed(2)} SOL`],
       ...(this.d.line() > 0 ? [['In line outside', this.d.line().toLocaleString('en-US')] as [string, string]] : []),

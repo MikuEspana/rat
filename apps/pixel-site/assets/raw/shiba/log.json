@@ -1,0 +1,108 @@
+[
+ {
+  "name": "kneel",
+  "tool": "edit_image_pixen",
+  "args": {
+   "image": "raw/shiba/in_rot_south-east.png",
+   "description": "kneeling on both knees, bowing in worship, arms raised",
+   "seed": 7203
+  },
+  "job_id": "e3f96a36-daef-49e5-8001-abc60262eba4",
+  "cost": "1 generation",
+  "frames": 1,
+  "submit_text": "id: e3f96a36-daef-49e5-8001-abc60262eba4\njob_id: e3f96a36-daef-49e5-8001-abc60262eba4\nmodel: pixen\nedit: kneeling on both knees, bowing in worship, arms raised\nsource: 68x68px\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 7203\nasset_id: ef4a74a0-2cfc-5450-826f-a01465ae0bd5\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~10-40s)\n\nhint: get_image(job_id=\"e3f96a36-daef-49e5-8001-abc60262eba4\")",
+  "at": "2026-10-01T12:59:33Z"
+ },
+ {
+  "name": "seat",
+  "tool": "edit_image_pixen",
+  "args": {
+   "image": "raw/shiba/in_rot_east.png",
+   "description": "same shiba inu office worker now sitting on a black swivel office chair seen from the side facing right, knees bent, back upright, both forearms forward with paws resting on a keyboard at lap height, same navy suit, same dark outline, no desk, no monitor",
+   "no_background": true,
+   "seed": 7201
+  },
+  "job_id": "2e1b89a0-fe2a-41d3-8b75-995df25c853b",
+  "cost": "1 generation",
+  "frames": 1,
+  "submit_text": "id: 2e1b89a0-fe2a-41d3-8b75-995df25c853b\njob_id: 2e1b89a0-fe2a-41d3-8b75-995df25c853b\nmodel: pixen\nedit: same shiba inu office worker now sitting on a black swivel office chair seen from the side facing right, knees bent, back upright, both forearms forward with paws resting on a keyboard at lap height, same navy suit, same dark outline, no desk, no monitor\nsource: 68x68px\nsize: 68x68px\ntransparent: True\nseed: 7201\nasset_id: 41c2fbe7-ff10-5477-b8bb-8bfefb0f8bdb\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~10-40s)\n\nhint: get_image(job_id=\"2e1b89a0-fe2a-41d3-8b75-995df25c853b\")",
+  "at": "2026-10-01T13:00:04Z"
+ },
+ {
+  "name": "cheer",
+  "tool": "animate_image",
+  "args": {
+   "first_frame": "raw/shiba/in_rot_south-east.png",
+   "action": "jumps up cheering with both fists raised high above the head, then lands",
+   "frame_count": 8,
+   "no_background": true,
+   "seed": 7202
+  },
+  "job_id": "3a759a6a-6abf-4a94-a56e-ece4dc373bd0",
+  "cost": "1 generation",
+  "frames": 9,
+  "submit_text": "id: 3a759a6a-6abf-4a94-a56e-ece4dc373bd0\njob_id: 3a759a6a-6abf-4a94-a56e-ece4dc373bd0\naction: jumps up cheering with both fists raised high above the head, then lands\nframes: 8\nsize: 68x68px\ntransparent: True\nseed: 7202\nasset_id: c5f1e54a-d2e7-5229-a829-a489a72ac7c6\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~30-180s)\n\nhint: get_image(job_id=\"3a759a6a-6abf-4a94-a56e-ece4dc373bd0\")",
+  "at": "2026-10-01T13:00:41Z"
+ },
+ {
+  "name": "type",
+  "tool": "animate_image",
+  "args": {
+   "first_frame": "raw/shiba/seat/0.png",
+   "action": "typing quickly on a keyboard, paws alternating up and down, head bobbing slightly, seated; the head, ears and chair keep their exact shape and size",
+   "frame_count": 6,
+   "no_background": true,
+   "seed": 7211
+  },
+  "job_id": "d07daac5-f6ec-41f3-b281-12b91136033e",
+  "cost": "1 generation",
+  "frames": 7,
+  "submit_text": "id: d07daac5-f6ec-41f3-b281-12b91136033e\njob_id: d07daac5-f6ec-41f3-b281-12b91136033e\naction: typing quickly on a keyboard, paws alternating up and down, head bobbing slightly, seated; the head, ears and chair keep their exact shape and size\nframes: 6\nsize: 68x68px\ntransparent: True\nseed: 7211\nasset_id: 1d55c595-88b2-500d-9836-07646906b88c\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~30-180s)\n\nhint: get_image(job_id=\"d07daac5-f6ec-41f3-b281-12b91136033e\")",
+  "at": "2026-10-01T13:02:27Z"
+ },
+ {
+  "name": "slump",
+  "tool": "animate_image",
+  "args": {
+   "first_frame": "raw/shiba/seat/0.png",
+   "action": "slumps forward in defeat, head drops down, shoulders sag, arms go limp, stays slumped; the head, ears and chair keep their exact shape and size",
+   "frame_count": 6,
+   "no_background": true,
+   "seed": 7212
+  },
+  "job_id": "d17c52e9-70a3-4bc5-88bb-f1ba1988f211",
+  "cost": "1 generation",
+  "frames": 7,
+  "submit_text": "id: d17c52e9-70a3-4bc5-88bb-f1ba1988f211\njob_id: d17c52e9-70a3-4bc5-88bb-f1ba1988f211\naction: slumps forward in defeat, head drops down, shoulders sag, arms go limp, stays slumped; the head, ears and chair keep their exact shape and size\nframes: 6\nsize: 68x68px\ntransparent: True\nseed: 7212\nasset_id: 69c46a4b-16b1-5a20-bdf8-549d077142eb\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~30-180s)\n\nhint: get_image(job_id=\"d17c52e9-70a3-4bc5-88bb-f1ba1988f211\")",
+  "at": "2026-10-01T13:02:44Z"
+ },
+ {
+  "name": "seat_front",
+  "tool": "edit_image_pixen",
+  "args": {
+   "image": "raw/shiba/in_sit_front.png",
+   "description": "keep the same shiba inu in the same navy suit jacket, white shirt and blue tie, same three-quarter view facing down-right, same black chair; only move both arms: bend the elbows and bring both forearms forward and down so the paws rest on a small dark keyboard just in front of his belly, as if typing. Same colors, size and pixel style",
+   "seed": 7221
+  },
+  "job_id": "c3948156-3425-4b7c-aa5f-ff9cd6182bfa",
+  "cost": "1 generation",
+  "frames": 1,
+  "submit_text": "id: c3948156-3425-4b7c-aa5f-ff9cd6182bfa\njob_id: c3948156-3425-4b7c-aa5f-ff9cd6182bfa\nmodel: pixen\nedit: keep the same shiba inu in the same navy suit jacket, white shirt and blue tie, same three-quarter view facing down-right, same black chair; only move both arms: bend the elbows and bring both forearms forward and down so the paws rest on a small dark keyboard just in front of his belly, as if typing. Same colors, size and pixel style\nsource: 68x68px\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 7221\nasset_id: 65fdefa2-974c-50dc-9d79-e394877e71ef\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~10-40s)\n\nhint: get_image(job_id=\"c3948156-3425-4b7c-aa5f-ff9cd6182bfa\")",
+  "at": "2026-10-01T13:03:47Z"
+ },
+ {
+  "name": "type_front",
+  "tool": "animate_image",
+  "args": {
+   "first_frame": "raw/shiba/seat_front/0.png",
+   "action": "typing quickly, paws tapping alternately, slight head bob, body and chair still; the head and ears keep their exact shape and size",
+   "frame_count": 6,
+   "seed": 7222
+  },
+  "job_id": "ab3f1b36-1739-4b5a-862c-8c39f2c64118",
+  "cost": "1 generation",
+  "frames": 7,
+  "submit_text": "id: ab3f1b36-1739-4b5a-862c-8c39f2c64118\njob_id: ab3f1b36-1739-4b5a-862c-8c39f2c64118\naction: typing quickly, paws tapping alternately, slight head bob, body and chair still; the head and ears keep their exact shape and size\nframes: 6\nsize: 68x68px\ntransparent: True \u2014 auto (input has transparency)\nseed: 7222\nasset_id: 1e4db123-9d9d-548c-a5f4-f2bbf69de072\nasset_status: pending (saved when generation completes)\ncost: 1 generation\nstatus: processing (~30-180s)\n\nhint: get_image(job_id=\"ab3f1b36-1739-4b5a-862c-8c39f2c64118\")",
+  "at": "2026-10-01T13:05:18Z"
+ }
+]

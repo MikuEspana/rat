@@ -27,7 +27,7 @@
       "dryRun": false,
       "data": {
         "ratId": 2,
-        "ratName": "Rat #0002",
+        "ratName": "Inu #0002",
         "wallet": "GpHXVCQRZmuo4VReiY87vkYRCUmChoaK4YV2zndGVjex",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -43,7 +43,7 @@
       "dryRun": false,
       "data": {
         "ratId": 192,
-        "ratName": "Rat #0192",
+        "ratName": "Inu #0192",
         "wallet": "k91h67RibQDWZGSD3FYZ3RiHyCnos7VE7wKYZr7uzUmz",
         "stock": "COINx",
         "salarySol": 0.03,
@@ -59,7 +59,7 @@
       "dryRun": false,
       "data": {
         "ratId": 66,
-        "ratName": "Rat #0066",
+        "ratName": "Inu #0066",
         "wallet": "gfHfe92b7KeoR13PFSLJ7S7JBFFTRBx9Bi7VCND7K826",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -99,7 +99,7 @@
       "dryRun": false,
       "data": {
         "ratId": 42,
-        "ratName": "Rat #0042",
+        "ratName": "Inu #0042",
         "wallet": "aoRgwDq3KypuXDQnLKgbxbAXVQJy4rmhsrEJFy2CjZXz",
         "stock": "AAPLx",
         "salarySol": 0.03,
@@ -115,7 +115,7 @@
       "dryRun": false,
       "data": {
         "ratId": 63,
-        "ratName": "Rat #0063",
+        "ratName": "Inu #0063",
         "wallet": "RBsnPNr5BKBq4uGaYRdS5WfMmK2aqMYJfJ5zZuJkwjXr",
         "stock": "NVDAx",
         "salarySol": 0.03,
@@ -131,7 +131,7 @@
       "dryRun": false,
       "data": {
         "ratId": 73,
-        "ratName": "Rat #0073",
+        "ratName": "Inu #0073",
         "wallet": "9pWTgyziM8A94n1XPHMyLTDmS7tiZxzUnH3tKoXpq5c2",
         "stock": "AMZNx",
         "salarySol": 0.03,
@@ -147,7 +147,7 @@
       "dryRun": false,
       "data": {
         "ratId": 36,
-        "ratName": "Rat #0036",
+        "ratName": "Inu #0036",
         "wallet": "eB9wVmxeMB6RukkfEcn9SPEBLwwdJV4w9hbcS2zxW73y",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -163,7 +163,7 @@
       "dryRun": false,
       "data": {
         "ratId": 130,
-        "ratName": "Rat #0130",
+        "ratName": "Inu #0130",
         "wallet": "gM2ZtKqvHT54G7bqQ9B1VFdDJTFNDPYZEh1EvCkP7UFj",
         "stock": "SPYx",
         "salarySol": 0.03,
@@ -179,7 +179,7 @@
       "dryRun": false,
       "data": {
         "ratId": 17,
-        "ratName": "Rat #0017",
+        "ratName": "Inu #0017",
         "wallet": "vvb4vQzQDjZmoHgDodYztA1b6mZqRkMwLsgEt8ugF1K9",
         "stock": "COINx",
         "salarySol": 0.03,
@@ -195,7 +195,7 @@
       "dryRun": false,
       "data": {
         "ratId": 2,
-        "ratName": "Rat #0002",
+        "ratName": "Inu #0002",
         "wallet": "GpHXVCQRZmuo4VReiY87vkYRCUmChoaK4YV2zndGVjex",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -211,7 +211,7 @@
       "dryRun": false,
       "data": {
         "ratId": 216,
-        "ratName": "Rat #0216",
+        "ratName": "Inu #0216",
         "wallet": "2GGFwVW7XdRRRbqZxyvbpsj7k84kE9MXLqUH6zVhqzZi",
         "stock": "NVDAx",
         "salarySol": 0.03,
@@ -227,7 +227,7 @@
       "dryRun": false,
       "data": {
         "ratId": 193,
-        "ratName": "Rat #0193",
+        "ratName": "Inu #0193",
         "wallet": "1kASFQrrsX1azPdwHFdTqc6Bogm4fxJQSxCsU4xMsyKn",
         "stock": "COINx",
         "salarySol": 0.03,
@@ -243,7 +243,7 @@
       "dryRun": false,
       "data": {
         "ratId": 131,
-        "ratName": "Rat #0131",
+        "ratName": "Inu #0131",
         "wallet": "z5vg8xKRsKALZsyiVwE4ucQ2f23SGYSdo24de54fcX1k",
         "stock": "AAPLx",
         "salarySol": 0.03,
@@ -259,7 +259,7 @@
       "dryRun": false,
       "data": {
         "ratId": 211,
-        "ratName": "Rat #0211",
+        "ratName": "Inu #0211",
         "wallet": "DqxP9mLwXihkaVQEXrpDYQR1mvKxBBY9wJ5DEsnLPcpR",
         "stock": "AMZNx",
         "salarySol": 0.03,
@@ -275,7 +275,7 @@
       "dryRun": false,
       "data": {
         "ratId": 243,
-        "ratName": "Rat #0243",
+        "ratName": "Inu #0243",
         "wallet": "1vswZxxGn9jGghEwh1sa9DHBhb92jCNDDs8fyg7TFHPj",
         "stock": "GOOGLx",
         "salarySol": 0.03,
@@ -291,7 +291,7 @@
       "dryRun": false,
       "data": {
         "ratId": 14,
-        "ratName": "Rat #0014",
+        "ratName": "Inu #0014",
         "wallet": "WMdj4NeFUieZYNYo699i7LoFaxNrn3eazBkUamu4fofn",
         "stock": "NVDAx",
         "salarySol": 0.03,
@@ -307,7 +307,7 @@
       "dryRun": false,
       "data": {
         "ratId": 146,
-        "ratName": "Rat #0146",
+        "ratName": "Inu #0146",
         "wallet": "uKegDXs3eEEjRZ8DqvkZt3jhEaExqDzMns7QeCVvPMzs",
         "stock": "COINx",
         "salarySol": 0.03,
@@ -323,7 +323,7 @@
       "dryRun": false,
       "data": {
         "ratId": 9,
-        "ratName": "Rat #0009",
+        "ratName": "Inu #0009",
         "wallet": "kZapFGuu4mQk7Yu4Ab2omPCmsqqvTVSiyEvLPYVLho58",
         "stock": "NVDAx",
         "salarySol": 0.03,
@@ -339,7 +339,7 @@
       "dryRun": false,
       "data": {
         "ratId": 161,
-        "ratName": "Rat #0161",
+        "ratName": "Inu #0161",
         "wallet": "77sp8dQ9ieGsUeSTaRV8SfXkW9szFhZhmFTNGiRM6Aav",
         "stock": "AMDx",
         "salarySol": 0.03,
@@ -367,7 +367,7 @@
       "dryRun": false,
       "data": {
         "ratId": 23,
-        "ratName": "Rat #0023",
+        "ratName": "Inu #0023",
         "wallet": "GCTb5n5XciuNSCKNtZtX8LXyoqsUmdgDVWB1HPSEK8jK",
         "stock": "AMDx",
         "salarySol": 0.03,
@@ -419,7 +419,7 @@
       "dryRun": false,
       "data": {
         "ratId": 250,
-        "ratName": "Rat #0250",
+        "ratName": "Inu #0250",
         "wallet": "mexjW3UqA52XKzh64eKnLZaWtnzKgyWp2DxzCo4DaFrU",
         "stock": "AAPLx",
         "salarySol": 0.03,
@@ -447,7 +447,7 @@
       "dryRun": false,
       "data": {
         "ratId": 150,
-        "ratName": "Rat #0150",
+        "ratName": "Inu #0150",
         "wallet": "THudHwAgerPBeCJJBwFAYakY9CRZdBTLdRRfp424WK9v",
         "stock": "AAPLx",
         "salarySol": 0.03,
@@ -475,7 +475,7 @@
       "dryRun": false,
       "data": {
         "ratId": 46,
-        "ratName": "Rat #0046",
+        "ratName": "Inu #0046",
         "wallet": "6LgrDeVLaX4KTULp19Y2ND5j16QPooq28vNdqwjHtzdN",
         "stock": "AMDx",
         "salarySol": 0.03,
@@ -515,7 +515,7 @@
       "dryRun": false,
       "data": {
         "ratId": 178,
-        "ratName": "Rat #0178",
+        "ratName": "Inu #0178",
         "wallet": "MNHPcYZhYM6pXcon34UfWrBZ3Akk3ZekiLrKCYSMNZTS",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -567,7 +567,7 @@
       "dryRun": false,
       "data": {
         "ratId": 74,
-        "ratName": "Rat #0074",
+        "ratName": "Inu #0074",
         "wallet": "DrLetG87vYPy7nfRvXA8jm9oVQdU9oEBHTC8BqiMTt4U",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -583,7 +583,7 @@
       "dryRun": false,
       "data": {
         "ratId": 31,
-        "ratName": "Rat #0031",
+        "ratName": "Inu #0031",
         "wallet": "ixK64mHdTeqpgabouFymJvA4LeS5DZYTvQX6PZUvE8h3",
         "stock": "TSLAx",
         "salarySol": 0.03,
@@ -599,7 +599,7 @@
       "dryRun": false,
       "data": {
         "ratId": 141,
-        "ratName": "Rat #0141",
+        "ratName": "Inu #0141",
         "wallet": "Jdh74uMfhLnineNnvGFH19A76okPU2avPryiDJdN3DBU",
         "stock": "TSLAx",
         "salarySol": 0.03,
@@ -615,7 +615,7 @@
       "dryRun": false,
       "data": {
         "ratId": 7,
-        "ratName": "Rat #0007",
+        "ratName": "Inu #0007",
         "wallet": "APJeBr2RgfA8dBQHVzEB6fpvXi7wj9BjNhHU1ZLApyuq",
         "stock": "GOOGLx",
         "salarySol": 0.03,
@@ -655,7 +655,7 @@
       "dryRun": false,
       "data": {
         "ratId": 96,
-        "ratName": "Rat #0096",
+        "ratName": "Inu #0096",
         "wallet": "4Auv76qfKze7unEgNHAqRZcM3EmwmTRdD2XKBoFrGBHZ",
         "stock": "TSLAx",
         "salarySol": 0.03,
@@ -671,7 +671,7 @@
       "dryRun": false,
       "data": {
         "ratId": 132,
-        "ratName": "Rat #0132",
+        "ratName": "Inu #0132",
         "wallet": "YmZxKo9L2WJLj7nNiHZGUUL4j1qgTT18feiNEDvmaqwc",
         "stock": "AMZNx",
         "salarySol": 0.03,
@@ -687,7 +687,7 @@
       "dryRun": false,
       "data": {
         "ratId": 241,
-        "ratName": "Rat #0241",
+        "ratName": "Inu #0241",
         "wallet": "eU6oj8rCuZZ8ns6hEaKvwPTEC6hX2uq7RP8WfrqQ1w68",
         "stock": "METAx",
         "salarySol": 0.03,
@@ -715,7 +715,7 @@
       "dryRun": false,
       "data": {
         "ratId": 103,
-        "ratName": "Rat #0103",
+        "ratName": "Inu #0103",
         "wallet": "A6VyEEohphA4pkB9FbjVAbkWgasHW1zGWwhGfoxBNuv3",
         "stock": "MSTRx",
         "salarySol": 0.03,
@@ -731,7 +731,7 @@
       "dryRun": false,
       "data": {
         "ratId": 211,
-        "ratName": "Rat #0211",
+        "ratName": "Inu #0211",
         "wallet": "DqxP9mLwXihkaVQEXrpDYQR1mvKxBBY9wJ5DEsnLPcpR",
         "stock": "AMZNx",
         "salarySol": 0.03,
@@ -747,7 +747,7 @@
       "dryRun": false,
       "data": {
         "ratId": 136,
-        "ratName": "Rat #0136",
+        "ratName": "Inu #0136",
         "wallet": "ArD9bWgbXPsSgDwvgMFHN24opCA46EEFzBdCtDxPPnXN",
         "stock": "AAPLx",
         "salarySol": 0.03,
@@ -763,7 +763,7 @@
       "dryRun": false,
       "data": {
         "ratId": 13,
-        "ratName": "Rat #0013",
+        "ratName": "Inu #0013",
         "wallet": "yjx2YqJF4b1ShgbGAS34v87VGPNsfAk92MwuAFVLTaqy",
         "stock": "MSTRx",
         "salarySol": 0.03,

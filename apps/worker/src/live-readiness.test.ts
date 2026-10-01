@@ -72,7 +72,7 @@ describe('idle hire budget alert', () => {
     await runHireStep(w.deps, w.worker.state);
     const alert = w.alerts.sent.find((a) => a.key === 'hire_idle')!;
     // the whole 1 SOL claim is hire budget
-    expect(alert.text).toMatch(/No rat hired for 31 min while 1 SOL waits in the hire budget/);
+    expect(alert.text).toMatch(/No inu hired for 31 min while 1 SOL waits in the hire budget/);
     expect(alert.text).toContain('no eligible stocks');
   });
 

@@ -1,17 +1,17 @@
 #!/bin/bash
 # The production site go-live check, before launch. Run it from ~/wallstreetrats:
 #   scripts/site-go-live.sh
-# 1. The production API answers and lets https://wallstreetrats.world read it (CORS).
+# 1. The production API answers and lets https://wallstreetinu.world read it (CORS).
 # 2. The published site is built against that API. If it is still the simulator demo, it shows the two clicks that
 #    switch it (GitHub: the SITE_API_BASE variable, then the pages workflow), waits for the new site, and the
 #    workflow's verify job checks it in a real browser (apps/pixel-site/tools/verify-live.mjs).
-# 3. You look at it on your phone: before launch it must show the honest state ("The rats are clocking in..." banner, 0 rats, market cap
+# 3. You look at it on your phone: before launch it must show the honest state ("The inus are clocking in..." banner, 0 inus, market cap
 #    "pre-launch"), nothing simulated.
 # The result goes to ~/rat-secrets/setup-state.env (SITE_GO_LIVE), which the rehearsal report reads. Only public data
 # is read. Nothing is sent on chain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SITE="https://wallstreetrats.world"
+SITE="https://wallstreetinu.world"
 REPO_WEB="https://github.com/MikuEspana/rat"
 STATE="${WSR_SECRETS:-$HOME/rat-secrets}/setup-state.env"
 if [ -t 1 ]; then G=$'\033[32m'; R=$'\033[31m'; B=$'\033[1m'; N=$'\033[0m'; else G=; R=; B=; N=; fi
@@ -85,12 +85,12 @@ say "The workflow's verify job checked it in a real browser: $REPO_WEB/actions/w
 # 3. you, on your phone
 say "Open $SITE on your phone."
 case "$mode" in
-  dry_run) want="the banner \"The rats are clocking in...\" at the top" ;;
-  paused) want="the banner \"The rats are on a break\" at the top" ;;
+  dry_run) want="the banner \"The inus are clocking in...\" at the top" ;;
+  paused) want="the banner \"The inus are on a break\" at the top" ;;
   *) want="no banner at the top (live)" ;;
 esac
 [ "$coin" = "none yet" ] && want="$want, market cap \"pre-launch\""
-yes_no "Does it show $want and RATS HIRED $rats, with nothing simulated?" || die "the site does not show the honest state" "Tell your engineer what it shows instead."
+yes_no "Does it show $want and INUS HIRED $rats, with nothing simulated?" || die "the site does not show the honest state" "Tell your engineer what it shows instead."
 yes_no "Does ${SITE}/?sim still open the launch simulator (clearly marked SIMULATION)?" || die "the simulator at /?sim does not open"
 record PASS "built against $API, mode $mode, $rats rats, checked on the phone"
 printf '\n  %sSITE READY%s  %s shows the production API honestly.\n' "$B$G" "$N" "$SITE"

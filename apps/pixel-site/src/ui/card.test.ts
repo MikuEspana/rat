@@ -13,18 +13,18 @@ describe('rat card: wallet on Solscan', () => {
     expect(walletUrl(` ${WALLET} `, false)).toBe(`https://solscan.io/account/${WALLET}`);
     // the same address the API's solscanUrl carries
     const view = computeRatView(
-      { id: 1, name: 'Rat', wallet: WALLET, stock: 'AAPLx', stockMint: 'm', status: 'active', avatarSeed: 's', hiredAt: new Date(0).toISOString(), hireTx: null, tokenAmount: '0', costUsd: 2.51 },
+      { id: 1, name: 'Inu', wallet: WALLET, stock: 'AAPLx', stockMint: 'm', status: 'active', avatarSeed: 's', hiredAt: new Date(0).toISOString(), hireTx: null, tokenAmount: '0', costUsd: 2.51 },
       null,
     );
     expect(walletUrl(WALLET, false)).toBe(view.solscanUrl);
-    expect(walletUrl(WALLET, false)).not.toMatch(/wallstreetrats|\?rat=|localhost/);
+    expect(walletUrl(WALLET, false)).not.toMatch(/wallstreetrats|wallstreetinu|\?rat=|localhost/);
   });
 
   it('shows no link in the simulator (made-up wallets) or for anything that is not a Solana address', () => {
     expect(walletUrl(WALLET, true)).toBeNull();
     expect(walletUrl('', false)).toBeNull();
     expect(walletUrl(null, false)).toBeNull();
-    expect(walletUrl('https://wallstreetrats.world/?rat=3', false)).toBeNull();
+    expect(walletUrl('https://wallstreetinu.world/?rat=3', false)).toBeNull();
     expect(walletUrl('0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl', false)).toBeNull(); // not base58
     expect(walletUrl('abc', false)).toBeNull();
   });
@@ -53,6 +53,6 @@ describe('the HUD and card after the pre-launch changes', () => {
     expect(ui).not.toMatch(/'Portfolio PnL'|'Job fair'/);
   });
   it('keeps MARKET CAP, RATS HIRED and PORTFOLIO VALUE, the next-hire ring and a Solscan wallet button', () => {
-    for (const t of ["'Market cap'", "'Rats hired'", "'Portfolio value'", 'ring-arc', 'WALLET ON SOLSCAN']) expect(ui).toContain(t);
+    for (const t of ["'Market cap'", "'Inus hired'", "'Portfolio value'", 'ring-arc', 'WALLET ON SOLSCAN']) expect(ui).toContain(t);
   });
 });

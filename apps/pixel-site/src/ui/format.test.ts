@@ -44,7 +44,7 @@ describe('format', () => {
     expect(claimProgress('2026-10-01T18:00:00Z', '2026-10-01T17:00:00Z', now)).toBeNull();
   });
 
-  it('is WALL STREET RATS everywhere a viewer can read it (no RAT RACE left in the site)', () => {
+  it('is WALL STREET INU everywhere a viewer can read it (no RAT RACE or WALL STREET RATS left in the site)', () => {
     const root = join(__dirname, '..', '..');
     const files: string[] = [join(root, 'index.html')];
     const walk = (dir: string): void => {
@@ -55,11 +55,12 @@ describe('format', () => {
       }
     };
     walk(join(root, 'src'));
-    const hits = files.filter((f) => /rat race/i.test(readFileSync(f, 'utf8')));
+    const hits = files.filter((f) => /rat race|wall street rats|wall st rats|wallstreetrats|\u{1F400}/iu.test(readFileSync(f, 'utf8')));
     expect(hits).toEqual([]);
     const html = readFileSync(join(root, 'index.html'), 'utf8');
-    expect(html).toContain('<title>WALL STREET RATS</title>');
-    expect(html).toContain('<meta property="og:title" content="WALL STREET RATS" />');
+    expect(html).toContain('<title>WALL STREET INU</title>');
+    expect(html).toContain('<meta property="og:title" content="WALL STREET INU" />');
+    expect(html).toContain('<meta property="og:url" content="https://wallstreetinu.world/" />');
   });
 
   it('announces every stage in the feed; the last one reads as a place (the company made it to Wall Street)', () => {
@@ -82,7 +83,7 @@ describe('format', () => {
       'The company made it to Wall Street',
     ]);
     for (const l of lines) {
-      expect(l).not.toMatch(/rats|in line/i);
+      expect(l).not.toMatch(/rats|inus|in line/i);
       expect(l).not.toContain(String.fromCharCode(0x2014));
     }
   });

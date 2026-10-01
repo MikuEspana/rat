@@ -42,7 +42,7 @@ export interface Vignette {
 
 export const VIGNETTES: Vignette[] = [
   {
-    id: 'copier_nap', story: 'A rat fell asleep on the copier', rooms: ['copy'], w: 3, h: 3,
+    id: 'copier_nap', story: 'A dog fell asleep on the copier', rooms: ['copy'], w: 3, h: 3,
     items: [{ kind: 'copier', u: 1, v: 1 }, { kind: 'paper_stack', u: 2, v: 2, flat: true }],
     extras: [{ anim: 'slump', u: 1, v: 1, dy: -26, dx: -6, zzz: true }],
   },
@@ -57,7 +57,7 @@ export const VIGNETTES: Vignette[] = [
     extras: [{ anim: 'cheer', u: 1, v: 1 }],
   },
   {
-    id: 'server_fire', story: 'Server room on fire, one rat with an extinguisher', rooms: ['server'], w: 3, h: 3,
+    id: 'server_fire', story: 'Server room on fire, one dog with an extinguisher', rooms: ['server'], w: 3, h: 3,
     items: [{ kind: 'rack_fire', u: 0, v: 0, scale: 0.8 }, { kind: 'wet_floor', u: 2, v: 2 }, { kind: 'extinguisher', u: 2, v: 0 }],
     extras: [{ anim: 'cheer', u: 1, v: 1, mirror: true }, { anim: 'walk_se', u: 1, v: 2 }],
   },
@@ -82,7 +82,7 @@ export const VIGNETTES: Vignette[] = [
     extras: [{ anim: 'idle_ne', u: 1, v: 1, tier: 'partner' }],
   },
   {
-    id: 'donut_fight', story: 'Two rats, one donut left', rooms: ['break'], w: 3, h: 3,
+    id: 'donut_fight', story: 'Two dogs, one donut left', rooms: ['break'], w: 3, h: 3,
     items: [{ kind: 'round_table', u: 1, v: 1 }, { kind: 'donut_box', u: 1, v: 1, on: true, dy: -14, dx: -4 }],
     extras: [{ anim: 'idle_ne', u: 1, v: 2, mirror: true }, { anim: 'idle_se', u: 0, v: 0 }, { anim: 'cheer', u: 2, v: 0 }],
   },

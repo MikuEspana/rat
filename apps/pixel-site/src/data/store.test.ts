@@ -24,7 +24,7 @@ function hire(id: number, ratId: number, stock: string, costUsd = 5): HireEvent 
     txSig: 'sig',
     txUrl: 'https://solscan.io/tx/sig',
     dryRun: false,
-    data: { ratId, ratName: `Rat #${ratId}`, wallet: 'W'.repeat(44), stock, salarySol: 0.03, costUsd },
+    data: { ratId, ratName: `Inu #${ratId}`, wallet: 'W'.repeat(44), stock, salarySol: 0.03, costUsd },
   };
 }
 

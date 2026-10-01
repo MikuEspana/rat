@@ -173,7 +173,7 @@ describe('alerts', () => {
     }) as unknown as typeof fetch;
     await telegramSink({ botToken: 't', chatId: 'c', fetchImpl, staging: true })('critical', 'kill switch');
     await telegramSink({ botToken: 't', chatId: 'c', fetchImpl })('critical', 'kill switch');
-    expect(sent[0]).toMatch(/^\[RAT RACE STAGING .* critical\] kill switch$/);
+    expect(sent[0]).toMatch(/^\[WSI STAGING .* critical\] kill switch$/);
     expect(sent[1]).not.toContain('STAGING');
   });
 });

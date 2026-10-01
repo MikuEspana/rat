@@ -228,11 +228,11 @@ export class Ui {
       });
     };
     this.ca.append(this.caAddr, this.caCopy);
-    title.append(el('div', 'brand', 'WALL STREET RATS'), el('div', 'tagline', 'The rat always loses. The fund always wins.'), this.ca, this.stageChip, this.tools);
+    title.append(el('div', 'brand', 'WALL STREET INU'), el('div', 'tagline', 'The dog always fetches. The fund keeps the ball.'), this.ca, this.stageChip, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
-      ['rats', 'Rats hired'],
+      ['rats', 'Inus hired'],
       ['portfolio', 'Portfolio value'],
     ] as const) {
       const box = el('div', 'stat');
@@ -416,7 +416,7 @@ export class Ui {
     const n = (v: number): string => v.toLocaleString('en-US');
     const p = progress;
     if (p?.desk) row('desk', p.desk.filled / Math.max(1, p.desk.total), `${p.desk.label}: ${n(p.desk.filled)} / ${n(p.desk.total)} seats`);
-    if (p?.room) row('room', (rats - p.room.from) / Math.max(1, p.room.at - p.room.from), `${p.room.label}: ${n(rats)} / ${n(p.room.at)} rats`);
+    if (p?.room) row('room', (rats - p.room.from) / Math.max(1, p.room.at - p.room.from), `${p.room.label}: ${n(rats)} / ${n(p.room.at)} inus`);
     const next = STAGES[stage + 1];
     if (next) {
       const from = STAGES[stage]!.sol;
@@ -440,7 +440,7 @@ export class Ui {
     const lines = headlines(stats);
     this.newsText.textContent = lines.join('   ///   ');
     this.news.className = `news stage-${stats.stage}`;
-    if (!this.newsText.isConnected) this.news.append(el('span', 'news-tag', 'RAT NEWS'), this.newsText);
+    if (!this.newsText.isConnected) this.news.append(el('span', 'news-tag', 'INU NEWS'), this.newsText);
     // speed: about 60 px a second whatever the length
     this.newsText.style.animationDuration = `${Math.max(20, this.newsText.textContent.length * 0.14)}s`;
   }
@@ -525,7 +525,7 @@ export class Ui {
   private buildBoard(): HTMLElement {
     const box = el('section', 'board panel');
     const head = el('div', 'panel-head');
-    const top = el('button', 'tab on', 'TOP RATS');
+    const top = el('button', 'tab on', 'TOP INUS');
     const bottom = el('button', 'tab', 'BOTTOM');
     top.onclick = () => {
       this.boardMode = 'top';
@@ -576,7 +576,7 @@ export class Ui {
   }
 
   // ------------------------------------------------------------------ the Vault
-  /** The Vault's panel: the Wall Street Rats portfolio in total and by stock, and the wallets of the rats that hold it. */
+  /** The Vault's panel: the Wall Street Inu portfolio in total and by stock, and the wallets of the rats that hold it. */
   openVault(): void {
     this.vaultCard.hidden = false;
     this.renderVault();
@@ -595,11 +595,11 @@ export class Ui {
     close.onclick = () => this.closeVault();
     const head = el('div', 'card-head');
     const who = el('div', 'card-who');
-    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Wall Street Rats portfolio'));
+    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Wall Street Inu portfolio'));
     head.append(who, close);
     const total = el('div', 'vault-total', usd(p.valueUsd));
     const line = el('div', `vault-pnl ${signClass(p.pnlPct)}`, `${pct(p.pnlPct)}  ${usd(p.pnlUsd)} on ${usd(p.costUsd)} paid`);
-    const stage = el('div', 'vault-stage', `${this.vaultStage?.(p.valueUsd) ?? ''}  .  ${p.ratCount.toLocaleString('en-US')} rats, each holding its stock in its own wallet`);
+    const stage = el('div', 'vault-stage', `${this.vaultStage?.(p.valueUsd) ?? ''}  .  ${p.ratCount.toLocaleString('en-US')} inus, each holding its stock in its own wallet`);
     const list = el('div', 'vault-stocks');
     const stocks = [...st.stocks].filter((s) => s.ratCount > 0).sort((a, b) => b.valueUsd - a.valueUsd);
     const most = Math.max(1, ...stocks.map((s) => s.valueUsd));
@@ -612,7 +612,7 @@ export class Ui {
         el('span', 'vault-barbox', ''),
         el('span', 'vault-val', usd(s.valueUsd)),
         el('span', `vault-chg ${signClass(s.pnlPct)}`, pct(s.pnlPct)),
-        el('span', 'vault-n', `${s.ratCount} rats`),
+        el('span', 'vault-n', `${s.ratCount} inus`),
       );
       row.children[1]!.append(bar);
       row.onclick = () => {
@@ -622,7 +622,7 @@ export class Ui {
       list.append(row);
       if (this.vaultOpen === s.symbol) list.append(this.walletList(s.symbol));
     }
-    const note = el('div', 'card-note', 'Every fee hires rats. Tap a stock to see the rat wallets that hold it.');
+    const note = el('div', 'card-note', 'Every fee hires inus. Tap a stock to see the inu wallets that hold it.');
     this.vaultCard.replaceChildren(head, total, line, stage, list, note);
   }
 
@@ -644,8 +644,8 @@ export class Ui {
       else row.append(el('span', 'vault-addr', short));
       box.append(row);
     }
-    if (holders.length > 25) box.append(el('div', 'card-note', `and ${(holders.length - 25).toLocaleString('en-US')} more (click a rat in the building to see its card)`));
-    if (this.d.simulated) box.append(el('div', 'card-note', 'simulated rats: made-up wallets, nothing on chain'));
+    if (holders.length > 25) box.append(el('div', 'card-note', `and ${(holders.length - 25).toLocaleString('en-US')} more (click an inu in the building to see its card)`));
+    if (this.d.simulated) box.append(el('div', 'card-note', 'simulated inus: made-up wallets, nothing on chain'));
     return box;
   }
 
@@ -743,7 +743,7 @@ export class Ui {
     } else {
       const off = el('span', 'wallet-btn off', this.d.simulated ? 'WALLET: SIMULATION' : 'WALLET: NOT ON CHAIN');
       off.setAttribute('aria-disabled', 'true');
-      off.title = this.d.simulated ? 'simulated rat: made-up wallet, nothing on chain' : 'no on-chain wallet for this rat';
+      off.title = this.d.simulated ? 'simulated inu: made-up wallet, nothing on chain' : 'no on-chain wallet for this inu';
       links.append(off);
     }
     if (rec.estimated) links.append(el('span', 'card-note', 'value estimated since hire; exact after reload'));

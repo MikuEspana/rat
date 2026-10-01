@@ -24,7 +24,7 @@ export function padRoster(res: RatsResponse, state: StateResponse, target: numbe
     rats.push({
       ...template,
       id,
-      name: `Rat #${String(id).padStart(4, '0')}`,
+      name: `Inu #${String(id).padStart(4, '0')}`,
       stock: s.symbol,
       stockMint: s.mint,
       status: s.status === 'paused' ? 'frozen' : 'active',
@@ -53,6 +53,6 @@ export function fakeHire(state: StateResponse, lastEventId: number): HireEvent |
     txSig: null,
     txUrl: null,
     dryRun: true,
-    data: { ratId, ratName: `Rat #${ratId}`, wallet: 'StressTestWallet1111111111111111111111111111', stock: s.symbol, salarySol: 0.03, costUsd: 5 },
+    data: { ratId, ratName: `Inu #${ratId}`, wallet: 'StressTestWallet1111111111111111111111111111', stock: s.symbol, salarySol: 0.03, costUsd: 5 },
   };
 }

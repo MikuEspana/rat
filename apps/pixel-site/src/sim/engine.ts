@@ -254,7 +254,7 @@ export class LaunchSim {
     const wallet = this.b58(44);
     const costUsd = round2(SWAP_SOL * SOL_USD);
     const tokens = (costUsd * (1 - 0.003)) / stock.price; // a little under cost: new rats start slightly red
-    const name = `Rat #${String(id).padStart(4, '0')}`;
+    const name = `Inu #${String(id).padStart(4, '0')}`;
     this.rats.push({
       id,
       name,
@@ -352,7 +352,7 @@ export class LaunchSim {
       },
       coin: {
         mint: live ? SIM_COIN_MINT : null,
-        symbol: 'WSR',
+        symbol: 'WSI',
         priceUsd: live ? Number(price.toPrecision(4)) : null,
         supply: live ? this.supply.toFixed(2) : null,
         marketCapUsd: live ? Math.round(this.mcap) : null,

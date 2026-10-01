@@ -92,16 +92,16 @@ export function describe(e: RatEvent): { tag: string; text: string } {
     case 'hire':
       return { tag: 'HIRE', text: `${e.data.ratName} hired for ${e.data.stock} (${usd(e.data.costUsd)})` };
     case 'claim':
-      return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees, all of it hires rats` };
+      return { tag: 'CLAIM', text: `${sol(e.data.amountSol)} in creator fees, all of it hires inus` };
     case 'freeze':
       return {
         tag: 'FREEZE',
-        text: e.data.scope === 'stock' ? `${e.data.stock} paused: ${e.data.ratCount} rats frozen` : `Rat #${e.data.ratId} frozen (${e.data.reason.replace(/_/g, ' ')})`,
+        text: e.data.scope === 'stock' ? `${e.data.stock} paused: ${e.data.ratCount} inus frozen` : `Inu #${e.data.ratId} frozen (${e.data.reason.replace(/_/g, ' ')})`,
       };
     case 'unfreeze':
       return {
         tag: 'THAW',
-        text: e.data.scope === 'stock' ? `${e.data.stock} resumed: ${e.data.ratCount} rats back at work` : `Rat #${e.data.ratId} back at work`,
+        text: e.data.scope === 'stock' ? `${e.data.stock} resumed: ${e.data.ratCount} inus back at work` : `Inu #${e.data.ratId} back at work`,
       };
   }
 }
@@ -151,10 +151,10 @@ export function bannerText(s: {
   coin: Pick<StateResponse['coin'], 'mint'>;
   portfolio?: Pick<StateResponse['portfolio'], 'ratCount'>;
 }): string | null {
-  if (s.bot.mode === 'paused') return '\u{1F400} The rats are on a break. Hiring is paused for now.';
+  if (s.bot.mode === 'paused') return '\u{1F415} The inus are on a break. Hiring is paused for now.';
   if (s.bot.mode !== 'dry_run') return null;
-  const practice = (s.portfolio?.ratCount ?? 0) > 0 ? ' Practice rats only, not real money yet.' : '';
-  return s.coin.mint ? `\u{1F400} The rats are clocking in...${practice}` : `\u{1F400} The rats are clocking in... Hiring starts at launch.${practice}`;
+  const practice = (s.portfolio?.ratCount ?? 0) > 0 ? ' Practice inus only, not real money yet.' : '';
+  return s.coin.mint ? `\u{1F415} The inus are clocking in...${practice}` : `\u{1F415} The inus are clocking in... Hiring starts at launch.${practice}`;
 }
 
 /** Under RATS HIRED. */
@@ -173,8 +173,8 @@ export function ordinal(n: number): string {
 
 /** The leaderboard with nobody on it. */
 export function emptyBoardText(s: { coin: Pick<StateResponse['coin'], 'mint'>; portfolio: Pick<StateResponse['portfolio'], 'ratCount'> }): string {
-  if (s.portfolio.ratCount > 0) return 'No rats to rank yet.';
-  return s.coin.mint ? 'No rats yet. The first one is hired as soon as the fees cover its salary.' : 'No rats yet. Hiring opens at launch.';
+  if (s.portfolio.ratCount > 0) return 'No inus to rank yet.';
+  return s.coin.mint ? 'No inus yet. The first one is hired as soon as the fees cover its salary.' : 'No inus yet. Hiring opens at launch.';
 }
 
 /**
@@ -217,11 +217,11 @@ export function walletUrl(wallet: string | null | undefined, simulated: boolean)
 /** Rats on screen that are not hires: set dressing and the job-fair line. They have no wallet and no stock. */
 export type ExtraKind = 'founder' | 'applicant' | 'crew' | 'staff' | 'passerby';
 
-/** The small card a rat that is not a hire opens: what it is, honestly. */
+/** The small card an inu that is not a hire opens: what it is, honestly. */
 export const EXTRA_CARD: Record<ExtraKind, { name: string; badge: string; line: string }> = {
-  founder: { name: 'FOUNDER', badge: 'NOT A HIRE', line: 'Founder: not a hire, no wallet. Part of the garage, holds no stock.' },
-  applicant: { name: 'JOB APPLICANT', badge: 'IN LINE', line: 'Job applicant: waiting for a desk. No wallet or stock yet: a real rat is hired when a salary buy confirms.' },
-  crew: { name: 'BUILDING CREW', badge: 'NOT A HIRE', line: 'Building crew: putting up the next rooms. Not a hire, no wallet.' },
-  staff: { name: 'OFFICE EXTRA', badge: 'NOT A HIRE', line: 'Office extra: part of the scenery. Not a hire, no wallet.' },
-  passerby: { name: 'PASSER-BY', badge: 'NOT A HIRE', line: 'Passer-by: lives in the city. Not a hire, no wallet.' },
+  founder: { name: 'FOUNDER', badge: 'NOT A HIRE', line: 'Founder: not a hire, no wallet. A good dog from the garage days, holds no stock.' },
+  applicant: { name: 'JOB APPLICANT', badge: 'IN LINE', line: 'Job applicant: waiting for a desk, tail wagging. No wallet or stock yet: a real inu is hired when a salary buy confirms.' },
+  crew: { name: 'BUILDING CREW', badge: 'NOT A HIRE', line: 'Building crew: dogs in hard hats putting up the next rooms. Not a hire, no wallet.' },
+  staff: { name: 'OFFICE EXTRA', badge: 'NOT A HIRE', line: 'Office extra: a dog who is part of the scenery. Not a hire, no wallet.' },
+  passerby: { name: 'PASSER-BY', badge: 'NOT A HIRE', line: 'Passer-by: a city dog out on walkies. Not a hire, no wallet.' },
 };
