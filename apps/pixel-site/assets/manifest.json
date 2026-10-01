@@ -2267,6 +2267,167 @@
         "shading": "basic shading",
         "detail": "high detail"
       }
+    },
+    {
+      "id": "wsi_character",
+      "raw": "raw/shiba/character/",
+      "tool": "create_character",
+      "pixellabId": "0ca6ab26-609a-48e0-8e87-96c679852c13",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "name": "WSI C_doge",
+        "description": "anthropomorphic doge meme shiba inu office worker, side-eye, tan and cream fur, navy business suit, white shirt, blue tie",
+        "mode": "standard",
+        "body_type": "humanoid",
+        "n_directions": 8,
+        "size": 68,
+        "view": "high top-down"
+      },
+      "note": "created by the owner's art session (not this build); 96x96 canvas, brought to the rat's 68 cell by tools/shiba_common.to_cell"
+    },
+    {
+      "id": "wsi_walk",
+      "raw": "raw/shiba/character/Idle/animations/walk/",
+      "tool": "animate_character",
+      "pixellabId": "group 26183ea7-38ce-428d-8f71-ffc1a4262504",
+      "costGenerations": 2,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "character_id": "0ca6ab26-609a-48e0-8e87-96c679852c13",
+        "template_animation_id": "walking-8-frames",
+        "animation_name": "walk",
+        "directions": [
+          "south-east",
+          "north-east"
+        ]
+      }
+    },
+    {
+      "id": "wsi_idle",
+      "raw": "raw/shiba/character/Idle/animations/idle/",
+      "tool": "animate_character",
+      "pixellabId": "group ebbca774-24fb-47ca-aed2-c7bec0473d83",
+      "costGenerations": 2,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "character_id": "0ca6ab26-609a-48e0-8e87-96c679852c13",
+        "template_animation_id": "breathing-idle",
+        "animation_name": "idle",
+        "directions": [
+          "south-east",
+          "north-east"
+        ]
+      }
+    },
+    {
+      "id": "wsi_kneel",
+      "raw": "raw/shiba/kneel/",
+      "tool": "edit_image_pixen",
+      "pixellabId": "e3f96a36-daef-49e5-8001-abc60262eba4",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "image": "raw/shiba/in_rot_south-east.png",
+        "description": "kneeling on both knees, bowing in worship, arms raised",
+        "seed": 7203
+      }
+    },
+    {
+      "id": "wsi_seat",
+      "raw": "raw/shiba/seat/",
+      "tool": "edit_image_pixen",
+      "pixellabId": "2e1b89a0-fe2a-41d3-8b75-995df25c853b",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "image": "raw/shiba/in_rot_east.png",
+        "description": "same shiba inu office worker now sitting on a black swivel office chair seen from the side facing right, knees bent, back upright, both forearms forward with paws resting on a keyboard at lap height, same navy suit, same dark outline, no desk, no monitor",
+        "no_background": true,
+        "seed": 7201
+      }
+    },
+    {
+      "id": "wsi_cheer",
+      "raw": "raw/shiba/cheer/",
+      "tool": "animate_image",
+      "pixellabId": "3a759a6a-6abf-4a94-a56e-ece4dc373bd0",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "first_frame": "raw/shiba/in_rot_south-east.png",
+        "action": "jumps up cheering with both fists raised high above the head, then lands",
+        "frame_count": 8,
+        "no_background": true,
+        "seed": 7202
+      }
+    },
+    {
+      "id": "wsi_type",
+      "raw": "raw/shiba/type/",
+      "tool": "animate_image",
+      "pixellabId": "d07daac5-f6ec-41f3-b281-12b91136033e",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "first_frame": "raw/shiba/seat/0.png",
+        "action": "typing quickly on a keyboard, paws alternating up and down, head bobbing slightly, seated; the head, ears and chair keep their exact shape and size",
+        "frame_count": 6,
+        "no_background": true,
+        "seed": 7211
+      }
+    },
+    {
+      "id": "wsi_slump",
+      "raw": "raw/shiba/slump/",
+      "tool": "animate_image",
+      "pixellabId": "d17c52e9-70a3-4bc5-88bb-f1ba1988f211",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "first_frame": "raw/shiba/seat/0.png",
+        "action": "slumps forward in defeat, head drops down, shoulders sag, arms go limp, stays slumped; the head, ears and chair keep their exact shape and size",
+        "frame_count": 6,
+        "no_background": true,
+        "seed": 7212
+      }
+    },
+    {
+      "id": "wsi_seat_front",
+      "raw": "raw/shiba/seat_front/",
+      "tool": "edit_image_pixen",
+      "pixellabId": "c3948156-3425-4b7c-aa5f-ff9cd6182bfa",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "image": "raw/shiba/in_sit_front.png",
+        "description": "keep the same shiba inu in the same navy suit jacket, white shirt and blue tie, same three-quarter view facing down-right, same black chair; only move both arms: bend the elbows and bring both forearms forward and down so the paws rest on a small dark keyboard just in front of his belly, as if typing. Same colors, size and pixel style",
+        "seed": 7221
+      }
+    },
+    {
+      "id": "wsi_type_front",
+      "raw": "raw/shiba/type_front/",
+      "tool": "animate_image",
+      "pixellabId": "ab3f1b36-1739-4b5a-862c-8c39f2c64118",
+      "costGenerations": 1,
+      "phase": "wall-street-inu",
+      "used": true,
+      "args": {
+        "first_frame": "raw/shiba/seat_front/0.png",
+        "action": "typing quickly, paws tapping alternately, slight head bob, body and chair still; the head and ears keep their exact shape and size",
+        "frame_count": 6,
+        "seed": 7222
+      }
     }
   ],
   "freeEdits": [
