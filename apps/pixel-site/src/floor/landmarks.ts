@@ -15,9 +15,9 @@ export const LANDMARKS: LandmarkDef[] = [
   { id: 'elevator', name: 'GLASS ELEVATOR', at: 100 },
   { id: 'gym', name: 'BASEMENT GYM AND NAP PODS', at: 250 },
   { id: 'helipad', name: 'ROOFTOP HELIPAD', at: 500 },
-  { id: 'statue', name: 'GIANT GOLDEN RAT', at: 1000 },
+  { id: 'statue', name: 'GIANT GOLDEN SHIBA', at: 1000 },
   { id: 'pool', name: 'ROOFTOP POOL PARTY', at: 1500 },
-  { id: 'rocket', name: 'RAT ROCKET LAUNCHPAD', at: 2000 },
+  { id: 'rocket', name: 'INU ROCKET LAUNCHPAD', at: 2000 },
   { id: 'throne', name: 'EVIL THRONE ROOM', at: 3000 },
 ];
 

@@ -169,7 +169,7 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
   if (annex && scene.standing.has('annex')) {
     const g = annexGeometry(annex, stage);
     const t = towerTop(g.fi + g.fp, g.fj + g.fp, g.floors, g.scale);
-    add('annex', 'WALL STREET RATS ANNEX', t.x, t.top - 100 * g.scale);
+    add('annex', 'WALL STREET INU ANNEX', t.x, t.top - 100 * g.scale);
   }
 
   // the basement gym in its pit
@@ -179,14 +179,14 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
     add('gym', named('gym'), c.x, c.y - 50);
   }
 
-  // the big sewer entrance: WALL ST RATS HIRING over its arch (world/sewer.ts draws it at this size)
+  // the big sewer entrance: WALL ST INU HIRING over its arch (world/sewer.ts draws it at this size)
   const way = scene.sewer.find((p) => p.main && p.kind === 'tunnel');
   if (way) {
     const c = cellCentre(way.i0 + way.w / 2 - 0.5, way.j0 + way.h / 2 - 0.5);
     const front = cellToScreen(way.i0 + way.w, way.j0 + way.h);
     const base = Math.min(front.y, c.y + (way.w * 16) / 2);
     const f = frames('sewer_tunnel');
-    const text = 'WALL ST RATS HIRING';
+    const text = 'WALL ST INU HIRING';
     out.push({ key: 'hiring', kind: 'landmark', text, x: c.x, y: base - (f ? f.h * SEWER_TUNNEL_SCALE : 60) - 4, ...signSize(text, 2) });
   }
 
@@ -209,7 +209,7 @@ export function nextFloorWhen(sol: number): string {
 /** Where the company name goes: over the building's back corner, or on tower A's roof once it stands. */
 export function nameSign(o: SignInput): SignSpot {
   const { plan, stage, count } = o;
-  const text = `WALL STREET RATS: ${STAGES[stage]!.name}`;
+  const text = `WALL STREET INU: ${STAGES[stage]!.name}`;
   const ring = plan.rings[stage]!;
   let at = cellToScreen(ring.i0, ring.j0);
   let y = at.y - 70;
@@ -248,7 +248,7 @@ export function planSigns(o: SignInput): SignSpot[] {
   ];
   for (const r of next) {
     const what = r.kind === 'stock' || r.kind === 'open' ? 'DESKS' : ROOM_LOOK[r.kind].label;
-    const when = r.unlockAt !== null ? `${r.unlockAt.toLocaleString('en-US')} RATS` : 'NEXT HIRES';
+    const when = r.unlockAt !== null ? `${r.unlockAt.toLocaleString('en-US')} INUS` : 'NEXT HIRES';
     const c = cellToScreen(r.i0 + r.w / 2, r.j0 + r.h / 2);
     out.push({ key: `lock:${r.id}`, kind: 'lock', text: what, sub: when, x: c.x, y: c.y - 4, ...lockSize(what, when) });
   }

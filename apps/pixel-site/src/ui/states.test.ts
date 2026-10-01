@@ -46,15 +46,15 @@ describe('next-hire ring', () => {
 
 describe('banner', () => {
   const MINT2 = MINT;
-  it('before the bot is live the rats are clocking in; paused is a break; nothing when live', () => {
+  it('before the bot is live the inus are clocking in; paused is a break; nothing when live', () => {
     const pre = bannerText({ bot: { mode: 'dry_run' }, coin: { mint: null } })!;
     const warm = bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 } })!;
     const paused = bannerText({ bot: { mode: 'paused' }, coin: { mint: MINT2 } })!;
     // tools/verify-live.mjs looks for these phrases on the published site
-    expect(pre).toContain('The rats are clocking in...');
+    expect(pre).toContain('The inus are clocking in...');
     expect(pre).toContain('Hiring starts at launch.');
-    expect(warm).toContain('The rats are clocking in...');
-    expect(paused).toContain('The rats are on a break');
+    expect(warm).toContain('The inus are clocking in...');
+    expect(paused).toContain('The inus are on a break');
     expect(bannerText({ bot: { mode: 'live' }, coin: { mint: MINT2 } })).toBeNull();
   });
 
@@ -68,13 +68,13 @@ describe('banner', () => {
     for (const t of texts) expect(t, String(t)).not.toMatch(/dry.?run|kill switch|simulat|claim|\bbot\b|preflight|worker|rehearsal/i);
   });
 
-  it('if practice rats are on screen before the bot is live, it says plainly they are not real money', () => {
+  it('if practice inus are on screen before the bot is live, it says plainly they are not real money', () => {
     expect(bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 }, portfolio: { ratCount: 3 } })).toMatch(/not real money/);
     expect(bannerText({ bot: { mode: 'dry_run' }, coin: { mint: MINT2 }, portfolio: { ratCount: 0 } })).not.toMatch(/real money/);
   });
 });
 
-describe('no rats yet', () => {
+describe('no inus yet', () => {
   it('RATS HIRED does not say "all at work" with nobody hired', () => {
     expect(ratsSub({ ratCount: 0, frozenCount: 0 }, 'live')).toBe('first hire soon');
     expect(ratsSub({ ratCount: 0, frozenCount: 0 }, 'dry_run')).toBe('none yet');
@@ -103,19 +103,19 @@ describe('no rats yet', () => {
     bestPct: '--',
   });
 
-  it('the news ticker never says "0TH RAT" or counts zero rats', () => {
+  it('the news ticker never says "0TH INU" or counts zero inus', () => {
     const zero = headlines(stats(0)).join(' / ');
-    expect(zero).not.toMatch(/\b0 ?(TH|RATS)\b|NOBODY/);
-    expect(zero).toMatch(/FIRST RAT/);
+    expect(zero).not.toMatch(/\b0 ?(TH|INUS|RATS)\b|NOBODY/);
+    expect(zero).toMatch(/FIRST INU/);
     // every stage with 0 rats (the stage goes by SOL claimed, so a stage can come before the first hire)
-    for (let stage = 0; stage < 6; stage++) expect(headlines(stats(0, stage)).join(' / ')).not.toMatch(/\b0 RATS\b|0TH/);
+    for (let stage = 0; stage < 6; stage++) expect(headlines(stats(0, stage)).join(' / ')).not.toMatch(/\b0 (INUS|RATS)\b|0TH/);
   });
 
   it('ordinals are English', () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101, 111, 1234].map(ordinal)).toEqual([
       '1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st', '111th', '1,234th',
     ]);
-    expect(headlines(stats(1)).join(' / ')).toMatch(/ITS 1ST RAT/);
-    expect(headlines(stats(22)).join(' / ')).toMatch(/ITS 22ND RAT/);
+    expect(headlines(stats(1)).join(' / ')).toMatch(/ITS 1ST INU/);
+    expect(headlines(stats(22)).join(' / ')).toMatch(/ITS 22ND INU/);
   });
 });

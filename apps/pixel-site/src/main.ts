@@ -1,4 +1,4 @@
-// WALL STREET RATS pixel site: an idle game at night. The company grows with the SOL claimed, from a garage startup
+// WALL STREET INU pixel site: an idle game at night. The company grows with the SOL claimed, from a garage startup
 // to Wall Street (floor/plan.ts, floor/growth.ts, floor/stage-source.ts), and its rooms, desks and landmarks with the
 // rats hired. Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
@@ -124,7 +124,7 @@ function buildLine(e: GrowthEvent): { tag: string; text: string } {
 }
 
 async function boot(): Promise<Site> {
-  setStatus('WALL STREET RATS: loading the building...');
+  setStatus('WALL STREET INU: loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
@@ -173,7 +173,7 @@ async function boot(): Promise<Site> {
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
   const effects = new Effects();
-  // the Vault: the money pile in the middle of the building shows the Wall Street Rats portfolio (?vault=USD pins a value)
+  // the Vault: the money pile in the middle of the building shows the Wall Street Inu portfolio (?vault=USD pins a value)
   const vault = new VaultView(atlas, world.vault);
   const VAULT_PIN = new URLSearchParams(location.search).get('vault');
   const PNL_PIN = new URLSearchParams(location.search).get('vaultpnl');
@@ -299,17 +299,17 @@ async function boot(): Promise<Site> {
   }
   const landmarkReveal = (id: string): Reveal => {
     const def = LANDMARKS.find((l) => l.id === id)!;
-    return { title: def.name, sub: `${def.at.toLocaleString('en-US')} rats`, kicker: 'UNLOCKED', focus: () => world.landmarkFocus(id) };
+    return { title: def.name, sub: `${def.at.toLocaleString('en-US')} inus`, kicker: 'UNLOCKED', focus: () => world.landmarkFocus(id) };
   };
   const vaultReveal = (stage: number): Reveal => ({
     title: `THE VAULT: ${VAULT_STAGES[stage]!.name}`,
-    sub: `${usd(vault.value)} in the Wall Street Rats portfolio`,
+    sub: `${usd(vault.value)} in the Wall Street Inu portfolio`,
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
   const sewerReveal = (stage: number): Reveal => ({
-    title: `THE SEWER: ${SPAWN_STAGES[stage]!.name}`,
-    sub: `${SPAWN_STAGES[stage]!.min.toLocaleString('en-US')} rats hired`,
+    title: `HIRING ENTRANCE: ${SPAWN_STAGES[stage]!.name}`,
+    sub: `${SPAWN_STAGES[stage]!.min.toLocaleString('en-US')} inus hired`,
     kicker: 'SPAWN UPGRADE',
     focus: () => sewer.focus(),
   });
@@ -781,7 +781,7 @@ async function boot(): Promise<Site> {
       topRats: top?.ratCount ?? 0,
       worstStock: worst?.symbol ?? 'EVERYONE',
       worstPct: worst?.change24hPct != null ? pct(worst.change24hPct) : '--',
-      bestRat: best?.view.name.toUpperCase() ?? 'A RAT',
+      bestRat: best?.view.name.toUpperCase() ?? 'AN INU',
       bestPct: best ? pct(best.view.pnlPct) : '--',
     };
   };
@@ -796,14 +796,14 @@ async function boot(): Promise<Site> {
     if (growth.stage !== newsStage) refreshNews();
   }, 2000);
 
-  // timelapse: replay the company from its first rat to now and record it (one click, a video file for X)
+  // timelapse: replay the company from its first inu to now and record it (one click, a video file for X)
   const caption = new Text({ text: '', style: { fontFamily: 'monospace', fontSize: 26, fontWeight: '700', fill: '#ffd23f', stroke: { color: '#16182c', width: 5 } } });
   caption.position.set(18, 14);
   caption.visible = false;
   app.stage.addChild(caption);
   const recBtn = document.createElement('button');
   recBtn.textContent = 'TIMELAPSE';
-  recBtn.title = 'Record the building growing from its first rat to now, as a video';
+  recBtn.title = 'Record the building growing from its first inu to now, as a video';
   ui.tools.append(recBtn);
   recBtn.onclick = () => void timelapse();
   const timelapse = async (): Promise<void> => {
@@ -834,7 +834,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, false, DEBUG_RATS ? undefined : (liveSol * n) / Math.max(1, live));
       const v = composeView();
       camera.centerOn(v.x, v.y, v.zoom);
-      caption.text = `WALL STREET RATS  ${n.toLocaleString('en-US')} RATS  ${STAGES[growth.stage]!.name}`;
+      caption.text = `WALL STREET INU  ${n.toLocaleString('en-US')} INUS  ${STAGES[growth.stage]!.name}`;
       await wait(k === steps - 1 ? 1800 : 260);
     }
     rec.stop();
@@ -847,7 +847,7 @@ async function boot(): Promise<Site> {
     const blob = new Blob(chunks, { type: mime || 'video/webm' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `wall-street-rats-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    a.download = `wall-street-inu-timelapse.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };
