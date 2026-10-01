@@ -8290,7 +8290,7 @@
   ]
  },
  "meta": {
-  "app": "rat-race pixel-site tools/build_assets.py",
+  "app": "wall-street-inu pixel-site tools/build_shiba.py",
   "image": "rats.png",
   "format": "RGBA8888",
   "size": {
@@ -8340,6 +8340,6 @@
     "loop": false
    }
   },
-  "notes": "Directions: se and ne are drawn; sw and nw are the same frames mirrored (scale.x = -1). rot_<dir> are single standing frames for all 8 directions. type and slump are seated on the rat's own chair, facing screen right; mirror to face left. slump: play once, then loop its last 3 frames."
+  "notes": "Wall Street Inu (Shiba) sprites; keys keep the old rat names. Directions: se and ne are drawn; sw and nw are the same frames mirrored (scale.x = -1). rot_<dir> are single standing frames for all 8 directions. type and slump are seated on the Shiba's own chair, facing screen right; mirror to face left. slump: play once, then loop its last 3 frames."
  }
 }
