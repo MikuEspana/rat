@@ -1,11 +1,11 @@
 {
-  "group_id": "89c3433a-8cab-4b69-8c21-347e7552b685",
+  "group_id": "19d0548e-e9ca-4fd3-9fa8-11001a02eab5",
   "states": [
     {
       "character": {
-        "id": "0cb1be21-e18b-4d27-b862-9c318677cdbf",
+        "id": "4396c2d4-cc2a-45bc-867d-7ce04f1c72f5",
         "name": "Idle",
-        "prompt": "slim tall grey street rat standing upright, no clothes, scruffy grey fur, lighter belly, pink ears, paws, feet and tail",
+        "prompt": "doge meme shiba inu street dog standing upright, no clothes, scruffy golden tan fur, cream belly and cream face mask, side-eye, pointy ears, fluffy curled tail, cream paws and feet",
         "size": {
           "width": 128,
           "height": 128
@@ -13,7 +13,7 @@
         "template_id": "mannequin",
         "directions": 8,
         "view": "low top-down",
-        "created_at": "2026-09-28T15:35:26.463798+00:00"
+        "created_at": "2026-10-01T13:05:06.541251+00:00"
       },
       "folder": "Idle",
       "frames": {
@@ -32,5 +32,5 @@
     }
   ],
   "export_version": "3.1",
-  "export_date": "2026-09-28T16:01:18.361145"
+  "export_date": "2026-10-01T13:09:20.177947"
 }

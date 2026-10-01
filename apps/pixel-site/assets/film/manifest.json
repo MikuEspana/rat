@@ -1,5 +1,5 @@
 {
- "about": "PixelLab gens for the ?film demo (branch film/demo). costGenerations is what PixelLab reported for the call. Image inputs are logged as paths under assets/film/. Look-test budget 30 gens, full film budget 300.",
+ "about": "PixelLab gens for the ?film demo (branch film/demo). costGenerations is what PixelLab reported for the call. Image inputs are logged as paths under assets/film/. Look-test budget 30 gens, full film budget 300. Phase \"inu\": the WALL STREET INU rebrand (branch film/inu) redid every rat piece as the Shiba Inu hero; the rat records it replaced are kept with replacedBy.",
  "generations": [
   {
    "id": "hero_scruffy",
@@ -227,7 +227,8 @@
    "raw": "raw/hero2_suited/",
    "at": "2026-09-28T14:38:00Z",
    "note": "",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "hero2_suited_detail",
@@ -261,7 +262,8 @@
    "raw": "raw/hero2_rot/",
    "at": "2026-09-28T14:39:29Z",
    "note": "on-model hero, 8 rotations from the locked redraw",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "hero2_scruffy",
@@ -276,7 +278,8 @@
    "raw": "raw/hero2_scruffy/",
    "at": "2026-09-28T14:40:13Z",
    "note": "",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "hero2_tumble",
@@ -292,7 +295,8 @@
    "raw": "raw/hero2_tumble/",
    "at": "2026-09-28T14:41:21Z",
    "note": "",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "hero2_tie",
@@ -308,7 +312,8 @@
    "raw": "raw/hero2_tie/",
    "at": "2026-09-28T14:41:31Z",
    "note": "",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "hero2_burst",
@@ -324,7 +329,8 @@
    "raw": "raw/hero2_burst/",
    "at": "2026-09-28T14:43:23Z",
    "note": "",
-   "phase": "looktest"
+   "phase": "looktest",
+   "replacedBy": "inu"
   },
   {
    "id": "manhole_lid2",
@@ -518,7 +524,8 @@
    },
    "raw": "raw/hero_scruffy_rot/",
    "at": "2026-09-28T15:35:26Z",
-   "note": "scruffy rotations for the suit-up spin"
+   "note": "scruffy rotations for the suit-up spin",
+   "replacedBy": "inu"
   },
   {
    "id": "coin",
@@ -609,7 +616,8 @@
    },
    "raw": "raw/hero_look/",
    "at": "2026-09-28T15:37:41Z",
-   "note": ""
+   "note": "",
+   "replacedBy": "inu"
   },
   {
    "id": "hero_type",
@@ -626,7 +634,8 @@
    },
    "raw": "raw/hero_type/",
    "at": "2026-09-28T15:50:18Z",
-   "note": "recovered after a poll timeout (PixelLab queue slow)"
+   "note": "recovered after a poll timeout (PixelLab queue slow)",
+   "replacedBy": "inu"
   },
   {
    "id": "boom_anim",
@@ -677,7 +686,8 @@
    },
    "raw": "raw/hero_crack/",
    "at": "2026-09-28T15:58:45Z",
-   "note": "recovered after a poll timeout (PixelLab queue slow)"
+   "note": "recovered after a poll timeout (PixelLab queue slow)",
+   "replacedBy": "inu"
   },
   {
    "id": "coin_spin",
@@ -729,21 +739,225 @@
    },
    "raw": "raw/hero2_rot/",
    "at": "2026-09-28T16:24:58Z",
-   "note": "template walk east on the on-model suited hero"
+   "note": "template walk east on the on-model suited hero",
+   "replacedBy": "inu"
+  },
+  {
+   "id": "hero2_suited",
+   "phase": "inu",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "4f0e3cf0-04f1-4035-a90a-368a6f67dfc7",
+   "args": {
+    "image_file": "raw/in_game_shiba_s_2x.png",
+    "no_background": true,
+    "description": "redraw this exact character as a detailed high resolution pixel art sprite: the same doge meme shiba inu office worker standing upright in a navy blue business suit, white shirt, blue tie, black shoes, golden tan and cream fur, cream face mask, side-eye, pointy ears, fluffy curled tail, small head, same proportions, same pose, same colors, finer detail in fur, face, lapels and folds, crisp dark navy outline"
+   },
+   "raw": "raw/hero2_suited/",
+   "at": "2026-10-01T13:01:50Z",
+   "note": "from the game character WSI C_doge (PixelLab 0ca6ab26-609a-48e0-8e87-96c679852c13), south rotation scaled 96->128 (raw/in_game_shiba_s_2x.png); the Inu hero everything else derives from"
+  },
+  {
+   "id": "hero2_scruffy_a",
+   "phase": "inu",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "e75ac170-6ab8-48b6-9c78-22bb69cc55fb",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "no_background": true,
+    "description": "the same doge meme shiba inu, same pose, same proportions and head, but with no clothes at all: no suit, no shirt, no tie, no shoes. Bare scruffy messy golden tan fur with dirty smudges, cream belly and cream face mask, side-eye, pointy ears, fluffy curled tail, cream paws and feet, a street dog fresh out of the sewer. Same dark outline"
+   },
+   "raw": "raw/hero2_scruffy_a/",
+   "at": "2026-10-01T13:03:03Z",
+   "note": "first try: the dirt smudges read as leopard spots and the stance drifted from the suited pose; not used"
+  },
+  {
+   "id": "hero2_tie",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "299e7bba-e839-46be-957e-5e6d07167719",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "action": "straightens its tie with both paws, tugs the knot up, chin lifts proudly"
+   },
+   "raw": "raw/hero2_tie/",
+   "at": "2026-10-01T13:04:02Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_scruffy",
+   "phase": "inu",
+   "tool": "edit_image_pixen",
+   "costGenerations": 1,
+   "pixellabId": "f170cf4f-1d09-422e-8d96-cb010c212173",
+   "args": {
+    "image_file": "raw/hero2_suited/0.png",
+    "no_background": true,
+    "seed": 7401,
+    "description": "the same doge meme shiba inu, same pose, same proportions and head, but with no clothes at all: no suit, no shirt, no tie, no shoes. Bare scruffy messy golden tan fur with stray tufts sticking out and two or three small grey dirt smudges, cream belly and cream face mask, side-eye, pointy ears, fluffy curled tail, cream paws and feet, a street dog fresh out of the sewer. Same dark outline"
+   },
+   "raw": "raw/hero2_scruffy/",
+   "at": "2026-10-01T13:04:47Z",
+   "note": "second try (seed 7401), used; renamed from hero2_scruffy_b. film_build softens the grey smudges into darker fur"
+  },
+  {
+   "id": "hero_type",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "e5955d74-f103-4baa-90b7-6123f0e9aa49",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7202,
+    "action": "types fast on a keyboard just in front of its waist, both paws tapping down in turn, head bobbing slightly, body still"
+   },
+   "raw": "raw/hero_type/",
+   "at": "2026-10-01T13:05:41Z",
+   "note": "frames 1-8 floated a keyboard above the head: those pixels were erased from the raw frames"
+  },
+  {
+   "id": "hero2_tumble",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "b324407a-939b-4ffa-a577-2e83b91c2f5b",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "action": "tumbles head over heels through the air, arms and legs flailing, lands flat on its back"
+   },
+   "raw": "raw/hero2_tumble/",
+   "at": "2026-10-01T13:05:51Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_rot",
+   "phase": "inu",
+   "tool": "create_character",
+   "costGenerations": 2,
+   "pixellabId": "07884628-f368-44c8-8a2c-514ab64b70bb",
+   "args": {
+    "description": "doge meme shiba inu office worker, golden tan and cream fur, cream face mask, side-eye, pointy ears, fluffy curled tail, navy blue business suit, white shirt, blue tie, black shoes",
+    "name": "Hero Inu Suited (on-model)",
+    "mode": "v3",
+    "size": 128,
+    "outline": "single color black outline",
+    "detail": "high detail",
+    "reference_image_file": "raw/hero2_suited/0.png"
+   },
+   "raw": "raw/hero2_rot/",
+   "at": "2026-10-01T13:06:12Z",
+   "note": ""
+  },
+  {
+   "id": "hero_crack",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "6fa7abeb-609e-4871-a03a-a6362766ad76",
+   "args": {
+    "first_frame_file": "raw/hero2_suited/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7203,
+    "action": "laces its fingers together, pushes both arms straight out in front and cracks its knuckles, then shakes its paws loose"
+   },
+   "raw": "raw/hero_crack/",
+   "at": "2026-10-01T13:06:47Z",
+   "note": ""
+  },
+  {
+   "id": "hero2_burst",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "aae3a6e3-b516-4f3b-8f0b-ab116a99c04f",
+   "args": {
+    "first_frame_file": "raw/hero2_scruffy/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "action": "bursts upward, throws both arms up high with claws spread wide, mouth opens in a huge excited grin, ears perk up, fur bristles"
+   },
+   "raw": "raw/hero2_burst/",
+   "at": "2026-10-01T13:07:48Z",
+   "note": "film_build drops the green slime it throws and any loose bits"
+  },
+  {
+   "id": "hero_look",
+   "phase": "inu",
+   "tool": "animate_image",
+   "costGenerations": 2,
+   "pixellabId": "843e1161-271a-4f78-9465-f2827ec510aa",
+   "args": {
+    "first_frame_file": "raw/hero2_scruffy/0.png",
+    "frame_count": 8,
+    "no_background": true,
+    "seed": 7201,
+    "action": "looks curiously to the left, then to the right, ears twitching, then back to the front"
+   },
+   "raw": "raw/hero_look/",
+   "at": "2026-10-01T13:07:55Z",
+   "note": "film_build drops the floating annoyance marks above the head"
+  },
+  {
+   "id": "hero_walk",
+   "phase": "inu",
+   "tool": "animate_character",
+   "costGenerations": 1,
+   "pixellabId": "07884628-f368-44c8-8a2c-514ab64b70bb",
+   "args": {
+    "character_id": "07884628-f368-44c8-8a2c-514ab64b70bb",
+    "template_animation_id": "walking-8-frames",
+    "animation_name": "walk",
+    "directions": [
+     "east"
+    ]
+   },
+   "raw": "raw/hero2_rot/",
+   "at": "2026-10-01T13:09:16Z",
+   "note": "template walk east on the on-model suited Inu"
+  },
+  {
+   "id": "hero_scruffy_rot",
+   "phase": "inu",
+   "tool": "create_character",
+   "costGenerations": 2,
+   "pixellabId": "4396c2d4-cc2a-45bc-867d-7ce04f1c72f5",
+   "args": {
+    "description": "doge meme shiba inu street dog standing upright, no clothes, scruffy golden tan fur, cream belly and cream face mask, side-eye, pointy ears, fluffy curled tail, cream paws and feet",
+    "name": "Hero Inu Scruffy (on-model)",
+    "mode": "v3",
+    "size": 128,
+    "outline": "single color black outline",
+    "detail": "high detail",
+    "reference_image_file": "raw/hero2_scruffy/0.png"
+   },
+   "raw": "raw/hero_scruffy_rot/",
+   "at": "2026-10-01T13:09:20Z",
+   "note": ""
   }
  ],
  "totals": {
-  "generations": 58,
-  "calls": 42,
+  "generations": 78,
+  "calls": 54,
   "byPhase": {
    "looktest": 30,
    "detail": 3,
-   "fullBuild": 25
+   "fullBuild": 25,
+   "inu": 20
   },
   "budgets": {
    "looktest": 60,
    "detail": 5,
-   "fullBuild": 150
+   "fullBuild": 150,
+   "inu": 90
   }
  }
 }

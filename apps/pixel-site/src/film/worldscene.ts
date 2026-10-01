@@ -86,7 +86,7 @@ export class WorldScene {
     this.sewer = new SewerView(atlas);
     this.open.visible = false;
     // the counter and the stage banner (captions layer: off with text=0)
-    this.counterLabel = sprite(textTexture(["THE RATS' FUND"], { fill: GOLD }), 0.5, 0.5);
+    this.counterLabel = sprite(textTexture(["THE INUS' FUND"], { fill: GOLD }), 0.5, 0.5);
     this.counter.anchor.set(0.5);
     this.bannerKicker = sprite(textTexture(['STAGE UNLOCKED'], { fill: GOLD, outline: null }), 0.5, 0.5);
     this.bannerTitle.anchor.set(0.5);
@@ -274,10 +274,10 @@ export class WorldScene {
     const stock = rec?.facts.stock ?? 'NVDAx';
     const k = this.view.tall ? 5 : 4;
     const lines: [string, string, number][] = [
-      ['RAT #0427', CREAM, 1.4],
+      ['INU #0427', CREAM, 1.4],
       [`HOLDS ${stock}`, GOLD, 1],
       [`0.0275 SHARES   $5.04`, GREEN, 0.75],
-      ['WALLET 7RAT...0427', '#9aa4cc', 0.75],
+      ['WALLET 7INU...0427', '#9aa4cc', 0.75],
     ];
     const bg = new Sprite(Texture.WHITE);
     const border = new Sprite(Texture.WHITE);

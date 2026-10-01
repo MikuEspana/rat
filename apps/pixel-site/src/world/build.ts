@@ -784,7 +784,7 @@ export function buildWorld(
     addPop, posed, sign: (t, c) => signTexture(t, c, 2), scene,
   });
   landmarkSigns.push(...lm.signs);
-  // WALL ST RATS HIRING over the big sewer entrance, laid out with the landmark names
+  // WALL ST INU HIRING over the big sewer entrance, laid out with the landmark names
   const hiringAt = spotAt.get('hiring');
   if (hiringAt) {
     const s = new Sprite(signTexture(hiringAt.text, 0x43d17a, 2));
@@ -1211,7 +1211,7 @@ function renderCity(
     g.poly([t2.x, t2.y, t1.x, t1.y, up(t1).x, up(t1).y, up(t2).x, up(t2).y]).fill({ color: 0x6a7390, alpha: 0.28 }).stroke({ color: 0xb8c6ee, width: 1, alpha: 0.7 });
     g.poly([up(t0).x, up(t0).y, up(t1).x, up(t1).y, up(t2).x, up(t2).y, up(t3).x, up(t3).y]).fill({ color: 0xaab4cc, alpha: 0.22 }).stroke({ color: 0xd8e2ff, width: 1, alpha: 0.8 });
     if (next) {
-      const s = new Sprite(lockTexture('NEXT FLOOR', `AT ${next.min.toLocaleString('en-US')} RATS`));
+      const s = new Sprite(lockTexture('NEXT FLOOR', `AT ${next.min.toLocaleString('en-US')} INUS`));
       const c = up(P(l.i0 + l.w / 2, l.j0 + l.h / 2));
       s.anchor.set(0.5, 1);
       s.position.set(c.x, c.y - 4);

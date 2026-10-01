@@ -36,11 +36,11 @@ export interface Caption {
 }
 
 export const CAPTIONS: Caption[] = [
-  { b0: 4, b1: 8, wide: 'EVERY FEE HIRES A RAT', tall: ['EVERY FEE', 'HIRES A RAT'], at: 'bottom' },
-  { b0: 16, b1: 20, wide: 'EACH RAT BUYS A STOCK', tall: ['EACH RAT', 'BUYS A STOCK'], at: 'bottom' },
+  { b0: 4, b1: 8, wide: 'EVERY FEE HIRES AN INU', tall: ['EVERY FEE', 'HIRES AN INU'], at: 'bottom' },
+  { b0: 16, b1: 20, wide: 'EACH INU BUYS A STOCK', tall: ['EACH INU', 'BUYS A STOCK'], at: 'bottom' },
   { b0: 32, b1: 36, wide: 'NOBODY EVER SELLS', tall: ['NOBODY', 'EVER SELLS'], at: 'bottom' },
-  { b0: 60, b1: 64, wide: 'EVERY RAT IS ON-CHAIN', tall: ['EVERY RAT', 'IS ON-CHAIN'], at: 'bottom' },
-  { b0: 72, b1: 75, wide: 'EVERY FEE HIRES A RAT', tall: ['EVERY FEE', 'HIRES A RAT'], at: 'top' },
+  { b0: 60, b1: 64, wide: 'EVERY INU IS ON-CHAIN', tall: ['EVERY INU', 'IS ON-CHAIN'], at: 'bottom' },
+  { b0: 72, b1: 75, wide: 'EVERY FEE HIRES AN INU', tall: ['EVERY FEE', 'HIRES AN INU'], at: 'top' },
 ];
 
 export const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);

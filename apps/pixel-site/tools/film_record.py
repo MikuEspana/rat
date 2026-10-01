@@ -15,7 +15,10 @@ Chrome window on the machine's graphics card (much faster than a server's softwa
 import argparse, base64, os, socket, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from playwright.sync_api import sync_playwright
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:  # --help works without it; recording needs it (pip install playwright)
+    sync_playwright = None
 
 URL = os.environ.get('FILM_URL', 'http://localhost:5173/')
 FPS = 60
@@ -195,8 +198,8 @@ def do_pass(out, name):
     with sync_playwright() as pw:
         if name.startswith('film'):
             film = Film(pw, aspect, 'vault')
-            film.record(range(0, film.meta['total']), None, os.path.join(out, f'wall-street-rats_{aspect}.mp4'),
-                        os.path.join(out, 'clean', f'wall-street-rats_{aspect}_notext.mp4'),
+            film.record(range(0, film.meta['total']), None, os.path.join(out, f'wall-street-inu_{aspect}.mp4'),
+                        os.path.join(out, 'clean', f'wall-street-inu_{aspect}_notext.mp4'),
                         stills={fb(73.9): (os.path.join(out, f'end-card_{aspect}.png'), os.path.join(out, 'clean', f'end-card_{aspect}_notext.png'))})
             film.close()
             return
@@ -232,7 +235,7 @@ def joins(out):
     total = fb(76)
     for aspect in ('16x9', '9x16'):
         for kind in ('text', 'notext'):
-            full = os.path.join(out, f'wall-street-rats_{aspect}.mp4') if kind == 'text' else os.path.join(out, 'clean', f'wall-street-rats_{aspect}_notext.mp4')
+            full = os.path.join(out, f'wall-street-inu_{aspect}.mp4') if kind == 'text' else os.path.join(out, 'clean', f'wall-street-inu_{aspect}_notext.mp4')
             for n, sid, b0, b1 in SHOTS:
                 h = H6 if n == 6 else H1
                 pre, post = tmp(out, aspect, f'pre{n}_{kind}.mp4'), tmp(out, aspect, f'post{n}_{kind}.mp4')
@@ -253,13 +256,13 @@ def joins(out):
             n8 = fb(76) - fb(64) + 2 * H1
             ff_join([(pile, 0, n8)], os.path.join(out, 'alt-ending-pile', 'shots', aspect, f'shot8_pile_{kind}.mp4'))
             if kind == 'text':
-                ff_join([(full, 0, fb(64)), (pile, H1, H1 + fb(76) - fb(64))], os.path.join(out, 'alt-ending-pile', f'wall-street-rats_pile_{aspect}.mp4'))
+                ff_join([(full, 0, fb(64)), (pile, H1, H1 + fb(76) - fb(64))], os.path.join(out, 'alt-ending-pile', f'wall-street-inu_pile_{aspect}.mp4'))
             else:
-                ff_join([(full, 0, fb(64)), (pile, H1, H1 + fb(76) - fb(64))], os.path.join(out, 'alt-ending-pile', 'clean', f'wall-street-rats_pile_{aspect}_notext.mp4'))
+                ff_join([(full, 0, fb(64)), (pile, H1, H1 + fb(76) - fb(64))], os.path.join(out, 'alt-ending-pile', 'clean', f'wall-street-inu_pile_{aspect}_notext.mp4'))
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('mode', choices=['all', 'pass', 'shot', 'stills', 'joins'])
     ap.add_argument('out')
     ap.add_argument('name', nargs='?')
@@ -268,6 +271,8 @@ def main():
     ap.add_argument('--text', default='1')
     ap.add_argument('--frames')
     a = ap.parse_args()
+    if sync_playwright is None and a.mode != 'joins':
+        raise SystemExit('needs Python Playwright: pip install playwright imageio-ffmpeg && python -m playwright install chromium')
     if a.mode == 'all':
         procs = [subprocess.Popen([sys.executable, __file__, 'pass', a.out, n]) for n in ('film16', 'film9', 'extras16', 'extras9')]
         codes = [p.wait() for p in procs]

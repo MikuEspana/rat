@@ -17,7 +17,12 @@ FILM = os.path.join(os.path.dirname(HERE), "assets", "film")
 RAW = os.path.join(FILM, "raw")
 MAN = os.path.join(FILM, "manifest.json")
 sys.path.insert(0, HERE)
-from pixellab_mcp import call  # noqa: E402
+from pixellab_mcp import KEY, call  # noqa: E402
+
+
+def authed(url):
+    """PixelLab downloads need the API key and a plain User-Agent (the default urllib one is refused)."""
+    return urllib.request.Request(url, headers={"Authorization": f"Bearer {KEY}", "User-Agent": "curl/8.7.1"})
 
 
 def load():
@@ -37,7 +42,7 @@ def save(man):
     for g in man["generations"]:
         by[g.get("phase", "looktest")] = by.get(g.get("phase", "looktest"), 0) + g["costGenerations"]
     man["totals"] = {"generations": total, "calls": len(man["generations"]), "byPhase": by,
-                     "budgets": {"looktest": 60, "detail": 5, "fullBuild": 150}}
+                     "budgets": {"looktest": 60, "detail": 5, "fullBuild": 150, "inu": 90}}
     with open(MAN, "w") as f:
         json.dump(man, f, indent=1)
         f.write("\n")
@@ -45,8 +50,12 @@ def save(man):
 
 def log(id_, tool, cost, pid, args, raw, note=""):
     man = load()
-    man["generations"] = [g for g in man["generations"] if g["id"] != id_]
-    man["generations"].append({"id": id_, "phase": os.environ.get("FILM_PHASE", "fullBuild"), "tool": tool,
+    phase = os.environ.get("FILM_PHASE", "fullBuild")
+    for g in man["generations"]:  # a redo in a later phase (the Inu rebrand) keeps the old record, marked replaced
+        if g["id"] == id_ and g.get("phase") != phase:
+            g["replacedBy"] = phase
+    man["generations"] = [g for g in man["generations"] if g["id"] != id_ or g.get("phase") != phase]
+    man["generations"].append({"id": id_, "phase": phase, "tool": tool,
                                "costGenerations": cost, "pixellabId": pid, "args": args,
                                "raw": raw, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "note": note})
     save(man)
@@ -103,7 +112,7 @@ def poll(tool, arg, every=8, limit=900):
 
 
 def fetch(url, dest):
-    with urllib.request.urlopen(url, timeout=120) as r:
+    with urllib.request.urlopen(authed(url), timeout=120) as r:
         open(dest, "wb").write(r.read())
 
 
@@ -153,7 +162,7 @@ def download_character(id_, cid):
     data = b""
     for _ in range(90):  # the ZIP answers 423 (or an error JSON) until every job on the character has finished
         try:
-            with urllib.request.urlopen(f"https://api.pixellab.ai/mcp/characters/{cid}/download", timeout=60) as r:
+            with urllib.request.urlopen(authed(f"https://api.pixellab.ai/mcp/characters/{cid}/download"), timeout=60) as r:
                 data = r.read()
         except urllib.error.HTTPError as e:
             if e.code != 423:

@@ -1,11 +1,11 @@
 {
-  "group_id": "f673f05b-3098-4b2f-9f30-49079f3d7e53",
+  "group_id": "aa1a084b-4989-4aed-a365-8b2737c90898",
   "states": [
     {
       "character": {
-        "id": "ec30f611-e342-44f4-846e-79e6e4353853",
+        "id": "07884628-f368-44c8-8a2c-514ab64b70bb",
         "name": "Idle",
-        "prompt": "slim tall grey rat in a navy blue business suit, white shirt, red tie, black shoes, pink ears and pink tail",
+        "prompt": "doge meme shiba inu office worker, golden tan and cream fur, cream face mask, side-eye, pointy ears, fluffy curled tail, navy blue business suit, white shirt, blue tie, black shoes",
         "size": {
           "width": 128,
           "height": 128
@@ -13,7 +13,7 @@
         "template_id": "mannequin",
         "directions": 8,
         "view": "low top-down",
-        "created_at": "2026-09-28T14:39:29.332007+00:00"
+        "created_at": "2026-10-01T13:02:22.777004+00:00"
       },
       "folder": "Idle",
       "frames": {
@@ -45,5 +45,5 @@
     }
   ],
   "export_version": "3.1",
-  "export_date": "2026-09-28T16:29:47.938098"
+  "export_date": "2026-10-01T13:09:16.324625"
 }

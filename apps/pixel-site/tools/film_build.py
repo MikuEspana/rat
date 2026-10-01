@@ -127,31 +127,111 @@ def street():
 # ---------------------------------------------------------------- hero frames and recolours
 DIRS = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west']
 TIERS = {'navy': None, 'green': (140, 0.8, 0.8), 'crimson': (352, 1.1, 1.1), 'brown': (32, 0.55, 0.75), 'black': (230, 0.3, 0.35)}
-FURS = {'grey': None, 'brown': ((150, 110, 80), 0.55), 'white': ((235, 230, 220), 0.5), 'dark': ((70, 70, 80), 0.55)}
-TEAM = [('green', 'brown'), ('crimson', 'grey'), ('brown', 'white'), ('black', 'grey'), ('navy', 'dark'), ('green', 'white'),
-        ('crimson', 'dark'), ('brown', 'grey'), ('black', 'brown'), ('navy', 'white'), ('green', 'grey'), ('crimson', 'brown')]
+# shiba coats: the hero is the red (golden tan) one; the cream mask and belly stay as they are
+FURS = {'gold': None, 'sesame': (150, 98, 56), 'cream': (236, 214, 172), 'black': (58, 48, 50)}
+TEAM = [('green', 'sesame'), ('crimson', 'gold'), ('brown', 'cream'), ('black', 'gold'), ('navy', 'black'), ('green', 'cream'),
+        ('crimson', 'black'), ('brown', 'gold'), ('black', 'sesame'), ('navy', 'cream'), ('green', 'gold'), ('crimson', 'sesame')]
+
+
+def _hsv(a):
+    r, g, b = a[:, :, 0] / 255, a[:, :, 1] / 255, a[:, :, 2] / 255
+    mx, mn = np.maximum(np.maximum(r, g), b), np.minimum(np.minimum(r, g), b)
+    d = np.where(mx - mn == 0, 1, mx - mn)
+    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) / 6
+    h = np.where(mx - mn == 0, 0, h)
+    s = np.where(mx == 0, 0, (mx - mn) / np.where(mx == 0, 1, mx))
+    return h, s, mx
 
 
 def recolour(im, tier, fur):
-    if TIERS[tier]:
-        im = L.recolor_suit(im, *TIERS[tier])
-    if FURS[fur]:
-        im = L.tint_fur(im, *FURS[fur])
-    return im
+    a = np.array(im.convert('RGBA')).astype(float)
+    h, s, v = _hsv(a)
+    on = a[:, :, 3] > 0
+    if TIERS[tier]:  # the navy suit only (dark blues); the bright blue tie keeps its colour
+        hue, sm, vm = TIERS[tier]
+        suit = on & (h > 0.55) & (h < 0.72) & (s > 0.35) & (v < 0.45)
+        import colorsys
+        for y, x in zip(*np.nonzero(suit)):
+            nr, ng, nb = colorsys.hsv_to_rgb(hue / 360, min(1, s[y, x] * sm), min(1, v[y, x] * vm))
+            a[y, x, :3] = (nr * 255, ng * 255, nb * 255)
+    if FURS[fur]:  # the golden tan coat (oranges), keeping its light and shade
+        coat = on & (h > 0.04) & (h < 0.14) & (s > 0.5)
+        k = (v / 0.87)[:, :, None]
+        a[:, :, :3] = np.where(coat[:, :, None], np.clip(np.array(FURS[fur]) * k, 0, 255), a[:, :, :3])
+    return Image.fromarray(a.astype(np.uint8))
+
+
+def body_only(im, keep=0.25):
+    """Drop loose bits PixelLab floats around a pose (sweat marks, a stray keyboard, slime): keeps the big pieces."""
+    a = np.array(im.convert('RGBA'))
+    on = a[:, :, 3] > 0
+    h, w = on.shape
+    lab = np.zeros((h, w), int)
+    sizes = [0]
+    for y0 in range(h):
+        for x0 in range(w):
+            if on[y0, x0] and not lab[y0, x0]:
+                n = len(sizes)
+                lab[y0, x0] = n
+                stack, c = [(y0, x0)], 0
+                while stack:
+                    y, x = stack.pop()
+                    c += 1
+                    for dy in (-1, 0, 1):
+                        for dx in (-1, 0, 1):
+                            yy, xx = y + dy, x + dx
+                            if 0 <= yy < h and 0 <= xx < w and on[yy, xx] and not lab[yy, xx]:
+                                lab[yy, xx] = n
+                                stack.append((yy, xx))
+                sizes.append(c)
+    big = max(sizes)
+    for n, c in enumerate(sizes):
+        if n and c < big * keep:
+            a[lab == n] = 0
+    return Image.fromarray(a)
+
+
+def no_slime(im):
+    """The burst throws green sewer slime from its paws; the Inu has no green, so the slime goes."""
+    a = np.array(im.convert('RGBA'))
+    h_, s_, v_ = _hsv(a.astype(float))
+    a[(h_ > 0.2) & (h_ < 0.5) & (s_ > 0.12) & (v_ > 0.25)] = 0
+    return Image.fromarray(a)
+
+
+def soften_smudges(im):
+    """The scruffy Inu's grey dirt spots read as leopard spots at 8x: turn them into darker fur of their surroundings."""
+    a = np.array(im.convert('RGBA')).astype(float)
+    h_, s_, v_ = _hsv(a)
+    smudge = (a[:, :, 3] > 0) & (s_ > 0.25) & (s_ < 0.55) & (v_ > 0.4) & (v_ < 0.72) & (h_ > 0.04) & (h_ < 0.16)
+    out = a.copy()
+    H, W = smudge.shape
+    for y, x in zip(*np.nonzero(smudge)):
+        y0, y1, x0, x1 = max(0, y - 3), min(H, y + 4), max(0, x - 3), min(W, x + 4)
+        m = (~smudge[y0:y1, x0:x1]) & (a[y0:y1, x0:x1, 3] > 0) & (v_[y0:y1, x0:x1] > 0.6)
+        if m.any():
+            out[y, x, :3] = np.median(a[y0:y1, x0:x1, :3][m], axis=0) * 0.88
+    return Image.fromarray(out.astype(np.uint8))
 
 
 def hero():
-    save('scruffy_s', load('hero2_scruffy/0.png'))
+    save('scruffy_s', soften_smudges(load('hero2_scruffy/0.png')))
     save('suited_s', load('hero2_suited/0.png'))
-    frames('burst', [f'hero2_burst/{i}.png' for i in range(9)])
-    frames('look', [f'hero_look/{i}.png' for i in range(9)])
+    burst = [body_only(no_slime(soften_smudges(load(f'hero2_burst/{i}.png')))) for i in range(9)]
+    for i, im in enumerate(burst):
+        save(f'burst_{i}', im)
+    META['burst'] = 9
+    look = [body_only(soften_smudges(load(f'hero_look/{i}.png'))) for i in range(9)]
+    for i, im in enumerate(look):
+        save(f'look_{i}', im)
+    META['look'] = 9
     frames('tie', [f'hero2_tie/{i}.png' for i in range(9)])
     frames('tumble', [f'hero2_tumble/{i}.png' for i in range(9)])
     frames('type', [f'hero_type/{i}.png' for i in range(9)])
     frames('crack', [f'hero_crack/{i}.png' for i in range(9)])
     for k, d in enumerate(DIRS):
         save(f'rot_suited_{k}', load(f'hero2_rot/Idle/rotations/{d}.png'))
-        save(f'rot_scruffy_{k}', load(f'hero_scruffy_rot/Idle/rotations/{d}.png'))
+        save(f'rot_scruffy_{k}', soften_smudges(load(f'hero_scruffy_rot/Idle/rotations/{d}.png')))
     wd = os.path.join(RAW, 'hero2_rot', 'Idle', 'animations', 'walk', 'east')
     walk = sorted(os.listdir(wd)) if os.path.isdir(wd) else ['0.png'] * 8
     frames('walk_e', [f'hero2_rot/Idle/animations/walk/east/{f}' for f in walk])
@@ -289,8 +369,8 @@ def vault_end():
     save('front_plate', front)
     # the door's hub on the sprite (400 x 300 canvas): x 200, y 124
     META['front'] = {'w': FW, 'h': FH, 'door': [ox + 200 - bb[0], oy + 124 - bb[1]], 'floor': FLOOR, 'cashRight': [ox + vf.width - 34, FLOOR - 64], 'top': oy}
-    for name, lines, scale, depth in (('logo_door', ['WALL STREET', 'RATS'], 2, 3), ('logo_line', ['WALL STREET RATS'], 5, 7),
-                                      ('logo_two', ['WALL STREET', 'RATS'], 4, 6)):
+    for name, lines, scale, depth in (('logo_door', ['WALL STREET', 'INU'], 2, 3), ('logo_line', ['WALL STREET INU'], 5, 7),
+                                      ('logo_two', ['WALL STREET', 'INU'], 4, 6)):
         parts = [L.gold_letters(s, scale if k == 0 else scale + 1, depth) for k, s in enumerate(lines)]
         w = max(p.width for p in parts)
         h = sum(p.height for p in parts) + 2 * (len(parts) - 1)
