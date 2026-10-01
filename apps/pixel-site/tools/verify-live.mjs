@@ -3,7 +3,7 @@
 // 1. waits until the published bundle is the one built against SITE_API_BASE (Pages can take a few minutes)
 // 2. the API answers /api/state and allows the site's origin (CORS)
 // 3. in Chromium, desktop and phone: no console errors, no simulator, the banner the API's mode calls for (DRY RUN /
-//    PAUSED / none), RATS HIRED equals the API's rat count, and "pre-launch" while there is no coin yet
+//    PAUSED / none), INUS HIRED equals the API's rat count, and "pre-launch" while there is no coin yet
 // Exit code 1 on any failure. Reads only public data.
 const SITE = (process.env.SITE_URL ?? 'https://wallstreetinu.world/').replace(/\/?$/, '/');
 const API = (process.env.SITE_API_BASE ?? '').replace(/\/$/, '');
@@ -56,7 +56,7 @@ if (state) {
     await page.waitForTimeout(10_000);
     const text = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
     // the public banner (apps/pixel-site/src/ui/format.ts bannerText): plain words for buyers
-    const banner = { dry_run: 'The rats are clocking in', paused: 'The rats are on a break', live: null }[state.bot.mode];
+    const banner = { dry_run: 'The inus are clocking in', paused: 'The inus are on a break', live: null }[state.bot.mode];
     // layout: nothing in the HUD runs off the screen, and the leaderboard never sits on the feed's rows
     const layout = await page.evaluate(() => {
       const box = (sel) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
@@ -75,8 +75,8 @@ if (state) {
       [errors.length === 0, `no console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`],
       [!/Waiting for the API|Connecting to the trading floor|Reconnecting to the trading floor/.test(text), 'the page reached the API'],
       [!/SIMULATION/.test(text), 'no simulator'],
-      [banner ? text.includes(banner) : !/The rats are clocking in|The rats are on a break/.test(text), banner ? `the "${banner}" banner is shown` : 'no clocking-in or break banner (live)'],
-      [new RegExp(`RATS HIRED ${state.portfolio.ratCount.toLocaleString('en-US')}\\b`).test(text), `RATS HIRED ${state.portfolio.ratCount}`],
+      [banner ? text.includes(banner) : !/The inus are clocking in|The inus are on a break/.test(text), banner ? `the "${banner}" banner is shown` : 'no clocking-in or break banner (live)'],
+      [new RegExp(`INUS HIRED ${state.portfolio.ratCount.toLocaleString('en-US')}\\b`).test(text), `INUS HIRED ${state.portfolio.ratCount}`],
       [state.coin.mint ? true : /pre-launch/.test(text), state.coin.mint ? 'coin launched' : 'market cap says pre-launch'],
       [layout.off === 0, `nothing in the HUD is off the screen${layout.off ? ` (${layout.off} elements are)` : ''}`],
       [!layout.overlap, 'the leaderboard does not cover the live feed'],
