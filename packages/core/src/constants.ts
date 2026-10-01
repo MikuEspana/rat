@@ -12,7 +12,7 @@ export const LIVE_CONFIRM_PHRASE = 'I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
  * The real launch's creator wallet. STAGING mode refuses it everywhere (config, database, seed), so no test-only
  * feature can ever run next to it. If the production creator ever changes, change it here too.
  */
-export const PRODUCTION_CREATOR_PUBKEY = '4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot';
+export const PRODUCTION_CREATOR_PUBKEY = '6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB';
 /** `rat staging-seed` limits, hard-coded so no setting can raise them: per call, and in total per database. */
 export const STAGING_SEED_MAX_LAMPORTS = 500_000_000n;
 export const STAGING_SEED_TOTAL_MAX_LAMPORTS = 1_000_000_000n;

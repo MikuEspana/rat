@@ -10,7 +10,7 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 FAILS=0
 check() { if eval "$2"; then echo "  ok   $1"; else echo "  FAIL $1"; FAILS=$((FAILS + 1)); fi; }
-CREATOR=4VYWcTTDYyMVic58AcUC7Nodt6vNQwjKhA9UphaAKiot
+CREATOR=6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB
 PHRASE=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
 mkdir -p "$W/bin" "$W/fake" "$W/home/rat-secrets"
 now_ms() { date +%s%3N; }
