@@ -1,11 +1,11 @@
 // The published site against the production API, in a real browser (the pages workflow's verify job).
-//   SITE_URL=https://wallstreetinu.world/ SITE_API_BASE=https://....up.railway.app node apps/pixel-site/tools/verify-live.mjs
+//   SITE_URL=https://theinuvestors.world/ SITE_API_BASE=https://....up.railway.app node apps/pixel-site/tools/verify-live.mjs
 // 1. waits until the published bundle is the one built against SITE_API_BASE (Pages can take a few minutes)
 // 2. the API answers /api/state and allows the site's origin (CORS)
 // 3. in Chromium, desktop and phone: no console errors, no simulator, the banner the API's mode calls for (DRY RUN /
 //    PAUSED / none), INUS HIRED equals the API's rat count, and "pre-launch" while there is no coin yet
 // Exit code 1 on any failure. Reads only public data.
-const SITE = (process.env.SITE_URL ?? 'https://wallstreetinu.world/').replace(/\/?$/, '/');
+const SITE = (process.env.SITE_URL ?? 'https://theinuvestors.world/').replace(/\/?$/, '/');
 const API = (process.env.SITE_API_BASE ?? '').replace(/\/$/, '');
 if (!API) {
   console.error('SITE_API_BASE is not set');

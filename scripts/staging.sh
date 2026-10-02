@@ -26,7 +26,7 @@ cd "$(dirname "$0")/.."
 APP_DIR=$PWD
 RESULTS="$SECRETS/rehearsal-results.env"
 REPORT="$APP_DIR/rehearsal-report.md"
-SITE="https://wallstreetinu.world"
+SITE="https://theinuvestors.world"
 # The fast rehearsal (scripts/staging-local.sh start): the worker, API and site run on this Mac, so a settings change
 # is a restart in seconds instead of a Railway build, and rat commands run here (scripts/rat-local.sh). Every gate,
 # check and audit is the same.

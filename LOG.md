@@ -696,3 +696,4 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 
 ## Rebrand: The Inuvestors, ticker INUVESTOR (owner decision, 2026-10-02)
 - Name change only: "Wall Street Inu" / WSI becomes "The Inuvestors" / INUVESTOR everywhere a viewer reads it (site header, title and share tags, signs, simulator, news ticker, API coin symbol, Telegram alert prefix, admin page, CLI, launch.sh prompt). Art unchanged except the sign on the share image (public/og.png), repainted to read THE INUVESTORS. Domain stays wallstreetinu.world until the new one is ready.
+- Same day: the site moves to **theinuvestors.world** (CNAME in pages.yml, canonical and share tags, scripts) and the production creator becomes **E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq** (PRODUCTION_CREATOR_PUBKEY and the script guards). The key goes in through the hidden-prompt import, as with the previous switch.

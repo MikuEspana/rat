@@ -60,7 +60,7 @@ describe('format', () => {
     const html = readFileSync(join(root, 'index.html'), 'utf8');
     expect(html).toContain('<title>THE INUVESTORS</title>');
     expect(html).toContain('<meta property="og:title" content="THE INUVESTORS" />');
-    expect(html).toContain('<meta property="og:url" content="https://wallstreetinu.world/" />');
+    expect(html).toContain('<meta property="og:url" content="https://theinuvestors.world/" />');
   });
 
   it('announces every stage in the feed; the last one reads as a place (the company made it to Wall Street)', () => {
