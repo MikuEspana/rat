@@ -76,7 +76,7 @@ describe('rat preflight', () => {
     expect(byCheck(lines, 'caps')?.detail).toMatch(/hires 60 SOL\/h, .* max 20 hires per loop/);
     expect(byCheck(lines, 'mode')?.detail).toMatch(/DRY RUN/);
     const out: string[] = [];
-    expect(printPreflight(lines, (l) => out.push(l), 'WALL STREET INU preflight')).toBe(true);
+    expect(printPreflight(lines, (l) => out.push(l), 'THE INUVESTORS preflight')).toBe(true);
     expect(out.at(-1)).toMatch(/^READY: /);
     expect(out.some((l) => /^PASS  rpc +slot/.test(l))).toBe(true);
   });

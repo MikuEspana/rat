@@ -1,5 +1,5 @@
 #!/bin/bash
-# WALL STREET INU: the whole backend setup on a Mac, in one command. DRY RUN only: nothing here can send a
+# THE INUVESTORS: the whole backend setup on a Mac, in one command. DRY RUN only: nothing here can send a
 # mainnet transaction. Safe to re-run: every step checks what is already done and skips it.
 #
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-mac.sh)"
@@ -297,7 +297,7 @@ case "$PROFILE" in
   *) die "unknown profile $PROFILE" ;;
 esac
 
-printf '%s\n' "${B}WALL STREET INU setup${N}  (DRY RUN only. Nothing here can send a mainnet transaction.)"
+printf '%s\n' "${B}THE INUVESTORS setup${N}  (DRY RUN only. Nothing here can send a mainnet transaction.)"
 say "Secrets are only typed into hidden prompts. Never paste a seed phrase anywhere."
 
 # ---------------------------------------------------------------- 1. tools --------------------------------------------
@@ -713,7 +713,7 @@ gen ADMIN_PASSWORD.txt "openssl rand -base64 30 | tr -d '/+=\n' | cut -c1-28"
 gen RAT_API_DB_PASSWORD.txt 'openssl rand -hex 32'
 AGE_PUB=$(age-keygen -y "$SECRETS/rat-backup.key")
 cat >"$SECRETS/README.txt" <<EOF
-WALL STREET INU secrets. Put every file here in your password manager, then keep this folder or delete it.
+THE INUVESTORS secrets. Put every file here in your password manager, then keep this folder or delete it.
 
 rat-backup.key            age PRIVATE key. The only way to read the nightly backups. Its public key is on Railway.
 KEY_ENCRYPTION_KEY.txt    master key: encrypts every wallet key in the database. Lose it and the rat wallets are lost.

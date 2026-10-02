@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "WALL STREET INU pixel site: isometric PixiJS office floor fed by the public API (CONTRACT.md).",
+  "description": "THE INUVESTORS pixel site: isometric PixiJS office floor fed by the public API (CONTRACT.md).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

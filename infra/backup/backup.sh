@@ -48,7 +48,7 @@ finish() {
   rc=$?
   rm -rf "$WORK"
   if [ "$rc" -ne 0 ]; then
-    msg="[WSI !!! critical] backup_failed: the nightly database backup failed at step '$STEP'. No new offsite copy until it is fixed. Check the backup service logs on Railway."
+    msg="[INUVESTOR !!! critical] backup_failed: the nightly database backup failed at step '$STEP'. No new offsite copy until it is fixed. Check the backup service logs on Railway."
     [ -n "$DETAIL" ] && msg="$msg Detail: $DETAIL"
     echo "backup: FAILED at step '$STEP'${DETAIL:+: $DETAIL}" >&2
     alert "$msg" || true

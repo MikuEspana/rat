@@ -1,4 +1,4 @@
-# WALL STREET INU ($WSI)
+# THE INUVESTORS ($INUVESTOR)
 
 > The rat always loses. The fund always wins.
 

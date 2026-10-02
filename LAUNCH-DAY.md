@@ -36,7 +36,7 @@ Every `rat ...` command below runs inside Railway: type it as `scripts/rat.sh ..
 - [ ] Fund the creator wallet with about **0.35 SOL**: 0.1 dev buy + launch cost + 0.05 reserve + 0.15 for 5 founding rats + spare. It is the bot's only wallet besides the rats'.
 - [ ] From `~/wallstreetrats`, start **`scripts/launch.sh` BEFORE the coin exists.** It checks this is the production bot, in DRY RUN, the creator wallet's balance, and the preflight (read-only). Only the coin's own lines may FAIL yet.
 - [ ] **Type GO to arm.** The bot restarts LIVE with its kill switch ON ("armed"): it sends nothing and waits 30 minutes for your coin. The founding rats are booked. It prints **ARMED**.
-- [ ] Now launch on pump.fun from the creator wallet: name Wall Street Inu, ticker WSI, **normal mode, no holder rewards, no fee sharing, no cashback**, dev buy **0.1 SOL** inside the launch.
+- [ ] Now launch on pump.fun from the creator wallet: name The Inuvestors, ticker INUVESTOR, **normal mode, no holder rewards, no fee sharing, no cashback**, dev buy **0.1 SOL** inside the launch.
 - [ ] The dev-buy coins stay in the creator wallet **forever**. Never sell or move them (anything signed by the creator wallet stops the bot). They are never counted as fees and the bot can never move them. Your own trading: your separate wallet only.
 - [ ] **Paste the CA** pump.fun shows (or just press Enter once Solscan shows the launch). The script finds the launch on chain; if it is not the CA you pasted, it asks.
 - [ ] It registers the coin: the site shows the CA, the kill switch is released, fee claims start and the founding rats walk in within about 30 s. No build in between.

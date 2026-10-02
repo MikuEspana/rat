@@ -157,7 +157,7 @@ export class StateService {
       },
       coin: {
         mint: this.cfg.coinMint ?? announced,
-        symbol: 'WSI',
+        symbol: 'INUVESTOR',
         priceUsd: this.cfg.coinMint ? coinPrice : null,
         supply: coinInfo ? rawToDecimalString(BigInt(coinInfo.supplyRaw), coinInfo.decimals) : null,
         marketCapUsd: this.cfg.coinMint && coinPrice !== null && supplyUi !== null ? Math.round(coinPrice * supplyUi) : null,

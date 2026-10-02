@@ -111,7 +111,7 @@ signature_before_floor() { # the creator's newest transaction before the watch f
 }
 tell_launch() {
   say "Now create the coin on pump.fun, in Phantom, with the CREATOR wallet $creator (within 30 minutes):"
-  say "1. pump.fun > Create coin: name Wall Street Inu, ticker WSI. Normal mode: no holder rewards, no fee sharing, no cashback."
+  say "1. pump.fun > Create coin: name The Inuvestors, ticker INUVESTOR. Normal mode: no holder rewards, no fee sharing, no cashback."
   say "2. Dev buy 0.1 SOL, inside the launch. The dev-buy coins stay in the creator wallet forever."
   say "3. After this, never sign anything else with the creator wallet: the bot treats it as a leaked key."
 }
