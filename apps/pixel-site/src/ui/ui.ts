@@ -228,7 +228,7 @@ export class Ui {
       });
     };
     this.ca.append(this.caAddr, this.caCopy);
-    title.append(el('div', 'brand', 'WALL STREET INU'), el('div', 'tagline', 'The dog always fetches. The fund keeps the ball.'), this.ca, this.stageChip, this.tools);
+    title.append(el('div', 'brand', 'THE INUVESTORS'), el('div', 'tagline', 'The dog always fetches. The fund keeps the ball.'), this.ca, this.stageChip, this.tools);
     const grid = el('div', 'stats');
     for (const [key, label] of [
       ['mcap', 'Market cap'],
@@ -576,7 +576,7 @@ export class Ui {
   }
 
   // ------------------------------------------------------------------ the Vault
-  /** The Vault's panel: the Wall Street Inu portfolio in total and by stock, and the wallets of the rats that hold it. */
+  /** The Vault's panel: the Inuvestors portfolio in total and by stock, and the wallets of the rats that hold it. */
   openVault(): void {
     this.vaultCard.hidden = false;
     this.renderVault();
@@ -595,7 +595,7 @@ export class Ui {
     close.onclick = () => this.closeVault();
     const head = el('div', 'card-head');
     const who = el('div', 'card-who');
-    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Wall Street Inu portfolio'));
+    who.append(el('div', 'card-name', 'THE VAULT'), el('div', 'vault-sub', 'the Inuvestors portfolio'));
     head.append(who, close);
     const total = el('div', 'vault-total', usd(p.valueUsd));
     const line = el('div', `vault-pnl ${signClass(p.pnlPct)}`, `${pct(p.pnlPct)}  ${usd(p.pnlUsd)} on ${usd(p.costUsd)} paid`);

@@ -16,7 +16,7 @@ cd "$(dirname "$0")/.." || exit 1
 . scripts/lib/launch.sh
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
-PRODUCTION_CREATOR="6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB"
+PRODUCTION_CREATOR="E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq"
 STATUS_URL="${WSR_STATUS_URL:-https://status.railway.com/summary.json}"
 # a worker loop older than this is not running (the admin watchdog uses the same 3 minutes, apps/admin/src/watchdog.ts).
 # The coin check runs every 10 minutes (apps/worker/src/worker.ts), so it gets twice that.

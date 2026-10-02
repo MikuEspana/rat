@@ -8,7 +8,7 @@ const jup = (price: number | null): FetchLike => async (url) =>
     ? { ok: price !== null, json: async () => (price === null ? {} : { [MINT]: { usdPrice: price } }) }
     : { ok: true, json: async () => [{ priceUsd: '0.0000050', marketCap: 5000 }] };
 const state = (mint: string | null, marketCapUsd: number | null): StateResponse =>
-  ({ coin: { mint, symbol: 'WSI', priceUsd: marketCapUsd === null ? null : 0.000004, supply: null, marketCapUsd } }) as unknown as StateResponse;
+  ({ coin: { mint, symbol: 'INUVESTOR', priceUsd: marketCapUsd === null ? null : 0.000004, supply: null, marketCapUsd } }) as unknown as StateResponse;
 
 /** A fetch whose feeds can be switched on and off; counts calls per feed. */
 interface Feeds {

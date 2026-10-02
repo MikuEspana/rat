@@ -1,5 +1,5 @@
 #!/usr/bin/env -S npx tsx
-// WALL STREET INU operator CLI. Every command reads config from the environment (see .env.example).
+// THE INUVESTORS operator CLI. Every command reads config from the environment (see .env.example).
 import { readFileSync } from 'node:fs';
 import { RpcChainReader, RpcTxSender, createConnection } from '@rat/chain';
 import { type AppConfig, NATIVE_SOL_MINT, createLogger, loadConfig, requireConfig, systemClock } from '@rat/core';
@@ -50,7 +50,7 @@ async function readStdin(): Promise<string> {
   return readFileSync(0, 'utf8');
 }
 
-const program = new Command().name('rat').description('WALL STREET INU operator CLI');
+const program = new Command().name('rat').description('THE INUVESTORS operator CLI');
 
 program
   .command('status')
@@ -149,7 +149,7 @@ program
       const log = createLogger({ level: cfg.logLevel });
       const sinks = [logSink(log)];
       if (cfg.telegram.botToken && cfg.telegram.chatId) sinks.push(telegramSink({ botToken: cfg.telegram.botToken, chatId: cfg.telegram.chatId, log, staging: cfg.staging }));
-      await new ThrottledAlerts(fanOut(...sinks), ctx.clock, 0).send('info', 'alert_test', 'test alert from the WALL STREET INU CLI');
+      await new ThrottledAlerts(fanOut(...sinks), ctx.clock, 0).send('info', 'alert_test', 'test alert from the THE INUVESTORS CLI');
       ctx.out(cfg.telegram.botToken ? 'sent to Telegram and the log' : 'TELEGRAM_BOT_TOKEN not set: logged only');
     }),
   );
@@ -291,7 +291,7 @@ program
       );
       const ready = !lines.some((l) => l.status === 'FAIL');
       if (o.json) out(JSON.stringify({ ready, lines }));
-      else printPreflight(lines, out, `WALL STREET INU preflight (${cfg.dryRun ? 'DRY RUN' : 'LIVE'}${o.live ? ', checking for a live start' : ''})`);
+      else printPreflight(lines, out, `THE INUVESTORS preflight (${cfg.dryRun ? 'DRY RUN' : 'LIVE'}${o.live ? ', checking for a live start' : ''})`);
       if (!ready) process.exitCode = 1;
     } finally {
       await handle?.close();

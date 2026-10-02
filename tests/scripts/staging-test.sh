@@ -118,7 +118,7 @@ echo '{"id":"proj-production","name":"wall-street-rats"}' >"$W/fake/linked"
 run "" check; rc=$?
 check "linked to production: refused" '[ $rc = 1 ] && grep -q "PRODUCTION project" "$W/out.txt"'
 reset
-printf '{"CREATOR_PUBKEY":"6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB","STAGING":"true","KEY_ENCRYPTION_KEY":"x"}\n' >"$W/fake/worker.json"
+printf '{"CREATOR_PUBKEY":"E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq","STAGING":"true","KEY_ENCRYPTION_KEY":"x"}\n' >"$W/fake/worker.json"
 run "" check; rc=$?
 check "the production creator: refused" '[ $rc = 1 ] && grep -q "must be the test creator" "$W/out.txt"'
 reset

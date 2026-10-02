@@ -117,7 +117,7 @@ export class SimPanel {
     });
     const speedLabel = el('div', 'sim-label', 'Speed');
     box.append(
-      el('div', 'sim-kicker', 'WALL STREET INU LAUNCH SIMULATOR'),
+      el('div', 'sim-kicker', 'THE INUVESTORS LAUNCH SIMULATOR'),
       el('div', 'sim-lede', 'Watch a whole launch in minutes: the coin goes live, fees come in, every fee hires a Shiba Inu that buys and holds a stock, and the portfolio and the company grow.'),
       el('div', 'sim-label', 'Scenario'),
       pick,
@@ -171,7 +171,7 @@ export class SimPanel {
     const launch = !sim.isLaunched;
     if (launch) {
       sim.launch();
-      this.d.ui.pushLocal([{ tag: 'LAUNCH', text: `WSI is live on pump.fun (simulated, ${SCENARIOS[this.scenarioId()].label} scenario). Creator fees start flowing.` }]);
+      this.d.ui.pushLocal([{ tag: 'LAUNCH', text: `INUVESTOR is live on pump.fun (simulated, ${SCENARIOS[this.scenarioId()].label} scenario). Creator fees start flowing.` }]);
     }
     this.intro.hidden = true;
     this.panel.hidden = false;

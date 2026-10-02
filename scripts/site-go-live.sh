@@ -1,7 +1,7 @@
 #!/bin/bash
 # The production site go-live check, before launch. Run it from ~/wallstreetrats:
 #   scripts/site-go-live.sh
-# 1. The production API answers and lets https://wallstreetinu.world read it (CORS).
+# 1. The production API answers and lets https://theinuvestors.world read it (CORS).
 # 2. The published site is built against that API. If it is still the simulator demo, it shows the two clicks that
 #    switch it (GitHub: the SITE_API_BASE variable, then the pages workflow), waits for the new site, and the
 #    workflow's verify job checks it in a real browser (apps/pixel-site/tools/verify-live.mjs).
@@ -11,7 +11,7 @@
 # is read. Nothing is sent on chain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-SITE="https://wallstreetinu.world"
+SITE="https://theinuvestors.world"
 REPO_WEB="https://github.com/MikuEspana/rat"
 STATE="${WSR_SECRETS:-$HOME/rat-secrets}/setup-state.env"
 if [ -t 1 ]; then G=$'\033[32m'; R=$'\033[31m'; B=$'\033[1m'; N=$'\033[0m'; else G=; R=; B=; N=; fi

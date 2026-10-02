@@ -16,7 +16,7 @@ About 20 to 30 minutes, mostly waiting for builds. Safe to run again at any time
 - A Railway account (Hobby plan) and a Cloudflare account with R2 turned on.
 - Your Helius RPC URL, your Jupiter API key, your Telegram bot token.
 - In Telegram: you sent any message (like "hi") to your bot in the last 24 hours, so the script can find your chat.
-- Phantom open, with the creator account `6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB` (it does not need SOL yet).
+- Phantom open, with the creator account `E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq` (it does not need SOL yet).
 - Your password manager open.
 
 ## How to read the output

@@ -1,6 +1,6 @@
 name: pages
 
-# The site at https://wallstreetinu.world, published to the gh-pages branch on every push to main (GitHub Pages
+# The site at https://theinuvestors.world, published to the gh-pages branch on every push to main (GitHub Pages
 # serves it at the custom domain; the CNAME file keeps the domain set on every deploy).
 #
 # Which site is built depends on the repository variable SITE_API_BASE (Settings > Secrets and variables > Actions >
@@ -59,7 +59,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           touch .nojekyll
-          echo wallstreetinu.world > CNAME
+          echo theinuvestors.world > CNAME
           git init -q -b gh-pages
           git add -A
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
@@ -84,7 +84,7 @@ jobs:
       - name: The live site uses the production API and shows its state
         env:
           SITE_API_BASE: ${{ vars.SITE_API_BASE }}
-          SITE_URL: https://wallstreetinu.world/
+          SITE_URL: https://theinuvestors.world/
           PLAYWRIGHT_PATH: /tmp/pw/node_modules/playwright/index.mjs
         run: node apps/pixel-site/tools/verify-live.mjs
 

@@ -99,7 +99,7 @@ chmod +x "$W/bin/"*
 reset() {
   echo '{"id":"proj-staging","name":"wall-street-rats-staging"}' >"$W/fake/linked"
   printf '{"CREATOR_PUBKEY":"%s","STAGING":"true","KEY_ENCRYPTION_KEY":"staging-master-key-secret","DATABASE_URL":"postgresql://postgres:pgsecret7@postgres.railway.internal:5432/railway","RPC_URL":"https://rpc.example/?api-key=rpcsecret5","DRY_RUN":"true"}\n' "$TEST_CREATOR" >"$W/fake/vars-worker.json"
-  printf '{"DATABASE_URL_READONLY":"postgresql://rat_api:apisecret9@postgres.railway.internal:5432/railway","STAGING":"true","CREATOR_PUBKEY":"%s","CORS_ORIGIN":"https://wallstreetinu.world","DRY_RUN":"true"}\n' "$TEST_CREATOR" >"$W/fake/vars-api.json"
+  printf '{"DATABASE_URL_READONLY":"postgresql://rat_api:apisecret9@postgres.railway.internal:5432/railway","STAGING":"true","CREATOR_PUBKEY":"%s","CORS_ORIGIN":"https://theinuvestors.world","DRY_RUN":"true"}\n' "$TEST_CREATOR" >"$W/fake/vars-api.json"
   echo '{"DATABASE_PUBLIC_URL":"postgresql://postgres:pgsecret7@shinkansen.proxy.rlwy.net:41234/railway"}' >"$W/fake/vars-Postgres.json"
   rm -f "$W/fake/status-"* "$W/fake/railway.log" "$W/fake/trip" "$T/out/"*
   echo on >"$W/fake/kill"

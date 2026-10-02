@@ -20,7 +20,7 @@ BRANCH="main"
 STG_DIR="${WSR_STAGING_DIR:-$HOME/wallstreetrats-staging}"
 STG_SECRETS="${WSR_STAGING_SECRETS:-$HOME/rat-secrets-staging}"
 PROD_SECRETS="${WSR_PROD_SECRETS:-$HOME/rat-secrets}"
-PRODUCTION_CREATOR="6MRpbXQruNeeXraMG3wQWodjnMYyHTrfMP3BpTLjvaeB"
+PRODUCTION_CREATOR="E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq"
 PRODUCTION_COLD="DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj"
 STATE="$STG_SECRETS/setup-state.env"
 
@@ -41,7 +41,7 @@ state_set() {
 }
 is_pubkey() { printf '%s' "$1" | grep -Eq '^[1-9A-HJ-NP-Za-km-z]{32,44}$'; }
 
-printf '%s\n' "${B}WALL STREET INU rehearsal setup (staging)${N}  (DRY RUN. Nothing here can send a mainnet transaction.)"
+printf '%s\n' "${B}THE INUVESTORS rehearsal setup (staging)${N}  (DRY RUN. Nothing here can send a mainnet transaction.)"
 umask 077
 mkdir -p "$STG_SECRETS"
 chmod 700 "$STG_SECRETS"

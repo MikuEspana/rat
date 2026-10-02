@@ -260,7 +260,7 @@ async function main(argv: string[]): Promise<number> {
     console.log(JSON.stringify({ ok: !lines.some((l) => l.status === 'FAIL'), lines }));
     return lines.some((l) => l.status === 'FAIL') ? 1 : 0;
   }
-  console.log('Wall Street Inu: read-only mainnet check (nothing is signed or sent)');
+  console.log('The Inuvestors: read-only mainnet check (nothing is signed or sent)');
   return printLines(lines, (l) => console.log(l)) ? 0 : 1;
 }
 
