@@ -20,7 +20,7 @@ cd "$(dirname "$0")/.."
 . scripts/lib/launch.sh
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
-PRODUCTION_CREATOR="E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq"
+PRODUCTION_CREATOR="DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1"
 # --rehearsal: this exact script on the staging project with the test creator (from ~/wallstreetrats-staging), to
 # practise launch day: the staging guards instead of the production ones. The staging kill switch (ON between
 # rehearsals) is released right before the arm; launch-register releases the armed one. Everything else is the same.

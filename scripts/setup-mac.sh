@@ -42,7 +42,7 @@ PROJECT_NAME="${WSR_PROJECT_NAME:-wall-street-rats}"
 EXTRA_VARS="${WSR_EXTRA_VARS:-}" # KEY=VALUE ... for worker, admin and api (the staging profile only)
 BUCKET_PREFIX="${WSR_BUCKET_PREFIX:-wsr-db-backups}"
 FORBIDDEN_PROJECT_ID="${WSR_FORBIDDEN_PROJECT_ID:-}"
-CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq}"
+CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1}"
 CREATOR_LABEL="${WSR_CREATOR_LABEL:-creator}"
 COLD_WALLET="${WSR_COLD_WALLET:-DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj}"
 SITE_ORIGIN="https://idleinu.world"
@@ -291,7 +291,7 @@ case "$PROFILE" in
     [ -n "$FORBIDDEN_PROJECT_ID" ] || FORBIDDEN_PROJECT_ID=$(sed -n 's/^RAILWAY_PROJECT_ID=//p' "$HOME/rat-secrets-staging/setup-state.env" 2>/dev/null | tail -1 || true)
     ;;
   staging)
-    [ "$CREATOR_PUBKEY" != "E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq" ] || die "the staging profile never uses the production creator wallet"
+    [ "$CREATOR_PUBKEY" != "DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1" ] || die "the staging profile never uses the production creator wallet"
     [ "$SECRETS" != "$HOME/rat-secrets" ] || die "the staging profile never uses the production secrets folder"
     ;;
   *) die "unknown profile $PROFILE" ;;

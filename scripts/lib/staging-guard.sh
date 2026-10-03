@@ -5,7 +5,7 @@
 SECRETS="${WSR_SECRETS:-$HOME/rat-secrets-staging}"
 PROD_SECRETS="${WSR_PROD_SECRETS:-$HOME/rat-secrets}"
 STATE="$SECRETS/setup-state.env"
-PRODUCTION_CREATOR="E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq"
+PRODUCTION_CREATOR="DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1"
 isolation() { # prints problems, one per line ("" = isolated)
   local pid prod creator staging mk_s mk_p
   [ "$(state_get "$STATE" PROFILE)" = staging ] || echo "no staging setup state in $SECRETS: run scripts/setup-staging.sh first"

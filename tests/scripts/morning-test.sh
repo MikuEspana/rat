@@ -9,7 +9,7 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 FAILS=0
 check() { if eval "$2"; then echo "  ok   $1"; else echo "  FAIL $1"; FAILS=$((FAILS + 1)); fi; }
-CREATOR=E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq
+CREATOR=DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1
 mkdir -p "$W/bin" "$W/fake" "$W/home/rat-secrets"
 
 # fake railway: read-only answers from files; anything else is logged (a write would show up in order.log)
