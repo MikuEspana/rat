@@ -44,7 +44,7 @@ describe('format', () => {
     expect(claimProgress('2026-10-01T18:00:00Z', '2026-10-01T17:00:00Z', now)).toBeNull();
   });
 
-  it('is THE INUVESTORS everywhere a viewer can read it (no RAT RACE or WALL STREET RATS left in the site)', () => {
+  it('is IDLE INU everywhere a viewer can read it (no RAT RACE or WALL STREET RATS left in the site)', () => {
     const root = join(__dirname, '..', '..');
     const files: string[] = [join(root, 'index.html')];
     const walk = (dir: string): void => {
@@ -58,9 +58,9 @@ describe('format', () => {
     const hits = files.filter((f) => /rat race|wall street rats|wall st rats|wallstreetrats|\u{1F400}/iu.test(readFileSync(f, 'utf8')));
     expect(hits).toEqual([]);
     const html = readFileSync(join(root, 'index.html'), 'utf8');
-    expect(html).toContain('<title>THE INUVESTORS</title>');
-    expect(html).toContain('<meta property="og:title" content="THE INUVESTORS" />');
-    expect(html).toContain('<meta property="og:url" content="https://theinuvestors.world/" />');
+    expect(html).toContain('<title>IDLE INU</title>');
+    expect(html).toContain('<meta property="og:title" content="IDLE INU" />');
+    expect(html).toContain('<meta property="og:url" content="https://idleinu.world/" />');
   });
 
   it('announces every stage in the feed; the last one reads as a place (the company made it to Wall Street)', () => {

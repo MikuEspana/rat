@@ -1,5 +1,5 @@
 #!/bin/bash
-# THE INUVESTORS: the whole backend setup on a Mac, in one command. DRY RUN only: nothing here can send a
+# IDLE INU: the whole backend setup on a Mac, in one command. DRY RUN only: nothing here can send a
 # mainnet transaction. Safe to re-run: every step checks what is already done and skips it.
 #
 #   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/MikuEspana/rat/main/scripts/setup-mac.sh)"
@@ -45,7 +45,7 @@ FORBIDDEN_PROJECT_ID="${WSR_FORBIDDEN_PROJECT_ID:-}"
 CREATOR_PUBKEY="${WSR_CREATOR_PUBKEY:-E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq}"
 CREATOR_LABEL="${WSR_CREATOR_LABEL:-creator}"
 COLD_WALLET="${WSR_COLD_WALLET:-DX7RpxyhbcGeiBQh76ed2wZHw8WZ2CdMoDibpWmX9ajj}"
-SITE_ORIGIN="https://theinuvestors.world"
+SITE_ORIGIN="https://idleinu.world"
 # Every service and Postgres run here: EU West (Amsterdam). Most Solana stake sits in Europe and Helius has nodes in
 # Amsterdam and Frankfurt (docs/runbooks/setup-mac.md, "Region").
 REGION="${WSR_REGION:-europe-west4-drams3a}"
@@ -297,7 +297,7 @@ case "$PROFILE" in
   *) die "unknown profile $PROFILE" ;;
 esac
 
-printf '%s\n' "${B}THE INUVESTORS setup${N}  (DRY RUN only. Nothing here can send a mainnet transaction.)"
+printf '%s\n' "${B}IDLE INU setup${N}  (DRY RUN only. Nothing here can send a mainnet transaction.)"
 say "Secrets are only typed into hidden prompts. Never paste a seed phrase anywhere."
 
 # ---------------------------------------------------------------- 1. tools --------------------------------------------
@@ -713,7 +713,7 @@ gen ADMIN_PASSWORD.txt "openssl rand -base64 30 | tr -d '/+=\n' | cut -c1-28"
 gen RAT_API_DB_PASSWORD.txt 'openssl rand -hex 32'
 AGE_PUB=$(age-keygen -y "$SECRETS/rat-backup.key")
 cat >"$SECRETS/README.txt" <<EOF
-THE INUVESTORS secrets. Put every file here in your password manager, then keep this folder or delete it.
+IDLE INU secrets. Put every file here in your password manager, then keep this folder or delete it.
 
 rat-backup.key            age PRIVATE key. The only way to read the nightly backups. Its public key is on Railway.
 KEY_ENCRYPTION_KEY.txt    master key: encrypts every wallet key in the database. Lose it and the rat wallets are lost.

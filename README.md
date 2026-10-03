@@ -1,10 +1,10 @@
-# THE INUVESTORS ($INUVESTOR)
+# IDLE INU ($IDLE)
 
 > The rat always loses. The fund always wins.
 
 A memecoin on pump.fun (Solana) with a live 3D website. Trading volume pays creator fees. Creator fees hire rats. Every rat is a trader with its own fresh Solana wallet that buys one tokenized stock (xStocks) and holds it forever. Everything is public.
 
-Website: https://theinuvestors.world (for now the in-browser launch simulator: a whole launch played out with the bot's real rules, no real money).
+Website: https://idleinu.world (for now the in-browser launch simulator: a whole launch played out with the bot's real rules, no real money).
 
 ## Mechanics (v1, final)
 

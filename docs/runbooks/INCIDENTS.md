@@ -7,7 +7,7 @@ If `railway ssh` is down, use `scripts/rat-local.sh X` instead (same command, ru
 **When in doubt: `scripts/rat.sh kill --reason "what I saw"`** (or the red KILL button on the admin page).
 It only stops new transactions. Nothing is lost. Undo: `scripts/rat.sh resume` (admin page: type RESUME).
 
-Telegram alerts look like `[INUVESTOR !!! critical] text`. The same key is sent at most once every 10 minutes.
+Telegram alerts look like `[IDLE !!! critical] text`. The same key is sent at most once every 10 minutes.
 
 | # | Problem | Telegram key |
 |---|---|---|

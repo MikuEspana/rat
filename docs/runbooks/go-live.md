@@ -8,11 +8,11 @@
 - [ ] `XSTOCKS_MINT_AUTHORITY` set to the confirmed xStocks mint authority (optional, recommended).
 - [ ] Worker + API deployed in DRY RUN (`deploy.md`).
 - [ ] The site: `scripts/site-go-live.sh` says **SITE READY**.
-  - It checks the production API and its CORS for theinuvestors.world.
+  - It checks the production API and its CORS for idleinu.world.
   - It switches the site from the simulator demo to the production API: two clicks, the `SITE_API_BASE` repository variable, then the pages workflow.
   - The workflow's verify job opens the published site in a real browser. It checks there are no console errors and no simulator, the "The rats are clocking in..." banner, RATS HIRED equal to the API's count, and "pre-launch".
   - Then it asks you to look at it on your phone.
-  - The simulator stays at `theinuvestors.world/?sim`. Deleting the variable and re-running the workflow brings the demo back.
+  - The simulator stays at `idleinu.world/?sim`. Deleting the variable and re-running the workflow brings the demo back.
 - [ ] Rehearsal: `DRY_RUN_FAKE_CLAIM_SOL_PER_HOUR=20` for 30 minutes, watch the site, then set it back to `0` and run `rat dry-run-reset --yes`.
 - [ ] `rat status` shows both keys imported. Master key backed up.
 - [ ] `rat alert-test` arrives on Telegram. `rat kill` / `rat resume` tested.

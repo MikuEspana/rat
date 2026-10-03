@@ -169,7 +169,7 @@ export function landmarkSigns(o: SignInput): SignSpot[] {
   if (annex && scene.standing.has('annex')) {
     const g = annexGeometry(annex, stage);
     const t = towerTop(g.fi + g.fp, g.fj + g.fp, g.floors, g.scale);
-    add('annex', 'INUVESTORS ANNEX', t.x, t.top - 100 * g.scale);
+    add('annex', 'IDLE INU ANNEX', t.x, t.top - 100 * g.scale);
   }
 
   // the basement gym in its pit
@@ -209,7 +209,7 @@ export function nextFloorWhen(sol: number): string {
 /** Where the company name goes: over the building's back corner, or on tower A's roof once it stands. */
 export function nameSign(o: SignInput): SignSpot {
   const { plan, stage, count } = o;
-  const text = `THE INUVESTORS: ${STAGES[stage]!.name}`;
+  const text = `IDLE INU: ${STAGES[stage]!.name}`;
   const ring = plan.rings[stage]!;
   let at = cellToScreen(ring.i0, ring.j0);
   let y = at.y - 70;

@@ -51,7 +51,7 @@ const BY_STAGE: Line[][] = [
   [
     (s) => `MEGACORP SWALLOWS THREE CITY BLOCKS, RESIDENTS OFFERED ${s.topStock} STOCK AND A CHEW TOY`,
     (s) => `THE VAULT NOW HOLDS ${s.fund}. INUS ASKED TO STOP BURYING BONES IN IT`,
-    () => 'CITY RENAMES MAIN AVENUE "INUVESTOR WAY" AFTER GENEROUS DONATION',
+    () => 'CITY RENAMES MAIN AVENUE "IDLE INU WAY" AFTER GENEROUS DONATION',
     (s) => `MARKET CAP ${s.mcap}. SMALL BUSINESSES "WELCOME TO APPLY" FOR DESKS`,
     () => 'TRADING FLOOR BARKS AT THE MARKET FOR SIX HOURS. MARKET DOES NOT FETCH',
   ],
@@ -72,7 +72,7 @@ const NO_RATS_YET: Line[] = [
 ];
 
 const ALWAYS: Line[] = [
-  (s) => `INUVESTOR ${s.price} . MCAP ${s.mcap} . VAULT ${s.fund}`,
+  (s) => `IDLE ${s.price} . MCAP ${s.mcap} . VAULT ${s.fund}`,
   (s) => `TOP DESK: ${s.topStock} WITH ${n(s.topRats)} INUS`,
 ];
 
