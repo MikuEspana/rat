@@ -11,7 +11,7 @@ W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 FAILS=0
 check() { if eval "$2"; then echo "  ok   $1"; else echo "  FAIL $1"; FAILS=$((FAILS + 1)); fi; }
-CREATOR=E8nsHrGuWeE97inEZUEsJPEEiZjqQCExULr1JzPqFdRq
+CREATOR=DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1
 TEST_CREATOR=CCtCZryKG3cdEFUAYPd5S1kFVhJ3mpEy2ciDqu59CvWT
 PHRASE=I_UNDERSTAND_THIS_SENDS_MAINNET_TRANSACTIONS
 mkdir -p "$W/bin" "$W/fake" "$W/home/rat-secrets"

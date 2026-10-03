@@ -701,3 +701,4 @@ Checked in Chromium, desktop and phone (320 to 430 px wide), against fixture API
 ## Rebrand: Idle Inu, ticker IDLE (owner decision, 2026-10-03)
 - Name change only: "The Inuvestors" / INUVESTOR becomes "Idle Inu" / IDLE everywhere a viewer reads it (site, share tags, API symbol, alerts, admin, CLI, launch.sh). Share image sign repainted to IDLE INU. Production was shut down on 2026-10-02 and comes back with this build.
 - Same day: the site moves to **idleinu.world** (CNAME in pages.yml, share tags, scripts).
+- 2026-10-03: the production creator becomes **DMCYiQzy5QoaARhVxFp9uwShBwm1BwbGX564neFvvZs1** (fresh wallet; DX7R stays the cold wallet).
