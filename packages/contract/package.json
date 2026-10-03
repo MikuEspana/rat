@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "THE INUVESTORS frontend contract: types, zod schemas, display math, mock data. Browser safe.",
+  "description": "IDLE INU frontend contract: types, zod schemas, display math, mock data. Browser safe.",
   "exports": {
     ".": "./src/index.ts",
     "./mock/state.json": "./mock/state.json",

@@ -101,7 +101,7 @@ export function renderDashboard(d: Dashboard, csrf: string, notice: string | nul
     : `<div class="kill off">Kill switch off. The bot is running.</div>`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="15"><title>THE INUVESTORS admin</title>
+<meta http-equiv="refresh" content="15"><title>IDLE INU admin</title>
 <style>
 :root{--bg:#0f1115;--fg:#e8e8e8;--mute:#9aa0a6;--line:#2a2f3a;--red:#ff4d4d;--green:#35c46a;--amber:#f5b83d}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,sans-serif}
@@ -115,7 +115,7 @@ form{display:inline-block;margin:6px 12px 6px 0}input[type=text]{background:#1a1
 button{padding:8px 14px;border-radius:4px;border:0;font-weight:700;cursor:pointer}.stop{background:var(--red);color:#fff}.go{background:var(--green);color:#000}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}.card{border:1px solid var(--line);border-radius:6px;padding:8px}.card b{display:block;font-size:18px}
 </style></head><body>
-<h1>THE INUVESTORS admin <span class="banner">${esc(d.mode)}${d.smoke ? ' + SMOKE' : ''}</span></h1>
+<h1>IDLE INU admin <span class="banner">${esc(d.mode)}${d.smoke ? ' + SMOKE' : ''}</span></h1>
 <div style="color:var(--mute)">Updated ${esc(d.generatedAt)} (refreshes every 15 s)</div>
 ${notice ? `<div class="notice">${esc(notice)}</div>` : ''}
 ${d.workerDown ? '<div class="kill on">WORKER DOWN: no loop has run for over 3 minutes. Claims and hires have stopped. Check the worker on Railway.</div>' : ''}

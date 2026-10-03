@@ -1,4 +1,4 @@
-// The Vault: the money pile at the centre of the building. It shows the Inuvestors portfolio (what every rat's stock
+// The Vault: the money pile at the centre of the building. It shows the Idle Inu portfolio (what every rat's stock
 // holdings are worth, in USD) in 6 stages on a steep early curve, so it visibly grows from the very first rat.
 export interface VaultStage {
   /** portfolio value (USD) from which this stage shows */

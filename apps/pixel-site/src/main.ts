@@ -1,4 +1,4 @@
-// THE INUVESTORS pixel site: an idle game at night. The company grows with the SOL claimed, from a garage startup
+// IDLE INU pixel site: an idle game at night. The company grows with the SOL claimed, from a garage startup
 // to Wall Street (floor/plan.ts, floor/growth.ts, floor/stage-source.ts), and its rooms, desks and landmarks with the
 // rats hired. Rats are hired by creator fees, walk in from the subway, sit at
 // their stock's desks and type, and wander off for coffee. The data comes from the public API (CONTRACT.md), or
@@ -124,7 +124,7 @@ function buildLine(e: GrowthEvent): { tag: string; text: string } {
 }
 
 async function boot(): Promise<Site> {
-  setStatus('THE INUVESTORS: loading the building...');
+  setStatus('IDLE INU: loading the building...');
   const app = new Application();
   await app.init({
     resizeTo: window,
@@ -173,7 +173,7 @@ async function boot(): Promise<Site> {
   // (mount() also picks the sky for the stage)
   let rats = new RatSystem(atlas, plan, growth, world.main, world.blocked, world.line);
   const effects = new Effects();
-  // the Vault: the money pile in the middle of the building shows the Inuvestors portfolio (?vault=USD pins a value)
+  // the Vault: the money pile in the middle of the building shows the Idle Inu portfolio (?vault=USD pins a value)
   const vault = new VaultView(atlas, world.vault);
   const VAULT_PIN = new URLSearchParams(location.search).get('vault');
   const PNL_PIN = new URLSearchParams(location.search).get('vaultpnl');
@@ -303,7 +303,7 @@ async function boot(): Promise<Site> {
   };
   const vaultReveal = (stage: number): Reveal => ({
     title: `THE VAULT: ${VAULT_STAGES[stage]!.name}`,
-    sub: `${usd(vault.value)} in the Inuvestors portfolio`,
+    sub: `${usd(vault.value)} in the Idle Inu portfolio`,
     kicker: 'VAULT UPGRADE',
     focus: () => vault.focus(),
   });
@@ -834,7 +834,7 @@ async function boot(): Promise<Site> {
       rebuildAt(n, false, DEBUG_RATS ? undefined : (liveSol * n) / Math.max(1, live));
       const v = composeView();
       camera.centerOn(v.x, v.y, v.zoom);
-      caption.text = `THE INUVESTORS  ${n.toLocaleString('en-US')} INUS  ${STAGES[growth.stage]!.name}`;
+      caption.text = `IDLE INU  ${n.toLocaleString('en-US')} INUS  ${STAGES[growth.stage]!.name}`;
       await wait(k === steps - 1 ? 1800 : 260);
     }
     rec.stop();

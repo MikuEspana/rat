@@ -352,7 +352,7 @@ export class LaunchSim {
       },
       coin: {
         mint: live ? SIM_COIN_MINT : null,
-        symbol: 'INUVESTOR',
+        symbol: 'IDLE',
         priceUsd: live ? Number(price.toPrecision(4)) : null,
         supply: live ? this.supply.toFixed(2) : null,
         marketCapUsd: live ? Math.round(this.mcap) : null,

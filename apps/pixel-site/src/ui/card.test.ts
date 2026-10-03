@@ -17,14 +17,14 @@ describe('rat card: wallet on Solscan', () => {
       null,
     );
     expect(walletUrl(WALLET, false)).toBe(view.solscanUrl);
-    expect(walletUrl(WALLET, false)).not.toMatch(/wallstreetrats|wallstreetinu|theinuvestors|\?rat=|localhost/);
+    expect(walletUrl(WALLET, false)).not.toMatch(/wallstreetrats|wallstreetinu|theinuvestors|idleinu|\?rat=|localhost/);
   });
 
   it('shows no link in the simulator (made-up wallets) or for anything that is not a Solana address', () => {
     expect(walletUrl(WALLET, true)).toBeNull();
     expect(walletUrl('', false)).toBeNull();
     expect(walletUrl(null, false)).toBeNull();
-    expect(walletUrl('https://theinuvestors.world/?rat=3', false)).toBeNull();
+    expect(walletUrl('https://idleinu.world/?rat=3', false)).toBeNull();
     expect(walletUrl('0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl', false)).toBeNull(); // not base58
     expect(walletUrl('abc', false)).toBeNull();
   });
